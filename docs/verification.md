@@ -1,5 +1,36 @@
 # 검증 기록
 
+## 2026-11-10 · 점멸 커서 없는 본문
+
+`lib/ui/editor.dart`의 실제 TextField에 showCursor: false를 적용했다. 본문
+커서만 숨기며 입력기와 저장·선택·조합 처리는 유지한다. 기존 WritingPen이
+논리적 입력 위치를 읽어 따라간다. 보조 입력칸과 펜 반응/동작 줄이기 설정은 유지한다.
+원문 밑글씨를 채우는 필사는 제안 단계이며 이번 변경의 구현 결과로 보고하지 않는다.
+
+변경 파일: `lib/ui/editor.dart`, `test/pen_motion_test.dart`,
+`tool/capture_preview_test.dart`, 제품·구조·검증 문서.
+실행: `flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true`.
+
+이번 코드의 검사:
+
+- `dart format lib test tool/capture_preview_test.dart`: 50개 파일, 변경 없음.
+  `flutter analyze --no-pub`: 문제 없음. `flutter test --no-pub`: 67개 통과.
+- 기존 펜 검사에서 실제 RenderEditable.showCursor 값이 false인 상태에서도
+  펜촉과 논리적 입력 위치가 일치하는지 확인했다. 확정 입력·줄바꿈·탭 이동·한글
+  조합·emoji·서체/스크롤 변경 검사에 적용했다. 방향키로 선택 위치를 옮긴 뒤
+  펜이 새 위치를 따르고 650ms 뒤에도 커서가 보이지 않으며 입력 값이 유지됐다.
+- 기존 저장 실패·페이지 스와이프·선택·복원 검사가 통과했다. 호스트 SQLite
+  파일 재연결 후 본문·두 쪽·마지막 선택/스크롤 복원 검사도 새 소스에서 통과했다.
+  실제 모바일 프로세스·키보드 검증으로 계산하지 않는다.
+
+화면 렌더 `flutter test tool/capture_preview_test.dart --no-pub` 1개도 통과했다.
+`artifacts/hidden-caret-*.png` 12개를 새 코드로 생성해 펜 반응 프레임에서 세로
+커서가 보이지 않는 것을 직접 확인했다. 실제 제품 위젯·번들 서체의 Flutter 테스트
+렌더이며 합성 문장과 test inset을 사용했다. 브라우저/실기기 실행 화면은 아니다.
+웹 빌드·배포는 후속 기록에 남긴다. 실제 브라우저·모바일 IME와
+키보드·접근성 보조기기·입력 위치 판독성은 미검증이다. 모바일 빌드를 수행했다고
+보고하지 않는다. 기존 hosting 설정·사용자 기록과 진행 중인 다른 변경은 보존한다.
+
 ## 2026-11-10 · 예시 진입 제거와 일반 앱 직접 적용 검증
 
 일곱 요소와 독립 설정은 일반 화면에 유지하고, 저장되지 않는 예시 앱으로 이동하는

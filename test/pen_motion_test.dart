@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/ui/editor.dart';
@@ -65,6 +66,7 @@ void expectNibAtCaret(WidgetTester tester) {
   final editable = tester
       .state<EditableTextState>(find.byType(EditableText))
       .renderEditable;
+  expect(editable.showCursor.value, isFalse);
   final value = tester.widget<TextField>(_field).controller!.value;
   final expected = editable.localToGlobal(
     editable.getLocalRectForCaret(value.selection.extent).bottomRight +
@@ -119,6 +121,14 @@ void main() {
       await tester.pumpAndSettle();
       expectNibAtCaret(tester);
       expect(controller.text, prose);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(controller.selection, const TextSelection.collapsed(offset: 2));
+      expectNibAtCaret(tester);
+      final beforeIdle = controller.value;
+      await tester.pump(const Duration(milliseconds: 650));
+      expectNibAtCaret(tester);
+      expect(controller.value, beforeIdle);
       // The overlaid barrel must not intercept a tap in the writing field.
       await tester.tapAt(tester.getCenter(_field));
       await tester.pumpAndSettle();

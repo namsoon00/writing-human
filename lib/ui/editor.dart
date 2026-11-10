@@ -151,6 +151,8 @@ class _PageEditorState extends State<PageEditor> {
                 controller: text,
                 scrollController: scroll,
                 focusNode: focus,
+                // Keep native input/selection, but let the pen mark the position.
+                showCursor: false,
                 maxLines: null,
                 minLines: null,
                 expands: true,

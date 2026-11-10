@@ -1,5 +1,12 @@
 # 구현 구조
 
+## 본문 입력 커서 표시 · 2026-11-10
+
+PageEditor의 실제 TextField에 showCursor: false를 적용한다. readOnly나 입력
+비활성화로 대체하지 않는다. RenderEditable의 논리적 입력 위치는 유지되므로
+WritingPen은 getLocalRectForCaret를 읽어 같은 위치를 따라간다. 포커스·선택·
+composing·스크롤·저장 리스너를 수정하지 않으며 OS의 조합/선택 표시도 유지한다.
+
 ## 일반 저장소로 통일한 앱 진입
 
 main은 URL에 따라 DemoStore를 선택하지 않고 항상 실제 저장소의 Bootstrap을 연다.

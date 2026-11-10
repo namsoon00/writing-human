@@ -1,5 +1,28 @@
 # 검증 기록
 
+## 2026-11-10 · 전체 한글 쓰는 인간체 웹 게시 완료
+
+[Actions 42799991684](https://github.com/namsoon00/writing-human/actions/runs/42799991684)에서
+소스 `9150f6f1d1a5db7832682e9d01450bb9fa4664a5`의 포맷·분석·테스트·웹 빌드·배포가 성공했다.
+배포 대상만 분리한 로컬 검사에서도 포맷·분석·테스트 33개와 release 빌드가 통과했다.
+다른 기능의 진행 중 변경은 이 배포에 포함하지 않았다.
+
+[웹 앱](https://namsoon00.github.io/writing-human/)에서 Aa → 글꼴 → 쓰는 인간체 · 개발 중을
+선택하면 현대 한글 11,172자·자모·영문·숫자를 지원하는 0.006을 사용한다.
+[서체 예시](https://namsoon00.github.io/writing-human/?demo=typeface)는 합성 데이터다.
+기존 글꼴 선택은 유지한다.
+
+실제 기본/서체 예시 HTML, FontManifest, TTF, 메타데이터, main JS의 6개 요청이 HTTP 200이었다.
+TTF는 742,856바이트, SHA-256
+`1b7c824ece6e653e9e2d72751346b1b703fd3a6e695171a9a62f60e2e21044f0`으로 로컬과 동일했다.
+메타데이터의 revision=0.006·hangul_syllables=11172를 확인했다. 실제 main JS 해시
+`3313e3135065aeeab830da5a1a1b6f4e049ac2ad8be715b0e242faf9317aa881`도 로컬 release와 일치했다.
+결과는 `artifacts/typeface/v006/web-deployment-check.json`, 빌드 기준은 `web-build-check.json`에 있다.
+
+이는 배포·HTTP·동일 파일 확인이며 실제 브라우저 타이핑·iPhone/Android 키보드·가독성
+검수는 이번 게시에서 수행하지 않았다. 최종 광학 검수 전까지 개발 중 표기를 유지한다.
+기존 비공개 Sites의 project_id·접근 범위와 사용자 기록은 변경하지 않았다.
+
 ## 2026-11-10 · 전체 한글 서체 웹 반영 준비
 
 기존 GitHub Pages의 main을 별도 체크아웃으로 열고 서체 관련 변경만 적용했다.

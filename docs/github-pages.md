@@ -51,3 +51,13 @@ HTTP 200을 확인했다. 검증 범위와 한계는 docs/verification.md를 따
 실제 기록에는 Aa → 글꼴 → 쓰는 인간체 · 개발 중을 선택한다. 한글 111자
 개발 TTF가 제공되고 미지원 문자는 나눔명조로 보완된다. 원격 실행 JS와 TTF가
 로컬 검증 파일과 정확히 일치함을 확인했으며 실기기 검증과 구분한다.
+
+## 2026-11-10 · 전체 한글 개발판 0.006 게시
+
+[Actions 42799991684](https://github.com/namsoon00/writing-human/actions/runs/42799991684)의
+소스 `9150f6f1d1a5db7832682e9d01450bb9fa4664a5`에서 검사·빌드·게시가 성공했다.
+현대 한글 11,172자·자모·영문·숫자를 지원하는 새 실제 TTF가 기존 주소에 반영됐다.
+[즉시 확인용 합성 예시](https://namsoon00.github.io/writing-human/?demo=typeface) 또는
+웹 앱의 Aa → 글꼴 → 쓰는 인간체 · 개발 중에서 확인한다.
+실제 제공되는 TTF·메타데이터·main JS가 로컬 release와 일치했으며 상세 검증은
+`docs/verification.md`에 있다. 실제 브라우저/실기기 타이핑 검증과는 구분한다.

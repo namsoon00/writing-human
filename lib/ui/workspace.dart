@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../data/library_controller.dart';
-import '../data/demo_store.dart';
 import '../data/model.dart';
 import '../sync/coordinator.dart';
 import 'collection_sheet.dart';
@@ -18,16 +17,8 @@ import 'pages_sheet.dart';
 import 'book_details.dart';
 
 class Workspace extends StatefulWidget {
-  const Workspace({
-    super.key,
-    required this.controller,
-    this.demo = false,
-    this.onExitDemo,
-    this.sync,
-  });
+  const Workspace({super.key, required this.controller, this.sync});
   final LibraryController controller;
-  final bool demo;
-  final VoidCallback? onExitDemo;
   final SyncCoordinator? sync;
   @override
   State<Workspace> createState() => _WorkspaceState();
@@ -259,15 +250,6 @@ class _WorkspaceState extends State<Workspace> {
         onNewBook: () {
           _afterSheet(_createBook);
         },
-        onDemo: widget.demo
-            ? null
-            : () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(builder: (_) => const _DemoPreview()),
-                );
-              },
       ),
     );
   }
@@ -455,15 +437,14 @@ class _WorkspaceState extends State<Workspace> {
                       ],
                     ),
                   ),
-                if (!widget.demo)
-                  ListTile(
-                    leading: const Icon(CupertinoIcons.cloud, size: 20),
-                    title: const Text('기기 동기화'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _syncInfo();
-                    },
-                  ),
+                ListTile(
+                  leading: const Icon(CupertinoIcons.cloud, size: 20),
+                  title: const Text('기기 동기화'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _syncInfo();
+                  },
+                ),
               ],
             ),
           ),
@@ -554,27 +535,6 @@ class _WorkspaceState extends State<Workspace> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (widget.demo)
-                      SizedBox(
-                        height: 30,
-                        child: Row(
-                          children: [
-                            const Expanded(
-                              child: Text(
-                                '예시 · 기록은 저장되지 않아요',
-                                style: TextStyle(fontSize: 10, color: muted),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: widget.onExitDemo,
-                              child: const Text(
-                                '내 종이',
-                                style: TextStyle(fontSize: 11),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     WritingHeader(
                       ribbon: c.library.style.bookDetails.ribbon,
                       bookmarked: record != null,
@@ -692,8 +652,6 @@ class _WorkspaceState extends State<Workspace> {
                           ? '자동 저장'
                           : c.saving
                           ? '저장 중'
-                          : widget.demo
-                          ? '예시'
                           : '저장됨',
                     ),
                   ],
@@ -859,27 +817,5 @@ class _WorkspaceState extends State<Workspace> {
         ],
       ),
     ),
-  );
-}
-
-class _DemoPreview extends StatefulWidget {
-  const _DemoPreview();
-  @override
-  State<_DemoPreview> createState() => _DemoPreviewState();
-}
-
-class _DemoPreviewState extends State<_DemoPreview> {
-  late final c = LibraryController(DemoStore(), referenceLibrary());
-  @override
-  void dispose() {
-    c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => Workspace(
-    controller: c,
-    demo: true,
-    onExitDemo: () => Navigator.pop(context),
   );
 }

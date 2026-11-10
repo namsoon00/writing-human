@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'data/library_controller.dart';
-import 'data/demo_store.dart';
+import 'entry_location.dart';
 import 'data/store.dart';
 import 'sync/context.dart';
 import 'sync/context_factory.dart';
@@ -13,15 +13,13 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   // Make the web app usable by assistive technology without a hidden opt-in.
   SemanticsBinding.instance.ensureSemantics();
-  final demoKind = Uri.base.queryParameters['demo'];
-  final demo = demoKind == 'reference' || demoKind == 'typeface';
-  runApp(WritingHumanApp(store: demo ? DemoStore() : null, demo: demo));
+  normalizeEntryLocation();
+  runApp(const WritingHumanApp());
 }
 
 class WritingHumanApp extends StatelessWidget {
-  const WritingHumanApp({super.key, this.store, this.demo = false});
+  const WritingHumanApp({super.key, this.store});
   final LibraryStore? store;
-  final bool demo;
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: '쓰는 인간',
@@ -67,13 +65,12 @@ class WritingHumanApp extends StatelessWidget {
         ),
       ),
     ),
-    home: _Bootstrap(store: store, demo: demo),
+    home: _Bootstrap(store: store),
   );
 }
 
 class _Bootstrap extends StatefulWidget {
-  final bool demo;
-  const _Bootstrap({this.store, this.demo = false});
+  const _Bootstrap({this.store});
   final LibraryStore? store;
   @override
   State<_Bootstrap> createState() => _BootstrapState();
@@ -85,46 +82,7 @@ class _BootstrapState extends State<_Bootstrap> with WidgetsBindingObserver {
   LibraryController? controller;
   LibraryStore? store;
   Object? error;
-  late bool demo = widget.demo;
-  late bool ownsStore = widget.store == null;
-  bool leavingDemo = false;
-  Future<void> _leaveDemo() async {
-    if (leavingDemo) {
-      return;
-    }
-    leavingDemo = true;
-    LibraryStore? next;
-    SyncContext? nextContext;
-    try {
-      nextContext = await openSyncContext();
-      next = nextContext.store;
-      final data = await next.load();
-      if (!mounted) {
-        await next.close();
-        return;
-      }
-      sync?.dispose();
-      controller?.dispose();
-      await store?.close();
-      setState(() {
-        store = next;
-        ownsStore = true;
-        demo = false;
-        controller = LibraryController(next!, data);
-        syncContext = nextContext;
-        sync = SyncCoordinator(controller!, nextContext!);
-      });
-    } catch (_) {
-      await next?.close();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('나의 기록을 불러오지 못했습니다. 다시 시도해 주세요.')),
-        );
-      }
-    } finally {
-      leavingDemo = false;
-    }
-  }
+  late final bool ownsStore = widget.store == null;
 
   @override
   void initState() {
@@ -185,12 +143,7 @@ class _BootstrapState extends State<_Bootstrap> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     if (controller != null) {
-      return Workspace(
-        controller: controller!,
-        sync: sync,
-        demo: demo,
-        onExitDemo: _leaveDemo,
-      );
+      return Workspace(controller: controller!, sync: sync);
     }
     return Scaffold(
       body: Center(

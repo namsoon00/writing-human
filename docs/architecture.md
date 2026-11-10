@@ -1,5 +1,14 @@
 # 구현 구조
 
+## 일반 저장소로 통일한 앱 진입
+
+main은 URL에 따라 DemoStore를 선택하지 않고 항상 실제 저장소의 Bootstrap을 연다.
+entry_location.dart는 이전 reference/typeface 데모 매개변수만 제거하며 다른 쿼리·
+fragment·origin을 유지한다. 웹의 history 정리가 제한되어도 실제 저장소 열기는 계속한다.
+Workspace와 CollectionSheet의 데모 화면·비영구 안내·데모로 이동하는 메뉴를 제거했다.
+DemoStore는 명시적으로 주입하는 개발 검증용 fixture로만 남으며 사용자 진입점과 연결하지 않는다.
+기존 저장 내용·선택·스크롤·계정 보호·읽기/쓰기 실패 처리는 동일하다.
+
 ## 책의 물성과 독서 흔적
 
 일곱 요소의 독립 설정은 `data/book_detail_style.dart`의 BookDetailsStyle 아래 ribbon/bookplate/sourceSlip/pencil/ornament/binding/dateStamp로 나뉜다. 각 BookDetailChoice는 enabled·variant·tone만 가진다. WritingStyle.bookDetails의 optional JSON을 기존 SQLite v4 settings와 웹 라이브러리에 저장하므로 이 설정 추가로 DB 버전을 올리지 않는다. 동기화는 요소별 필드를 따로 병합한다. 화면의 각 위젯은 해당 선택을 매개변수로 받아 표현만 담당한다.
@@ -53,7 +62,7 @@ WritingHumanDevelopment + NanumMyeongjo/NanumGothic 대체 체인을 사용한�
 추가 필드를 보존하므로 인증이나 요청 구조 변경은 없다.
 
 일반 주소·빈 종이·기존 페이지·보관함·도구·대화상자에 쓰는 인간체를 기본 적용한다.
-`?demo=reference`와 `?demo=typeface`도 같은 기본 글꼴을 쓰는 합성 예시다.
+이전 데모 주소도 같은 실제 기록·기본 글꼴로 열린다.
 
 ## 저장과 복원
 
@@ -81,7 +90,7 @@ lib/ui/writing_pen.dart는 TextEditingController·FocusNode·ScrollController를
 
 펜 레이어는 IgnorePointer·ExcludeSemantics·RepaintBoundary로 입력과 분리한다. 새 TextEditingController를 만들거나 TextEditingValue·selection·composing·focus·scroll을 되쓰지 않는다. WritingStyle.penMotion은 기본 true인 optional JSON 값으로 기존 SQLite settings 및 웹 저장/동기화에 보관하며 DB 스키마를 바꾸지 않는다. sync/merge.dart에서 다른 도구 값과 독립적으로 병합한다.
 
-?demo=reference와 빈 책장의 ‘예시 책장 둘러보기’는 DemoStore를 사용하는 명시적인 예시 화면이다. 사용자 SQLite/localStorage를 쓰지 않는다. 예시 페이지 수와 문장은 레퍼런스 외관 확인용이며 실제 사용자 기록이나 책 원문 전체가 아니다. 예시 화면에 비영구 저장 안내를 표시하고 나의 책장으로 돌아갈 수 있다.
+DemoStore와 합성 문장은 개발 검증용으로만 남는다. 일반 앱에 예시 진입점이나 합성 기록 자동 생성은 없다.
 
 ## 동기화 추가
 

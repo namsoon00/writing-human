@@ -51,7 +51,7 @@ class BookDetailTools extends StatelessWidget {
             const Padding(
               padding: EdgeInsets.fromLTRB(24, 0, 24, 16),
               child: Text(
-                '각각 모양과 색을 고를 수 있어요.\n꾸밈을 꺼도 글과 기록은 그대로 남아요.',
+                '모양과 색을 고르면 바로 적용돼요.\n꾸밈을 꺼도 글과 기록은 그대로 남아요.',
                 style: TextStyle(color: muted, fontSize: 12, height: 1.7),
               ),
             ),

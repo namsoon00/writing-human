@@ -13,13 +13,11 @@ class CollectionSheet extends StatefulWidget {
     required this.onRecord,
     required this.onNewSheet,
     required this.onNewBook,
-    this.onDemo,
   });
   final LibraryController controller;
   final ValueChanged<WritingRecord> onRecord;
   final ValueChanged<String?> onNewSheet;
   final VoidCallback onNewBook;
-  final VoidCallback? onDemo;
   @override
   State<CollectionSheet> createState() => _CollectionSheetState();
 }
@@ -167,14 +165,6 @@ class _CollectionSheetState extends State<CollectionSheet> {
                                 height: 1.8,
                               ),
                             ),
-                            if (widget.onDemo != null)
-                              TextButton(
-                                onPressed: widget.onDemo,
-                                child: const Text(
-                                  '예시 둘러보기',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ),
                           ],
                         ),
                       )

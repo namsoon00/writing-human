@@ -11,7 +11,7 @@ class PenHarness extends StatefulWidget {
 }
 
 class PenHarnessState extends State<PenHarness> {
-  bool enabled = true, reduced = false;
+  bool enabled = true, reduced = false, useDevelopmentTypeface = false;
   double scale = 1;
   int font = 1;
   String saved = '';
@@ -34,7 +34,11 @@ class PenHarnessState extends State<PenHarness> {
                 number: 1,
                 text: widget.initial,
               ),
-              style: WritingStyle(fontIndex: font, penMotion: enabled),
+              style: WritingStyle(
+                fontIndex: font,
+                penMotion: enabled,
+                useDevelopmentTypeface: useDevelopmentTypeface,
+              ),
               // Simulate the workspace/save-status rebuilds during typing.
               onChanged: (_, value, base, extent, scroll) =>
                   setState(() => saved = value),
@@ -126,7 +130,7 @@ void main() {
   testWidgets(
     'Korean composing and emoji are untouched; selection hides the pen',
     (tester) async {
-      await open(tester);
+      final key = await open(tester);
       final controller = tester.widget<TextField>(_field).controller!;
       const prefix = '문장 🌿 ';
       for (final syllable in ['ㅎ', '하', '한']) {
@@ -137,6 +141,10 @@ void main() {
           composing: TextRange(start: prefix.length, end: text.length),
         );
         tester.testTextInput.updateEditingValue(value);
+        await tester.pumpAndSettle();
+        key.currentState!.change(
+          () => key.currentState!.useDevelopmentTypeface = true,
+        );
         await tester.pumpAndSettle();
         expect(controller.value, value);
         expectNibAtCaret(tester);

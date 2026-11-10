@@ -1,0 +1,20 @@
+{
+  "status": "development-partial-font",
+  "revision": "0.005",
+  "flutter_family": "WritingHumanDevelopment",
+  "hangul_syllables": 111,
+  "characters": " ,.가각간값게겨곁계고과관괜궤귀그글금급기깁까나남는늘니다달대던됨두따라랐래려로록리마만말맑멈문보빈빠삶새생서세쉼시싶싸쓰쓴씁씩아앉알어었에였오옮왜외웨위은을읊음의이인읽잇있자잠장쟁저적제조종줄지짜책천체쳤추침투펼표하한함흙히",
+  "font_sha256": "eda1b102b1d09cf322fa625bc25f1826333486142b6098570188690a99d83a2e",
+  "fallback": [
+    "NanumMyeongjo",
+    "NanumGothic"
+  ],
+  "source": "Original project-authored vector jamo. design/typeface/build_vector_proof.py",
+  "not_implemented": [
+    "full Hangul coverage",
+    "conjoining-jamo shaping",
+    "digits and Latin",
+    "hinting",
+    "final optical review"
+  ]
+}

@@ -83,6 +83,22 @@ class ToolsScreen extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
+                  ChoiceChip(
+                    label: const Text(
+                      developmentFontLabel,
+                      style: TextStyle(fontSize: 13),
+                    ),
+                    selected: style.useDevelopmentTypeface,
+                    onSelected: (_) => controller.setStyle(
+                      style.copy(useDevelopmentTypeface: true),
+                    ),
+                    showCheckmark: false,
+                    selectedColor: const Color(0xffeeddd3),
+                    backgroundColor: paper,
+                    side: BorderSide(
+                      color: style.useDevelopmentTypeface ? brandInk : line,
+                    ),
+                  ),
                   for (var i = 0; i < 3; i++)
                     ChoiceChip(
                       label: Text(
@@ -92,14 +108,20 @@ class ToolsScreen extends StatelessWidget {
                           fontSize: 13,
                         ),
                       ),
-                      selected: style.fontIndex == i,
-                      onSelected: (_) =>
-                          controller.setStyle(style.copy(fontIndex: i)),
+                      selected:
+                          !style.useDevelopmentTypeface && style.fontIndex == i,
+                      onSelected: (_) => controller.setStyle(
+                        style.copy(fontIndex: i, useDevelopmentTypeface: false),
+                      ),
                       showCheckmark: false,
                       selectedColor: const Color(0xffeeddd3),
                       backgroundColor: paper,
                       side: BorderSide(
-                        color: style.fontIndex == i ? burgundy : line,
+                        color:
+                            !style.useDevelopmentTypeface &&
+                                style.fontIndex == i
+                            ? burgundy
+                            : line,
                       ),
                     ),
                 ],
@@ -127,7 +149,7 @@ class ToolsScreen extends StatelessWidget {
                 ),
               const SizedBox(height: 6),
               const Text(
-                '쓰는 인간체는 다듬는 중입니다. 지금은 나눔 글꼴로 씁니다.',
+                '쓰는 인간체는 한글 111자의 개발판입니다.\n지원하지 않는 글자는 나눔명조로 표시합니다.',
                 style: TextStyle(color: muted, fontSize: 11, height: 1.7),
               ),
             ],

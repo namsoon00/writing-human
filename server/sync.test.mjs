@@ -4,7 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {mkdtempSync, rmSync, readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import worker from './index.mjs';
+import worker, {validLibrary} from './index.mjs';
 
 class SQLiteD1 {
   constructor(file) { this.db = new DatabaseSync(file); }
@@ -14,6 +14,17 @@ class SQLiteD1 {
 const origin = 'https://writing-human.test';
 const empty = () => ({version: 1, books: [], records: [], pages: [], activePageId: null, writing: false, style: {paperIndex: 0, penIndex: 0, fontIndex: 1, guides: false, favoriteBookIds: []}});
 const request = (user, method='GET', data, path='/api/sync/library', originHeader=origin) => new Request(origin+path, {method, headers: {...(user ? {'oai-authenticated-user-id': user} : {}), origin: originHeader, 'content-type': 'application/json', 'x-writing-human-sync': '1', 'x-writing-human-account': user ?? ''}, ...(data ? {body: JSON.stringify(data)} : {})});
+
+test('Development typeface flag is optional and validated without changing legacy indices', () => {
+  const library = empty();
+  assert.equal(validLibrary(library), true);
+  library.style.useDevelopmentTypeface = true;
+  assert.equal(validLibrary(library), true);
+  library.style.useDevelopmentTypeface = 'true';
+  assert.equal(validLibrary(library), false);
+  library.style.useDevelopmentTypeface = false;
+  assert.equal(validLibrary(library), true);
+});
 
 test('Account isolation, compare-and-swap, malformed writes and real file reopen', async () => {
   const dir=mkdtempSync(join(tmpdir(),'writing-human-server-')), file=join(dir,'cloud.db');

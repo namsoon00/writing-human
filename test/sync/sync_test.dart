@@ -59,6 +59,23 @@ class DeviceRemote implements CloudRemote {
 }
 
 void main() {
+  test(
+    'Font fallback index and development flag remain one choice when merging',
+    () {
+      const base = Library();
+      final local = base.copy(style: base.style.copy(fontIndex: 2));
+      final remote = base.copy(
+        style: base.style.copy(useDevelopmentTypeface: true),
+      );
+      final merged = mergeLibraries(base, local, remote).library;
+      expect(merged.style.fontIndex, 2);
+      expect(merged.style.useDevelopmentTypeface, isFalse);
+      final paperOnly = base.copy(style: base.style.copy(paperIndex: 2));
+      final complementary = mergeLibraries(base, paperOnly, remote).library;
+      expect(complementary.style.useDevelopmentTypeface, isTrue);
+      expect(complementary.style.paperIndex, 2);
+    },
+  );
   sqfliteFfiInit();
   late Directory dir;
   late SqliteLibraryStore aStore, bStore;
@@ -132,6 +149,7 @@ void main() {
           paperIndex: 2,
           penIndex: 1,
           fontIndex: 2,
+          useDevelopmentTypeface: true,
           penMotion: false,
         ),
       );
@@ -141,6 +159,7 @@ void main() {
       expect(b.library.style.paperIndex, 2);
       expect(b.library.style.penIndex, 1);
       expect(b.library.style.fontIndex, 2);
+      expect(b.library.style.useDevelopmentTypeface, isTrue);
       expect(b.library.style.penMotion, isFalse);
       await bStore.close();
       bStore = await SqliteLibraryStore.open(
@@ -148,6 +167,7 @@ void main() {
         factory: databaseFactoryFfi,
       );
       final persisted = await bStore.load();
+      expect(persisted.style.useDevelopmentTypeface, isTrue);
       expect(persisted.sync.accountId, 'same-account');
       expect(persisted.sync.revision, ra.hub.revision);
       expect(persisted.sync.baseline, isNotNull);

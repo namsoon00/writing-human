@@ -88,17 +88,19 @@ class WritingStyle {
     this.paperIndex = 0,
     this.penIndex = 0,
     this.fontIndex = 0,
+    this.useDevelopmentTypeface = false,
     this.guides = false,
     this.penMotion = true,
     this.favoriteBookIds = const [],
   });
   final int paperIndex, penIndex, fontIndex;
-  final bool guides, penMotion;
+  final bool guides, penMotion, useDevelopmentTypeface;
   final List<String> favoriteBookIds;
   WritingStyle copy({
     int? paperIndex,
     int? penIndex,
     int? fontIndex,
+    bool? useDevelopmentTypeface,
     bool? guides,
     bool? penMotion,
     List<String>? favoriteBookIds,
@@ -106,6 +108,8 @@ class WritingStyle {
     paperIndex: paperIndex ?? this.paperIndex,
     penIndex: penIndex ?? this.penIndex,
     fontIndex: fontIndex ?? this.fontIndex,
+    useDevelopmentTypeface:
+        useDevelopmentTypeface ?? this.useDevelopmentTypeface,
     guides: guides ?? this.guides,
     penMotion: penMotion ?? this.penMotion,
     favoriteBookIds: favoriteBookIds ?? this.favoriteBookIds,
@@ -114,6 +118,7 @@ class WritingStyle {
     'paperIndex': paperIndex,
     'penIndex': penIndex,
     'fontIndex': fontIndex,
+    'useDevelopmentTypeface': useDevelopmentTypeface,
     'guides': guides,
     'penMotion': penMotion,
     'favoriteBookIds': favoriteBookIds,
@@ -123,6 +128,7 @@ class WritingStyle {
       paperIndex: j['paperIndex'] as int? ?? 0,
       penIndex: j['penIndex'] as int? ?? 0,
       fontIndex: j['fontIndex'] as int? ?? 1,
+      useDevelopmentTypeface: j['useDevelopmentTypeface'] as bool? ?? false,
       guides: j['guides'] as bool? ?? false,
       penMotion: j['penMotion'] as bool? ?? true,
       favoriteBookIds: (j['favoriteBookIds'] as List? ?? []).cast<String>(),

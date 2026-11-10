@@ -50,6 +50,18 @@ void main() {
     await saved();
     final field = find.byKey(const ValueKey('page-text'));
     final text = tester.widget<TextField>(field).controller!;
+    expect(tester.widget<TextField>(field).style!.fontFamily, 'NanumMyeongjo');
+    await tester.tap(find.byTooltip('쓰기 도구'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('쓰는 인간체 · 개발 중'));
+    await saved();
+    await tester.tap(find.byTooltip('닫기'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(field).controller, same(text));
+    expect(
+      tester.widget<TextField>(field).style!.fontFamily,
+      'WritingHumanDevelopment',
+    );
     await tester.tap(field);
     await tester.pump();
     const composing = TextEditingValue(
@@ -94,7 +106,9 @@ void main() {
     expect(restored.controller!.text, body);
     expect(restored.controller!.selection, committed.selection);
     expect(restored.scrollController!.offset, 710);
-    expect(restored.style!.fontFamily, 'NanumMyeongjo');
+    expect(restored.style!.fontFamily, 'WritingHumanDevelopment');
+    expect(restored.style!.fontFamilyFallback, contains('NanumMyeongjo'));
+    expect(controller.library.style.useDevelopmentTypeface, isTrue);
     expect(controller.library.activePageId, pageId);
     expect(controller.library.books.single.title, '실제 파일 검수');
     expect(

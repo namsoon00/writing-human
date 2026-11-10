@@ -9,6 +9,8 @@ const line = Color(0xffe4dacb);
 const paper = Color(0xfff7f2e8);
 const appPaper = Color(0xffeee9e0);
 const serif = 'NanumMyeongjo';
+const developmentSerif = 'WritingHumanDevelopment';
+const developmentFontLabel = '쓰는 인간체 · 개발 중';
 const paperColors = [
   paper,
   Color(0xfff3e7d2),
@@ -19,15 +21,28 @@ const paperNames = ['순면지', '미색지', '회백지', '크림지'];
 const penColors = [ink, brandInk, Color(0xff5b6f8e)];
 const fontNames = ['나눔명조', '나눔명조 Bold', '나눔고딕'];
 
-TextStyle writingTextStyle(int font, {double size = 23, Color color = ink}) =>
-    TextStyle(
-      fontFamily: font == 2 ? 'NanumGothic' : serif,
-      fontWeight: font == 1 ? FontWeight.w700 : FontWeight.w400,
-      fontSize: size,
-      height: 1.8,
-      color: color,
-      letterSpacing: .15,
-    );
+TextStyle writingTextStyle(
+  int font, {
+  double size = 23,
+  Color color = ink,
+  bool useDevelopmentTypeface = false,
+}) => TextStyle(
+  fontFamily: useDevelopmentTypeface
+      ? developmentSerif
+      : font == 2
+      ? 'NanumGothic'
+      : serif,
+  fontFamilyFallback: useDevelopmentTypeface
+      ? const [serif, 'NanumGothic']
+      : null,
+  fontWeight: !useDevelopmentTypeface && font == 1
+      ? FontWeight.w700
+      : FontWeight.w400,
+  fontSize: size,
+  height: 1.8,
+  color: color,
+  letterSpacing: .15,
+);
 
 /// A continuous interior page behind header, editable text and footer.
 /// The material is static and never participates in hit testing or semantics.

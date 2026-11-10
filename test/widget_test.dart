@@ -187,7 +187,7 @@ void main() {
       final controller = tester.widget<TextField>(editor).controller!;
       await tester.tap(find.byTooltip('쓰기 도구'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('쓰는 인간체'), findsOneWidget);
+      expect(find.text('쓰는 인간체 · 개발 중'), findsOneWidget);
       await tester.tap(find.text('나눔고딕'));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('미색지'));

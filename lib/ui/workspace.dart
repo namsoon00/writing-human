@@ -466,6 +466,8 @@ class _WorkspaceState extends State<Workspace> {
                     ),
                   ),
                 WritingHeader(
+                  useDevelopmentTypeface:
+                      c.library.style.useDevelopmentTypeface,
                   compact: compact,
                   bookTitle: book?.title,
                   onCollection: _collection,

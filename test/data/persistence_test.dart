@@ -185,7 +185,9 @@ void main() {
       expect(c.library.activePage!.scroll, 80);
       c.setStyle(c.library.style.copy(paperIndex: 2));
       c.setStyle(c.library.style.copy(penIndex: 1));
-      c.setStyle(c.library.style.copy(fontIndex: 2));
+      c.setStyle(
+        c.library.style.copy(fontIndex: 2, useDevelopmentTypeface: true),
+      );
       c.setStyle(c.library.style.copy(penMotion: false));
       c.setSource('r', '함께 읽을 원문');
       c.toggleFavorite('b');
@@ -201,6 +203,7 @@ void main() {
       expect(data.style.paperIndex, 2);
       expect(data.style.penIndex, 1);
       expect(data.style.fontIndex, 2);
+      expect(data.style.useDevelopmentTypeface, isTrue);
       expect(data.style.penMotion, isFalse);
       expect(data.style.favoriteBookIds, ['b']);
       expect(data.records.single.source, '함께 읽을 원문');
@@ -285,6 +288,7 @@ void main() {
     expect(data.books.single.title, '기존 책');
     expect(data.style.paperIndex, 0);
     expect(data.style.fontIndex, 1);
+    expect(data.style.useDevelopmentTypeface, isFalse);
     expect(data.style.penMotion, isTrue);
   });
 

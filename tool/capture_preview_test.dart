@@ -24,6 +24,12 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetViewInsets);
       await tester.runAsync(() async {
+        await (FontLoader('WritingHumanDevelopment')..addFont(
+              rootBundle.load(
+                'assets/fonts/WritingHumanDevelopment-Regular.ttf',
+              ),
+            ))
+            .load();
         await (FontLoader('NanumMyeongjo')
               ..addFont(
                 rootBundle.load('assets/fonts/NanumMyeongjo-Regular.ttf'),
@@ -78,20 +84,34 @@ void main() {
           final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
           await Directory('artifacts').create(recursive: true);
           await File(
-            'artifacts/paper-v1-$name.png',
+            'artifacts/typeface-live-$name.png',
           ).writeAsBytes(bytes!.buffer.asUint8List());
           image.dispose();
         });
       }
 
       await capture('blank');
+      await tester.tap(find.byTooltip('쓰기 도구'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('쓰는 인간체 · 개발 중'));
+      await tester.pumpAndSettle();
+      await capture('selected');
+      await tester.tap(find.byTooltip('닫기'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('page-text')));
       await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const ValueKey('page-text')),
-        '새는 알에서 나오려고\n투쟁한다. 알은 세계다.\n\n한 문장씩, 나의 속도로.',
+        '천천히 읽고,\n마음에 남은 문장을 씁니다.\n\n오래 곁에 두고 싶은 생각을\n한 줄씩 남깁니다.',
       );
       await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('page-text')))
+            .style!
+            .fontFamily,
+        'WritingHumanDevelopment',
+      );
       await capture('writing');
       final typed = tester.widget<TextField>(
         find.byKey(const ValueKey('page-text')),

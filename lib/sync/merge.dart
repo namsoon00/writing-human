@@ -139,6 +139,14 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
     ...local.style.favoriteBookIds,
     ...remote.style.favoriteBookIds,
   }.toList()..sort();
+  // Font selection is one choice. Keep its legacy fallback index and the
+  // optional development flag together during simultaneous preference edits.
+  final fontStyle =
+      local.style.fontIndex != base.style.fontIndex ||
+          local.style.useDevelopmentTypeface !=
+              base.style.useDevelopmentTypeface
+      ? local.style
+      : remote.style;
   final style = WritingStyle(
     paperIndex: _field(
       base.style.paperIndex,
@@ -150,11 +158,8 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
       local.style.penIndex,
       remote.style.penIndex,
     ),
-    fontIndex: _field(
-      base.style.fontIndex,
-      local.style.fontIndex,
-      remote.style.fontIndex,
-    ),
+    fontIndex: fontStyle.fontIndex,
+    useDevelopmentTypeface: fontStyle.useDevelopmentTypeface,
     guides: _field(base.style.guides, local.style.guides, remote.style.guides),
     penMotion: _field(
       base.style.penMotion,

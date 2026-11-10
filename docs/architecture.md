@@ -20,6 +20,22 @@ collection_sheet.dart는 필요할 때 여는 글/책 보관함이다. tools_scr
 - lib/ui/workspace.dart: 책장, 책 생성, 편집. 본문 controller는 페이지마다 한 번 생성하고 입력 중 되쓰지 않는다. TextEditingValue를 관찰해서 조합 중 텍스트도 보관하되 IME composing 영역은 재실행 시 복원하지 않는다. 선택 영역은 UTF-16 offset이며 복원 시 범위를 제한한다.
 - lib/ui/paper.dart: 공통 종이/잉크 팔레트, 면지 이미지와 얕은 왼쪽 음영, 잉크 표식, 줄 가이드와 보관함의 린넨 표지. 소재는 RepaintBoundary로 편집과 분리하며 포인터·접근성 트리에서 제외한다. 애니메이션은 없다. lib/ui/writing_chrome.dart는 상단/하단의 실제 조작부를 담당한다. 소재 경로와 프롬프트는 docs/visual-assets.md를 따른다.
 
+## 개발 중 서체 연결
+
+WritingHumanDevelopment family를 pubspec.yaml에 등록했다. 본문은 기존
+TextField와 TextEditingController를 유지하고 TextStyle의 family/fallback만
+바꾼다. 개발 TTF의 미지원 글자는 NanumMyeongjo → NanumGothic → 플랫폼
+대체 글꼴로 표시한다. 문자열·선택 영역·composing을 나누거나 다시 설정하지 않는다.
+
+WritingStyle.useDevelopmentTypeface는 기본 false인 optional JSON bool이다.
+기존 fontIndex 0–2와 DB 버전 3을 유지하여 예전 데이터의 선택을 바꾸지 않는다.
+동기화 병합에서는 fontIndex와 개발 서체 여부를 한 선택으로 처리하며 종이·펜과
+독립적으로 합친다. 서버는 optional bool의 타입을 검증한다. 기존 서버도 style의
+추가 필드를 보존하므로 인증이나 요청 구조 변경은 없다.
+
+`?demo=typeface`는 DemoStore에서 개발 서체 선택만 활성화한 합성 예시다.
+실제 기록에 적용하려면 사용자가 쓰기 도구에서 선택한다.
+
 ## 저장과 복원
 
 본문, 선택 영역, 본문의 스크롤 변경마다 저장 요청을 큐에 넣는다. 마지막 열린 페이지와 책장/편집 화면 여부도 저장한다. 스크롤은 초기 레이아웃 후 유효 범위로 복원한다. 마지막 위치는 자동 스크롤이나 포커스로 덮어쓰지 않는다. 페이지에 키보드를 자동 표시하지 않아 복원 직후 글을 읽을 수 있다.

@@ -11,10 +11,11 @@ class WritingHeader extends StatelessWidget {
     required this.onNewSheet,
     this.bookTitle,
     this.compact = false,
+    this.useDevelopmentTypeface = false,
   });
   final VoidCallback onCollection, onNewSheet;
   final String? bookTitle;
-  final bool compact;
+  final bool compact, useDevelopmentTypeface;
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -31,12 +32,15 @@ class WritingHeader extends StatelessWidget {
             children: [
               const InkMark(size: 22),
               const SizedBox(height: 3),
-              const Text(
+              Text(
                 '쓰는 인간',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontFamily: serif,
+                  fontFamily: useDevelopmentTypeface ? developmentSerif : serif,
+                  fontFamilyFallback: useDevelopmentTypeface
+                      ? const [serif]
+                      : null,
                   fontSize: 20,
                   color: brandInk,
                   height: 1.3,

@@ -26,6 +26,7 @@ export function validLibrary(l) {
   if ((l.activePageId !== null && !pages.has(l.activePageId)) || (l.writing && l.activePageId === null)) return false;
   const s = l.style;
   if (!object(s) || !integer(s.paperIndex) || s.paperIndex < 0 || s.paperIndex > 3 || !integer(s.penIndex) || s.penIndex < 0 || s.penIndex > 2 || !integer(s.fontIndex) || s.fontIndex < 0 || s.fontIndex > 2 || typeof s.guides !== 'boolean' || !Array.isArray(s.favoriteBookIds) || s.favoriteBookIds.some(v => !id(v))) return false;
+  if ('useDevelopmentTypeface' in s && typeof s.useDevelopmentTypeface !== 'boolean') return false;
   // Do not let clients smuggle extra secrets or alternate identities into storage.
   const keys = ['version', 'books', 'records', 'pages', 'activePageId', 'writing', 'style'];
   return Object.keys(l).every(k => keys.includes(k));

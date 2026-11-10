@@ -1,5 +1,59 @@
 # 검증 기록
 
+## 2026-11-10 · 실제 앱에 쓰는 인간체 개발판 연결
+
+사용자가 실제 적용을 요청해 한글 111자 개발 TTF를 앱에 연결했다. 완성 서체로
+표시하지 않으며 `쓰는 인간체 · 개발 중` 선택지와 대체 표시 범위를 명시했다.
+
+변경 파일:
+
+- `assets/fonts/WritingHumanDevelopment-Regular.ttf`, `-info.json`, `-README.md`,
+  `pubspec.yaml`: 원래 제작한 0.005 TTF를 실제 앱 family로 등록했다.
+  SHA-256은 `eda1b102b1d09cf322fa625bc25f1826333486142b6098570188690a99d83a2e`다.
+  문자 114개 중 완성형 한글은 111개다. 편집 원본과 재생성기는 `design/typeface/`다.
+- `lib/ui/paper.dart`, `editor.dart`, `tools_screen.dart`, `writing_chrome.dart`,
+  `workspace.dart`: 선택 시 본문·브랜드 제목에 실제 서체를 사용하며 미지원
+  글자는 NanumMyeongjo → NanumGothic → 플랫폼 글꼴로 보완한다.
+  본문은 실제 TextField이며 문자열·selection·composing을 나눠 다시 쓰지 않는다.
+- `lib/data/model.dart`, `demo_store.dart`, `lib/main.dart`, `lib/sync/merge.dart`:
+  optional bool `useDevelopmentTypeface`를 저장하고 `?demo=typeface` 합성 예시를
+  추가했다. 기존 fontIndex 0–2와 DB 버전 3을 유지하며 기존 선택은 자동 변경하지 않는다.
+  병합 시 fontIndex와 개발 서체 선택 여부를 한 선택으로 처리한다.
+- `server/index.mjs`, `server/sync.test.mjs`, 앱/폰트/영구 저장 검사와 문서.
+
+실행 방법: 일반 주소에서 Aa → 글꼴 → 쓰는 인간체 · 개발 중을 선택한다.
+별도의 `?demo=typeface`는 사용자 기록에 쓰지 않는 즉시 확인용 합성 예시다.
+`flutter test tool/capture_preview_test.dart --no-pub`로 화면을 다시 렌더한다.
+
+이번 변경 후 검사:
+
+- `dart format --output=none --set-exit-if-changed lib test tool`: 34개 파일,
+  변경 없음. `flutter analyze --no-pub`: 문제 없음.
+- `flutter test --no-pub`: 33개 통과. 실제 앱 TTF 해시/로드, 지원 글자의 실제
+  윤곽 차이, 미지원 `똠뷁힣ABC2026`의 나눔명조와 동일한 픽셀 렌더를 확인했다.
+  이는 전체 자형의 미적 완성도를 보증하는 검사는 아니다.
+- 실제 SQLite UI 검사는 도구에서 새 서체 선택 → 한글 composing 입력 →
+  본문·선택 영역·스크롤 저장 → DB 종료/재열기 후 같은 본문과 새 서체 선택의
+  복원을 확인했다. 호스트 SQLite이며 모바일 실제 키보드 테스트는 아니다.
+- 한글 조합 중 서체를 바꿔도 같은 TextEditingController와 composing 값이
+  유지됐다. 기존 펜 추적·저장 실패·계정 보호 검사도 통과했다.
+- 두 SQLite 파일의 동기화 시뮬레이션에서 새 옵션의 수신·영구 저장, 병합 시
+  글꼴 선택과 종이 선택의 독립성을 확인했다. 실제 PC/모바일 서비스 검증과 구분한다.
+- `npm run test:server`: 3개 통과. optional bool의 구버전 호환·타입 검사 포함.
+- 별도 화면 렌더 1개 통과. `artifacts/typeface-live-{blank,selected,writing,
+  pen-stroke,keyboard,resting,tools,collection,desktop}.png`를 새 코드로 만들었다.
+  실제 번들 TTF를 FontLoader로 읽은 Flutter 테스트 렌더이며 합성 데이터다.
+  폰트를 이미지 생성기로 그린 결과나 실기기 캡처로 보고하지 않는다.
+- 동일한 `/writing-human/` base href의 웹 release 빌드와 iOS 시뮬레이터 빌드
+  성공. release FontManifest의 family 등록과 TTF 바이트가 원본과 일치함을 확인했다.
+
+초기 메타데이터 생성에서 일반 Python 환경에 fontTools가 없어 중단됐으며,
+서체용 venv에서 생성한 후 포맷·분석·전체 검사를 다시 실행한 통과 결과만 기록했다.
+
+미검증: 실제 브라우저·iOS/Android IME, 실제 모바일 폰트 판독성, 전체 한글·
+자모 조판·숫자·라틴 자형·힌팅·최종 광학 간격. 미지원 글자의 나눔명조 대체를
+쓰는 인간체 자체 지원으로 계산하지 않는다. 웹 배포 결과는 후속 배포 항목을 따른다.
+
 ## 2026-11-10 · 종이 작성 화면 GitHub Pages 배포 확인
 
 [GitHub Actions 42793174412](https://github.com/namsoon00/writing-human/actions/runs/42793174412)에서

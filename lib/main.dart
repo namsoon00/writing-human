@@ -13,8 +13,16 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   // Make the web app usable by assistive technology without a hidden opt-in.
   SemanticsBinding.instance.ensureSemantics();
-  final demo = Uri.base.queryParameters['demo'] == 'reference';
-  runApp(WritingHumanApp(store: demo ? DemoStore() : null, demo: demo));
+  final demoKind = Uri.base.queryParameters['demo'];
+  final demo = demoKind == 'reference' || demoKind == 'typeface';
+  runApp(
+    WritingHumanApp(
+      store: demo
+          ? DemoStore(useDevelopmentTypeface: demoKind == 'typeface')
+          : null,
+      demo: demo,
+    ),
+  );
 }
 
 class WritingHumanApp extends StatelessWidget {

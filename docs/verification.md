@@ -1,5 +1,27 @@
 # 검증 기록
 
+## 2026-11-10 · 크고 선명한 글씨 웹 게시 완료
+
+[Actions 42827190338](https://github.com/namsoon00/writing-human/actions/runs/42827190338)의
+소스 `750e9081310e9999b4e6d315bcedf48dfa7de551`에서 포맷·분석·테스트·빌드·게시가 성공했다.
+[일반 웹](https://namsoon00.github.io/writing-human/)에 전체 표시 크기 20% 확대,
+일반 안내/조작 문구 최소 14px, 본문 약 27.6px와 실제 획을 두껍게 한 0.007을 반영했다.
+최신 일반 진입·커서 표시 정책을 유지했고 종이·펜·글꼴 설정과 본문/선택/composing을
+다시 설정하지 않았다. 배포 대상 코드의 테스트 67개가 통과했다.
+
+일반 HTML·main JS·FontManifest·실제 TTF·메타데이터의 HTTP 200을 확인했다.
+실제 main JS SHA-256은
+`6178eb5d727dae603e05cdf835e7d32d49bda9b2ba76ff933975b670b9289e02`,
+TTF는 778,776바이트, SHA-256
+`927e67acd9d116c3ca4a4fec66a0327ed6f0ca3a18fb1c4eb5c89a5f21cb398b`로
+검사한 로컬 release와 일치했다. 메타데이터 revision=0.007·hangul_syllables=11172도 확인했다.
+결과는 `artifacts/typeface/v007/web-deployment.json`, 기준 빌드는 `web-build.json`에 있다.
+
+작은 화면/키보드/큰 시스템 글씨와 실제 번들 TTF의 Flutter 렌더를 검사했다.
+실제 브라우저 타이핑·iPhone/Android의 새 서체 가독성·최종 광학 승인은 미검증이다.
+이 결과를 실기기 화면·실서버 기록 저장 검증으로 보고하지 않는다. 기존 비공개 Sites의
+project_id·접근 권한과 사용자 기록은 변경하지 않았다.
+
 ## 2026-11-10 · 본문 커서 숨김 웹 배포 완료
 
 [Actions 42826786100](https://github.com/namsoon00/writing-human/actions/runs/42826786100)의

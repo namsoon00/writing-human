@@ -123,3 +123,11 @@ HTTP 200을 확인했다. 검증 범위와 한계는 docs/verification.md를 따
 [합성 예시](https://namsoon00.github.io/writing-human/?demo=reference)는 사용자 기록과 분리된다.
 실제 main JS와 서체·면지 파일이 검증한 release와 일치했다. bootstrap 생성 버전 값의 차이와
 실제 브라우저/실기기 미검증 범위는 docs/verification.md를 따른다.
+
+## 2026-11-10 · 글씨 크기·획 굵기 보강 게시
+
+[Actions 42827190338](https://github.com/namsoon00/writing-human/actions/runs/42827190338),
+소스 `750e9081310e9999b4e6d315bcedf48dfa7de551`에서 검사·빌드·게시가 성공했다.
+일반 웹에 20% 큰 글씨, 일반 문구 최소 14px, 본문 약 27.6px와 획을 두껍게 한
+쓰는 인간체 0.007이 반영됐다. 실제 JS·TTF·메타데이터가 로컬 검증 파일과 일치했다.
+시스템 글씨 확대와 기록·입력 보존을 유지한다. 검증 범위는 docs/verification.md를 따른다.

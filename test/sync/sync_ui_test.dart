@@ -124,7 +124,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('기기 동기화'));
+      await tester.tap(find.byTooltip('더 보기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('기기 동기화'));
       await tester.pumpAndSettle();
       expect(find.text('기기 간 동기화 완료'), findsOneWidget);
       await tester.runAsync(() async {

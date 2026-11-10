@@ -1,22 +1,22 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
-const ink = Color(0xff4a3528);
-const muted = Color(0xff826b58);
-const green = Color(0xff4e5a42);
-const burgundy = Color(0xff7a4a4a);
-const line = Color(0xffdfcdbb);
-const paper = Color(0xfff7f2e8);
-const appPaper = Color(0xfff5e7d8);
+const ink = Color(0xff2d332e);
+const muted = Color(0xff7b817a);
+const green = Color(0xff526759);
+const burgundy = green;
+const line = Color(0xffe6e8e1);
+const paper = Color(0xfffbfaf6);
+const appPaper = Color(0xfff2f3ef);
 const serif = 'NanumMyeongjo';
 const paperColors = [
-  Color(0xfffaf3e7),
-  Color(0xfff3e5d0),
-  Color(0xffe8e5df),
-  Color(0xfff2dbb9),
+  Color(0xfffbfaf6),
+  Color(0xfff6f0e4),
+  Color(0xffedeeea),
+  Color(0xfff5ecd9),
 ];
 const paperNames = ['순면지', '미색지', '회백지', '크림지'];
-const penColors = [Color(0xff483426), Color(0xff79503c), Color(0xff536783)];
+const penColors = [Color(0xff30372f), Color(0xff795c49), Color(0xff50647a)];
 const fontNames = ['나눔명조', '나눔명조 Bold', '나눔고딕'];
 
 TextStyle writingTextStyle(int font, {double size = 23, Color color = ink}) =>
@@ -44,15 +44,15 @@ class PaperSurface extends StatelessWidget {
   Widget build(BuildContext context) => PhysicalShape(
     clipper: _PaperEdge(torn),
     color: color,
-    elevation: 5,
-    shadowColor: const Color(0x655b4636),
+    elevation: 1,
+    shadowColor: const Color(0x18545b4d),
     clipBehavior: Clip.antiAlias,
     child: Stack(
       fit: StackFit.passthrough,
       children: [
-        Positioned.fill(child: _PaperMaterial(color: color, strength: .8)),
+        Positioned.fill(child: _PaperMaterial(color: color, strength: .16)),
         CustomPaint(
-          painter: PaperGrain(guides: guides, opacity: .4),
+          painter: PaperGrain(guides: guides, opacity: .1),
           child: child,
         ),
       ],

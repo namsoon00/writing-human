@@ -118,6 +118,38 @@ class LibraryController extends ChangeNotifier {
   }
 
   void retrySave() => _publish(library);
+
+  /// Commit an already-mounted blank sheet on its first real input, retaining
+  /// its IDs so the editor and an in-flight IME composition stay mounted.
+  void saveDraft(WritingPage page, {String source = '', String? bookId}) {
+    if (library.pages.any((p) => p.id == page.id)) {
+      editPage(page.id, page.text, page.base, page.extent, page.scroll);
+      return;
+    }
+    if (page.text.isEmpty && source.isEmpty) return;
+    final record = WritingRecord(
+      id: page.recordId,
+      title: '필사 ${library.records.length + 1}',
+      source: source,
+      bookId: bookId,
+    );
+    _publish(
+      library.copy(
+        records: [...library.records, record],
+        pages: [...library.pages, page],
+        activePageId: page.id,
+        writing: true,
+      ),
+      positionChanged: true,
+    );
+  }
+
+  Book addBook(String title, String author) {
+    final book = Book(id: _id(), title: title.trim(), author: author.trim());
+    _publish(library.copy(books: [...library.books, book]));
+    return book;
+  }
+
   void createBook(String title, String author) {
     final book = Book(id: _id(), title: title.trim(), author: author.trim());
     _createRecord(book.id, library.copy(books: [...library.books, book]));

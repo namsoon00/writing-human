@@ -106,7 +106,7 @@ class _PageEditorState extends State<PageEditor> {
     final style = widget.style;
     return PaperSurface(
       color: paperColors[style.paperIndex],
-      torn: true,
+      torn: false,
       guides: style.guides,
       child: Stack(
         children: [
@@ -133,15 +133,13 @@ class _PageEditorState extends State<PageEditor> {
               cursorColor: burgundy,
               cursorWidth: 1.2,
               decoration: InputDecoration(
-                labelText: '필사 본문',
-                floatingLabelBehavior: FloatingLabelBehavior.never,
-                hintText: '마음에 머문 문장을\n천천히 옮겨 보세요.',
+                hintText: '여기를 눌러 써보세요.',
                 hintStyle: writingTextStyle(
                   style.fontIndex,
                   size: 23,
-                  color: const Color(0xffb8a58d),
+                  color: const Color(0xffa7ada3),
                 ),
-                contentPadding: const EdgeInsets.fromLTRB(26, 27, 25, 42),
+                contentPadding: const EdgeInsets.fromLTRB(26, 38, 25, 42),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
@@ -157,21 +155,6 @@ class _PageEditorState extends State<PageEditor> {
               enabled: style.penMotion,
             ),
           ),
-          if (!focus.hasFocus && text.text.length < 250)
-            Positioned(
-              right: -85,
-              bottom: 70,
-              width: 240,
-              height: 185,
-              child: ExcludeSemantics(
-                child: IgnorePointer(
-                  child: Image.asset(
-                    'assets/images/fountain-pen.png',
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );

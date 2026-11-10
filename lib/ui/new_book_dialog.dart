@@ -25,10 +25,10 @@ class NewBookDialogState extends State<NewBookDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    scrollable: true,
     title: const Text(
-      '새 책의 이름을 지어 주세요',
-      style: TextStyle(fontFamily: serif, fontSize: 21),
+      '새 책 만들기',
+      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
     ),
     content: SizedBox(
       width: 360,
@@ -100,10 +100,12 @@ class _SourceDialogState extends State<SourceDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
+    scrollable: true,
     title: const Text('원문 메모', style: TextStyle(fontSize: 20)),
     content: SizedBox(
       width: 320,
       child: TextField(
+        key: const ValueKey('source-text'),
         controller: text,
         minLines: 3,
         maxLines: 8,

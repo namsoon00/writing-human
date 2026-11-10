@@ -1,5 +1,17 @@
 # 검증 기록
 
+## 2026-11-10 · 바로 쓰는 종이 UX
+
+- dart format lib test tool/capture_preview_test.dart 및 flutter analyze --no-pub 통과. flutter test --no-pub: 이번 개편 후 30개 통과.
+- node tool/build_github_pages.mjs /writing-human/: 새 정적 release 웹 빌드 성공. 실제 공개 URL 배포와 파일 일치는 게시 후 따로 확인한다.
+- 첫 진입에서 바로 입력창이 보이고, 열기/포커스만으로는 저장·빈 기록 생성이 발생하지 않는 것을 확인했다. 첫 한글 composing 입력으로 기록을 만들 때 TextEditingController와 TextEditingValue가 그대로인 것을 검사했다. 실제 입력 후에는 자동 저장·다시 열기·마지막 페이지/선택 영역 복원을 확인했다. 위젯의 저장소는 메모리이며 아래 실제 파일 검사와 구분한다.
+- 실제 임시 SQLite 파일에서 빈 초안 무생성 → 첫 한글/emoji 기록 저장 → 같은 기록을 새 책에 묶기 → 닫고 새 연결로 재열기 후 ID·본문·선택 영역 보존을 추가 확인했다.
+- UI 검사에는 쓰고 나서 새 책으로 묶을 때 빈 기록이 추가되지 않음, 새 종이를 여러 번 열어도 빈 기록이 늘지 않음, 원문을 먼저 저장한 빈 본문 복원, 첫 저장 실패 시에도 같은 편집기와 조합 범위 유지, 한 시트의 독립 도구 설정, 계정 변경/로그인 만료 보호를 포함했다. 실제 PC·모바일 로그인 동기화 검증과 구분한다.
+- flutter test tool/capture_preview_test.dart --no-pub: 별도 렌더 확인 1개 통과. 실제 번들 글꼴/소재로 390×844의 빈 종이·작성·펜 반응·가상 키보드 inset·도구 시트·보관함과 1440×1000 작성면을 확인했다. artifacts/calm-*.png는 Flutter 테스트 런타임/메모리 예시 데이터이며, 실제 브라우저나 실제 키보드 캡처가 아니다.
+- 컴퓨터가 잠겨 있고 Work의 로컬 브라우저 제어가 비활성화되어 실제 브라우저/실기기 조작과 화면 캡처는 진행하지 못했다. 다른 제어 수단으로 우회하지 않았다. 실제 기기의 키보드·글자 크기·빠른 입력 성능과 사용성 관찰은 미검증이다.
+
+기존 JSON/SQLite 구조와 저장 기록을 보존한다. 새 사용자의 본문은 Regular로 시작하지만, 기존 저장된 글꼴과 이전 JSON의 기본값은 유지한다. 웹 빌드/배포 결과는 아래 후속 기록 및 이번 최종 보고를 따른다.
+
 ## 2026-11-10 · 커서를 따라 쓰는 펜
 
 - [GitHub Actions 42729878343](https://github.com/namsoon00/writing-human/actions/runs/42729878343)에서 소스 0ad93baf6e87833bb5893c364499fa79e8a72524의 분석·테스트 25개·웹 빌드·게시가 모두 성공했다. 공개 주소 https://namsoon00.github.io/writing-human/ 의 새 main.dart.js는 로컬 검증 빌드와 SHA-256이 fe9da4ec2b9405f956710505b7731206b00c44128fed9bbcb53cf34680c44cf6으로 일치했다. penMotion·writing-pen 표식, 정적 호스팅의 계정 API 미포함, 기본/예시 HTML 및 만년필 자산 HTTP 200을 확인했다. artifacts/pen-deployment-check.json에 기록했다. HTTP 확인을 실제 브라우저 타이핑 검사라고 보고하지 않는다.

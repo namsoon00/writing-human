@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/data/demo_store.dart';
+import 'package:writing_human/data/model.dart';
 import 'package:writing_human/main.dart';
 
 void main() {
@@ -21,6 +22,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
     await tester.runAsync(() async {
       await (FontLoader('NanumMyeongjo')
             ..addFont(rootBundle.load('assets/fonts/NanumMyeongjo-Regular.ttf'))
@@ -37,10 +39,12 @@ void main() {
           .load();
     });
     final boundary = GlobalKey();
+    final preview = DemoStore();
+    await preview.save(const Library());
     await tester.pumpWidget(
       RepaintBoundary(
         key: boundary,
-        child: WritingHumanApp(store: DemoStore(), demo: true),
+        child: WritingHumanApp(store: preview, demo: true),
       ),
     );
     await tester.pumpAndSettle();
@@ -71,19 +75,13 @@ void main() {
         final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
         await Directory('artifacts').create(recursive: true);
         await File(
-          'artifacts/material-$name.png',
+          'artifacts/calm-$name.png',
         ).writeAsBytes(bytes!.buffer.asUint8List());
         image.dispose();
       });
     }
 
-    await capture('shelf');
-    await tester.tap(find.text('데미안').last);
-    await tester.pumpAndSettle();
-    await capture('book');
-    await tester.tap(find.text('이어서 쓰기'));
-    await tester.pumpAndSettle();
-    await capture('writing');
+    await capture('blank');
     await tester.tap(find.byKey(const ValueKey('page-text')));
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -91,7 +89,7 @@ void main() {
       '새는 알에서 나오려고\n투쟁한다. 알은 세계다.\n\n한 문장씩, 나의 속도로.',
     );
     await tester.pumpAndSettle();
-    await capture('pen-follow');
+    await capture('writing');
     final typed = tester.widget<TextField>(
       find.byKey(const ValueKey('page-text')),
     );
@@ -105,20 +103,23 @@ void main() {
     await tester.pump(const Duration(milliseconds: 40));
     await capture('pen-stroke');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Aa'));
+    tester.view.viewInsets = const FakeViewPadding(bottom: 320);
     await tester.pumpAndSettle();
-    await capture('fonts');
-    await tester.tap(find.text('종이'));
+    await capture('keyboard');
+    tester.view.viewInsets = const FakeViewPadding();
     await tester.pumpAndSettle();
-    await capture('paper');
-    await tester.tap(find.text('펜'));
+    await tester.tap(find.text('완료'));
     await tester.pumpAndSettle();
-    await capture('pen');
-    await tester.tap(find.byTooltip('돌아가기'));
+    await capture('resting');
+    await tester.tap(find.text('쓰기 도구'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('나의 책장'));
+    await capture('tools');
+    await tester.tap(find.byTooltip('닫기'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('나의 책장'));
+    await tester.tap(find.text('보관함'));
+    await tester.pumpAndSettle();
+    await capture('collection');
+    await tester.tap(find.byTooltip('닫기'));
     await tester.pumpAndSettle();
     tester.view.physicalSize = const Size(1440, 1000);
     await tester.pumpAndSettle();

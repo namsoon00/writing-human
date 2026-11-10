@@ -7,6 +7,7 @@ import 'sync/context.dart';
 import 'sync/context_factory.dart';
 import 'sync/coordinator.dart';
 import 'ui/workspace.dart';
+import 'ui/paper.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,22 +26,41 @@ class WritingHumanApp extends StatelessWidget {
     title: '쓰는 인간',
     debugShowCheckedModeBanner: false,
     theme: ThemeData(
-      fontFamily: 'NanumMyeongjo',
+      fontFamily: 'NanumGothic',
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xff4e5a42),
-        surface: const Color(0xfff8ecdf),
+        seedColor: green,
+        surface: paper,
+        primary: green,
+        onSurface: ink,
       ),
-      scaffoldBackgroundColor: const Color(0xfff8ecdf),
+      scaffoldBackgroundColor: appPaper,
       textTheme: ThemeData.light().textTheme.apply(
-        fontFamily: 'NanumMyeongjo',
-        bodyColor: const Color(0xff4a3528),
-        displayColor: const Color(0xff4a3528),
+        fontFamily: 'NanumGothic',
+        bodyColor: ink,
+        displayColor: ink,
       ),
       inputDecorationTheme: const InputDecorationTheme(
-        border: OutlineInputBorder(),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Color(0xff4e5a42)),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+          borderSide: BorderSide(color: green),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: paper,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: paper,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(22)),
         ),
       ),
     ),

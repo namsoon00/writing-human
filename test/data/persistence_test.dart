@@ -86,6 +86,47 @@ void main() {
   });
 
   test(
+    'An untouched sheet stores no record; first draft survives disk reopen and later book binding',
+    () async {
+      final path = '${dir.path}/first-sheet.db';
+      final store = await SqliteLibraryStore.open(
+        path,
+        factory: databaseFactoryFfi,
+      );
+      final c = LibraryController(store, await store.load());
+      const draft = WritingPage(
+        id: 'first-page',
+        recordId: 'first-record',
+        number: 1,
+      );
+      c.saveDraft(draft);
+      await c.settled;
+      expect((await store.load()).records, isEmpty);
+      c.saveDraft(
+        draft.edited(text: '바로 쓴 한글 🌿', base: 2, extent: 4, scroll: 0),
+      );
+      await c.settled;
+      final book = c.addBook('나중에 묶은 문장', '');
+      c.bindRecord(draft.recordId, book.id);
+      await c.settled;
+      await store.close();
+      c.dispose();
+      final reopened = await SqliteLibraryStore.open(
+        path,
+        factory: databaseFactoryFfi,
+      );
+      final data = await reopened.load();
+      expect(data.records.single.id, draft.recordId);
+      expect(data.records.single.bookId, book.id);
+      expect(data.activePage!.id, draft.id);
+      expect(data.activePage!.text, '바로 쓴 한글 🌿');
+      expect(data.activePage!.base, 2);
+      expect(data.activePage!.extent, 4);
+      await reopened.close();
+    },
+  );
+
+  test(
     'Version 1 SQLite migrates without losing text or last position; independent tools persist',
     () async {
       final file = '${dir.path}/legacy.db';

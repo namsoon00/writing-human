@@ -87,7 +87,7 @@ class WritingStyle {
   const WritingStyle({
     this.paperIndex = 0,
     this.penIndex = 0,
-    this.fontIndex = 1,
+    this.fontIndex = 0,
     this.guides = false,
     this.penMotion = true,
     this.favoriteBookIds = const [],

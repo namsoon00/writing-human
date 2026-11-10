@@ -2,6 +2,14 @@
 
 Flutter 3.41.2 / Dart 3.11.0. iOS·Android는 sqflite, 웹 미리보기는 package:web의 localStorage. 하나의 Flutter 화면을 반응형으로 배치한다. 웹용 별도 HTML 모조 앱은 없다.
 
+## 현재 작성 흐름
+
+Workspace는 마지막 활성 페이지를 즉시 보여 주며, 기록이 없으면 저장하지 않은 WritingPage 초안을 표시한다. 탭/포커스/스크롤만으로는 저장하지 않는다. LibraryController.saveDraft가 첫 실제 입력 또는 원문 메모를 기존 초안과 같은 page/record ID로 저장한다. PageEditor의 키와 TextEditingController를 유지해 첫 한글 조합도 다시 설정하지 않는다. 오류 안내·원문 표시가 생겨도 writing-surface 키를 가진 Expanded를 유지한다.
+
+새 종이는 첫 입력까지 메모리 초안이다. 앱을 닫으면 쓰지 않은 초안만 사라지고 마지막 저장 글은 유지한다. 기존 글을 이후 새 책으로 묶을 때는 addBook + bindRecord로 같은 기록을 묶으며 빈 기록을 추가 생성하지 않는다. 데이터 형식과 DB 스키마는 바꾸지 않았다.
+
+collection_sheet.dart는 필요할 때 여는 글/책 보관함이다. tools_screen.dart는 종이·잉크·글꼴과 펜/줄 가이드를 한 시트에서 독립 선택한다. 원문·페이지·동기화도 보조 시트이며 기존 계정 보호·저장 실패/재시도·기존 기기 기록 가져오기를 유지한다. 작성 화면은 폭 760 이하의 한 면으로 적응하고, 마케팅 배경과 휴대폰 프레임은 사용하지 않는다. 아래 첨부 이미지 개편 기록은 이전 UI 구조다.
+
 - lib/data/model.dart: Book, WritingRecord(bookId nullable), WritingPage(recordId, number, text, selection, scroll), Library(activePageId, writing). 버전 1 JSON 및 참조 구조 검증.
 - lib/data/library_controller.dart: 사용자 동작, 변경 스냅샷의 순차 저장, 저장 상태와 재시도. 저장 순서가 역전되지 않도록 Future 체인을 사용한다.
 - lib/data/sqlite_store.dart: 네 개의 관계형 테이블, 외래 키, 현재 버전 3. 이전 버전 1·2의 파일을 자동 이전한다. 부모를 REPLACE로 삭제하지 않고 갱신한다. 각 스냅샷은 트랜잭션으로 저장한다.

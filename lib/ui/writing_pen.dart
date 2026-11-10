@@ -27,7 +27,7 @@ class _WritingPenState extends State<WritingPen>
     with SingleTickerProviderStateMixin {
   // The nib tip in the bundled, transparent 768:512 image.
   static const nib = FractionalOffset(.185, .95);
-  static const penSize = Size(150, 100);
+  static const penSize = Size(120, 80);
   late final motion = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 130),

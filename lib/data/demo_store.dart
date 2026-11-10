@@ -19,7 +19,7 @@ Library referenceLibrary() {
   const quote = '새는 알에서 나오려고\n투쟁한다.\n알은 세계다.';
   const titles = ['데미안', '나의 문장집', '좋은 것들의 힘'];
   const authors = ['헤르만 헤세', '나의 생각과 문장들', '앨리스 먼로'];
-  const counts = [128, 36, 24];
+  const counts = [1, 1, 1];
   final books = <Book>[], records = <WritingRecord>[], pages = <WritingPage>[];
   for (var i = 0; i < titles.length; i++) {
     final id = 'demo-book-$i', r = 'demo-record-$i';
@@ -38,7 +38,7 @@ Library referenceLibrary() {
           id: '$r-page-$n',
           recordId: r,
           number: n,
-          text: i == 0 && (n.isEven || n == 128) ? quote : '',
+          text: i == 0 ? quote : '오래 곁에 두고 싶은 문장을 남깁니다.',
         ),
       );
     }
@@ -47,7 +47,7 @@ Library referenceLibrary() {
     books: books,
     records: records,
     pages: pages,
-    activePageId: 'demo-record-0-page-128',
-    style: const WritingStyle(fontIndex: 1),
+    activePageId: 'demo-record-0-page-1',
+    style: const WritingStyle(fontIndex: 0),
   );
 }

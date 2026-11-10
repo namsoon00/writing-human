@@ -40,7 +40,7 @@ Future<Uint8List> pixels(String family, String text) async {
 
 void main() {
   testWidgets(
-    'Real bundled glyphs differ and unsupported text uses Nanum fallback',
+    'Full Hangul asset shapes NFC and NFD and preserves Nanum fallback',
     (tester) async {
       await tester.runAsync(() async {
         final bytes = await rootBundle.load(
@@ -53,7 +53,12 @@ void main() {
                   ),
                 )
                 as Map<String, dynamic>;
-        expect(info['status'], 'development-partial-font');
+        expect(info['status'], 'development-full-coverage');
+        expect(info['hangul_syllables'], 11172);
+        final covered = (info['characters'] as String).runes.toSet();
+        for (var rune = 0xAC00; rune <= 0xD7A3; rune++) {
+          expect(covered, contains(rune));
+        }
         expect(
           sha256
               .convert(
@@ -75,16 +80,32 @@ void main() {
               rootBundle.load('assets/fonts/NanumMyeongjo-Regular.ttf'),
             ))
             .load();
-        // All these characters are deliberately absent from the 111-glyph proof.
-        const unsupported = '똠뷁힣ABC2026';
+        // Present in Nanum, outside this font's declared coverage.
+        const unsupported = '©™←';
+        expect(unsupported.runes.any(covered.contains), isFalse);
         expect(
           await pixels(developmentSerif, unsupported),
           orderedEquals(await pixels(serif, unsupported)),
         );
-        // Detect an accidental alias to Nanum or a missing custom asset load.
+        // Detect fallback replacing newly supported syllables, Latin or digits.
+        for (final text in ['쓰는인간', '똠뷁힣', 'ABCxyz', '2026', 'ㄳㅞ']) {
+          expect(
+            await pixels(developmentSerif, text),
+            isNot(orderedEquals(await pixels(serif, text))),
+            reason: text,
+          );
+        }
+        const composed = '꽃값힣';
+        final decomposed = String.fromCharCodes([
+          for (final rune in composed.runes) ...[
+            0x1100 + (rune - 0xAC00) ~/ 588,
+            0x1161 + (rune - 0xAC00) % 588 ~/ 28,
+            if ((rune - 0xAC00) % 28 != 0) 0x11A7 + (rune - 0xAC00) % 28,
+          ],
+        ]);
         expect(
-          await pixels(developmentSerif, '쓰는인간'),
-          isNot(orderedEquals(await pixels(serif, '쓰는인간'))),
+          await pixels(developmentSerif, decomposed),
+          orderedEquals(await pixels(developmentSerif, composed)),
         );
       });
     },

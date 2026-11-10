@@ -22,7 +22,7 @@ collection_sheet.dart는 필요할 때 여는 글/책 보관함이다. tools_scr
 
 ## 개발 중 서체 연결
 
-WritingHumanDevelopment family를 pubspec.yaml에 등록했다. 본문은 기존
+WritingHumanDevelopment family를 pubspec.yaml에 등록했다. 0.006은 현대 한글 11,172자·자모·ASCII·문장부호를 담은 실제 TTF이며 반복 자모를 TrueType composite으로 공유한다. OpenType ccmp는 현대 초성+중성 및 받침을 완성형과 같은 윤곽으로 조합한다. 본문은 기존
 TextField와 TextEditingController를 유지하고 TextStyle의 family/fallback만
 바꾼다. 개발 TTF의 미지원 글자는 NanumMyeongjo → NanumGothic → 플랫폼
 대체 글꼴로 표시한다. 문자열·선택 영역·composing을 나누거나 다시 설정하지 않는다.

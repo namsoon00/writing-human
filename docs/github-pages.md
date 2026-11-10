@@ -28,7 +28,7 @@
 개발 서체 적용 버전은 `?demo=typeface`로 즉시 확인할 수 있는 합성 예시를
 제공한다. 실제 기록에서는 Aa → 글꼴 → 쓰는 인간체 · 개발 중을 선택한다.
 기존 선택은 자동 변경하지 않으며 개발 서체의 미지원 글자는 나눔명조로 보완한다.
-이는 전체 한글을 지원하는 완성 서체가 아닌 111자 개발판이다.
+현재 0.006은 현대 한글 11,172자·자모·영문·숫자를 지원하는 개발판이다. 최종 광학·실기기 검수 전에는 완성 서체로 표시하지 않는다.
 
 - [GitHub Pages 정적 호스팅과 사용 조건](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages)
 - [GitHub Pages 사용자 지정 워크플로](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)

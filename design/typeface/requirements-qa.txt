@@ -1,0 +1,3 @@
+-r requirements-vector.txt
+uharfbuzz==0.51.7
+pillow==11.3.0

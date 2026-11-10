@@ -149,7 +149,7 @@ class ToolsScreen extends StatelessWidget {
                 ),
               const SizedBox(height: 6),
               const Text(
-                '쓰는 인간체는 한글 111자의 개발판입니다.\n지원하지 않는 글자는 나눔명조로 표시합니다.',
+                '현대 한글 11,172자·자모·영문·숫자를 지원하는 개발판입니다.\n지원 범위 밖의 문자는 나눔명조 등으로 표시합니다.',
                 style: TextStyle(color: muted, fontSize: 11, height: 1.7),
               ),
             ],

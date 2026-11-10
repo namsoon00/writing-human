@@ -1,5 +1,21 @@
 # 검증 기록
 
+## 2026-11-10 · 전체 한글 서체 웹 반영 준비
+
+기존 GitHub Pages의 main을 별도 체크아웃으로 열고 서체 관련 변경만 적용했다.
+현대 한글 11,172자·자모·영문·숫자를 지원하는 0.006 TTF를 기존 Flutter family에
+연결하며 기본/기존 글꼴 선택과 사용자 기록을 유지한다. 실제 적용은 Aa → 글꼴 →
+쓰는 인간체 · 개발 중, 즉시 확인용 합성 예시는 `?demo=typeface`다.
+
+앱 번들 TTF SHA-256: `1b7c824ece6e653e9e2d72751346b1b703fd3a6e695171a9a62f60e2e21044f0`.
+`dart format lib test tool/capture_preview_test.dart tool/render_full_typeface_test.dart`: 변경 없음.
+`flutter analyze --no-pub`: 문제 없음. `flutter test --no-pub`: 배포 대상 코드에서 33개 통과.
+`node tool/build_github_pages.mjs /writing-human/`: release 빌드 성공.
+FontManifest 등록·빌드 TTF 해시·새 지원 범위 안내 문자열을 확인했다.
+실제 배포 결과는 완료 후 후속 기록에 남긴다. 기존 소유자 비공개 Sites의
+project_id·접근 권한과 다른 기능의 진행 중 변경은 이 배포에서 변경하지 않는다.
+실제 브라우저·모바일 키보드/가독성 검증과 HTTP·빌드 검증은 구분한다.
+
 ## 2026-11-10 · 개발 서체 포함 웹 배포 확인
 
 [Actions 42795999490](https://github.com/namsoon00/writing-human/actions/runs/42795999490)에서

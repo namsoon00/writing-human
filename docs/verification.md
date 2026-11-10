@@ -1,5 +1,20 @@
 # 검증 기록
 
+## 2026-11-10 · 일곱 디테일 다듬기 웹 게시 완료
+
+[Actions 42830964689](https://github.com/namsoon00/writing-human/actions/runs/42830964689)의
+소스 `18321f76fc89700a27c67a4c9d1e38c4abac6a46`에서 포맷·분석·전체 테스트·빌드·게시가 성공했다.
+[일반 웹](https://namsoon00.github.io/writing-human/)의 HTML, main JS, FontManifest,
+쓰는 인간체 0.007 TTF, 종이 이미지 5개 요청은 모두 HTTP 200이고 검증한 로컬 release와
+바이트/해시가 일치했다. main.dart.js는 2,693,748바이트, SHA-256
+`8a10e86c3d394097c1c75537647bdcd37cb204949d92a47c421da392a5742623`이다.
+실제 검사 시간은 2026-11-10 14:13 UTC이며 결과는
+`artifacts/details-polish-release-state.json`, `artifacts/details-polish-deployment-check.json`에 기록했다.
+
+일곱 기존 요소의 재질·비례·가독성이 반영됐고 새 요소 후보는 아직 구현하지 않았다.
+실제 브라우저 조작과 iOS/Android 검증 범위는 아래 기록의 제한을 그대로 따른다.
+기존 사용자 기록과 비공개 Sites project_id·권한은 변경하지 않았다.
+
 ## 2026-11-10 · 일곱 디테일의 재질·비례·가독성 다듬기
 
 책갈피의 직조와 비례, 제본 실, 원문 쪽지의 종이 가장자리와 접힘, 장서표의 인쇄와

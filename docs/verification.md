@@ -1,5 +1,24 @@
 # 검증 기록
 
+## 2026-11-10 · 본문 커서 숨김 웹 배포 완료
+
+[Actions 42826786100](https://github.com/namsoon00/writing-human/actions/runs/42826786100)의
+소스 `4c3f69de5c7eb3bae7cfa57528f06ff295e57261`에서 포맷·분석·67개 검사·웹 빌드·배포가
+성공했다. [웹 앱](https://namsoon00.github.io/writing-human/) 본문의 점멸 세로 커서를
+숨기고 기존 펜 추적·한글 조합·선택/이동·저장을 유지했다.
+
+HTML, main JS, FontManifest, 개발 TTF, 펜 이미지, 종이 소재 6개 요청이 HTTP 200이고
+해당 소스의 로컬 release와 바이트가 일치했다. main.dart.js는 2,683,915바이트,
+SHA-256 `b6c30be76a8a7098ee99380157f74bb72c313112a151b63ed43202bf462fdf6d`다.
+`artifacts/hidden-caret-{build-check,deployment-check}.json`에 기록했다.
+
+실제 UI 접근은 Mac 잠금과 Work 브라우저 사용 비활성화로 진행하지 못했다.
+설정을 바꾸거나 다른 UI 제어로 우회하지 않았다. 새 화면 PNG 12개는 Flutter
+테스트 렌더이며 실제 브라우저/실기기 캡처가 아니다. 실제 모바일 IME·접근성
+보조기기·펜만으로 입력 위치를 구분하는 사용성은 미검증이다. 모바일 빌드는
+수행하지 않았다. 이번 결과는 위 소스 기준이며 이후 독립적인 서체 확대 변경의
+실행 파일·서체 해시 검증으로 사용하지 않는다. 기존 hosting 설정·기록은 유지했다.
+
 ## 2026-11-10 · 글씨 크기와 실제 획 굵기 보강
 
 일반 화면의 본문·제목·메뉴 표시 크기를 20% 키우고 조작/안내 문구는 최소 14px로

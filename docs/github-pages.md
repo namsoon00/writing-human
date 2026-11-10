@@ -1,5 +1,13 @@
 # GitHub Pages 배포
 
+## 2026-11-10 · 점멸 커서 없는 본문
+
+[Actions 42826786100](https://github.com/namsoon00/writing-human/actions/runs/42826786100),
+소스 `4c3f69de5c7eb3bae7cfa57528f06ff295e57261`의 검사·빌드·배포가 성공했다.
+실제 입력기는 유지하고 본문의 세로 커서만 숨겼다. 기존 펜이 입력 위치를 따른다.
+해당 소스의 공개 JS·서체·펜·종이가 로컬 release와 일치했다.
+실제 브라우저/기기 검증 범위와 후속 버전 구분은 docs/verification.md를 따른다.
+
 ## 일반 앱 주소로 통일
 
 현재 사용자 화면에는 별도의 예시 모드가 없다. 기본 주소와 이전 `?demo=reference`·

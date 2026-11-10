@@ -73,4 +73,4 @@ node --test server/http.integration.mjs
 - [화면 소재와 생성 프롬프트](docs/visual-assets.md)
 - [폰트 라이선스](assets/fonts/OFL.txt): Google Fonts가 배포하는 Nanum Myeongjo Regular. ‘쓰는 인간체’가 아니다.
 
-Git 기본 브랜치는 main이다. GitHub 원격 저장소 생성은 현재 토큰의 권한 부족으로 완료하지 못했다. Sites 배포용 비공개 소스 Git과 GitHub 저장소는 별개다. 추후 GitHub 저장소가 준비되면 origin으로 연결할 수 있다.
+Git 기본 브랜치는 main이다. 소스 저장소는 [namsoon00/writing-human](https://github.com/namsoon00/writing-human)이다. GitHub Pages 배포는 위 워크플로를 사용하며 진행 상태는 저장소의 Actions에서 확인한다. 기존 Sites 배포용 비공개 소스 Git도 유지한다.

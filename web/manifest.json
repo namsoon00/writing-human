@@ -1,0 +1,35 @@
+{
+    "name": "쓰는 인간",
+    "short_name": "쓰는 인간",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#4e5a42",
+    "theme_color": "#4e5a42",
+    "description": "내 취향으로 쓰고, 한 권으로 남기는 즐거움.",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

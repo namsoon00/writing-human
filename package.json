@@ -1,0 +1,14 @@
+{
+  "name": "writing-human-sync",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node tool/build_site.mjs",
+    "dev": "node tool/dev_sync.mjs",
+    "db:generate": "drizzle-kit generate",
+    "db:local": "wrangler d1 migrations apply DB --local --config wrangler.jsonc",
+    "test:server": "node --test server/sync.test.mjs"
+  },
+  "dependencies": {"drizzle-orm": "0.45.2"},
+  "devDependencies": {"drizzle-kit": "0.31.11", "wrangler": "4.158.0"}
+}

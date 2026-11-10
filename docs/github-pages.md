@@ -29,3 +29,11 @@
 - [GitHub Pages 사용자 지정 워크플로](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)
 - [Flutter 웹 빌드](https://docs.flutter.dev/deployment/web)
 - [Flutter 하위 경로 base href](https://docs.flutter.dev/ui/navigation/url-strategies)
+
+## 2026-11-10 · 연속된 종이 작성 화면 배포
+
+[Actions 42793174412](https://github.com/namsoon00/writing-human/actions/runs/42793174412)의
+소스 e9ff3ec2e3499da5fb30091f26ff1f95c26795dc에서 포맷·분석·테스트·빌드·배포가
+모두 성공했다. 새 작성 화면, 번짐 잉크 표식, 최소 조작부가 같은 공개 주소에
+반영됐다. 실행 JS가 로컬 release 빌드와 정확히 일치하고 잉크·종이·서체 자산의
+HTTP 200을 확인했다. 검증 범위와 한계는 docs/verification.md를 따른다.

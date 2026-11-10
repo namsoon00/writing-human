@@ -1,5 +1,22 @@
 # 검증 기록
 
+## 2026-11-10 · 종이 작성 화면 GitHub Pages 배포 확인
+
+[GitHub Actions 42793174412](https://github.com/namsoon00/writing-human/actions/runs/42793174412)에서
+소스 `e9ff3ec2e3499da5fb30091f26ff1f95c26795dc`의 포맷·분석·테스트·웹 빌드와
+Pages 배포가 성공했다. 공개 주소는 https://namsoon00.github.io/writing-human/ 이다.
+
+기본/예시 HTML, bootstrap, main JS, 새 잉크 소재, 면지와 나눔명조 7개 요청이
+모두 HTTP 200이었다. 제공 main.dart.js의 SHA-256
+`64ec5ca456940abbe238e691c472598434001d57518ee0cc495b11958d6232a3`가
+로컬의 동일 base href release 빌드와 일치하고 새 잉크 이미지도 소스와 일치했다.
+`artifacts/paper-deployment-check.json`에 결과를 보관했다.
+
+이는 새 코드의 배포·파일 검증이며 실제 브라우저 타이핑이나 실기기 IME
+검증이 아니다. GitHub Pages는 계속 기기 내 저장용 미리보기이며 기존 Sites의
+비공개 project_id/접근 범위를 유지한다. 기록 저장 구조와 키는 변경하지 않았다.
+아래의 로컬 구현 단위 기록 이후 이번 원격 배포를 완료했다.
+
 ## 2026-11-10 · 개발 계획 첫 구현 단위: 연속된 종이 작성 화면
 
 최신 시안을 실제 Flutter 작성 화면에 반영했다. 이번 단위는 디자인 요소와

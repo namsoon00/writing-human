@@ -1,5 +1,25 @@
 # 검증 기록
 
+## 2026-11-10 · 일곱 디테일의 재질·비례·가독성 다듬기
+
+책갈피의 직조와 비례, 제본 실, 원문 쪽지의 종이 가장자리와 접힘, 장서표의 인쇄와
+이름 편집, 구분 장식, 날짜인의 눌린 잉크를 정적인 Flutter 벡터로 다듬었다.
+종이·펜·글꼴과 일곱 디테일의 기존 독립 설정/저장 형식은 유지했다.
+색인 탭·문장 구분표·압화는 설계 문서의 추가 후보이며 이번에 새 기능으로 추가하지 않았다.
+
+- `dart format --output=none --set-exit-if-changed lib test tool/capture_book_detail_design_test.dart`: 51개 파일, 변경 없음.
+- `flutter analyze --no-pub`: 문제 없음.
+- `flutter test --no-pub`: 68개 통과. 실제 임시 SQLite 파일 재열기, 개별 설정·이름·위치 보존,
+  저장 실패와 한글 composing 회귀, 작은 화면/큰 글씨 검사와 작은 인쇄 글씨의 대비 4.5:1 검사를 포함한다.
+- `flutter test tool/capture_book_detail_design_test.dart --no-pub`: 2개 통과.
+  실제 번들 서체/아이콘을 사용한 일곱 디테일 판과 작성 화면·원문·보관함·설정의 Flutter 렌더를 확인했다.
+  앱 렌더는 명시적으로 주입한 합성 테스트 기록이며 사용자 기록이나 실제 브라우저/실기기 캡처가 아니다.
+- `node tool/build_github_pages.mjs /writing-human/`: 성공. 로컬 저장 전용 웹 빌드 생성.
+
+Mac 잠금으로 실제 브라우저 UI를 열 수 없었고 잠금을 우회하지 않았다.
+실제 iOS/Android IME·최종 서체 자형/실기기 가독성·모바일 빌드·실서버 저장은 이번 검증 범위가 아니다.
+쓰는 인간체 0.007과 기존 확대 글씨/커서 정책은 유지했다. 기존 비공개 Sites project_id/권한은 바꾸지 않았다.
+
 ## 2026-11-10 · 크고 선명한 글씨 웹 게시 완료
 
 [Actions 42827190338](https://github.com/namsoon00/writing-human/actions/runs/42827190338)의

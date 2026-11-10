@@ -378,13 +378,14 @@ void main() {
       await tester.tap(find.text('오래 곁에 둘 문장들').last);
       await tester.pumpAndSettle();
       expect(find.byType(Bookplate), findsOneWidget);
-      await tester.tap(find.text('이 책의 주인 이름 남기기'));
+      await tester.tap(find.byTooltip('장서표 이름 남기기'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byKey(const ValueKey('book-owner')), '나의 필명');
       await tester.tap(find.text('저장'));
       await tester.pumpAndSettle();
       expect(store.data.books.single.owner, '나의 필명');
-      expect(find.text('나의 필명의 책 · 이름 고치기'), findsOneWidget);
+      expect(find.text('나의 필명의 책'), findsOneWidget);
+      expect(find.byTooltip('장서표 이름 고치기'), findsOneWidget);
       tester.platformDispatcher.textScaleFactorTestValue = 2;
       tester.view.physicalSize = const Size(320, 640);
       await tester.pumpAndSettle();

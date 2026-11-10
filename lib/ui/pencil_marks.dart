@@ -52,7 +52,11 @@ TextSpan pencilTextSpan({
                     2 => TextDecorationStyle.dotted,
                     _ => TextDecorationStyle.solid,
                   },
-                  decorationThickness: .8,
+                  decorationThickness: switch (choice.variant) {
+                    1 => .6,
+                    2 => 1.0,
+                    _ => .85,
+                  },
                 )
               : null,
         ),

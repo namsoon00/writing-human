@@ -6,6 +6,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/data/model.dart';
+import 'package:writing_human/data/demo_store.dart';
+import 'package:writing_human/main.dart';
 import 'package:writing_human/ui/book_detail_design.dart';
 import 'package:writing_human/ui/book_detail_tools.dart';
 import 'package:writing_human/ui/paper.dart';
@@ -17,11 +19,14 @@ void main() {
     final shadows = debugDisableShadows;
     debugDisableShadows = false;
     addTearDown(() => debugDisableShadows = shadows);
-    tester.view.physicalSize = const Size(1080, 440);
+    tester.view.physicalSize = const Size(1080, 560);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.runAsync(() async {
+      await (FontLoader(
+        'MaterialIcons',
+      )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
       await (FontLoader('WritingHumanDevelopment')..addFont(
             rootBundle.load('assets/fonts/WritingHumanDevelopment-Regular.ttf'),
           ))
@@ -154,11 +159,105 @@ void main() {
         final data = await rendered.toByteData(format: ui.ImageByteFormat.png);
         await Directory('artifacts').create(recursive: true);
         await File(
-          'artifacts/book-detail-design-${kind.name}.png',
+          'artifacts/book-detail-polished-${kind.name}.png',
         ).writeAsBytes(data!.buffer.asUint8List());
         rendered.dispose();
       });
     }
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+    debugDisableShadows = shadows;
+  });
+
+  testWidgets('Render polished details inside the ordinary application', (
+    tester,
+  ) async {
+    final shadows = debugDisableShadows;
+    debugDisableShadows = false;
+    addTearDown(() => debugDisableShadows = shadows);
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.runAsync(() async {
+      for (final font in [
+        [
+          'WritingHumanDevelopment',
+          'assets/fonts/WritingHumanDevelopment-Regular.ttf',
+        ],
+        ['NanumMyeongjo', 'assets/fonts/NanumMyeongjo-Regular.ttf'],
+        ['NanumGothic', 'assets/fonts/NanumGothic-Regular.ttf'],
+        ['MaterialIcons', 'fonts/MaterialIcons-Regular.otf'],
+        [
+          'packages/cupertino_icons/CupertinoIcons',
+          'packages/cupertino_icons/assets/CupertinoIcons.ttf',
+        ],
+      ]) {
+        await (FontLoader(font[0])..addFont(rootBundle.load(font[1]))).load();
+      }
+    });
+    final key = GlobalKey();
+    await tester.pumpWidget(
+      RepaintBoundary(
+        key: key,
+        child: WritingHumanApp(store: DemoStore()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      for (final name in [
+        'cotton-paper.jpg',
+        'ink-mark.png',
+        'linen-cover.png',
+        'ivory-linen-cover.png',
+        'blue-linen-cover.png',
+      ]) {
+        await precacheImage(
+          AssetImage('assets/images/$name'),
+          key.currentContext!,
+        );
+      }
+    });
+    await tester.pumpAndSettle();
+    Future<void> capture(String name) async {
+      expect(tester.takeException(), isNull);
+      expect(find.textContaining('예시'), findsNothing);
+      await tester.runAsync(() async {
+        final image =
+            await (key.currentContext!.findRenderObject()
+                    as RenderRepaintBoundary)
+                .toImage(pixelRatio: 2);
+        final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+        await Directory('artifacts').create(recursive: true);
+        await File(
+          'artifacts/book-details-polished-$name.png',
+        ).writeAsBytes(bytes!.buffer.asUint8List());
+        image.dispose();
+      });
+    }
+
+    await capture('writing');
+    await tester.tap(find.text('새는 알에서 나오려고 투쟁한다. 알은 세계다.'));
+    await tester.pumpAndSettle();
+    await capture('source');
+    await tester.tap(find.text('취소'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('보관함'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('책'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('데미안').last);
+    await tester.pumpAndSettle();
+    await capture('bookplate');
+    await tester.tap(find.byTooltip('닫기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('쓰기 도구'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('책의 디테일'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('책의 디테일'));
+    await tester.pumpAndSettle();
+    await capture('settings');
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();
     debugDisableShadows = shadows;

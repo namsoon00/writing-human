@@ -8,6 +8,7 @@ import 'package:writing_human/data/sqlite_store.dart';
 import 'package:writing_human/sync/merge.dart';
 import 'package:writing_human/ui/book_detail_design.dart';
 import 'package:writing_human/ui/book_detail_tools.dart';
+import 'package:writing_human/ui/book_details.dart';
 import 'package:writing_human/ui/paper.dart';
 import 'package:writing_human/ui/workspace.dart';
 import 'book_details_test.dart' show specimen;
@@ -15,6 +16,19 @@ import 'widget_test.dart' show MemoryStore;
 
 void main() {
   sqfliteFfiInit();
+  test('Printed metadata stays readable on all papers and slip tones', () {
+    for (final background in [
+      ...paperColors,
+      ...BookDetailDesign.of(BookDetailKind.sourceSlip).colors,
+      const Color(0xfff8f2e5),
+    ]) {
+      expect(
+        (background.computeLuminance() + .05) /
+            (detailMetadataInk.computeLuminance() + .05),
+        greaterThanOrEqualTo(4.5),
+      );
+    }
+  });
   test(
     'Seven independent choices survive SQLite reopen with annotations, owner and position',
     () async {

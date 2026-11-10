@@ -5,7 +5,7 @@ import 'paper.dart';
 import 'book_details.dart';
 import 'pencil_marks.dart';
 
-typedef PageChoice = ({String? pageId, bool append});
+typedef PageChoice = ({String? pageId, bool append, bool cover});
 
 class PagesSheet extends StatelessWidget {
   const PagesSheet({
@@ -13,10 +13,14 @@ class PagesSheet extends StatelessWidget {
     required this.pages,
     required this.currentId,
     required this.style,
+    required this.coverTitle,
+    required this.coverVariant,
   });
   final List<WritingPage> pages;
   final String currentId;
   final WritingStyle style;
+  final String coverTitle;
+  final int coverVariant;
   @override
   Widget build(BuildContext context) => SafeArea(
     top: false,
@@ -55,13 +59,45 @@ class PagesSheet extends StatelessWidget {
                 mainAxisSpacing: 18,
                 crossAxisSpacing: 16,
               ),
-              itemCount: pages.length + 1,
+              itemCount: pages.length + 2,
               itemBuilder: (context, index) {
-                if (index == pages.length) {
+                if (index == 0) {
                   return InkWell(
                     borderRadius: BorderRadius.circular(12),
-                    onTap: () =>
-                        Navigator.pop(context, (pageId: null, append: true)),
+                    onTap: () => Navigator.pop(context, (
+                      pageId: null,
+                      append: false,
+                      cover: true,
+                    )),
+                    child: LayoutBuilder(
+                      builder: (context, box) => Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ExcludeSemantics(
+                            child: MediaQuery.withNoTextScaling(
+                              child: BookCover(
+                                title: coverTitle,
+                                width: box.maxWidth * .72,
+                                variant: coverVariant,
+                                details: style.bookDetails,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text('표지', style: TextStyle(fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                if (index == pages.length + 1) {
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => Navigator.pop(context, (
+                      pageId: null,
+                      append: true,
+                      cover: false,
+                    )),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         border: Border.all(color: line),
@@ -81,17 +117,18 @@ class PagesSheet extends StatelessWidget {
                     ),
                   );
                 }
-                final page = pages[index];
+                final page = pages[index - 1];
                 final selected = page.id == currentId;
                 final excerpt = String.fromCharCodes(page.text.runes.take(360));
                 return Semantics(
                   selected: selected,
-                  label: '${page.number}쪽${selected ? ', 현재 페이지' : ''}',
+                  label: '$index쪽${selected ? ', 현재 페이지' : ''}',
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
                     onTap: () => Navigator.pop(context, (
                       pageId: page.id,
                       append: false,
+                      cover: false,
                     )),
                     child: ExcludeSemantics(
                       child: DecoratedBox(
@@ -143,7 +180,7 @@ class PagesSheet extends StatelessWidget {
                                   PageOrnament(
                                     choice: style.bookDetails.ornament,
                                     child: Text(
-                                      '${page.number}쪽${selected ? ' · 현재' : ''}',
+                                      '$index쪽${selected ? ' · 현재' : ''}',
                                       style: const TextStyle(
                                         fontSize: 11,
                                         color: brandInk,

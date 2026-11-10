@@ -5,6 +5,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:writing_human/data/library_controller.dart';
 import 'package:writing_human/data/sqlite_store.dart';
 import 'package:writing_human/ui/workspace.dart';
+import 'package:writing_human/ui/paper_swipe.dart';
 
 void main() {
   sqfliteFfiInit();
@@ -37,6 +38,25 @@ void main() {
       await tester.runAsync(() => controller.settled);
       await tester.pumpAndSettle();
       expect(controller.saveError, isNull);
+    }
+
+    Future<void> turn(double distance) async {
+      final number = find.byKey(const ValueKey('page-number'));
+      final gesture = await tester.startGesture(tester.getCenter(number));
+      await gesture.moveBy(Offset(distance, 0));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('page-turn-reveal')), findsOneWidget);
+      await gesture.up();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 240));
+      await saved();
+      final footer = find.byKey(const ValueKey('page-number-swipe'));
+      if (footer.evaluate().isNotEmpty) {
+        // The new page is already visible; its position write can finish later.
+        await saved();
+        expect(tester.widget<PaperSwipe>(footer).onNext, isNotNull);
+      }
+      expect(find.byKey(const ValueKey('page-turn-reveal')), findsNothing);
     }
 
     await tester.pumpWidget(app());
@@ -120,12 +140,7 @@ void main() {
     );
     expect(find.text('저장됨'), findsOneWidget);
     expect(tester.takeException(), isNull);
-    await tester.fling(
-      find.byKey(const ValueKey('page-number')),
-      const Offset(-140, 0),
-      800,
-    );
-    await saved();
+    await turn(-160);
     expect(find.text('2'), findsOneWidget);
     const next = TextEditingValue(
       text: '두 번째 쪽도 실제 파일에 남깁니다.',
@@ -154,12 +169,7 @@ void main() {
     expect(controller.library.activePageId, secondId);
     expect(find.text('2'), findsOneWidget);
     expect(tester.widget<TextField>(field).controller!.value, next);
-    await tester.fling(
-      find.byKey(const ValueKey('page-number')),
-      const Offset(140, 0),
-      800,
-    );
-    await saved();
+    await turn(160);
     expect(controller.library.activePageId, pageId);
     expect(tester.widget<TextField>(field).controller!.text, body);
     expect(
@@ -167,6 +177,17 @@ void main() {
       committed.selection,
     );
     expect(tester.widget<TextField>(field).scrollController!.offset, 710);
+    await turn(160);
+    expect(find.byKey(const ValueKey('book-front-cover')), findsOneWidget);
+    await tester.runAsync(() async {
+      final stored = await store.load();
+      expect(stored.activePageId, pageId);
+      expect(stored.pages.length, 2);
+      expect(stored.activePage!.text, body);
+    });
+    await tester.tap(find.text('책 펼치기'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(field).controller!.text, body);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();

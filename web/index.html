@@ -31,6 +31,11 @@
 
   <title>쓰는 인간</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    /* The semantics textarea sits outside Flutter's touch-action pane.
+       Leave pan arbitration to the editor and paper recognizers. */
+    flutter-view flt-semantics textarea { touch-action: none; }
+  </style>
 </head>
 <body style="margin:0;background:#f8f5ef">
   <!--

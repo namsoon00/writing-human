@@ -11,16 +11,24 @@ class PaperSwipe extends StatefulWidget {
     this.onPrevious,
     this.onNext,
     this.touchOnly = false,
+    this.onTurnStart,
+    this.onTurnUpdate,
+    this.onTurnEnd,
+    this.onTurnCancel,
   });
   final Widget child;
   final VoidCallback? onPrevious, onNext;
   final bool touchOnly;
+  final VoidCallback? onTurnStart, onTurnCancel;
+  final ValueChanged<double>? onTurnUpdate;
+  final void Function(double distance, double velocity)? onTurnEnd;
   @override
   State<PaperSwipe> createState() => _PaperSwipeState();
 }
 
 class _PaperSwipeState extends State<PaperSwipe> {
-  double distance = 0;
+  double distance = 0, originX = 0;
+  bool accepted = false;
   late final HorizontalDragGestureRecognizer drag;
 
   @override
@@ -28,18 +36,29 @@ class _PaperSwipeState extends State<PaperSwipe> {
     super.initState();
     drag = HorizontalDragGestureRecognizer(debugOwner: this)
       ..dragStartBehavior = DragStartBehavior.down
-      ..onStart = (_) {
+      ..onStart = (details) {
+        accepted = true;
         distance = 0;
+        originX = details.localPosition.dx;
+        widget.onTurnStart?.call();
       }
       ..onUpdate = (details) {
-        distance += details.delta.dx;
+        distance = details.localPosition.dx - originX;
+        widget.onTurnUpdate?.call(distance);
       }
       ..onCancel = () {
         distance = 0;
+        if (accepted) widget.onTurnCancel?.call();
+        accepted = false;
       }
       ..onEnd = (details) {
+        accepted = false;
         final dx = distance, speed = details.primaryVelocity ?? 0;
         distance = 0;
+        if (widget.onTurnEnd != null) {
+          widget.onTurnEnd!(dx, speed);
+          return;
+        }
         if (dx.abs() < 64 && !(dx.abs() >= 36 && speed.abs() >= 500)) {
           return;
         }

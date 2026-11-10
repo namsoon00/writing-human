@@ -15,6 +15,8 @@ import 'page_turn.dart';
 import 'paper_swipe.dart';
 import 'pages_sheet.dart';
 import 'book_details.dart';
+import 'book_front_cover.dart';
+import 'page_read_preview.dart';
 
 class Workspace extends StatefulWidget {
   const Workspace({super.key, required this.controller, this.sync});
@@ -27,6 +29,9 @@ class Workspace extends StatefulWidget {
 class _WorkspaceState extends State<Workspace> {
   LibraryController get c => widget.controller;
   final editorFocus = FocusNode();
+  final _pageTurn = PageTurnController();
+  String? _coverAnchor;
+  bool get _showCover => _coverAnchor == page.id;
   late WritingPage draft = _blank();
   late bool fresh = c.library.pages.isEmpty;
   bool userFresh = false;
@@ -40,12 +45,22 @@ class _WorkspaceState extends State<Workspace> {
       (widget.sync?.accountMismatch ?? false) ||
       (widget.sync?.signInRequired == true && c.library.sync.accountId != null);
 
-  List<WritingPage> get _recordPages {
+  List<WritingPage> get _volumePages {
     final current = page;
-    final pages =
-        c.library.pages.where((p) => p.recordId == current.recordId).toList()
-          ..sort((a, b) => a.number.compareTo(b.number));
-    return pages.isEmpty ? [current] : pages;
+    if (fresh) return [current];
+    final bookId = book?.id;
+    final recordIds = bookId == null
+        ? [current.recordId]
+        : c.library.records.where((r) => r.bookId == bookId).map((r) => r.id);
+    final byRecord = {for (final id in recordIds) id: <WritingPage>[]};
+    for (final page in c.library.pages) {
+      byRecord[page.recordId]?.add(page);
+    }
+    final pages = [
+      for (final group in byRecord.values)
+        ...(group..sort((a, b) => a.number.compareTo(b.number))),
+    ];
+    return pages.any((p) => p.id == current.id) ? pages : [current];
   }
 
   bool _canLeaveInput() {
@@ -80,22 +95,45 @@ class _WorkspaceState extends State<Workspace> {
   }
 
   Future<void> _openPage(String id) => _navigatePage(() async {
+    if (page.id == id && _showCover) {
+      setState(() => _coverAnchor = null);
+      return;
+    }
     if (!c.library.pages.any((p) => p.id == id) || page.id == id) return;
+    _coverAnchor = null;
     fresh = false;
     userFresh = false;
     c.openPage(id);
   });
 
-  void _stepPage(int step) {
-    final pages = _recordPages,
-        index = _recordPages.indexWhere((p) => p.id == page.id);
-    if (step > 0 && index == pages.length - 1) {
-      _appendPage();
+  Future<void> _openCover() => _navigatePage(() async {
+    final first = _volumePages.first;
+    if (first.id != page.id) c.openPage(first.id);
+    setState(() => _coverAnchor = first.id);
+  });
+
+  Future<void> _stepPage(int step) async {
+    if (_showCover) {
+      if (step > 0) await _openPage(page.id);
       return;
     }
-    if (index + step >= 0 && index + step < pages.length) {
-      _openPage(pages[index + step].id);
+    final pages = _volumePages;
+    final index = pages.indexWhere((p) => p.id == page.id);
+    if (index < 0) return;
+    final target = index + step;
+    if (target < 0) {
+      await _openCover();
+    } else if (target >= pages.length) {
+      await _appendPage();
+    } else {
+      await _openPage(pages[target].id);
     }
+  }
+
+  Future<bool> _commitTurn(bool forward) async {
+    final owner = c, id = page.id, wasCover = _showCover;
+    await _stepPage(forward ? 1 : -1);
+    return mounted && c == owner && (page.id != id || wasCover != _showCover);
   }
 
   Future<void> _appendPage() => _navigatePage(() async {
@@ -128,6 +166,10 @@ class _WorkspaceState extends State<Workspace> {
       .where((b) => b.id == (record?.bookId ?? (fresh ? draftBookId : null)))
       .firstOrNull;
 
+  int get _coverVariant => c.library.books
+      .indexWhere((b) => b.id == book?.id)
+      .clamp(0, c.library.books.length);
+
   @override
   void initState() {
     super.initState();
@@ -144,6 +186,7 @@ class _WorkspaceState extends State<Workspace> {
       c.addListener(_changed);
       widget.sync?.addListener(_changed);
       editorFocus.unfocus();
+      _coverAnchor = null;
       fresh = c.library.pages.isEmpty;
       userFresh = false;
       draft = _blank();
@@ -156,6 +199,7 @@ class _WorkspaceState extends State<Workspace> {
     if (!mounted) return;
     setState(() {
       if (fresh && !userFresh && c.library.activePage != null) fresh = false;
+      if (_accountLocked || !_showCover) _coverAnchor = null;
     });
     if ((widget.sync?.accountMismatch ?? false) ||
         (widget.sync?.signInRequired ?? false)) {
@@ -198,6 +242,7 @@ class _WorkspaceState extends State<Workspace> {
 
   Future<void> _newSheet([String? bookId]) => _navigatePage(() async {
     setState(() {
+      _coverAnchor = null;
       draft = _blank();
       draftSource = '';
       draftBookId = bookId;
@@ -261,6 +306,7 @@ class _WorkspaceState extends State<Workspace> {
       builder: (_) => const NewBookDialog(),
     );
     if (values != null && mounted) {
+      _coverAnchor = null;
       fresh = false;
       userFresh = false;
       c.createBook(values.$1, values.$2);
@@ -355,9 +401,11 @@ class _WorkspaceState extends State<Workspace> {
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       constraints: const BoxConstraints(maxWidth: 600),
       builder: (_) => PagesSheet(
-        pages: _recordPages,
+        pages: _volumePages,
         currentId: selectedId,
         style: c.library.style,
+        coverTitle: book?.title ?? record?.title ?? '나의 필사',
+        coverVariant: _coverVariant,
       ),
     );
     final choice = await Navigator.of(context).push<PageChoice>(route);
@@ -372,6 +420,8 @@ class _WorkspaceState extends State<Workspace> {
     }
     if (choice.append) {
       await _appendPage();
+    } else if (choice.cover) {
+      await _openCover();
     } else if (choice.pageId != null) {
       await _openPage(choice.pageId!);
     }
@@ -501,125 +551,208 @@ class _WorkspaceState extends State<Workspace> {
         ),
       );
     }
-    final currentPage = page;
-    final source = record?.source ?? (fresh ? draftSource : '');
-    final pages = _recordPages;
-    final index = pages.indexWhere((p) => p.id == currentPage.id);
+    final current = page;
+    final pages = _volumePages;
+    final index = pages.indexWhere((p) => p.id == current.id);
+    final showingCover = _showCover;
     final navigationEnabled =
         !_pageNavigationBusy &&
         !_editorComposing &&
         !c.composing &&
         c.saveError == null;
+    final canSwipe = navigationEnabled && !editorFocus.hasFocus;
     final compact =
         MediaQuery.viewInsetsOf(context).bottom > 0 ||
         MediaQuery.sizeOf(context).height < 520;
+    Widget paper(WritingPage target, int index, {bool preview = true}) =>
+        _paperSurface(
+          target,
+          index,
+          pages.length,
+          compact,
+          preview: preview,
+          navigationEnabled: !preview && navigationEnabled,
+        );
+    final cover = BookFrontCover(
+      title: book?.title ?? record?.title ?? '나의 필사',
+      author: book?.author ?? '',
+      variant: _coverVariant,
+      style: c.library.style,
+      pageCount: pages.length,
+      onOpen: () => _stepPage(1),
+      onCollection: _collection,
+    );
+    final nextPage = index + 1 < pages.length
+        ? pages[index + 1]
+        : WritingPage(
+            id: 'preview-next:${current.id}',
+            recordId: current.recordId,
+            number: current.number + 1,
+          );
     return Scaffold(
       backgroundColor: appPaper,
-      body: PageTurnView(
-        key: ValueKey(c),
-        page: currentPage,
-        style: c.library.style,
-        editing: c.editorFocused || c.composing,
-        child: PaperSwipe(
-          key: const ValueKey('paper-swipe'),
-          touchOnly: true,
-          onPrevious: navigationEnabled && !editorFocus.hasFocus && index > 0
-              ? () => _stepPage(-1)
-              : null,
-          onNext: navigationEnabled && !editorFocus.hasFocus
-              ? () => _stepPage(1)
-              : null,
-          child: PaperBackdrop(
-            binding: c.library.style.bookDetails.binding,
-            color: paperColors[c.library.style.paperIndex],
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    WritingHeader(
-                      ribbon: c.library.style.bookDetails.ribbon,
-                      bookmarked: record != null,
-                      useDevelopmentTypeface:
-                          c.library.style.useDevelopmentTypeface,
-                      compact: compact,
-                      bookTitle: book?.title,
-                      onCollection: _collection,
-                      onNewSheet: () => _newSheet(),
-                    ),
-                    if (widget.sync != null &&
-                        (widget.sync!.hasLegacy || widget.sync!.legacyError))
-                      TextButton(
-                        onPressed: _syncInfo,
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: PageTurnView(
+            key: ValueKey((c, c.editorEpoch)),
+            controller: _pageTurn,
+            page: current,
+            style: c.library.style,
+            scopeId: book?.id ?? current.recordId,
+            position: showingCover ? -1 : index,
+            editing: c.editorFocused,
+            composing: _editorComposing || c.composing,
+            onTurn: _commitTurn,
+            previous: showingCover
+                ? null
+                : index == 0
+                ? cover
+                : paper(pages[index - 1], index - 1),
+            next: showingCover
+                ? paper(current, index)
+                : paper(nextPage, index + 1),
+            child: PaperSwipe(
+              key: const ValueKey('paper-swipe'),
+              touchOnly: !showingCover,
+              onPrevious: canSwipe && !showingCover
+                  ? () => _stepPage(-1)
+                  : null,
+              onNext: canSwipe ? () => _stepPage(1) : null,
+              onTurnStart: _pageTurn.start,
+              onTurnUpdate: _pageTurn.update,
+              onTurnEnd: _pageTurn.end,
+              onTurnCancel: _pageTurn.cancel,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Offstage(
+                    offstage: showingCover,
+                    child: paper(current, index, preview: false),
+                  ),
+                  if (showingCover) cover,
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _paperSurface(
+    WritingPage currentPage,
+    int index,
+    int count,
+    bool compact, {
+    required bool preview,
+    required bool navigationEnabled,
+  }) {
+    final record = c.library.records
+        .where((r) => r.id == currentPage.recordId)
+        .firstOrNull;
+    final source =
+        record?.source ??
+        (fresh && currentPage.recordId == draft.recordId ? draftSource : '');
+    final bookId = record?.bookId ?? (fresh ? draftBookId : null);
+    final book = c.library.books.where((b) => b.id == bookId).firstOrNull;
+    return PaperBackdrop(
+      binding: c.library.style.bookDetails.binding,
+      color: paperColors[c.library.style.paperIndex],
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              WritingHeader(
+                ribbon: c.library.style.bookDetails.ribbon,
+                bookmarked: record != null,
+                useDevelopmentTypeface: c.library.style.useDevelopmentTypeface,
+                compact: compact,
+                bookTitle: book?.title,
+                onCollection: _collection,
+                onNewSheet: () => _newSheet(),
+              ),
+              if (widget.sync != null &&
+                  (widget.sync!.hasLegacy || widget.sync!.legacyError))
+                TextButton(
+                  onPressed: _syncInfo,
+                  child: Text(
+                    widget.sync!.legacyError
+                        ? '이전 글을 읽지 못했어요 · 확인'
+                        : '이 기기의 이전 글 가져오기',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              if (c.saveError != null)
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xffffeee5),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  padding: const EdgeInsets.only(left: 12),
+                  child: Row(
+                    children: [
+                      const Expanded(
                         child: Text(
-                          widget.sync!.legacyError
-                              ? '이전 글을 읽지 못했어요 · 확인'
-                              : '이 기기의 이전 글 가져오기',
-                          style: const TextStyle(fontSize: 12),
+                          '저장 실패 · 앱을 닫지 말아 주세요.',
+                          style: TextStyle(fontSize: 11),
                         ),
                       ),
-                    if (c.saveError != null)
-                      Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xffffeee5),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        padding: const EdgeInsets.only(left: 12),
-                        child: Row(
-                          children: [
-                            const Expanded(
-                              child: Text(
-                                '저장 실패 · 앱을 닫지 말아 주세요.',
-                                style: TextStyle(fontSize: 11),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: c.retrySave,
-                              child: const Text(
-                                '저장 재시도',
-                                style: TextStyle(fontSize: 11),
-                              ),
-                            ),
-                          ],
+                      TextButton(
+                        onPressed: c.retrySave,
+                        child: const Text(
+                          '저장 재시도',
+                          style: TextStyle(fontSize: 11),
                         ),
                       ),
-                    if (source.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 4,
-                        ),
-                        child: SourceSlip(
-                          choice: c.library.style.bookDetails.sourceSlip,
-                          compact: true,
-                          child: TextButton.icon(
-                            onPressed: _source,
-                            icon: const Icon(
-                              CupertinoIcons.quote_bubble,
-                              size: 14,
-                              color: muted,
-                            ),
-                            label: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                source.replaceAll('\n', ' '),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontFamily: appFontFamily,
-                                  fontFamilyFallback: appFontFallback,
-                                  fontSize: 13,
-                                  color: muted,
-                                ),
-                              ),
-                            ),
+                    ],
+                  ),
+                ),
+              if (source.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 4,
+                  ),
+                  child: SourceSlip(
+                    choice: c.library.style.bookDetails.sourceSlip,
+                    compact: true,
+                    child: TextButton.icon(
+                      onPressed: _source,
+                      icon: const Icon(
+                        CupertinoIcons.quote_bubble,
+                        size: 14,
+                        color: muted,
+                      ),
+                      label: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          source.replaceAll('\n', ' '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontFamily: appFontFamily,
+                            fontFamilyFallback: appFontFallback,
+                            fontSize: 13,
+                            color: muted,
                           ),
                         ),
                       ),
-                    Expanded(
-                      key: const ValueKey('writing-surface'),
-                      child: PageEditor(
+                    ),
+                  ),
+                ),
+              Expanded(
+                key: const ValueKey('writing-surface'),
+                child: preview
+                    ? PageReadPreview(
+                        key: ValueKey(currentPage.id),
+                        page: currentPage,
+                        style: c.library.style,
+                      )
+                    : PageEditor(
                         key: ValueKey('${currentPage.id}:${c.editorEpoch}'),
                         page: currentPage,
                         style: c.library.style,
@@ -634,33 +767,32 @@ class _WorkspaceState extends State<Workspace> {
                           );
                         },
                       ),
-                    ),
-                    WritingFooter(
-                      ornament: c.library.style.bookDetails.ornament,
-                      onTools: _tools,
-                      onMore: _more,
-                      onDone: _blur,
-                      focused: editorFocus.hasFocus,
-                      failed: c.saveError != null,
-                      pageLabel: '${index + 1}',
-                      pageCount: pages.length,
-                      onPages: navigationEnabled ? _pages : null,
-                      onPrevious: navigationEnabled && index > 0
-                          ? () => _stepPage(-1)
-                          : null,
-                      onNext: navigationEnabled ? () => _stepPage(1) : null,
-                      status: c.saveError != null
-                          ? '저장 실패'
-                          : record == null
-                          ? '자동 저장'
-                          : c.saving
-                          ? '저장 중'
-                          : '저장됨',
-                    ),
-                  ],
-                ),
               ),
-            ),
+              WritingFooter(
+                ornament: c.library.style.bookDetails.ornament,
+                onTools: _tools,
+                onMore: _more,
+                onDone: _blur,
+                focused: !preview && editorFocus.hasFocus,
+                failed: c.saveError != null,
+                pageLabel: '${index + 1}',
+                pageCount: count,
+                onPages: navigationEnabled ? _pages : null,
+                onPrevious: navigationEnabled ? () => _stepPage(-1) : null,
+                onNext: navigationEnabled ? () => _stepPage(1) : null,
+                onTurnStart: _pageTurn.start,
+                onTurnUpdate: _pageTurn.update,
+                onTurnEnd: _pageTurn.end,
+                onTurnCancel: _pageTurn.cancel,
+                status: c.saveError != null
+                    ? '저장 실패'
+                    : record == null
+                    ? '자동 저장'
+                    : c.saving
+                    ? '저장 중'
+                    : '저장됨',
+              ),
+            ],
           ),
         ),
       ),

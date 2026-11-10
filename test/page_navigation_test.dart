@@ -6,10 +6,11 @@ import 'package:writing_human/main.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/ui/pages_sheet.dart';
 import 'widget_test.dart' show MemoryStore;
-import 'package:writing_human/ui/page_turn.dart';
 import 'package:writing_human/ui/writing_chrome.dart';
 
 final field = find.byKey(const ValueKey('page-text'));
+final reveal = find.byKey(const ValueKey('page-turn-reveal'));
+final cover = find.byKey(const ValueKey('book-front-cover'));
 final overlay = find.byKey(const ValueKey('page-turn-overlay'));
 
 Library twoPages() => Library(
@@ -94,72 +95,151 @@ void main() {
   });
 
   for (final size in [const Size(390, 844), const Size(1440, 1000)]) {
-    testWidgets('Turn includes header and footer at $size', (tester) async {
+    testWidgets('Held drag reveals exactly the distance moved at $size', (
+      tester,
+    ) async {
       final store = MemoryStore()..data = twoPages();
       await open(tester, store);
       tester.view.physicalSize = size;
       tester.view.padding = const FakeViewPadding(top: 24, bottom: 20);
       addTearDown(tester.view.resetPadding);
       await tester.pumpAndSettle();
-      await nextSheet(tester);
+      final live = tester.widget<TextField>(field).controller!;
+      final selection = live.selection;
+      final writes = store.writes;
+      final origin = tester.getCenter(field);
+      final gesture = await tester.startGesture(origin);
+      Rect exposed() {
+        final clip = tester.widget<ClipRect>(reveal).clipper!;
+        return clip.getClip(tester.getSize(reveal));
+      }
+
+      await gesture.moveBy(const Offset(-75, 0));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 160));
-      final rect = tester.getRect(overlay);
-      expect(rect, tester.getRect(find.byType(PageTurnView)));
-      expect(rect.top, 0);
-      expect(rect.bottom, size.height);
+      expect(exposed().width, closeTo(75, .01));
+      await gesture.moveBy(const Offset(-130, 0));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(exposed().width, closeTo(205, .01));
+      expect(exposed().height, size.height);
+      expect(tester.getSize(reveal).width, size.width.clamp(0, 760));
       expect(
-        rect.contains(tester.getCenter(find.byType(WritingHeader))),
-        isTrue,
+        find.descendant(of: reveal, matching: find.byType(WritingHeader)),
+        findsOneWidget,
       );
       expect(
-        rect.contains(tester.getCenter(find.byType(WritingFooter))),
-        isTrue,
-      );
-      final image = tester
-          .widget<RawImage>(
-            find.descendant(of: overlay, matching: find.byType(RawImage)),
-          )
-          .image!;
-      expect(
-        image.width,
-        inInclusiveRange(rect.width.ceil(), (rect.width * 2).ceil()),
+        find.descendant(of: reveal, matching: find.byType(WritingFooter)),
+        findsOneWidget,
       );
       expect(
-        image.height,
-        inInclusiveRange(rect.height.ceil(), (rect.height * 2).ceil()),
+        find.descendant(of: reveal, matching: find.text('둘째 페이지')),
+        findsOneWidget,
       );
-      expect(image.width * image.height, lessThan(2004000));
       expect(find.byType(TextField), findsOneWidget);
-      // A quick reverse turn replaces the disposable image, not the editor tree.
-      await previousSheet(tester);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-      expect(overlay, findsOneWidget);
+      expect(tester.widget<TextField>(field).controller, same(live));
+      expect(live.selection, selection);
+      expect(store.writes, writes);
       expect(store.data.activePageId, 'one');
+      await gesture.moveBy(const Offset(145, 0));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(exposed().width, closeTo(60, .01));
+      await gesture.up();
       await tester.pumpAndSettle();
-      expect(overlay, findsNothing);
-      expect(tester.takeException(), isNull);
+      expect(reveal, findsNothing);
+      expect(store.writes, writes);
+      expect(store.data.activePageId, 'one');
+      expect(tester.widget<TextField>(field).controller, same(live));
+      expect(live.selection, selection);
     });
   }
 
-  testWidgets('Resizing ends the turn without stretching the old screen', (
+  testWidgets('Resizing cancels a held turn and retains the editor', (
     tester,
   ) async {
     final store = MemoryStore()..data = twoPages();
     await open(tester, store);
-    await nextSheet(tester);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(overlay, findsOneWidget);
     final controller = tester.widget<TextField>(field).controller!;
+    final gesture = await tester.startGesture(tester.getCenter(field));
+    await gesture.moveBy(const Offset(-160, 0));
+    await tester.pump();
+    expect(reveal, findsOneWidget);
     tester.view.physicalSize = const Size(844, 390);
     await tester.pumpAndSettle();
-    expect(overlay, findsNothing);
+    expect(reveal, findsNothing);
+    await gesture.up();
+    await tester.pumpAndSettle();
     expect(tester.widget<TextField>(field).controller, same(controller));
-    expect(controller.text, '둘째 페이지');
-    expect(store.data.activePageId, 'two');
+    expect(store.data.activePageId, 'one');
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('The first sheet peels back to a cover without a saved page', (
+    tester,
+  ) async {
+    final store = MemoryStore()..data = twoPages();
+    await open(tester, store);
+    final writes = store.writes;
+    final live = tester.widget<TextField>(field).controller!;
+    final gesture = await tester.startGesture(tester.getCenter(field));
+    await gesture.moveBy(const Offset(165, 0));
+    await tester.pump();
+    expect(find.descendant(of: reveal, matching: cover), findsOneWidget);
+    expect(store.writes, writes);
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(reveal, findsNothing);
+    expect(cover, findsOneWidget);
+    expect(field, findsNothing);
+    expect(store.data.activePageId, 'one');
+    expect(store.data.pages.length, 2);
+    expect(store.writes, writes);
+    final reopen = await tester.startGesture(tester.getCenter(cover));
+    await reopen.moveBy(const Offset(-170, 0));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('page-preview-text:one')), findsOneWidget);
+    await reopen.up();
+    await tester.pumpAndSettle();
+    expect(cover, findsNothing);
+    expect(tester.widget<TextField>(field).controller, same(live));
+    expect(live.selection, const TextSelection(baseOffset: 2, extentOffset: 6));
+    expect(tester.widget<TextField>(field).scrollController!.offset, 180);
+    expect(store.writes, writes);
+  });
+
+  testWidgets('Book turns traverse its records and keep each record intact', (
+    tester,
+  ) async {
+    final store = MemoryStore()
+      ..data = Library(
+        books: const [Book(id: 'book', title: '한 권의 책', author: '지은이')],
+        records: const [
+          WritingRecord(id: 'a', title: '앞 기록', bookId: 'book'),
+          WritingRecord(id: 'b', title: '뒤 기록', bookId: 'book'),
+          WritingRecord(id: 'loose', title: '따로 둔 기록'),
+        ],
+        pages: const [
+          WritingPage(id: 'b1', recordId: 'b', number: 1, text: '뒤의 글'),
+          WritingPage(id: 'a1', recordId: 'a', number: 1, text: '앞의 글'),
+          WritingPage(id: 'loose1', recordId: 'loose', number: 1, text: '다른 글'),
+        ],
+        activePageId: 'b1',
+        writing: true,
+      );
+    await open(tester, store);
+    expect(find.text('2'), findsOneWidget);
+    await previousSheet(tester);
+    await tester.pumpAndSettle();
+    expect(store.data.activePageId, 'a1');
+    await previousSheet(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('지은이'), findsOneWidget);
+    await tester.tap(find.text('책 펼치기'));
+    await tester.pumpAndSettle();
+    expect(store.data.activePageId, 'a1');
+    await nextSheet(tester);
+    await tester.pumpAndSettle();
+    expect(store.data.activePageId, 'b1');
+    expect(store.data.pages.map((p) => p.number), everyElement(1));
+    expect(store.data.records.length, 3);
   });
 
   testWidgets('Paper swipes turn pages; editing gestures stay in the text', (
@@ -202,6 +282,12 @@ void main() {
       await open(tester, store);
       await previousSheet(tester);
       await tester.pumpAndSettle();
+      expect(cover, findsOneWidget);
+      await tester.fling(cover, const Offset(140, 0), 800);
+      await tester.pumpAndSettle();
+      expect(cover, findsOneWidget);
+      await tester.tap(find.text('책 펼치기'));
+      await tester.pumpAndSettle();
       await tester.drag(field, const Offset(0, -180));
       await tester.pumpAndSettle();
       expect(store.data.activePageId, 'one');
@@ -241,9 +327,8 @@ void main() {
       expect(store.writes, 0);
       expect(find.text('1'), findsOneWidget);
       await nextSheet(tester);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 120));
-      expect(overlay, findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(overlay, findsNothing);
       expect(find.byKey(const ValueKey('page-text')), findsOneWidget);
       expect(find.text('2'), findsOneWidget);
       expect(store.data.pages.length, 2);
@@ -274,9 +359,8 @@ void main() {
     final firstText = store.data.pages.first.text;
     await open(tester, store);
     await nextSheet(tester);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(overlay, findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(overlay, findsNothing);
     expect(tester.widget<TextField>(field).controller!.text, '둘째 페이지');
     await tester.enterText(field, '둘째 페이지 수정 🌿');
     await tester.pumpAndSettle();
@@ -302,6 +386,7 @@ void main() {
     await tester.tap(find.text('2'));
     await tester.pumpAndSettle();
     expect(find.byType(PagesSheet), findsOneWidget);
+    expect(find.text('표지'), findsOneWidget);
     expect(find.text('1쪽'), findsOneWidget);
     expect(find.text('2쪽 · 현재'), findsOneWidget);
     await tester.tap(find.text('1쪽'));

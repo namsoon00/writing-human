@@ -142,15 +142,14 @@ void main() {
       await tester.tap(find.text('완료'));
       await tester.pumpAndSettle();
       await capture('resting');
-      await tester.fling(
-        find.byKey(const ValueKey('page-number')),
-        const Offset(-140, 0),
-        800,
-      );
+      final number = find.byKey(const ValueKey('page-number'));
+      final reveal = find.byKey(const ValueKey('page-turn-reveal'));
+      final forward = await tester.startGesture(tester.getCenter(number));
+      await forward.moveBy(const Offset(-160, 0));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 180));
-      expect(find.byKey(const ValueKey('page-turn-overlay')), findsOneWidget);
+      expect(reveal, findsOneWidget);
       await capture('forward-middle');
+      await forward.up();
       await tester.pumpAndSettle();
       await capture('new-page');
       await tester.enterText(
@@ -158,14 +157,21 @@ void main() {
         '새는 알에서 나오려고\n투쟁한다. 알은 세계다.',
       );
       await tester.pumpAndSettle();
-      await tester.fling(
-        find.byKey(const ValueKey('page-number')),
-        const Offset(140, 0),
-        800,
-      );
+      final backward = await tester.startGesture(tester.getCenter(number));
+      await backward.moveBy(const Offset(165, 0));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 180));
+      expect(reveal, findsOneWidget);
       await capture('backward-middle');
+      await backward.up();
+      await tester.pumpAndSettle();
+      final close = await tester.startGesture(tester.getCenter(number));
+      await close.moveBy(const Offset(160, 0));
+      await tester.pump();
+      await capture('cover-middle');
+      await close.up();
+      await tester.pumpAndSettle();
+      await capture('cover');
+      await tester.tap(find.text('책 펼치기'));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('page-number')));
       await tester.pumpAndSettle();

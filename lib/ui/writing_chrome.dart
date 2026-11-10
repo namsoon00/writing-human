@@ -110,6 +110,10 @@ class WritingFooter extends StatelessWidget {
     this.onPages,
     this.onPrevious,
     this.onNext,
+    this.onTurnStart,
+    this.onTurnUpdate,
+    this.onTurnEnd,
+    this.onTurnCancel,
     this.failed = false,
     this.ornament = const BookDetailChoice(),
   });
@@ -118,6 +122,9 @@ class WritingFooter extends StatelessWidget {
   final VoidCallback? onPages, onPrevious, onNext;
   final String? pageLabel;
   final int pageCount;
+  final VoidCallback? onTurnStart, onTurnCancel;
+  final ValueChanged<double>? onTurnUpdate;
+  final void Function(double distance, double velocity)? onTurnEnd;
   final bool focused, failed;
   final BookDetailChoice ornament;
 
@@ -160,6 +167,10 @@ class WritingFooter extends StatelessWidget {
         Expanded(
           child: PaperSwipe(
             key: const ValueKey('page-number-swipe'),
+            onTurnStart: onTurnStart,
+            onTurnUpdate: onTurnUpdate,
+            onTurnEnd: onTurnEnd,
+            onTurnCancel: onTurnCancel,
             onPrevious: onPrevious,
             onNext: onNext,
             child: Semantics(

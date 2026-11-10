@@ -1,5 +1,21 @@
 # 검증 기록
 
+## 2026-11-11 · 손가락을 따라 넘기는 페이지와 앞표지
+
+- 작업본과 배포용 작업본에서 Dart 포맷 55개 변경 없음, `flutter analyze --no-pub` 문제 없음,
+  `flutter test --no-pub` 74개 통과. 휴대폰·넓은 화면에서 누른 채 움직인 75/205/60px의
+  노출 폭, 드래그 취소 시 편집기·선택 유지와 무저장, 회전, 한글 composing, 저장 오류,
+  책 안의 기록 간 이동, 표지에서 첫 장 재개를 확인했다.
+- 호스트 SQLite 임시 파일을 종료·재개해 두 장의 실제 본문과 선택·스크롤 복원을 검사했다.
+  앞표지를 본 상태에서 파일을 읽어 페이지 수와 저장된 첫 장의 ID·본문도 비교했다.
+- `flutter test --no-pub tool/capture_preview_test.dart` 통과. 번들 서체로 그린
+  `artifacts/readability-{backward-middle,cover-middle,cover}.png`에서 옆 장 본문과 표지를 확인했다.
+- `node tool/build_github_pages.mjs /writing-human/` 성공. 빌드 산출물을 로컬 HTTP로 열어
+  Chrome 157의 390×844 터치 에뮬레이션으로 드래그 중의 두 노출 폭, 짧은 드래그 취소,
+  확정, 표지 열기·닫기, 세로 스크롤, 한글 문자열 입력과 브라우저 localStorage 반영을 확인했다.
+  검수용 데이터는 임시 Chrome 프로필에만 넣었다.
+- 물리 iOS/Android 기기와 모바일 Safari, 실제 모바일 키보드의 IME, 비공개 동기화 배포는 검증하지 않았다.
+
 ## 2026-11-11 · 새 세 요소 웹 게시 완료
 
 [Actions 42912500229](https://github.com/namsoon00/writing-human/actions/runs/42912500229)의

@@ -5,6 +5,8 @@ import 'package:writing_human/main.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/ui/pages_sheet.dart';
 import 'widget_test.dart' show MemoryStore;
+import 'package:writing_human/ui/page_turn.dart';
+import 'package:writing_human/ui/writing_chrome.dart';
 
 final field = find.byKey(const ValueKey('page-text'));
 final overlay = find.byKey(const ValueKey('page-turn-overlay'));
@@ -37,6 +39,75 @@ Future<void> open(WidgetTester tester, MemoryStore store) async {
 }
 
 void main() {
+  for (final size in [const Size(390, 844), const Size(1440, 1000)]) {
+    testWidgets('Turn includes header and footer at $size', (tester) async {
+      final store = MemoryStore()..data = twoPages();
+      await open(tester, store);
+      tester.view.physicalSize = size;
+      tester.view.padding = const FakeViewPadding(top: 24, bottom: 20);
+      addTearDown(tester.view.resetPadding);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('다음 페이지'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 160));
+      final rect = tester.getRect(overlay);
+      expect(rect, tester.getRect(find.byType(PageTurnView)));
+      expect(rect.top, 0);
+      expect(rect.bottom, size.height);
+      expect(
+        rect.contains(tester.getCenter(find.byType(WritingHeader))),
+        isTrue,
+      );
+      expect(
+        rect.contains(tester.getCenter(find.byType(WritingFooter))),
+        isTrue,
+      );
+      final image = tester
+          .widget<RawImage>(
+            find.descendant(of: overlay, matching: find.byType(RawImage)),
+          )
+          .image!;
+      expect(
+        image.width,
+        inInclusiveRange(rect.width.ceil(), (rect.width * 2).ceil()),
+      );
+      expect(
+        image.height,
+        inInclusiveRange(rect.height.ceil(), (rect.height * 2).ceil()),
+      );
+      expect(image.width * image.height, lessThan(2004000));
+      expect(find.byType(TextField), findsOneWidget);
+      // A quick reverse turn replaces the disposable image, not the editor tree.
+      await tester.tap(find.byTooltip('이전 페이지'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(overlay, findsOneWidget);
+      expect(store.data.activePageId, 'one');
+      await tester.pumpAndSettle();
+      expect(overlay, findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('Resizing ends the turn without stretching the old screen', (
+    tester,
+  ) async {
+    final store = MemoryStore()..data = twoPages();
+    await open(tester, store);
+    await tester.tap(find.byTooltip('다음 페이지'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(overlay, findsOneWidget);
+    final controller = tester.widget<TextField>(field).controller!;
+    tester.view.physicalSize = const Size(844, 390);
+    await tester.pumpAndSettle();
+    expect(overlay, findsNothing);
+    expect(tester.widget<TextField>(field).controller, same(controller));
+    expect(controller.text, '둘째 페이지');
+    expect(store.data.activePageId, 'two');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Only the page controls respond to horizontal page swipes', (
     tester,
   ) async {

@@ -1,5 +1,45 @@
 # 검증 기록
 
+## 2026-11-10 · 화면 전체를 한 장으로 넘기기
+
+사용자 피드백으로 본문 안쪽에 한정됐던 전환을 앱의 종이 화면 전체로 넓혔다.
+상단 브랜드·본문·하단 도구가 함께 넘어간다. OS 상태 표시·키보드는 전환 대상이 아니다.
+
+변경 파일은 `lib/ui/page_turn.dart`, `lib/ui/workspace.dart`,
+`test/page_navigation_test.dart`, `tool/capture_preview_test.dart`와 제품·구조 문서다.
+PageTurnView가 Scaffold 본문 전체를 감싸고 떠나는 화면의 마지막 paint layer를
+임시 메모리 이미지로 쓴다. 실제 편집기·포커스·저장 리스너는 복제하지 않는다.
+메모리 이미지는 전환 종료·중단·dispose 때 해제하며 파일로 저장하거나 업로드하지 않는다.
+스냅샷 실패는 저장 오류와 분리해 장식만 생략하며 페이지 이동과 입력은 유지한다.
+
+실행: `flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true`.
+페이지 추가·이전/다음·하단 넘김·미리보기에서 페이지를 선택하면 전체 전환을 볼 수 있다.
+
+새 코드의 검사:
+
+- `dart format lib test tool/capture_preview_test.dart`: 35개 파일 포맷 완료.
+  `flutter analyze --no-pub`: 문제 없음. `flutter test --no-pub`: 43개 통과.
+- 새 검사 3개는 390×844·1440×1000과 safe area에서도 장식 영역이 화면
+  위부터 아래까지 이어지고 상단·하단을 포함하는지, 이미지 크기 제한, 빠른 역방향
+  이동과 편집기 하나 유지, 화면 회전 시 이미지 제거·같은 입력 controller 보존을 확인한다.
+- 기존 한글 조합 보호·저장 실패 후 재시도·각 페이지 선택/스크롤 복원 검사도
+  새 코드에서 통과했다. 호스트 SQLite 파일 종료/재연결 후 두 쪽의 본문과 마지막
+  위치를 복원하는 UI 검사도 포함한다. 이는 실제 폰 프로세스/IME 검증은 아니다.
+- 첫 시도에서는 버튼 반응으로 repaint 대기 중인 화면을 제외해 넘김이 빠지는 문제가
+  위젯 검사에서 드러났다. 마지막으로 그려진 layer를 읽도록 수정한 뒤 전체 검사를
+  다시 통과했다. 분석기의 if 블록 경고도 수정 후 문제 없음으로 확인했다.
+
+`flutter test tool/capture_preview_test.dart --no-pub` 1개와 웹 release 빌드도
+성공했다. `artifacts/fullscreen-turn-*.png` 13개를 새 소스로 생성했고 양방향
+중간 프레임에서 상단·하단을 가로지르는 종이 휨과 본문·도구를 직접 확인했다.
+실제 제품 위젯과 번들 폰트의 테스트 렌더이며 합성 문장·키보드 inset을 썼다.
+브라우저/실기기 실행 화면으로 보고하지 않는다. 배포 결과는 후속 항목에 기록한다.
+실제 브라우저 조작·기기 IME,
+모바일/CanvasKit의 실제 프레임 지연·메모리 사용량, 키보드 전환 성능은 미검증이다.
+이 변경에서 iOS/Android 빌드를 실행했다고 보고하지 않는다. 이전 빌드 결과와 구분한다.
+공유 작업 공간의 진행 중인 책 상세·장식 변경을 보존하고 배포된 main 기반 별도
+체크아웃에서 이번 변경만 검증한다. 기존 hosting 설정·사용자 기록은 변경하지 않는다.
+
 ## 2026-11-10 · 페이지 넘김 웹 배포 완료
 
 [Actions 42800541152](https://github.com/namsoon00/writing-human/actions/runs/42800541152)의

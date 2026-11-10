@@ -87,7 +87,7 @@ void main() {
           final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
           await Directory('artifacts').create(recursive: true);
           await File(
-            'artifacts/page-turn-$name.png',
+            'artifacts/fullscreen-turn-$name.png',
           ).writeAsBytes(bytes!.buffer.asUint8List());
           image.dispose();
         });

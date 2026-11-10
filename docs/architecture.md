@@ -72,12 +72,16 @@ GitHub Pages 등 정적 호스팅은 `WRITING_HUMAN_LOCAL_ONLY=true` 빌드에�
 
 ## 페이지 전환 · 2026-11-10
 
-PageTurnView는 실제 PageEditor 하나를 유지한다. 떠나는 쪽만 TextPainter로
-읽기 전용으로 그려 360ms 곡선 클립·종이 뒷면·그림자를 덧댄다. 장식은
+PageTurnView는 Scaffold 본문 전체를 감싸 상단 브랜드·본문·하단 도구를
+한 장으로 넘긴다. 실제 PageEditor는 하나다. 떠나는 화면의 마지막 paint layer만
+메모리 이미지로 읽어 360ms 곡선 클립·종이 뒷면·그림자를 덧댄다. 장식은
 IgnorePointer/ExcludeSemantics이며 이전 편집기의 포커스·저장 리스너를 복제하지 않는다.
 같은 page ID의 첫 저장·도구 변경에는 전환하지 않는다. 새 쪽 입력은 연출을
 즉시 끝낸다. OS disableAnimations, 비활성 TickerMode, 20,000자 초과 본문은
-연출을 생략해 입력과 기록을 우선한다.
+연출을 생략해 입력과 기록을 우선한다. 스냅샷은 최대 배율 2·약 200만 픽셀로
+제한하며 PNG 인코딩·디스크 저장·업로드를 하지 않는다. 전환 완료·입력·빠른 역방향
+전환·키보드/화면 크기 변경·dispose 때 이미지를 해제한다. 화면 캡처가 불가능하면
+이동은 즉시 완료한다. 컨트롤러가 바뀌면 이전 계정의 장식을 재사용하지 않는다.
 
 Workspace는 조합 입력·계정 잠금·중복 이동을 검사하고 현재 저장 큐가 끝난 뒤
 이동한다. 실패하면 현재 쪽에 머문다. 시트의 쪽 선택은 route.completed 이후에

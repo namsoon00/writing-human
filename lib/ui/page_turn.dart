@@ -1,10 +1,12 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
 import 'package:flutter/material.dart';
 import '../data/model.dart';
 import 'paper.dart';
 
-/// Exactly one live editor is mounted. Only the outgoing page is painted as a
-/// non-interactive preview; it has no input, focus or persistence listeners.
+/// The whole paper surface turns, including the header and footer. Only one
+/// live editor is mounted; the outgoing surface is a disposable raster image.
 class PageTurnView extends StatefulWidget {
   const PageTurnView({
     super.key,
@@ -34,17 +36,21 @@ class _PageTurnViewState extends State<PageTurnView>
           duration: const Duration(milliseconds: 360),
         )..addStatusListener((status) {
           if (status == AnimationStatus.completed && mounted) {
-            setState(() => outgoing = null);
+            setState(stop);
           }
         });
   }
 
-  WritingPage? outgoing;
+  final surface = GlobalKey();
+  ui.Image? outgoing;
   WritingStyle? outgoingStyle;
   bool forward = true, reduced = false;
+  Size? viewport;
+  EdgeInsets? insets;
 
   void stop() {
     turn.stop();
+    outgoing?.dispose();
     outgoing = null;
   }
 
@@ -54,7 +60,11 @@ class _PageTurnViewState extends State<PageTurnView>
     reduced =
         MediaQuery.disableAnimationsOf(context) ||
         !TickerMode.valuesOf(context).enabled;
-    if (reduced) stop();
+    final nextViewport = MediaQuery.sizeOf(context);
+    final nextInsets = MediaQuery.viewInsetsOf(context);
+    if (reduced || viewport != nextViewport || insets != nextInsets) stop();
+    viewport = nextViewport;
+    insets = nextInsets;
   }
 
   @override
@@ -67,7 +77,21 @@ class _PageTurnViewState extends State<PageTurnView>
       if (reduced || oldWidget.page.text.length > 20000) {
         stop();
       } else {
-        outgoing = oldWidget.page;
+        stop();
+        final boundary = surface.currentContext?.findRenderObject();
+        if (boundary is! _PaperSurfaceBoundary ||
+            !boundary.hasSize ||
+            boundary.size.isEmpty) {
+          return;
+        }
+        try {
+          outgoing = boundary.capture();
+          if (outgoing == null) return;
+        } catch (error) {
+          // An unavailable decorative image must never block page navigation.
+          debugPrint('Page turn preview unavailable: $error');
+          return;
+        }
         outgoingStyle = oldWidget.style;
         forward =
             oldWidget.page.recordId != widget.page.recordId ||
@@ -79,6 +103,7 @@ class _PageTurnViewState extends State<PageTurnView>
 
   @override
   void dispose() {
+    stop();
     turn.dispose();
     super.dispose();
   }
@@ -88,7 +113,7 @@ class _PageTurnViewState extends State<PageTurnView>
     clipBehavior: Clip.hardEdge,
     fit: StackFit.expand,
     children: [
-      widget.child,
+      _PaperSurface(key: surface, child: widget.child),
       if (outgoing != null)
         Positioned.fill(
           child: IgnorePointer(
@@ -96,7 +121,11 @@ class _PageTurnViewState extends State<PageTurnView>
               child: AnimatedBuilder(
                 animation: turn,
                 child: RepaintBoundary(
-                  child: _PrintedPage(page: outgoing!, style: outgoingStyle!),
+                  child: RawImage(
+                    image: outgoing,
+                    fit: BoxFit.fill,
+                    filterQuality: FilterQuality.medium,
+                  ),
                 ),
                 builder: (context, child) {
                   final progress = Curves.easeInOutCubic.transform(turn.value);
@@ -121,69 +150,35 @@ class _PageTurnViewState extends State<PageTurnView>
   );
 }
 
-/// Recreates the last visible prose without retaining an outgoing TextField.
-class _PrintedPage extends StatelessWidget {
-  const _PrintedPage({required this.page, required this.style});
-  final WritingPage page;
-  final WritingStyle style;
+/// The previously painted layer is still the outgoing screen during widget
+/// updates. Capture that frame even if a button ripple has requested repaint.
+/// No encoding, storage or extra live widget tree is involved.
+class _PaperSurface extends SingleChildRenderObjectWidget {
+  const _PaperSurface({super.key, required super.child});
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) => DecoratedBox(
-      decoration: BoxDecoration(
-        color: paperColors[style.paperIndex],
-        image: DecorationImage(
-          image: const AssetImage('assets/images/cotton-paper.jpg'),
-          repeat: ImageRepeat.repeat,
-          scale: 2,
-          opacity: .24,
-        ),
-      ),
-      child: CustomPaint(
-        painter: _Prose(
-          page,
-          style,
-          writingPagePadding(constraints.biggest),
-          MediaQuery.textScalerOf(context),
-        ),
-      ),
-    ),
-  );
+  _PaperSurfaceBoundary createRenderObject(BuildContext context) =>
+      _PaperSurfaceBoundary();
 }
 
-class _Prose extends CustomPainter {
-  _Prose(this.page, this.style, this.padding, this.scaler);
-  final WritingPage page;
-  final WritingStyle style;
-  final EdgeInsets padding;
-  final TextScaler scaler;
+class _PaperSurfaceBoundary extends RenderRepaintBoundary {
+  Size? paintedSize;
   @override
-  void paint(Canvas canvas, Size size) {
-    if (page.text.isEmpty) return;
-    final text = TextPainter(
-      text: TextSpan(
-        text: page.text,
-        style: writingTextStyle(
-          style.fontIndex,
-          color: penColors[style.penIndex],
-          useDevelopmentTypeface: style.useDevelopmentTypeface,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-      textScaler: scaler,
-    )..layout(maxWidth: math.max(1, size.width - padding.horizontal));
-    canvas.save();
-    canvas.clipRect(Offset.zero & size);
-    text.paint(canvas, Offset(padding.left, padding.top - page.scroll));
-    canvas.restore();
-    text.dispose();
+  void paint(PaintingContext context, Offset offset) {
+    super.paint(context, offset);
+    paintedSize = size;
   }
 
-  @override
-  bool shouldRepaint(_Prose old) =>
-      old.page != page ||
-      old.style != style ||
-      old.padding != padding ||
-      old.scaler != scaler;
+  ui.Image? capture() {
+    final previous = paintedSize, painted = layer;
+    if (previous == null || previous.isEmpty || painted is! OffsetLayer) {
+      return null;
+    }
+    final ratio = math.min(
+      2.0,
+      math.sqrt(2000000 / (previous.width * previous.height)),
+    );
+    return painted.toImageSync(Offset.zero & previous, pixelRatio: ratio);
+  }
 }
 
 Path _visiblePage(Size size, double t, bool forward) {

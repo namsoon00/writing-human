@@ -1,5 +1,17 @@
 # 검증 기록
 
+## 2026-11-11 · 원문 놓기 웹 게시 완료
+
+[Actions 42915266930](https://github.com/namsoon00/writing-human/actions/runs/42915266930)의
+`b50e8747b5451f2fb5e24f78ca59bc9f9e7956b1`에서 검사·빌드·게시가 성공했다.
+[공개 웹](https://namsoon00.github.io/writing-human/)의 HTML, 앱 JS, 인식 작업자·엔진,
+번들 서체가 HTTP 200이며 검증한 로컬 산출물과 바이트 단위로 일치했다.
+앱 JS SHA-256은 `7cdbc71102d036b941d2add77159d0230a966e7a63cbf10600c9bf657dffe14c`이다. 한글 모델은 빌드 환경에 따라 gzip 결과가 다르지만
+압축을 푼 모델 바이트는 일치했다. 세부 결과는
+`artifacts/source-intake-deployment-check.json`에 있다.
+로컬 작업 폴더에서도 분석 및 원문·디스크 관련 8개 테스트가 통과했다.
+기존 비공개 Sites의 project_id와 접근 범위는 유지했다.
+
 ## 2026-11-11 · 원문 놓기
 
 - 최신 책장 넘김과 통합한 코드에서 Dart 포맷 62개 변경 없음, `flutter analyze --no-pub`

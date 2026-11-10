@@ -88,6 +88,10 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.runAsync(() async {
+      await precacheImage(
+        ResizeImage.resizeIfNeeded(640, null, MemoryImage(photo)),
+        boundary.currentContext!,
+      );
       for (final name in [
         'cotton-paper.jpg',
         'ink-mark.png',

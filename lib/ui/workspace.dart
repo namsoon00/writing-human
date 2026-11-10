@@ -433,227 +433,249 @@ class _WorkspaceState extends State<Workspace> {
     return Scaffold(
       backgroundColor: appPaper,
       body: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 760),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (widget.demo)
+        child: PaperBackdrop(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (widget.demo)
+                      SizedBox(
+                        height: 30,
+                        child: Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                '예시 · 기록은 저장되지 않아요',
+                                style: TextStyle(fontSize: 10, color: muted),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: widget.onExitDemo,
+                              child: const Text(
+                                '내 종이',
+                                style: TextStyle(fontSize: 11),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     SizedBox(
-                      height: 30,
+                      height: 60,
                       child: Row(
                         children: [
-                          const Expanded(
-                            child: Text(
-                              '예시 · 기록은 저장되지 않아요',
-                              style: TextStyle(fontSize: 10, color: muted),
+                          TextButton.icon(
+                            onPressed: _collection,
+                            icon: const Icon(
+                              CupertinoIcons.square_stack,
+                              size: 17,
                             ),
-                          ),
-                          TextButton(
-                            onPressed: widget.onExitDemo,
-                            child: const Text(
-                              '내 종이',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  SizedBox(
-                    height: 60,
-                    child: Row(
-                      children: [
-                        TextButton.icon(
-                          onPressed: _collection,
-                          icon: const Icon(
-                            CupertinoIcons.square_stack,
-                            size: 17,
-                          ),
-                          label: const Text(
-                            '보관함',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          style: TextButton.styleFrom(
-                            foregroundColor: muted,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            book?.title ?? '쓰는 인간',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: ink,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: () => _newSheet(),
-                          icon: const Icon(CupertinoIcons.plus, size: 16),
-                          label: const Text(
-                            '새 종이',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          style: TextButton.styleFrom(
-                            foregroundColor: muted,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (widget.sync != null &&
-                      (widget.sync!.hasLegacy || widget.sync!.legacyError))
-                    TextButton(
-                      onPressed: _syncInfo,
-                      child: Text(
-                        widget.sync!.legacyError
-                            ? '이전 글을 읽지 못했어요 · 확인'
-                            : '이 기기의 이전 글 가져오기',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  if (c.saveError != null)
-                    Container(
-                      color: const Color(0xffffeee5),
-                      padding: const EdgeInsets.only(left: 12),
-                      child: Row(
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              '저장 실패 · 앱을 닫지 말아 주세요.',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: c.retrySave,
-                            child: const Text(
-                              '저장 재시도',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (source.isNotEmpty)
-                    TextButton.icon(
-                      onPressed: _source,
-                      icon: const Icon(
-                        CupertinoIcons.quote_bubble,
-                        size: 14,
-                        color: muted,
-                      ),
-                      label: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          source.replaceAll('\n', ' '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontFamily: serif,
-                            fontSize: 13,
-                            color: muted,
-                          ),
-                        ),
-                      ),
-                    ),
-                  Expanded(
-                    key: const ValueKey('writing-surface'),
-                    child: PageEditor(
-                      key: ValueKey('${currentPage.id}:${c.editorEpoch}'),
-                      page: currentPage,
-                      style: c.library.style,
-                      focusNode: editorFocus,
-                      onChanged: _edit,
-                      onEditingState: (focused, composing) => c.setEditorState(
-                        focused: focused,
-                        isComposing: composing,
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    height: 54,
-                    child: Row(
-                      children: [
-                        TextButton.icon(
-                          onPressed: _tools,
-                          icon: const Icon(
-                            CupertinoIcons.slider_horizontal_3,
-                            size: 17,
-                          ),
-                          label: const Text(
-                            '쓰기 도구',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          style: TextButton.styleFrom(
-                            foregroundColor: muted,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                          ),
-                        ),
-                        const Spacer(),
-                        InkWell(
-                          onTap: _syncInfo,
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Text(
-                              c.saveError != null
-                                  ? '저장 실패'
-                                  : record == null
-                                  ? '자동 저장'
-                                  : c.saving
-                                  ? '저장 중'
-                                  : widget.demo
-                                  ? '예시'
-                                  : '저장됨',
-                              style: const TextStyle(
-                                color: muted,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                        if (count > 1)
-                          TextButton(
-                            onPressed: _pages,
-                            child: Text(
-                              '${currentPage.number} / $count',
-                              style: const TextStyle(
-                                color: muted,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
-                        if (editorFocus.hasFocus)
-                          TextButton(
-                            onPressed: _blur,
-                            child: const Text(
-                              '완료',
+                            label: const Text(
+                              '보관함',
                               style: TextStyle(fontSize: 12),
                             ),
-                          )
-                        else
-                          IconButton(
-                            tooltip: '더 보기',
-                            onPressed: _more,
-                            icon: const Icon(
-                              CupertinoIcons.ellipsis,
-                              size: 21,
+                            style: TextButton.styleFrom(
+                              foregroundColor: muted,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                if (book == null) ...[
+                                  const BotanicalMark(size: 18, color: gold),
+                                  const SizedBox(width: 5),
+                                ],
+                                Flexible(
+                                  child: Text(
+                                    book?.title ?? '쓰는 인간',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontFamily: serif,
+                                      fontSize: 16,
+                                      letterSpacing: .3,
+                                      color: ink,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => _newSheet(),
+                            icon: const Icon(CupertinoIcons.plus, size: 16),
+                            label: const Text(
+                              '새 종이',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            style: TextButton.styleFrom(
+                              foregroundColor: burgundy,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (widget.sync != null &&
+                        (widget.sync!.hasLegacy || widget.sync!.legacyError))
+                      TextButton(
+                        onPressed: _syncInfo,
+                        child: Text(
+                          widget.sync!.legacyError
+                              ? '이전 글을 읽지 못했어요 · 확인'
+                              : '이 기기의 이전 글 가져오기',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    if (c.saveError != null)
+                      Container(
+                        color: const Color(0xffffeee5),
+                        padding: const EdgeInsets.only(left: 12),
+                        child: Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                '저장 실패 · 앱을 닫지 말아 주세요.',
+                                style: TextStyle(fontSize: 11),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: c.retrySave,
+                              child: const Text(
+                                '저장 재시도',
+                                style: TextStyle(fontSize: 11),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (source.isNotEmpty)
+                      TextButton.icon(
+                        onPressed: _source,
+                        icon: const Icon(
+                          CupertinoIcons.quote_bubble,
+                          size: 14,
+                          color: muted,
+                        ),
+                        label: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            source.replaceAll('\n', ' '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: serif,
+                              fontSize: 13,
                               color: muted,
                             ),
                           ),
-                      ],
+                        ),
+                      ),
+                    Expanded(
+                      key: const ValueKey('writing-surface'),
+                      child: PageEditor(
+                        key: ValueKey('${currentPage.id}:${c.editorEpoch}'),
+                        page: currentPage,
+                        style: c.library.style,
+                        focusNode: editorFocus,
+                        onChanged: _edit,
+                        onEditingState: (focused, composing) =>
+                            c.setEditorState(
+                              focused: focused,
+                              isComposing: composing,
+                            ),
+                      ),
                     ),
-                  ),
-                ],
+                    SizedBox(
+                      height: 54,
+                      child: Row(
+                        children: [
+                          TextButton.icon(
+                            onPressed: _tools,
+                            icon: const Icon(
+                              CupertinoIcons.slider_horizontal_3,
+                              size: 17,
+                            ),
+                            label: const Text(
+                              '쓰기 도구',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            style: TextButton.styleFrom(
+                              foregroundColor: muted,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          InkWell(
+                            onTap: _syncInfo,
+                            child: Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: Text(
+                                c.saveError != null
+                                    ? '저장 실패'
+                                    : record == null
+                                    ? '자동 저장'
+                                    : c.saving
+                                    ? '저장 중'
+                                    : widget.demo
+                                    ? '예시'
+                                    : '저장됨',
+                                style: const TextStyle(
+                                  color: muted,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          if (count > 1)
+                            TextButton(
+                              onPressed: _pages,
+                              child: Text(
+                                '${currentPage.number} / $count',
+                                style: const TextStyle(
+                                  color: muted,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                          if (editorFocus.hasFocus)
+                            TextButton(
+                              onPressed: _blur,
+                              child: const Text(
+                                '완료',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                            )
+                          else
+                            IconButton(
+                              tooltip: '더 보기',
+                              onPressed: _more,
+                              icon: const Icon(
+                                CupertinoIcons.ellipsis,
+                                size: 21,
+                                color: muted,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

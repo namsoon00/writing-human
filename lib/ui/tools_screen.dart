@@ -28,6 +28,7 @@ class ToolsScreen extends StatelessWidget {
                     child: Text(
                       '쓰기 취향',
                       style: TextStyle(
+                        fontFamily: serif,
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                       ),
@@ -50,6 +51,7 @@ class ToolsScreen extends StatelessWidget {
                       _swatch(
                         label: paperNames[i],
                         color: paperColors[i],
+                        sheet: true,
                         selected: style.paperIndex == i,
                         onTap: () =>
                             controller.setStyle(style.copy(paperIndex: i)),
@@ -94,10 +96,10 @@ class ToolsScreen extends StatelessWidget {
                       onSelected: (_) =>
                           controller.setStyle(style.copy(fontIndex: i)),
                       showCheckmark: false,
-                      selectedColor: const Color(0xffe2e9df),
+                      selectedColor: const Color(0xffeeddd3),
                       backgroundColor: paper,
                       side: BorderSide(
-                        color: style.fontIndex == i ? green : line,
+                        color: style.fontIndex == i ? burgundy : line,
                       ),
                     ),
                 ],
@@ -108,14 +110,14 @@ class ToolsScreen extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 title: const Text('펜 움직임', style: TextStyle(fontSize: 14)),
                 value: style.penMotion,
-                activeTrackColor: green,
+                activeTrackColor: burgundy,
                 onChanged: (v) => controller.setStyle(style.copy(penMotion: v)),
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('줄 가이드', style: TextStyle(fontSize: 14)),
                 value: style.guides,
-                activeTrackColor: green,
+                activeTrackColor: burgundy,
                 onChanged: (v) => controller.setStyle(style.copy(guides: v)),
               ),
               if (controller.saveError != null)
@@ -149,6 +151,7 @@ class ToolsScreen extends StatelessWidget {
     required Color color,
     required bool selected,
     required VoidCallback onTap,
+    bool sheet = false,
   }) => Semantics(
     label: label,
     selected: selected,
@@ -157,19 +160,21 @@ class ToolsScreen extends StatelessWidget {
       message: label,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(sheet ? 7 : 22),
         child: Container(
           width: 44,
           height: 44,
           padding: const EdgeInsets.all(5),
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: selected ? green : Colors.transparent),
+            shape: sheet ? BoxShape.rectangle : BoxShape.circle,
+            borderRadius: sheet ? BorderRadius.circular(7) : null,
+            border: Border.all(color: selected ? burgundy : Colors.transparent),
           ),
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: color,
-              shape: BoxShape.circle,
+              shape: sheet ? BoxShape.rectangle : BoxShape.circle,
+              borderRadius: sheet ? BorderRadius.circular(3) : null,
               border: Border.all(color: ink.withValues(alpha: .12)),
             ),
           ),

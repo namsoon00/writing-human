@@ -73,6 +73,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                       child: Text(
                         book?.title ?? '보관함',
                         style: const TextStyle(
+                          fontFamily: serif,
                           fontSize: 21,
                           fontWeight: FontWeight.w700,
                         ),
@@ -230,7 +231,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                       icon: const Icon(CupertinoIcons.plus, size: 16),
                       label: const Text('새 종이'),
                       style: FilledButton.styleFrom(
-                        backgroundColor: ink,
+                        backgroundColor: burgundy,
                         foregroundColor: paper,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,

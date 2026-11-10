@@ -1,22 +1,23 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
-const ink = Color(0xff2d332e);
-const muted = Color(0xff7b817a);
-const green = Color(0xff526759);
-const burgundy = green;
-const line = Color(0xffe6e8e1);
-const paper = Color(0xfffbfaf6);
-const appPaper = Color(0xfff2f3ef);
+const ink = Color(0xff5b4636);
+const muted = Color(0xff806b59);
+const green = Color(0xff4e5a42);
+const burgundy = Color(0xff7a4a4a);
+const gold = Color(0xffad8b51);
+const line = Color(0xffe3d3c1);
+const paper = Color(0xfff7f2e8);
+const appPaper = Color(0xfff5e9dc);
 const serif = 'NanumMyeongjo';
 const paperColors = [
-  Color(0xfffbfaf6),
-  Color(0xfff6f0e4),
-  Color(0xffedeeea),
-  Color(0xfff5ecd9),
+  Color(0xfffbf5e9),
+  Color(0xfff3e7d2),
+  Color(0xffe9e6df),
+  Color(0xfff3dfbd),
 ];
 const paperNames = ['순면지', '미색지', '회백지', '크림지'];
-const penColors = [Color(0xff30372f), Color(0xff795c49), Color(0xff50647a)];
+const penColors = [Color(0xff5b4636), Color(0xff79503c), Color(0xff5b6f8e)];
 const fontNames = ['나눔명조', '나눔명조 Bold', '나눔고딕'];
 
 TextStyle writingTextStyle(int font, {double size = 23, Color color = ink}) =>
@@ -44,15 +45,15 @@ class PaperSurface extends StatelessWidget {
   Widget build(BuildContext context) => PhysicalShape(
     clipper: _PaperEdge(torn),
     color: color,
-    elevation: 1,
-    shadowColor: const Color(0x18545b4d),
+    elevation: 2,
+    shadowColor: const Color(0x305b4636),
     clipBehavior: Clip.antiAlias,
     child: Stack(
       fit: StackFit.passthrough,
       children: [
-        Positioned.fill(child: _PaperMaterial(color: color, strength: .16)),
+        Positioned.fill(child: _PaperMaterial(color: color, strength: .48)),
         CustomPaint(
-          painter: PaperGrain(guides: guides, opacity: .1),
+          painter: PaperGrain(guides: guides, opacity: .28),
           child: child,
         ),
       ],
@@ -71,7 +72,7 @@ class PaperBackdrop extends StatelessWidget {
     fit: StackFit.passthrough,
     children: [
       const Positioned.fill(
-        child: _PaperMaterial(color: appPaper, strength: .52),
+        child: _PaperMaterial(color: appPaper, strength: .18),
       ),
       child,
     ],
@@ -137,14 +138,14 @@ class _PaperEdge extends CustomClipper<Path> {
     final p = Path()
       ..moveTo(0, 0)
       ..lineTo(s.width, 0)
-      ..lineTo(s.width, s.height - 6);
+      ..lineTo(s.width, s.height - 3);
     final random = Random(42);
-    for (double x = s.width; x > 0; x -= 1.3) {
-      final wave = sin(x * .12) * .6 + sin(x * .031) * .8;
-      p.lineTo(x, s.height - 3.2 - random.nextDouble() * 2.7 - wave);
+    for (double x = s.width; x > 0; x -= 1.8) {
+      final wave = sin(x * .12) * .35 + sin(x * .031) * .4;
+      p.lineTo(x, s.height - 1.8 - random.nextDouble() * 1.4 - wave);
     }
     return p
-      ..lineTo(0, s.height - 4)
+      ..lineTo(0, s.height - 2)
       ..close();
   }
 

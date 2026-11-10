@@ -31,7 +31,7 @@ class WritingHumanApp extends StatelessWidget {
       colorScheme: ColorScheme.fromSeed(
         seedColor: green,
         surface: paper,
-        primary: green,
+        primary: burgundy,
         onSurface: ink,
       ),
       scaffoldBackgroundColor: appPaper,

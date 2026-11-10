@@ -1,5 +1,13 @@
 # 검증 기록
 
+## 2026-11-10 · 단순한 UX와 기획 이미지의 룩앤필
+
+- 원본 첨부 브랜드 보드와 새 Flutter 렌더를 비교했다. 종이빛·브라운·그린·포도빛·블루 팔레트, 면지의 결, 가는 종이 끝, 명조 제목과 작은 금박 식물 표식을 적용했다. 바로 쓰는 진입 흐름, 제어 순서, 저장 구조는 바꾸지 않았다.
+- dart format lib tool/capture_preview_test.dart, flutter analyze --no-pub 통과. flutter test --no-pub: 이번 변경 후 30개 통과. 첫 한글 입력의 편집기 유지·저장 실패·복원·독립 도구·펜/조합 보호 검사를 포함했다.
+- node tool/build_github_pages.mjs /writing-human/: 새 release 웹 빌드 성공.
+- flutter test tool/capture_preview_test.dart --no-pub: 렌더 검사 1개 통과. 390×844 및 1440×1000의 새 brand-*.png에서 빈 종이, 작성/펜, 키보드 inset, 도구, 보관함과 넓은 화면을 확인했다. 실제 번들 글꼴/소재와 메모리 예시 데이터의 Flutter 렌더이며 실제 브라우저·실기기 캡처가 아니다.
+- 실제 기기의 색 표현·한국어 키보드 및 실제 브라우저 조작은 이번 룩앤필 변경에서도 미검증이다. 완전한 픽셀 일치나 개발 중인 쓰는 인간체 제공을 주장하지 않는다. 웹 빌드/배포 결과는 게시 후 별도로 기록한다.
+
 ## 2026-11-10 · 바로 쓰는 종이 UX
 
 - [GitHub Actions 42732777232](https://github.com/namsoon00/writing-human/actions/runs/42732777232)에서 소스 80ddcb5d75e93449a5824e1333c77ebe3dbebe3c의 분석·테스트 30개·release 빌드·Pages 배포가 성공했다. 공개 URL의 기본/예시 HTML, UI 나눔고딕 및 면지 자산이 HTTP 200이었다. 실제 제공 main.dart.js의 SHA-256 905485076443d1c821900ed124f294e6634f97da5f1b8558e0ba8e62f95b9bba가 로컬 검증 빌드와 일치했고 writing-surface 표식, 사진 배경/계정 API 경로 미포함을 확인했다. artifacts/calm-deployment-check.json에 기록했다. 이는 게시·파일 확인이며 실제 브라우저 실행 확인과 구분한다.

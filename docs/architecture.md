@@ -10,6 +10,8 @@ Workspace는 마지막 활성 페이지를 즉시 보여 주며, 기록이 없�
 
 collection_sheet.dart는 필요할 때 여는 글/책 보관함이다. tools_screen.dart는 종이·잉크·글꼴과 펜/줄 가이드를 한 시트에서 독립 선택한다. 원문·페이지·동기화도 보조 시트이며 기존 계정 보호·저장 실패/재시도·기존 기기 기록 가져오기를 유지한다. 작성 화면은 폭 760 이하의 한 면으로 적응하고, 마케팅 배경과 휴대폰 프레임은 사용하지 않는다. 아래 첨부 이미지 개편 기록은 이전 UI 구조다.
 
+룩앤필 재정렬은 이 흐름과 데이터 계층을 바꾸지 않고 paper.dart의 공통 팔레트와 소재 표시를 조정한다. 작성지는 면지 48%, 바탕은 18% 강도로 구분하며 정적인 RepaintBoundary 안에서 그린다. 작은 명조/금박 식물 표식, 브라운 본문, 포도빛 선택 상태를 사용한다. 종이의 하단 결은 최대 몇 논리 픽셀 정도로 잘라 입력 면을 유지한다.
+
 - lib/data/model.dart: Book, WritingRecord(bookId nullable), WritingPage(recordId, number, text, selection, scroll), Library(activePageId, writing). 버전 1 JSON 및 참조 구조 검증.
 - lib/data/library_controller.dart: 사용자 동작, 변경 스냅샷의 순차 저장, 저장 상태와 재시도. 저장 순서가 역전되지 않도록 Future 체인을 사용한다.
 - lib/data/sqlite_store.dart: 네 개의 관계형 테이블, 외래 키, 현재 버전 3. 이전 버전 1·2의 파일을 자동 이전한다. 부모를 REPLACE로 삭제하지 않고 갱신한다. 각 스냅샷은 트랜잭션으로 저장한다.

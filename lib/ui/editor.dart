@@ -106,7 +106,7 @@ class _PageEditorState extends State<PageEditor> {
     final style = widget.style;
     return PaperSurface(
       color: paperColors[style.paperIndex],
-      torn: false,
+      torn: true,
       guides: style.guides,
       child: Stack(
         children: [
@@ -137,7 +137,7 @@ class _PageEditorState extends State<PageEditor> {
                 hintStyle: writingTextStyle(
                   style.fontIndex,
                   size: 23,
-                  color: const Color(0xffa7ada3),
+                  color: const Color(0xffa18b75),
                 ),
                 contentPadding: const EdgeInsets.fromLTRB(26, 38, 25, 42),
                 border: InputBorder.none,

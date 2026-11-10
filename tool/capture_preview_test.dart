@@ -75,7 +75,7 @@ void main() {
         final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
         await Directory('artifacts').create(recursive: true);
         await File(
-          'artifacts/calm-$name.png',
+          'artifacts/brand-$name.png',
         ).writeAsBytes(bytes!.buffer.asUint8List());
         image.dispose();
       });

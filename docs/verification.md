@@ -1,5 +1,34 @@
 # 검증 기록
 
+## 2026-11-10 · 일반 웹 전체 쓰는 인간체 기본 적용 게시 완료
+
+[Actions 42804908393](https://github.com/namsoon00/writing-human/actions/runs/42804908393)에서
+소스 `79a3c989606d2f89f1c5cde8dfe40961390dd576`의 검사·빌드·게시가 성공했다.
+구현 소스는 `7894e4601ff66ccdca4cfdd28c9f3d7d08ba6e29`이며 재게시 버전의 앱 코드는 같다.
+[일반 웹 주소](https://namsoon00.github.io/writing-human/)에 쓰는 인간체를 기본 적용했다.
+예시나 최초 글꼴 선택 없이 기존 페이지·작성지·제목·메뉴·보관함·페이지 목록·도구·
+입력 대화상자에 적용한다. 이후 사용자가 명시적으로 선택한 다른 본문 글꼴은 유지한다.
+
+배포 소스의 포맷·분석·테스트 46개, 실제 폰트로 일반 화면을 렌더한 검사 1개,
+release 웹 빌드가 통과했다. 구형 JSON/실제 SQLite의 1회 기본 글꼴 전환과 재열기,
+본문·선택·스크롤·독립 도구 설정 보존을 확인했다. 상세 범위는 아래 구현 기록을 따른다.
+
+첫 실행 42802990398은 GitHub Pages의 syncing_files 상태에서 10분 시간 초과였고,
+실패 단계만 재실행하면 같은 SHA가 Deployment cancelled를 반환했다. 검증된 앱 코드를
+바꾸지 않고 새 SHA로 게시해 성공했다. 시간 초과나 취소를 게시 성공으로 보고하지 않았다.
+
+실제 일반 HTML·main JS·FontManifest·TTF·메타데이터 5개 요청이 HTTP 200이었다.
+main JS SHA-256은
+`f10f7c39f0d6d7a6cf3a34a6e47f5a0f2835e5327e3adda063c06589169de5bd`이며 로컬 release와 동일했다.
+실제 JS의 typefaceDefaultsVersion 전환 필드도 확인했다. TTF는 기존 전체 한글 0.006과
+동일한 742,856바이트이며 해시는
+`1b7c824ece6e653e9e2d72751346b1b703fd3a6e695171a9a62f60e2e21044f0`이다.
+결과는 `artifacts/typeface/v006/global-web-deployment.json`, 기준 빌드는 `global-web-build.json`이다.
+
+이는 Flutter 실행 검사와 배포/HTTP 동일 파일 확인이다. 실제 브라우저 입력·iPhone/Android
+키보드·최종 가독성/광학 검수는 미검증이며 예시 렌더를 실기기나 사용자 디스크 검증으로
+보고하지 않는다. 기존 비공개 Sites의 project_id와 접근 범위는 변경하지 않았다.
+
 ## 2026-11-10 · 전체 화면 넘김 웹 배포 완료
 
 [Actions 42802397738](https://github.com/namsoon00/writing-human/actions/runs/42802397738),

@@ -77,3 +77,13 @@ HTTP 200을 확인했다. 검증 범위와 한계는 docs/verification.md를 따
 웹 앱의 Aa → 글꼴 → 쓰는 인간체 · 개발 중에서 확인한다.
 실제 제공되는 TTF·메타데이터·main JS가 로컬 release와 일치했으며 상세 검증은
 `docs/verification.md`에 있다. 실제 브라우저/실기기 타이핑 검증과는 구분한다.
+
+## 2026-11-10 · 일반 화면 전체 기본 서체 게시
+
+[Actions 42804908393](https://github.com/namsoon00/writing-human/actions/runs/42804908393),
+소스 `79a3c989606d2f89f1c5cde8dfe40961390dd576`에서 검사·빌드·게시가 성공했다.
+[일반 웹 주소](https://namsoon00.github.io/writing-human/)의 본문·기존 페이지·제목·메뉴·
+보관함·도구·대화상자에 쓰는 인간체를 기본 적용한다. 예시 화면이나 최초 선택이 필요하지 않다.
+기존 설정은 한 번 전환하고 이후 사용자가 고른 다른 본문 글꼴은 보존한다.
+실제 실행 JS와 전체 한글 TTF가 검증한 로컬 release와 같음을 확인했다.
+초기 Pages 동기화 시간 초과와 새 버전 재게시, 검증 범위는 docs/verification.md에 기록했다.

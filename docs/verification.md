@@ -1,5 +1,23 @@
 # 검증 기록
 
+## 2026-11-10 · 개발 서체 포함 웹 배포 확인
+
+[Actions 42795999490](https://github.com/namsoon00/writing-human/actions/runs/42795999490)에서
+소스 `28884e22f860c815722c0b6a52712e6b8698a6bf`의 분석·테스트·빌드·배포가 성공했다.
+즉시 확인용 합성 예시는 https://namsoon00.github.io/writing-human/?demo=typeface 이다.
+실제 기록에는 Aa → 글꼴 → 쓰는 인간체 · 개발 중을 선택하면 저장·복원된다.
+
+기본/서체 예시 HTML, main JS, FontManifest, 실제 TTF, 서체 메타데이터,
+나눔명조 7개 요청이 HTTP 200이었다. 제공 JS의 SHA-256
+`80d8cefcb784c30122d69b81dd558c0226c4e44f7ab763bc381ec2dee54e657e`가
+로컬 release와 일치했다. FontManifest의 WritingHumanDevelopment 등록과
+배포 TTF의 SHA-256 `eda1b102b1d09cf322fa625bc25f1826333486142b6098570188690a99d83a2e`가
+원본과 동일함을 확인했다. `artifacts/typeface-deployment-check.json`에 기록했다.
+
+이는 실제 서체 파일을 포함한 배포 확인이며 브라우저 조작·실기기 IME 검증은 아니다.
+한글 111자 개발판이고 나머지는 나눔명조 등으로 표시한다. 기본/기존 선택을 자동
+변경하지 않으며 데모를 사용자 영구 저장 검증으로 보고하지 않는다.
+
 ## 2026-11-10 · 실제 앱에 쓰는 인간체 개발판 연결
 
 사용자가 실제 적용을 요청해 한글 111자 개발 TTF를 앱에 연결했다. 완성 서체로

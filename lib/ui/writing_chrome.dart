@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'paper.dart';
+import 'paper_swipe.dart';
 
 /// Small, native controls over the same paper as the editor. Decorative
 /// materials never replace editable text or accessible button labels.
@@ -89,145 +90,125 @@ class WritingFooter extends StatelessWidget {
     super.key,
     required this.status,
     required this.onTools,
-    required this.onStatus,
     required this.onMore,
     required this.onDone,
     required this.focused,
     this.pageLabel,
+    this.pageCount = 1,
     this.onPages,
     this.onPrevious,
     this.onNext,
-    this.onAddPage,
     this.failed = false,
   });
   final String status;
-  final VoidCallback onTools, onStatus, onMore, onDone;
-  final VoidCallback? onPages, onPrevious, onNext, onAddPage;
+  final VoidCallback onTools, onMore, onDone;
+  final VoidCallback? onPages, onPrevious, onNext;
   final String? pageLabel;
+  final int pageCount;
   final bool focused, failed;
 
   @override
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      if (pageLabel != null)
-        Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 280),
-            child: GestureDetector(
-              onHorizontalDragEnd: (details) {
-                final velocity = details.primaryVelocity ?? 0;
-                if (velocity < -250) onNext?.call();
-                if (velocity > 250) onPrevious?.call();
-              },
-              child: Row(
-                children: [
-                  IconButton(
-                    tooltip: '이전 페이지',
-                    onPressed: onPrevious,
-                    color: brandInk,
-                    icon: const Icon(CupertinoIcons.chevron_left, size: 17),
-                  ),
-                  Expanded(
-                    child: TextButton(
-                      onPressed: onPages,
-                      child: Text(
-                        pageLabel!,
-                        maxLines: 1,
-                        style: const TextStyle(color: muted, fontSize: 11),
+  Widget build(BuildContext context) => SizedBox(
+    height: 64 + (MediaQuery.textScalerOf(context).scale(13) - 13) * 2,
+    child: Row(
+      children: [
+        SizedBox(
+          width: 64,
+          child: Tooltip(
+            message: '쓰기 도구',
+            child: TextButton(
+              onPressed: onTools,
+              style: TextButton.styleFrom(
+                foregroundColor: brandInk,
+                minimumSize: const Size(48, 48),
+              ),
+              child: Semantics(
+                label: '쓰기 도구',
+                excludeSemantics: true,
+                child: const CustomPaint(
+                  painter: _Underline(),
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: 5),
+                    child: Text(
+                      'Aa',
+                      style: TextStyle(
+                        fontFamily: appFontFamily,
+                        fontFamilyFallback: appFontFallback,
+                        fontSize: 21,
                       ),
                     ),
                   ),
-                  IconButton(
-                    tooltip: '다음 페이지',
-                    onPressed: onNext,
-                    color: brandInk,
-                    icon: const Icon(CupertinoIcons.chevron_right, size: 17),
-                  ),
-                  IconButton(
-                    tooltip: '페이지 추가',
-                    onPressed: onAddPage,
-                    color: brandInk,
-                    icon: const Icon(Icons.note_add_outlined, size: 21),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
         ),
-      SizedBox(
-        height: 64,
-        child: Row(
-          children: [
-            SizedBox(
-              width: 64,
+        Expanded(
+          child: PaperSwipe(
+            key: const ValueKey('page-number-swipe'),
+            onPrevious: onPrevious,
+            onNext: onNext,
+            child: Semantics(
+              label: '$pageLabel쪽, 전체 $pageCount쪽',
+              onIncrease: onNext,
+              onDecrease: onPrevious,
               child: Tooltip(
-                message: '쓰기 도구',
+                message: '페이지 목록',
                 child: TextButton(
-                  onPressed: onTools,
+                  key: const ValueKey('page-number'),
+                  onPressed: onPages,
                   style: TextButton.styleFrom(
-                    foregroundColor: brandInk,
                     minimumSize: const Size(48, 48),
+                    foregroundColor: muted,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
                   ),
-                  child: Semantics(
-                    label: '쓰기 도구',
-                    excludeSemantics: true,
-                    child: const CustomPaint(
-                      painter: _Underline(),
-                      child: Padding(
-                        padding: EdgeInsets.only(bottom: 5),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        pageLabel ?? '',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+
+                      const SizedBox(height: 3),
+                      Semantics(
+                        liveRegion: failed,
                         child: Text(
-                          'Aa',
+                          status,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontFamily: appFontFamily,
-                            fontFamilyFallback: appFontFallback,
-                            fontSize: 21,
+                            fontSize: 9,
+                            color: failed ? burgundy : muted,
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ),
             ),
-            Expanded(
-              child: Tooltip(
-                message: '저장 상태와 동기화',
-                child: TextButton(
-                  onPressed: onStatus,
-                  child: Semantics(
-                    liveRegion: failed,
-                    child: Text(
-                      status,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: failed ? burgundy : muted,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(
-              width: 64,
-              child: focused
-                  ? TextButton(
-                      onPressed: onDone,
-                      child: const Text('완료', style: TextStyle(fontSize: 12)),
-                    )
-                  : IconButton(
-                      tooltip: '더 보기',
-                      onPressed: onMore,
-                      color: brandInk,
-                      icon: const Icon(CupertinoIcons.ellipsis, size: 23),
-                    ),
-            ),
-          ],
+          ),
         ),
-      ),
-    ],
+        SizedBox(
+          width: 64,
+          child: focused
+              ? TextButton(
+                  onPressed: onDone,
+                  child: const Text('완료', style: TextStyle(fontSize: 12)),
+                )
+              : IconButton(
+                  tooltip: '더 보기',
+                  onPressed: onMore,
+                  color: brandInk,
+                  icon: const Icon(CupertinoIcons.ellipsis, size: 23),
+                ),
+        ),
+      ],
+    ),
   );
 }
 

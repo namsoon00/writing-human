@@ -87,7 +87,7 @@ void main() {
           final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
           await Directory('artifacts').create(recursive: true);
           await File(
-            'artifacts/global-typeface-$name.png',
+            'artifacts/paper-swipe-$name.png',
           ).writeAsBytes(bytes!.buffer.asUint8List());
           image.dispose();
         });
@@ -142,7 +142,11 @@ void main() {
       await tester.tap(find.text('완료'));
       await tester.pumpAndSettle();
       await capture('resting');
-      await tester.tap(find.byTooltip('페이지 추가'));
+      await tester.fling(
+        find.byKey(const ValueKey('page-number')),
+        const Offset(-140, 0),
+        800,
+      );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 180));
       expect(find.byKey(const ValueKey('page-turn-overlay')), findsOneWidget);
@@ -154,12 +158,16 @@ void main() {
         '새는 알에서 나오려고\n투쟁한다. 알은 세계다.',
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('이전 페이지'));
+      await tester.fling(
+        find.byKey(const ValueKey('page-number')),
+        const Offset(140, 0),
+        800,
+      );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 180));
       await capture('backward-middle');
       await tester.pumpAndSettle();
-      await tester.tap(find.text('1 / 2'));
+      await tester.tap(find.byKey(const ValueKey('page-number')));
       await tester.pumpAndSettle();
       await capture('overview');
       await tester.tap(find.byTooltip('닫기'));

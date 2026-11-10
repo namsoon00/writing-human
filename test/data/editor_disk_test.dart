@@ -120,9 +120,13 @@ void main() {
     );
     expect(find.text('저장됨'), findsOneWidget);
     expect(tester.takeException(), isNull);
-    await tester.tap(find.byTooltip('페이지 추가'));
+    await tester.fling(
+      find.byKey(const ValueKey('page-number')),
+      const Offset(-140, 0),
+      800,
+    );
     await saved();
-    expect(find.text('2 / 2'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
     const next = TextEditingValue(
       text: '두 번째 쪽도 실제 파일에 남깁니다.',
       selection: TextSelection(baseOffset: 2, extentOffset: 5),
@@ -148,9 +152,13 @@ void main() {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
     expect(controller.library.activePageId, secondId);
-    expect(find.text('2 / 2'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
     expect(tester.widget<TextField>(field).controller!.value, next);
-    await tester.tap(find.byTooltip('이전 페이지'));
+    await tester.fling(
+      find.byKey(const ValueKey('page-number')),
+      const Offset(140, 0),
+      800,
+    );
     await saved();
     expect(controller.library.activePageId, pageId);
     expect(tester.widget<TextField>(field).controller!.text, body);

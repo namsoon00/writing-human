@@ -13,6 +13,7 @@ import 'paper.dart';
 import 'tools_screen.dart';
 import 'writing_chrome.dart';
 import 'page_turn.dart';
+import 'paper_swipe.dart';
 import 'pages_sheet.dart';
 
 class Workspace extends StatefulWidget {
@@ -96,6 +97,10 @@ class _WorkspaceState extends State<Workspace> {
   void _stepPage(int step) {
     final pages = _recordPages,
         index = _recordPages.indexWhere((p) => p.id == page.id);
+    if (step > 0 && index == pages.length - 1) {
+      _appendPage();
+      return;
+    }
     if (index + step >= 0 && index + step < pages.length) {
       _openPage(pages[index + step].id);
     }
@@ -502,146 +507,153 @@ class _WorkspaceState extends State<Workspace> {
         page: currentPage,
         style: c.library.style,
         editing: c.editorFocused || c.composing,
-        child: PaperBackdrop(
-          color: paperColors[c.library.style.paperIndex],
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (widget.demo)
-                    SizedBox(
-                      height: 30,
-                      child: Row(
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              '예시 · 기록은 저장되지 않아요',
-                              style: TextStyle(fontSize: 10, color: muted),
+        child: PaperSwipe(
+          key: const ValueKey('paper-swipe'),
+          touchOnly: true,
+          onPrevious: navigationEnabled && !editorFocus.hasFocus && index > 0
+              ? () => _stepPage(-1)
+              : null,
+          onNext: navigationEnabled && !editorFocus.hasFocus
+              ? () => _stepPage(1)
+              : null,
+          child: PaperBackdrop(
+            color: paperColors[c.library.style.paperIndex],
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (widget.demo)
+                      SizedBox(
+                        height: 30,
+                        child: Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                '예시 · 기록은 저장되지 않아요',
+                                style: TextStyle(fontSize: 10, color: muted),
+                              ),
                             ),
-                          ),
-                          TextButton(
-                            onPressed: widget.onExitDemo,
-                            child: const Text(
-                              '내 종이',
-                              style: TextStyle(fontSize: 11),
+                            TextButton(
+                              onPressed: widget.onExitDemo,
+                              child: const Text(
+                                '내 종이',
+                                style: TextStyle(fontSize: 11),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                    WritingHeader(
+                      useDevelopmentTypeface:
+                          c.library.style.useDevelopmentTypeface,
+                      compact: compact,
+                      bookTitle: book?.title,
+                      onCollection: _collection,
+                      onNewSheet: () => _newSheet(),
                     ),
-                  WritingHeader(
-                    useDevelopmentTypeface:
-                        c.library.style.useDevelopmentTypeface,
-                    compact: compact,
-                    bookTitle: book?.title,
-                    onCollection: _collection,
-                    onNewSheet: () => _newSheet(),
-                  ),
-                  if (widget.sync != null &&
-                      (widget.sync!.hasLegacy || widget.sync!.legacyError))
-                    TextButton(
-                      onPressed: _syncInfo,
-                      child: Text(
-                        widget.sync!.legacyError
-                            ? '이전 글을 읽지 못했어요 · 확인'
-                            : '이 기기의 이전 글 가져오기',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  if (c.saveError != null)
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xffffeee5),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      padding: const EdgeInsets.only(left: 12),
-                      child: Row(
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              '저장 실패 · 앱을 닫지 말아 주세요.',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: c.retrySave,
-                            child: const Text(
-                              '저장 재시도',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (source.isNotEmpty)
-                    TextButton.icon(
-                      onPressed: _source,
-                      icon: const Icon(
-                        CupertinoIcons.quote_bubble,
-                        size: 14,
-                        color: muted,
-                      ),
-                      label: Align(
-                        alignment: Alignment.centerLeft,
+                    if (widget.sync != null &&
+                        (widget.sync!.hasLegacy || widget.sync!.legacyError))
+                      TextButton(
+                        onPressed: _syncInfo,
                         child: Text(
-                          source.replaceAll('\n', ' '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontFamily: appFontFamily,
-                            fontFamilyFallback: appFontFallback,
-                            fontSize: 13,
-                            color: muted,
+                          widget.sync!.legacyError
+                              ? '이전 글을 읽지 못했어요 · 확인'
+                              : '이 기기의 이전 글 가져오기',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    if (c.saveError != null)
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xffffeee5),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.only(left: 12),
+                        child: Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                '저장 실패 · 앱을 닫지 말아 주세요.',
+                                style: TextStyle(fontSize: 11),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: c.retrySave,
+                              child: const Text(
+                                '저장 재시도',
+                                style: TextStyle(fontSize: 11),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (source.isNotEmpty)
+                      TextButton.icon(
+                        onPressed: _source,
+                        icon: const Icon(
+                          CupertinoIcons.quote_bubble,
+                          size: 14,
+                          color: muted,
+                        ),
+                        label: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            source.replaceAll('\n', ' '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: appFontFamily,
+                              fontFamilyFallback: appFontFallback,
+                              fontSize: 13,
+                              color: muted,
+                            ),
                           ),
                         ),
                       ),
+                    Expanded(
+                      key: const ValueKey('writing-surface'),
+                      child: PageEditor(
+                        key: ValueKey('${currentPage.id}:${c.editorEpoch}'),
+                        page: currentPage,
+                        style: c.library.style,
+                        focusNode: editorFocus,
+                        onChanged: _edit,
+                        onEditingState: (focused, composing) {
+                          _editorComposing = composing;
+                          c.setEditorState(
+                            focused: focused,
+                            isComposing: composing,
+                          );
+                        },
+                      ),
                     ),
-                  Expanded(
-                    key: const ValueKey('writing-surface'),
-                    child: PageEditor(
-                      key: ValueKey('${currentPage.id}:${c.editorEpoch}'),
-                      page: currentPage,
-                      style: c.library.style,
-                      focusNode: editorFocus,
-                      onChanged: _edit,
-                      onEditingState: (focused, composing) {
-                        _editorComposing = composing;
-                        c.setEditorState(
-                          focused: focused,
-                          isComposing: composing,
-                        );
-                      },
+                    WritingFooter(
+                      onTools: _tools,
+                      onMore: _more,
+                      onDone: _blur,
+                      focused: editorFocus.hasFocus,
+                      failed: c.saveError != null,
+                      pageLabel: '${index + 1}',
+                      pageCount: pages.length,
+                      onPages: navigationEnabled ? _pages : null,
+                      onPrevious: navigationEnabled && index > 0
+                          ? () => _stepPage(-1)
+                          : null,
+                      onNext: navigationEnabled ? () => _stepPage(1) : null,
+                      status: c.saveError != null
+                          ? '저장 실패'
+                          : record == null
+                          ? '자동 저장'
+                          : c.saving
+                          ? '저장 중'
+                          : widget.demo
+                          ? '예시'
+                          : '저장됨',
                     ),
-                  ),
-                  WritingFooter(
-                    onTools: _tools,
-                    onStatus: _syncInfo,
-                    onMore: _more,
-                    onDone: _blur,
-                    focused: editorFocus.hasFocus,
-                    failed: c.saveError != null,
-                    pageLabel: '${index + 1} / ${pages.length}',
-                    onPages: navigationEnabled ? _pages : null,
-                    onPrevious: navigationEnabled && index > 0
-                        ? () => _stepPage(-1)
-                        : null,
-                    onNext: navigationEnabled && index < pages.length - 1
-                        ? () => _stepPage(1)
-                        : null,
-                    onAddPage: navigationEnabled ? _appendPage : null,
-                    status: c.saveError != null
-                        ? '저장 실패'
-                        : record == null
-                        ? '자동 저장'
-                        : c.saving
-                        ? '저장 중'
-                        : widget.demo
-                        ? '예시'
-                        : '저장됨',
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

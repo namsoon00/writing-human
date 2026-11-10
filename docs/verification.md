@@ -1,5 +1,48 @@
 # 검증 기록
 
+## 2026-11-10 · 버튼 없이 쪽수와 스와이프로 넘기기
+
+변경 파일: `lib/ui/paper_swipe.dart`, `writing_chrome.dart`, `workspace.dart`,
+`test/page_navigation_test.dart`, `test/data/editor_disk_test.dart`,
+`tool/capture_preview_test.dart`와 제품·구조 문서.
+
+하단 이전/다음/추가 버튼과 분수형 쪽수를 없앴다. 현재 쪽수와 작은 저장 상태,
+도구·더 보기/완료를 64px 기본 높이 한 줄에 놓아 본문 공간을 늘렸다.
+읽는 상태에서는 종이 위를 좌우로 넘긴다. 마지막 쪽의 다음 넘김은 같은 필사에
+새 빈 쪽을 실제 저장한다. 첫 쪽의 이전 넘김은 그대로 둔다. 글을 쓰는 동안은
+본문 드래그를 기존 편집기에 맡기고, 쪽수 영역에서 넘긴다. 번호 탭은 미리보기를 연다.
+
+실행: `flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true`.
+빌드: `node tool/build_github_pages.mjs /writing-human/`.
+
+이번 코드의 검증:
+
+- `dart format lib test tool/capture_preview_test.dart`: 37개 파일 포맷 완료.
+  `flutter analyze --no-pub`: 문제 없음. `flutter test --no-pub`: 49개 통과.
+- 페이지 검사 13개: 본문/쪽수 넘김, 첫 쪽 경계·마지막 쪽 추가, 느린 드래그,
+  작은 이동·세로 스크롤 무시, 입력 중 본문 드래그 유지, 마우스 글 선택과 쪽수
+  드래그, 길게 눌러 글 선택을 확인했다. 한글 조합 중 이동 차단·저장 실패 재시도,
+  각 쪽 선택/스크롤 복원·전체 화면 전환·동작 줄이기 검사도 새 UI로 통과했다.
+- 호스트 SQLite UI 검사에서 쪽수 스와이프로 둘째 쪽을 작성하고 DB를 종료/재연결했다.
+  둘째 쪽과 마지막 위치 복원, 이전 쪽의 본문·선택 영역·스크롤 710 복원을 확인했다.
+  호스트 파일/Flutter 검사이며 실제 모바일 프로세스·키보드 검증으로 계산하지 않는다.
+- `flutter test tool/capture_preview_test.dart --no-pub`: 1개 통과. 실제 제품
+  위젯과 번들 서체·종이로 `artifacts/paper-swipe-*.png` 12개를 새로 만들었다.
+  합성 문장과 test inset이며 브라우저/실기기 실행 캡처가 아니다. 정지 화면에서
+  하단 버튼 제거·작은 쪽수·늘어난 본문 공간을 직접 확인했다. 한 화면은 도구를
+  두 번 렌더하므로 파일 개수는 12개다.
+- `/writing-human/` base href의 로컬 저장용 웹 release 빌드 성공.
+
+초기에는 본문의 pan recognizer가 먼저 잡아 종이 넘김이 빠지는 문제가 검사에서
+발견됐다. 수평 의도를 먼저 구분하되 세로·탭·길게 누르기는 기존 입력기로 보내도록
+수정한 뒤 전체 검사를 통과했다. 입력 리스너에서 본문·selection·composing을
+되쓰거나 포인터 이벤트를 재생하지 않는다.
+
+미검증: 실제 브라우저·모바일 IME/트랙패드·전환 프레임 성능, OS 강제 종료.
+이번에는 iOS/Android 빌드를 실행하지 않았다. 공유 작업 공간의 진행 중 변경을
+보존하고 배포 main의 기본 쓰는 인간체를 유지한 별도 체크아웃에서 검증했다.
+배포 결과는 후속 항목에 기록한다. 기존 비공개 hosting 설정과 사용자 기록은 유지한다.
+
 ## 2026-11-10 · 일반 웹 전체 쓰는 인간체 기본 적용 게시 완료
 
 [Actions 42804908393](https://github.com/namsoon00/writing-human/actions/runs/42804908393)에서

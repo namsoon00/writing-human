@@ -1,5 +1,6 @@
+import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:writing_human/ui/paper_swipe.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/main.dart';
 import 'package:writing_human/data/model.dart';
@@ -38,7 +39,60 @@ Future<void> open(WidgetTester tester, MemoryStore store) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> nextSheet(WidgetTester tester) => tester.fling(
+  find.byKey(const ValueKey('page-number')),
+  const Offset(-140, 0),
+  800,
+);
+Future<void> previousSheet(WidgetTester tester) => tester.fling(
+  find.byKey(const ValueKey('page-number')),
+  const Offset(140, 0),
+  800,
+);
+
 void main() {
+  testWidgets(
+    'Mouse selection stays native while the page number accepts mouse swipes',
+    (tester) async {
+      final store = MemoryStore()..data = twoPages();
+      await open(tester, store);
+      final original = store.data.pages.first.text;
+      final controller = tester.widget<TextField>(field).controller!;
+      await tester.drag(
+        field,
+        const Offset(-140, 0),
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pumpAndSettle();
+      expect(store.data.activePageId, 'one');
+      expect(tester.widget<TextField>(field).controller, same(controller));
+      expect(controller.text, original);
+      await tester.drag(
+        find.byKey(const ValueKey('page-number')),
+        const Offset(-140, 0),
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pumpAndSettle();
+      expect(store.data.activePageId, 'two');
+    },
+  );
+
+  testWidgets('A native long press selects text instead of turning the paper', (
+    tester,
+  ) async {
+    final store = MemoryStore()..data = twoPages();
+    await open(tester, store);
+    final controller = tester.widget<TextField>(field).controller!;
+    final original = controller.text;
+    await tester.longPressAt(tester.getTopLeft(field) + const Offset(90, 80));
+    await tester.pumpAndSettle();
+    expect(store.data.activePageId, 'one');
+    expect(tester.widget<TextField>(field).controller, same(controller));
+    expect(controller.text, original);
+    expect(controller.selection.isCollapsed, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final size in [const Size(390, 844), const Size(1440, 1000)]) {
     testWidgets('Turn includes header and footer at $size', (tester) async {
       final store = MemoryStore()..data = twoPages();
@@ -47,7 +101,7 @@ void main() {
       tester.view.padding = const FakeViewPadding(top: 24, bottom: 20);
       addTearDown(tester.view.resetPadding);
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('다음 페이지'));
+      await nextSheet(tester);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 160));
       final rect = tester.getRect(overlay);
@@ -78,7 +132,7 @@ void main() {
       expect(image.width * image.height, lessThan(2004000));
       expect(find.byType(TextField), findsOneWidget);
       // A quick reverse turn replaces the disposable image, not the editor tree.
-      await tester.tap(find.byTooltip('이전 페이지'));
+      await previousSheet(tester);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
       expect(overlay, findsOneWidget);
@@ -94,7 +148,7 @@ void main() {
   ) async {
     final store = MemoryStore()..data = twoPages();
     await open(tester, store);
-    await tester.tap(find.byTooltip('다음 페이지'));
+    await nextSheet(tester);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(overlay, findsOneWidget);
@@ -108,37 +162,87 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Only the page controls respond to horizontal page swipes', (
+  testWidgets('Paper swipes turn pages; editing gestures stay in the text', (
     tester,
   ) async {
     final store = MemoryStore()..data = twoPages();
     await open(tester, store);
     final original = store.data.pages.first.text;
-    await tester.fling(field, const Offset(-120, 0), 800);
-    await tester.pumpAndSettle();
-    expect(store.data.activePageId, 'one');
-    expect(store.data.pages.first.text, original);
-    await tester.fling(find.text('1 / 2'), const Offset(-120, 0), 800);
+    expect(find.byTooltip('페이지 추가'), findsNothing);
+    expect(find.byTooltip('이전 페이지'), findsNothing);
+    expect(find.byTooltip('다음 페이지'), findsNothing);
+    expect(tester.getSize(find.byType(WritingFooter)).height, 64);
+    await tester.fling(field, const Offset(-140, 0), 800);
     await tester.pumpAndSettle();
     expect(store.data.activePageId, 'two');
-    await tester.fling(find.text('2 / 2'), const Offset(120, 0), 800);
+    await tester.fling(field, const Offset(140, 0), 800);
     await tester.pumpAndSettle();
     expect(store.data.activePageId, 'one');
+    await tester.tap(field);
+    await tester.pumpAndSettle();
+    final controller = tester.widget<TextField>(field).controller!;
+    await tester.fling(field, const Offset(-140, 0), 800);
+    await tester.pumpAndSettle();
+    expect(store.data.activePageId, 'one');
+    expect(tester.widget<TextField>(field).controller, same(controller));
+    expect(controller.text, original);
+    await nextSheet(tester);
+    await tester.pumpAndSettle();
+    expect(store.data.activePageId, 'two');
     expect(store.data.pages.length, 2);
   });
+
+  testWidgets(
+    'Vertical scroll, small movements and the first edge do not add pages',
+    (tester) async {
+      final store = MemoryStore()..data = twoPages();
+      await open(tester, store);
+      await previousSheet(tester);
+      await tester.pumpAndSettle();
+      await tester.drag(field, const Offset(0, -180));
+      await tester.pumpAndSettle();
+      expect(store.data.activePageId, 'one');
+      expect(store.data.pages.length, 2);
+      expect(
+        tester.widget<TextField>(field).scrollController!.offset,
+        greaterThan(180),
+      );
+      await tester.drag(
+        find.byKey(const ValueKey('page-number')),
+        const Offset(-32, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(store.data.activePageId, 'one');
+      await tester.timedDrag(
+        find.byKey(const ValueKey('page-number')),
+        const Offset(-130, 0),
+        const Duration(seconds: 1),
+      );
+      await tester.pumpAndSettle();
+      expect(store.data.activePageId, 'two');
+      await tester.timedDrag(
+        field,
+        const Offset(-130, 0),
+        const Duration(seconds: 1),
+      );
+      await tester.pumpAndSettle();
+      expect(store.data.pages.length, 3);
+      expect(store.data.activePage!.text, isEmpty);
+    },
+  );
   testWidgets(
     'Explicit blank-page addition turns to a saved second page with one editor',
     (tester) async {
       final store = MemoryStore();
       await open(tester, store);
       expect(store.writes, 0);
-      expect(find.text('1 / 1'), findsOneWidget);
-      await tester.tap(find.byTooltip('페이지 추가'));
+      expect(find.text('1'), findsOneWidget);
+      await nextSheet(tester);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 120));
       expect(overlay, findsOneWidget);
       expect(find.byKey(const ValueKey('page-text')), findsOneWidget);
-      expect(find.text('2 / 2'), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
       expect(store.data.pages.length, 2);
       expect(store.data.records.length, 1);
       expect(store.data.pages.every((p) => p.text.isEmpty), isTrue);
@@ -155,7 +259,7 @@ void main() {
       await tester.pumpWidget(WritingHumanApp(store: store));
       await tester.pumpAndSettle();
       expect(store.data.activePageId, id);
-      expect(find.text('2 / 2'), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
       expect(tester.widget<TextField>(field).controller!.text, '새 페이지에 바로 입력');
     },
   );
@@ -166,7 +270,7 @@ void main() {
     final store = MemoryStore()..data = twoPages();
     final firstText = store.data.pages.first.text;
     await open(tester, store);
-    await tester.tap(find.byTooltip('다음 페이지'));
+    await nextSheet(tester);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(overlay, findsOneWidget);
@@ -174,7 +278,7 @@ void main() {
     await tester.enterText(field, '둘째 페이지 수정 🌿');
     await tester.pumpAndSettle();
     expect(overlay, findsNothing);
-    await tester.tap(find.byTooltip('이전 페이지'));
+    await previousSheet(tester);
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(field).controller!.text, firstText);
     expect(
@@ -183,7 +287,7 @@ void main() {
     );
     expect(tester.widget<TextField>(field).scrollController!.offset, 180);
     expect(store.data.pages.last.text, '둘째 페이지 수정 🌿');
-    expect(find.text('1 / 2'), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -192,7 +296,7 @@ void main() {
   ) async {
     final store = MemoryStore()..data = twoPages().copy(activePageId: 'two');
     await open(tester, store);
-    await tester.tap(find.text('2 / 2'));
+    await tester.tap(find.text('2'));
     await tester.pumpAndSettle();
     expect(find.byType(PagesSheet), findsOneWidget);
     expect(find.text('1쪽'), findsOneWidget);
@@ -202,12 +306,12 @@ void main() {
     expect(store.data.activePageId, 'two');
     await tester.pumpAndSettle();
     expect(store.data.activePageId, 'one');
-    await tester.tap(find.text('1 / 2'));
+    await tester.tap(find.text('1'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('한 쪽 더'));
     await tester.pumpAndSettle();
     expect(store.data.pages.length, 3);
-    expect(find.text('3 / 3'), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
     expect(tester.widget<TextField>(field).controller!.text, isEmpty);
   });
 
@@ -228,27 +332,19 @@ void main() {
       final controller = tester.widget<TextField>(field).controller!;
       expect(
         tester
-            .widget<IconButton>(
-              find.widgetWithIcon(IconButton, Icons.note_add_outlined),
-            )
-            .onPressed,
+            .widget<PaperSwipe>(find.byKey(const ValueKey('page-number-swipe')))
+            .onNext,
         isNull,
       );
-      expect(
-        tester
-            .widget<IconButton>(
-              find.widgetWithIcon(IconButton, CupertinoIcons.chevron_right),
-            )
-            .onPressed,
-        isNull,
-      );
+      await nextSheet(tester);
+      await tester.pumpAndSettle();
       expect(controller.value, value);
       expect(store.data.activePageId, 'one');
       tester.testTextInput.updateEditingValue(
         value.copyWith(composing: TextRange.empty),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('다음 페이지'));
+      await nextSheet(tester);
       await tester.pumpAndSettle();
       expect(store.data.activePageId, 'two');
       expect(store.data.pages.first.text, value.text);
@@ -265,11 +361,11 @@ void main() {
           FakeAccessibilityFeatures(disableAnimations: true);
       final store = MemoryStore()..data = twoPages();
       await open(tester, store);
-      await tester.tap(find.byTooltip('다음 페이지'));
+      await nextSheet(tester);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
       expect(overlay, findsNothing);
-      expect(find.text('2 / 2'), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
       expect(tester.widget<TextField>(field).controller!.text, '둘째 페이지');
       await tester.pumpAndSettle();
     },
@@ -284,7 +380,7 @@ void main() {
     await tester.enterText(field, '아직 디스크에 쓰지 못한 문장');
     await tester.pumpAndSettle();
     expect(find.text('저장 실패'), findsOneWidget);
-    await tester.tap(find.byTooltip('다음 페이지'));
+    await nextSheet(tester);
     await tester.pumpAndSettle();
     expect(store.data.activePageId, 'one');
     expect(
@@ -295,7 +391,7 @@ void main() {
     store.fail = false;
     await tester.tap(find.text('저장 재시도'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('다음 페이지'));
+    await nextSheet(tester);
     await tester.pumpAndSettle();
     expect(store.data.activePageId, 'two');
     expect(store.data.pages.first.text, '아직 디스크에 쓰지 못한 문장');

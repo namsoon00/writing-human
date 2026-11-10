@@ -1,5 +1,14 @@
 # GitHub Pages 배포
 
+## 2026-11-10 · 페이지 넘김 배포
+
+[Actions 42800541152](https://github.com/namsoon00/writing-human/actions/runs/42800541152),
+소스 `212458ed3618434b034eed34163fc258f90b0543`의 검사·빌드·배포가 성공했다.
+하단의 페이지 추가·이전/다음과 쪽수 미리보기 선택에 종이 넘김이 적용됐다.
+[두 쪽 예시](https://namsoon00.github.io/writing-human/?demo=typeface)는 비영구 데이터다.
+실제 기록은 기본 주소에서 쓴다. 제공 JS·서체·아이콘이 로컬 release와 일치했다.
+실제 브라우저/실기기 검증 범위는 docs/verification.md를 따른다.
+
 ## 준비된 구성
 
 - `.github/workflows/github-pages.yml`: main push 또는 수동 실행 → Flutter 3.41.2 설정 → 포맷·분석·테스트 → 프로젝트 경로에 맞춘 웹 빌드 → Pages 배포.

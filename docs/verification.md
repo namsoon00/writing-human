@@ -1,5 +1,25 @@
 # 검증 기록
 
+## 2026-11-10 · 페이지 넘김 웹 배포 완료
+
+[Actions 42800541152](https://github.com/namsoon00/writing-human/actions/runs/42800541152)의
+소스 `212458ed3618434b034eed34163fc258f90b0543`에서 포맷·분석·테스트·웹 빌드·배포가
+모두 성공했다. [웹 앱](https://namsoon00.github.io/writing-human/) 하단의 페이지 추가,
+이전/다음, 쪽수 → 미리보기에서 종이 넘김을 사용할 수 있다.
+[두 쪽 예시](https://namsoon00.github.io/writing-human/?demo=typeface)는 비영구 합성 데이터다.
+
+기본/예시 HTML, main JS, FontManifest, 실제 개발 TTF, Material 아이콘의
+6개 요청이 HTTP 200이었고 로컬 release와 바이트가 일치했다. main.dart.js의
+SHA-256은 `538ab05eb0ca4b0231a2c899e9466b0e0dfec6c77508edd4c79b3f2f053ef994`다.
+이미 게시된 0.006 개발 서체도 그대로 보존했다. 결과는
+`artifacts/page-turn-{build-check,deployment-check}.json`에 있다.
+
+통합 소스의 iOS 시뮬레이터 빌드도 성공했다. 실제 UI 확인은 Mac 잠금과 Work의
+브라우저 사용 비활성화로 진행하지 못했다. 설정을 바꾸거나 다른 제어 수단으로
+우회하지 않았다. 13개 화면 PNG는 새 제품 위젯의 Flutter 테스트 렌더이며
+브라우저/실기기 실행 화면으로 보고하지 않는다. 실제 기기 IME·전환 성능은 미검증이다.
+기존 비공개 Sites의 project_id·접근 범위와 사용자 기록을 변경하지 않았다.
+
 ## 2026-11-10 · 종이를 넘기는 페이지 추가·이동
 
 변경 파일:

@@ -156,6 +156,11 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
       remote.style.fontIndex,
     ),
     guides: _field(base.style.guides, local.style.guides, remote.style.guides),
+    penMotion: _field(
+      base.style.penMotion,
+      local.style.penMotion,
+      remote.style.penMotion,
+    ),
     favoriteBookIds: allFavorites
         .where(
           (id) => _field(

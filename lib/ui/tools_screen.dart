@@ -281,9 +281,24 @@ class _ToolsScreenState extends State<ToolsScreen> {
       ),
       const SizedBox(height: 35),
       const Divider(color: line),
+      SwitchListTile.adaptive(
+        contentPadding: EdgeInsets.zero,
+        title: const Text(
+          '펜 움직임',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+        ),
+        subtitle: const Text(
+          '입력 위치를 따라, 한 획씩 가볍게',
+          style: TextStyle(color: muted, fontSize: 11, height: 1.7),
+        ),
+        activeTrackColor: burgundy,
+        value: c.library.style.penMotion,
+        onChanged: (value) =>
+            c.setStyle(c.library.style.copy(penMotion: value)),
+      ),
       const SizedBox(height: 13),
       const Text(
-        '펜의 반응과 쓰기 소리는 준비 중입니다.',
+        '한글 조합 중에는 흔들림을 멈춥니다.\n쓰기 소리는 준비 중입니다.',
         textAlign: TextAlign.center,
         style: TextStyle(fontSize: 12, color: muted, height: 1.8),
       ),

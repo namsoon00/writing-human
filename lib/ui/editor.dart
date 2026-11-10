@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/model.dart';
 import 'paper.dart';
+import 'writing_pen.dart';
 
 class PageEditor extends StatefulWidget {
   const PageEditor({
@@ -25,6 +26,7 @@ class _PageEditorState extends State<PageEditor> {
   late final ScrollController scroll;
   late final focus = widget.focusNode ?? FocusNode();
   bool restoring = true;
+  final fieldRenderKey = GlobalKey();
   @override
   void initState() {
     super.initState();
@@ -108,39 +110,51 @@ class _PageEditorState extends State<PageEditor> {
       guides: style.guides,
       child: Stack(
         children: [
-          TextField(
-            key: const ValueKey('page-text'),
-            controller: text,
-            scrollController: scroll,
-            focusNode: focus,
-            maxLines: null,
-            minLines: null,
-            expands: true,
-            textAlignVertical: TextAlignVertical.top,
-            keyboardType: TextInputType.multiline,
-            textInputAction: TextInputAction.newline,
-            autocorrect: false,
-            enableSuggestions: false,
-            style: writingTextStyle(
-              style.fontIndex,
-              size: 23,
-              color: penColors[style.penIndex],
-            ),
-            cursorColor: burgundy,
-            cursorWidth: 1.2,
-            decoration: InputDecoration(
-              labelText: '필사 본문',
-              floatingLabelBehavior: FloatingLabelBehavior.never,
-              hintText: '마음에 머문 문장을\n천천히 옮겨 보세요.',
-              hintStyle: writingTextStyle(
+          RepaintBoundary(
+            key: fieldRenderKey,
+            child: TextField(
+              key: const ValueKey('page-text'),
+              controller: text,
+              scrollController: scroll,
+              focusNode: focus,
+              maxLines: null,
+              minLines: null,
+              expands: true,
+              textAlignVertical: TextAlignVertical.top,
+              keyboardType: TextInputType.multiline,
+              textInputAction: TextInputAction.newline,
+              autocorrect: false,
+              enableSuggestions: false,
+              style: writingTextStyle(
                 style.fontIndex,
                 size: 23,
-                color: const Color(0xffb8a58d),
+                color: penColors[style.penIndex],
               ),
-              contentPadding: const EdgeInsets.fromLTRB(26, 27, 25, 42),
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
+              cursorColor: burgundy,
+              cursorWidth: 1.2,
+              decoration: InputDecoration(
+                labelText: '필사 본문',
+                floatingLabelBehavior: FloatingLabelBehavior.never,
+                hintText: '마음에 머문 문장을\n천천히 옮겨 보세요.',
+                hintStyle: writingTextStyle(
+                  style.fontIndex,
+                  size: 23,
+                  color: const Color(0xffb8a58d),
+                ),
+                contentPadding: const EdgeInsets.fromLTRB(26, 27, 25, 42),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: WritingPen(
+              controller: text,
+              scroll: scroll,
+              focus: focus,
+              fieldKey: fieldRenderKey,
+              enabled: style.penMotion,
             ),
           ),
           if (!focus.hasFocus && text.text.length < 250)

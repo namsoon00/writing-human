@@ -1,5 +1,16 @@
 # 검증 기록
 
+## 2026-11-10 · 커서를 따라 쓰는 펜
+
+- dart format lib test tool/capture_preview_test.dart 적용 및 변경 없는 형식 검사, flutter analyze --no-pub 통과. flutter test --no-pub: 25개 통과.
+- 새 위젯 검사 3개: 실제 RenderEditable 커서와 펜촉 좌표 비교, 입력 직후 중간 프레임의 이동과 최종 정착, 자동 줄바꿈·개행·커서 탭·터치 통과, 한글 composing/emoji TextEditingValue 보존, 선택 영역 시 숨김, 스크롤로 커서가 가려질 때 숨김, 키보드 inset·가로 화면·글꼴/글자 배율 변경, 움직임 끄기와 OS 동작 줄이기를 확인했다. 실제 모바일 키보드 테스트가 아니다.
+- 기존 검사에 펜 움직임 설정의 실제 SQLite 파일 닫기/재열기, 예전 JSON의 기본값, 두 SQLite 기기 + 메모리 원격의 설정 병합, 도구 스위치 변경 후 같은 편집 컨트롤러/본문/선택 영역 유지를 추가했다. 이 검사들을 실제 배포 서버·실기기 동기화 검증으로 보고하지 않는다.
+- flutter test tool/capture_preview_test.dart --no-pub: 별도 렌더 검사 1개 통과. artifacts/material-pen-follow.png와 material-pen-stroke.png는 새 코드와 실제 번들 폰트/자산으로 만든 Flutter 테스트 런타임 렌더다. 예시 데이터이며 실제 브라우저 캡처가 아니다.
+- node tool/build_github_pages.mjs /writing-human/: 새 release 웹 빌드 성공. 배포의 Actions 결과와 공개 주소 점검은 최종 보고 및 후속 기록을 따른다.
+- 현재 컴퓨터가 잠겨 있고 로컬 브라우저 제어가 비활성화되어 실제 브라우저·실기기 조작/화면 캡처는 하지 못했다. 우회 수단을 사용하지 않았다. 실기기의 한글 키보드·빠른 입력 지연·긴 문서 프레임 성능은 미검증이다.
+
+추적 펜은 기본 켜짐이며 쓰기 도구 → 펜 → 펜 움직임에서 끈다. 조합 중에는 위치만 표시하고 보간/흔들림을 멈춘다. 쓰기·종이 넘김 소리는 아직 준비 중이다. 본문·selection·composing을 입력 리스너에서 다시 설정하지 않았다.
+
 ## 2026-11-10 · GitHub Pages 게시 완료
 
 - 사용자의 Pages 설정 완료 후 API에서 build_type=workflow 및 https://namsoon00.github.io/writing-human/ 주소를 확인했다. 실행 42727457916의 실패 작업을 재실행했고 Configure Pages, Deploy to GitHub Pages가 성공했다. 배포 소스는 bb82d230d576f452ec077189929c968aef512ca4다.

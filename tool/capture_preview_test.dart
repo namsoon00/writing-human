@@ -84,6 +84,27 @@ void main() {
     await tester.tap(find.text('이어서 쓰기'));
     await tester.pumpAndSettle();
     await capture('writing');
+    await tester.tap(find.byKey(const ValueKey('page-text')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('page-text')),
+      '새는 알에서 나오려고\n투쟁한다. 알은 세계다.\n\n한 문장씩, 나의 속도로.',
+    );
+    await tester.pumpAndSettle();
+    await capture('pen-follow');
+    final typed = tester.widget<TextField>(
+      find.byKey(const ValueKey('page-text')),
+    );
+    final nextText = '${typed.controller!.text} 천천히';
+    typed.controller!.value = TextEditingValue(
+      text: nextText,
+      selection: TextSelection.collapsed(offset: nextText.length),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 40));
+    await capture('pen-stroke');
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Aa'));
     await tester.pumpAndSettle();
     await capture('fonts');

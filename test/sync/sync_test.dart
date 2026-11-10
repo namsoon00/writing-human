@@ -128,7 +128,12 @@ void main() {
       expect(b.library.activePage!.base, 2);
       expect(b.library.activePage!.scroll, 44);
       a.setStyle(
-        a.library.style.copy(paperIndex: 2, penIndex: 1, fontIndex: 2),
+        a.library.style.copy(
+          paperIndex: 2,
+          penIndex: 1,
+          fontIndex: 2,
+          penMotion: false,
+        ),
       );
       await a.settled;
       await sa.syncNow();
@@ -136,6 +141,7 @@ void main() {
       expect(b.library.style.paperIndex, 2);
       expect(b.library.style.penIndex, 1);
       expect(b.library.style.fontIndex, 2);
+      expect(b.library.style.penMotion, isFalse);
       await bStore.close();
       bStore = await SqliteLibraryStore.open(
         '${dir.path}/mobile.db',

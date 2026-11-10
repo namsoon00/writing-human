@@ -176,6 +176,12 @@ void main() {
       expect(store.data.style.paperIndex, 1);
       expect(store.data.style.fontIndex, 2);
       expect(store.data.style.penIndex, 0);
+      await tester.tap(find.text('펜'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('펜 움직임'));
+      await tester.tap(find.byType(SwitchListTile));
+      await tester.pumpAndSettle();
+      expect(store.data.style.penMotion, isFalse);
       await tester.tap(find.byTooltip('돌아가기'));
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(editor).controller, same(controller));

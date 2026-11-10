@@ -89,22 +89,25 @@ class WritingStyle {
     this.penIndex = 0,
     this.fontIndex = 1,
     this.guides = false,
+    this.penMotion = true,
     this.favoriteBookIds = const [],
   });
   final int paperIndex, penIndex, fontIndex;
-  final bool guides;
+  final bool guides, penMotion;
   final List<String> favoriteBookIds;
   WritingStyle copy({
     int? paperIndex,
     int? penIndex,
     int? fontIndex,
     bool? guides,
+    bool? penMotion,
     List<String>? favoriteBookIds,
   }) => WritingStyle(
     paperIndex: paperIndex ?? this.paperIndex,
     penIndex: penIndex ?? this.penIndex,
     fontIndex: fontIndex ?? this.fontIndex,
     guides: guides ?? this.guides,
+    penMotion: penMotion ?? this.penMotion,
     favoriteBookIds: favoriteBookIds ?? this.favoriteBookIds,
   );
   Json toJson() => {
@@ -112,6 +115,7 @@ class WritingStyle {
     'penIndex': penIndex,
     'fontIndex': fontIndex,
     'guides': guides,
+    'penMotion': penMotion,
     'favoriteBookIds': favoriteBookIds,
   };
   factory WritingStyle.fromJson(Json j) {
@@ -120,6 +124,7 @@ class WritingStyle {
       penIndex: j['penIndex'] as int? ?? 0,
       fontIndex: j['fontIndex'] as int? ?? 1,
       guides: j['guides'] as bool? ?? false,
+      penMotion: j['penMotion'] as bool? ?? true,
       favoriteBookIds: (j['favoriteBookIds'] as List? ?? []).cast<String>(),
     );
     if (style.paperIndex < 0 ||

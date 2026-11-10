@@ -26,7 +26,15 @@ Flutter 3.41.2 / Dart 3.11.0. iOS·Android는 sqflite, 웹 미리보기는 packa
 
 WritingStyle은 종이, 펜, 글꼴, 줄 가이드, 즐겨찾기를 독립적으로 보관한다. Library JSON 버전 1의 optional style 필드로 추가했으며 이전 웹 데이터는 기본값으로 읽는다. SQLite 스키마는 버전 2다. app_state.settings와 records.source 컬럼을 ALTER TABLE로 추가하고 기존 테이블·본문·마지막 위치는 삭제하지 않는다. 기록에 source 원문 메모가 추가됐다.
 
-도구 화면은 기존 편집기 위에 표시한다. 선택 변경으로 TextEditingController를 새로 만들거나 본문/selection/composing을 덮어쓰지 않는다. 펜 선택은 잉크빛에 반영되며 종이·글꼴을 바꾸지 않는다. 펜 반응과 소리는 아직 준비 중으로 명시한다.
+도구 화면은 기존 편집기 위에 표시한다. 선택 변경으로 TextEditingController를 새로 만들거나 본문/selection/composing을 덮어쓰지 않는다. 펜 선택은 잉크빛에 반영되며 종이·글꼴을 바꾸지 않는다. 쓰기 소리는 준비 중이다.
+
+## 입력 위치를 따르는 펜
+
+lib/ui/writing_pen.dart는 TextEditingController·FocusNode·ScrollController를 읽기만 하는 장식 위젯이다. 한 프레임에 하나로 합친 post-frame callback에서 실제 RenderEditable의 getLocalRectForCaret를 읽고, global/local 좌표 변환으로 FittedBox·본문 패딩·스크롤·글자 크기를 반영한다. 텍스트 길이로 펜 위치를 추측하지 않는다.
+
+일반 확정 입력은 최대 130ms 동안 위치를 따라가며 미세한 회전과 들림을 표현한다. 줄바꿈·큰 붙여넣기·스크롤·커서 탭은 긴 궤적을 그리지 않고 새 위치로 옮긴다. composing이 유효한 동안 위치만 즉시 표시하며 흔들림/보간은 멈춘다. 선택 영역이 펼쳐져 있거나 커서가 보이지 않거나 포커스를 잃으면 추적 펜을 숨긴다. OS disableAnimations 또는 TickerMode 비활성화 시에도 숨긴다. 지속 반복 애니메이션은 없다.
+
+펜 레이어는 IgnorePointer·ExcludeSemantics·RepaintBoundary로 입력과 분리한다. 새 TextEditingController를 만들거나 TextEditingValue·selection·composing·focus·scroll을 되쓰지 않는다. WritingStyle.penMotion은 기본 true인 optional JSON 값으로 기존 SQLite settings 및 웹 저장/동기화에 보관하며 DB 스키마를 바꾸지 않는다. sync/merge.dart에서 다른 도구 값과 독립적으로 병합한다.
 
 ?demo=reference와 빈 책장의 ‘예시 책장 둘러보기’는 DemoStore를 사용하는 명시적인 예시 화면이다. 사용자 SQLite/localStorage를 쓰지 않는다. 예시 페이지 수와 문장은 레퍼런스 외관 확인용이며 실제 사용자 기록이나 책 원문 전체가 아니다. 예시 화면에 비영구 저장 안내를 표시하고 나의 책장으로 돌아갈 수 있다.
 

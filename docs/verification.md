@@ -2,6 +2,7 @@
 
 ## 2026-11-10 · 커서를 따라 쓰는 펜
 
+- [GitHub Actions 42729878343](https://github.com/namsoon00/writing-human/actions/runs/42729878343)에서 소스 0ad93baf6e87833bb5893c364499fa79e8a72524의 분석·테스트 25개·웹 빌드·게시가 모두 성공했다. 공개 주소 https://namsoon00.github.io/writing-human/ 의 새 main.dart.js는 로컬 검증 빌드와 SHA-256이 fe9da4ec2b9405f956710505b7731206b00c44128fed9bbcb53cf34680c44cf6으로 일치했다. penMotion·writing-pen 표식, 정적 호스팅의 계정 API 미포함, 기본/예시 HTML 및 만년필 자산 HTTP 200을 확인했다. artifacts/pen-deployment-check.json에 기록했다. HTTP 확인을 실제 브라우저 타이핑 검사라고 보고하지 않는다.
 - dart format lib test tool/capture_preview_test.dart 적용 및 변경 없는 형식 검사, flutter analyze --no-pub 통과. flutter test --no-pub: 25개 통과.
 - 새 위젯 검사 3개: 실제 RenderEditable 커서와 펜촉 좌표 비교, 입력 직후 중간 프레임의 이동과 최종 정착, 자동 줄바꿈·개행·커서 탭·터치 통과, 한글 composing/emoji TextEditingValue 보존, 선택 영역 시 숨김, 스크롤로 커서가 가려질 때 숨김, 키보드 inset·가로 화면·글꼴/글자 배율 변경, 움직임 끄기와 OS 동작 줄이기를 확인했다. 실제 모바일 키보드 테스트가 아니다.
 - 기존 검사에 펜 움직임 설정의 실제 SQLite 파일 닫기/재열기, 예전 JSON의 기본값, 두 SQLite 기기 + 메모리 원격의 설정 병합, 도구 스위치 변경 후 같은 편집 컨트롤러/본문/선택 영역 유지를 추가했다. 이 검사들을 실제 배포 서버·실기기 동기화 검증으로 보고하지 않는다.

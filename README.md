@@ -40,7 +40,7 @@ flutter pub get
 node tool/build_github_pages.mjs /writing-human/
 ```
 
-출력은 `build/github-pages`다. `.github/workflows/github-pages.yml`은 main에 푸시하면 검사·빌드 후 Pages에 배포한다. 저장소의 Settings → Pages → Source를 GitHub Actions로 설정해야 한다. 다른 저장소 이름은 Pages의 base_path를 통해 자동 적용한다.
+출력은 `build/github-pages`다. `.github/workflows/github-pages.yml`은 main에 푸시하면 검사·빌드 후 Pages에 배포한다. 저장소의 Settings → Pages → Source를 GitHub Actions로 설정해야 한다. 다른 저장소 이름은 Actions의 GITHUB_REPOSITORY 값으로 자동 적용한다. Pages가 아직 활성화되지 않아도 build 작업은 산출물을 업로드하고, 설정을 마친 후 deploy 작업만 재시도할 수 있다.
 
 GitHub Pages 버전은 실제 브라우저 로컬 저장만 제공하며 계정 로그인·기기 간 동기화를 요청하지 않는다. 기존 Sites의 동기화 버전과 기록 저장 위치가 다르다. 예시 화면은 배포 주소 뒤에 `?demo=reference`를 붙여 연다. 설정과 배포 상태는 [GitHub Pages 배포 문서](docs/github-pages.md)를 따른다.
 

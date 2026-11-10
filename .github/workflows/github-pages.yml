@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pages: read
     steps:
       - uses: actions/checkout@v6
       - uses: subosito/flutter-action@v2
@@ -31,11 +30,8 @@ jobs:
       - run: dart format --output=none --set-exit-if-changed lib test tool/capture_preview_test.dart
       - run: flutter analyze --no-pub
       - run: flutter test --no-pub
-      - name: Configure Pages
-        id: pages
-        uses: actions/configure-pages@v5
       - name: Build Flutter preview
-        run: node tool/build_github_pages.mjs '${{ steps.pages.outputs.base_path }}/'
+        run: node tool/build_github_pages.mjs
       - uses: actions/upload-pages-artifact@v4
         with:
           path: build/github-pages
@@ -50,6 +46,8 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

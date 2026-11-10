@@ -1,5 +1,13 @@
 # 검증 기록
 
+## 2026-11-10 · GitHub 저장소 업로드 및 원격 검사
+
+- 사용자가 namsoon00/writing-human Public 저장소를 생성했다. 환경 PAT의 Git 푸시·Pages 설정 요청은 403이었으나 연결된 GitHub 도구의 파일 쓰기는 성공했다.
+- 연결 도구로 37개 바이너리의 Git blob SHA와 99개 텍스트를 확인해 총 136개 소스 파일을 업로드했다. 원격 main의 파일 트리와 로컬 스냅샷은 git diff로 동일함을 확인했다. 토큰·사용자 기록·빌드 산출물은 업로드하지 않았다. GitHub 최초 소스 반영 커밋은 183ea5282a0cca9cd5db87bbf6d659214a3d9295다.
+- GitHub Actions 실행 42727127765의 Ubuntu runner에서 포맷·flutter analyze·flutter test가 통과했다. 로그의 실제 결과는 No issues found, 22 tests passed였다. Pages API가 Not Found를 반환해 Configure Pages에서 실패했으며, 이 실행을 게시 성공으로 보고하지 않는다.
+- 이후 build에서 먼저 웹 산출물을 준비하고 deploy에서 Pages 설정을 조회하도록 순서를 정리했다. Pages 최초 설정 후 실패한 deploy만 재시도할 수 있다. 최종 실행 결과는 이어지는 기록 및 이번 최종 보고를 따른다.
+- 브라우저 제어는 계속 비활성화되어 이번에도 실제 브라우저 화면 캡처를 하지 않았다.
+
 ## 2026-11-10 · GitHub Pages 배포 준비
 
 - dart format lib test tool/capture_preview_test.dart: 변경 없음. flutter analyze --no-pub: 문제 없음. flutter test --no-pub: 이번 변경 후 22개 통과.

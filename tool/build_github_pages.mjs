@@ -2,7 +2,11 @@ import {spawnSync} from 'node:child_process';
 import {readFileSync, writeFileSync} from 'node:fs';
 
 // A separate output prevents the static preview from replacing the Sites Worker.
-const base = process.argv[2] ?? '/writing-human/';
+const repository = process.env.GITHUB_REPOSITORY?.split('/')[1];
+const defaultBase = repository
+  ? repository.endsWith('.github.io') ? '/' : `/${repository}/`
+  : '/writing-human/';
+const base = process.argv[2] ?? defaultBase;
 if (!/^\/(?:[A-Za-z0-9_.-]+\/)*$/.test(base) || base.includes('/../')) {
   throw new Error('Provide a base path such as /writing-human/ or /.');
 }

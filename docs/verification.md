@@ -2,6 +2,7 @@
 
 ## 2026-11-10 · 단순한 UX와 기획 이미지의 룩앤필
 
+- [GitHub Actions 42740934395](https://github.com/namsoon00/writing-human/actions/runs/42740934395)에서 소스 26fedeaabb6dcab65e84db42025a62d2703cd41f의 분석·테스트 30개·빌드·배포가 성공했다. 기본/예시 HTML, 면지/만년필 자산이 HTTP 200이었으며 제공 main.dart.js의 SHA-256 9716d882acb787d86ed3c930c19bea2a87fb9acd2c633df81c3cfa1d78d5441a가 로컬 검증 빌드와 일치했다. writing-surface 표식도 확인했다. artifacts/brand-deployment-check.json에 기록했다. 이는 HTTP/파일 검증이며 실제 브라우저 타이핑 검사로 보고하지 않는다.
 - 원본 첨부 브랜드 보드와 새 Flutter 렌더를 비교했다. 종이빛·브라운·그린·포도빛·블루 팔레트, 면지의 결, 가는 종이 끝, 명조 제목과 작은 금박 식물 표식을 적용했다. 바로 쓰는 진입 흐름, 제어 순서, 저장 구조는 바꾸지 않았다.
 - dart format lib tool/capture_preview_test.dart, flutter analyze --no-pub 통과. flutter test --no-pub: 이번 변경 후 30개 통과. 첫 한글 입력의 편집기 유지·저장 실패·복원·독립 도구·펜/조합 보호 검사를 포함했다.
 - node tool/build_github_pages.mjs /writing-human/: 새 release 웹 빌드 성공.

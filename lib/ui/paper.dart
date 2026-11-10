@@ -195,6 +195,7 @@ class BookCover extends StatelessWidget {
             top: width * .34,
             child: Text(
               title,
+              textScaler: width < 80 ? TextScaler.noScaling : null,
               maxLines: 3,
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,

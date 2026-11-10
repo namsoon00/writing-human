@@ -17,14 +17,28 @@ from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.svgLib.path import parse_path
 from fontTools.ttLib import TTFont, newTable
 
-from build_vector_proof import Designer, L, V, T, MIXED, SOURCE, to_glyph, polygon
+from build_vector_proof import Designer, L, V, T, MIXED, SOURCE, to_glyph as base_to_glyph, polygon
 
 ROOT = Path(__file__).resolve().parent
 APP = ROOT.parents[1] / "assets/fonts"
 OUT = ROOT / "release"
 LATIN = ROOT / "source/latin-v006.json"
-REVISION = "0.006"
+PROFILE = ROOT / "source/reading-v007.json"
+READING = json.loads(PROFILE.read_text())
+REVISION = READING["revision"]
 FILENAME = "WritingHumanDevelopment-Regular.ttf"
+
+
+def to_glyph(path):
+    # Expand filled vector contours; their counters shrink by the same amount.
+    # Keeping advances fixed preserves spacing and the NFC/NFD composition map.
+    clean = pathops.simplify(path, clockwise=False)
+    edge = pathops.Path(clean)
+    edge.stroke(READING["outline_expansion"] * 2,
+                pathops.LineCap.ROUND_CAP, pathops.LineJoin.ROUND_JOIN, 4)
+    edge.convertConicsToQuads(.1)
+    expanded = pathops.op(clean, edge, pathops.PathOp.UNION)
+    return base_to_glyph(expanded)
 
 
 class Layout(Designer):
@@ -196,7 +210,7 @@ def build(install=False):
     # Smooth at all sizes. No instruction-based hinting has been claimed.
     fb.font["gasp"] = newTable("gasp")
     fb.font["gasp"].gaspRange = {65535: 10}
-    fb.font["head"].fontRevision = .006
+    fb.font["head"].fontRevision = float(REVISION)
     fb.font["head"].created = fb.font["head"].modified = 3877113600
     fb.font.recalcTimestamp = False
     OUT.mkdir(exist_ok=True)
@@ -219,11 +233,12 @@ def build(install=False):
         "compatibility_jamo": 51, "conjoining_jamo": 67,
         "ascii_printable": 95, "cmap_entries": len(cmap),
         "shared_hangul_parts": len(parts),
+        "reading_profile": READING,
         "characters": "".join(chr(cp) for cp in sorted(cmap)),
         "blank_codepoints": sorted(blanks), "layouts": layouts,
         "font_sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
         "source_sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
-                          for p in [SOURCE, LATIN, Path(__file__), ROOT / "build_vector_proof.py"]},
+                          for p in [SOURCE, LATIN, PROFILE, Path(__file__), ROOT / "build_vector_proof.py"]},
         "fallback": ["NanumMyeongjo", "NanumGothic"],
         "source": "Original project-authored vector jamo and Latin; design/typeface/build_typeface.py",
         "not_implemented": ["Old Hangul shaping", "Hanja", "extended Latin", "instruction-based hinting", "final optical approval", "physical iOS/Android readability review"],

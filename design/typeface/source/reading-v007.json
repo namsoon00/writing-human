@@ -1,0 +1,6 @@
+{
+  "revision": "0.007",
+  "outline_expansion": 6,
+  "units_per_em": 1000,
+  "method": "Expand the project's original vector outlines outward by 6 design units for screen readability. Preserve glyph advances, masters and modern Hangul shaping. No raster or third-party font outlines."
+}

@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent
 FONT = ROOT / "release/WritingHumanDevelopment-Regular.ttf"
-OUT = ROOT.parents[1] / "artifacts/typeface/v006"
+OUT = ROOT.parents[1] / "artifacts/typeface/v007"
 INK = "#302c27"
 PAPER = "#f7f2e8"
 
@@ -17,7 +17,7 @@ def render():
     y = 90
     samples = [
         (64, "쓰는 인간체"),
-        (28, "0.006 / 실제 TTF / 전체 문자 개발판 / FreeType 렌더"),
+        (28, "0.007 / 실제 TTF / 전체 문자 개발판 / FreeType 렌더"),
         (38, "꽃잎을 읽는 마음, 곁에 두고 싶은 문장."),
         (38, "괜찮다. 천천히 써도 한 권의 기록이 된다."),
         (38, "값싼 흙, 닭, 삶, 앉다, 읊다, 똠뷁힣"),

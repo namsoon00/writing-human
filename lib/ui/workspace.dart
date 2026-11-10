@@ -424,10 +424,13 @@ class _WorkspaceState extends State<Workspace> {
                 if (page.writtenOn != null)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                    child: Row(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         const Text(
-                          '기록 시작  ',
+                          '기록 시작',
                           style: TextStyle(fontSize: 11, color: muted),
                         ),
                         DateStamp(

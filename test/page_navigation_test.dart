@@ -171,7 +171,10 @@ void main() {
     expect(find.byTooltip('페이지 추가'), findsNothing);
     expect(find.byTooltip('이전 페이지'), findsNothing);
     expect(find.byTooltip('다음 페이지'), findsNothing);
-    expect(tester.getSize(find.byType(WritingFooter)).height, 64);
+    expect(
+      tester.getSize(find.byType(WritingFooter)).height,
+      inInclusiveRange(64, 80),
+    );
     await tester.fling(field, const Offset(-140, 0), 800);
     await tester.pumpAndSettle();
     expect(store.data.activePageId, 'two');

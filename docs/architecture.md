@@ -52,9 +52,20 @@ collection_sheet.dart는 필요할 때 여는 글/책 보관함이다. tools_scr
 - lib/ui/workspace.dart: 책장, 책 생성, 편집. 본문 controller는 페이지마다 한 번 생성하고 입력 중 되쓰지 않는다. TextEditingValue를 관찰해서 조합 중 텍스트도 보관하되 IME composing 영역은 재실행 시 복원하지 않는다. 선택 영역은 UTF-16 offset이며 복원 시 범위를 제한한다.
 - lib/ui/paper.dart: 공통 종이/잉크 팔레트, 면지 이미지와 얕은 왼쪽 음영, 잉크 표식, 줄 가이드와 보관함의 린넨 표지. 소재는 RepaintBoundary로 편집과 분리하며 포인터·접근성 트리에서 제외한다. 애니메이션은 없다. lib/ui/writing_chrome.dart는 상단/하단의 실제 조작부를 담당한다. 소재 경로와 프롬프트는 docs/visual-assets.md를 따른다.
 
+## 글씨 가독성
+
+`ui/typography.dart`의 ReadingTextScaler는 기존 글자 크기를 1.2배로, 일반 최소 문구를
+14px로 올린 후 OS TextScaler에 전달한다. 시스템의 비선형 확대를 선형 값으로 치환하지
+않는다. 0 크기는 유지하며 설정 저장이나 편집 값 변경은 없다. 본문·줄 가이드·펜 위치는
+같은 MediaQuery 척도로 실제 레이아웃을 읽는다. 작은 표지 썸네일은 중복 장식 텍스트를
+비례 크기로 유지한다. 날짜 안내 행은 Wrap으로 바꿔 접근성 확대에서도 넘치지 않는다.
+
+서체는 `source/reading-v007.json`의 6 디자인 단위 바깥 윤곽 확대로 실제 TTF를 재생성했다.
+공통 자모 공유·advance·cmap·NFC/NFD 조판을 유지한다. 단순 가짜 굵기나 이미지 텍스트가 아니다.
+
 ## 개발 중 서체 연결
 
-WritingHumanDevelopment family를 pubspec.yaml에 등록했다. 0.006은 현대 한글 11,172자·자모·ASCII·문장부호를 담은 실제 TTF이며 반복 자모를 TrueType composite으로 공유한다. OpenType ccmp는 현대 초성+중성 및 받침을 완성형과 같은 윤곽으로 조합한다. 본문은 기존
+WritingHumanDevelopment family를 pubspec.yaml에 등록했다. 0.007은 현대 한글 11,172자·자모·ASCII·문장부호를 담은 실제 TTF이며 반복 자모를 TrueType composite으로 공유한다. OpenType ccmp는 현대 초성+중성 및 받침을 완성형과 같은 윤곽으로 조합한다. 본문은 기존
 TextField와 TextEditingController를 유지하고 TextStyle의 family/fallback만
 바꾼다. 개발 TTF의 미지원 글자는 NanumMyeongjo → NanumGothic → 플랫폼
 대체 글꼴로 표시한다. 문자열·선택 영역·composing을 나누거나 다시 설정하지 않는다.

@@ -8,6 +8,7 @@ import 'sync/context_factory.dart';
 import 'sync/coordinator.dart';
 import 'ui/workspace.dart';
 import 'ui/paper.dart';
+import 'ui/typography.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +24,13 @@ class WritingHumanApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: '쓰는 인간',
+    builder: (context, child) {
+      final media = MediaQuery.of(context);
+      return MediaQuery(
+        data: media.copyWith(textScaler: ReadingTextScaler(media.textScaler)),
+        child: child!,
+      );
+    },
     debugShowCheckedModeBanner: false,
     theme: ThemeData(
       fontFamily: appFontFamily,

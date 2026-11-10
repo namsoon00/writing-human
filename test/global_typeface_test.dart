@@ -156,6 +156,13 @@ void main() {
       final field = find.byKey(const ValueKey('page-text'));
       final controller = tester.widget<TextField>(field).controller!;
       expect(tester.widget<TextField>(field).style!.fontFamily, appFontFamily);
+      final editorStyle = tester.widget<TextField>(field).style!;
+      expect(
+        MediaQuery.textScalerOf(
+          tester.element(field),
+        ).scale(editorStyle.fontSize!),
+        closeTo(27.6, .001),
+      );
       expect(controller.text, '남겨 둔 문장');
       expect(
         controller.selection,

@@ -96,3 +96,14 @@ HTTP 200을 확인했다. 검증 범위와 한계는 docs/verification.md를 따
 기존 설정은 한 번 전환하고 이후 사용자가 고른 다른 본문 글꼴은 보존한다.
 실제 실행 JS와 전체 한글 TTF가 검증한 로컬 release와 같음을 확인했다.
 초기 Pages 동기화 시간 초과와 새 버전 재게시, 검증 범위는 docs/verification.md에 기록했다.
+
+
+## 2026-11-10 · 일곱 스타일 요소와 독립 설정 게시
+
+[Actions 42824161690](https://github.com/namsoon00/writing-human/actions/runs/42824161690),
+소스 `86122ea1743b5df81e004f89ac0125b73ed651a4`에서 검사·빌드·게시가 성공했다.
+[웹 앱](https://namsoon00.github.io/writing-human/)의 Aa → 책의 디테일에서
+일곱 요소를 각각 표시/숨김·세 모양·네 색으로 고를 수 있다.
+[합성 예시](https://namsoon00.github.io/writing-human/?demo=reference)는 사용자 기록과 분리된다.
+실제 main JS와 서체·면지 파일이 검증한 release와 일치했다. bootstrap 생성 버전 값의 차이와
+실제 브라우저/실기기 미검증 범위는 docs/verification.md를 따른다.

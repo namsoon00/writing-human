@@ -1,5 +1,28 @@
 # 검증 기록
 
+## 2026-11-10 · 일곱 스타일 요소와 독립 설정 웹 배포 완료
+
+[Actions 42824161690](https://github.com/namsoon00/writing-human/actions/runs/42824161690)의
+소스 `86122ea1743b5df81e004f89ac0125b73ed651a4`에서 포맷·분석·테스트·빌드·게시가 성공했다.
+기존 서체·쪽수/스와이프를 보존한 별도 배포 작업본에서 Flutter 검사 64개와 서버 검사 5개도 통과했다.
+
+[웹 앱](https://namsoon00.github.io/writing-human/)의 Aa → 책의 디테일에서
+천 책갈피·장서표·원문 쪽지·연필 흔적·판면 장식·제본·날짜인을 각각 켜고 끄며
+세 모양·네 색을 선택한다. 예시 진입은 필수 조건이 아니며, 이름·원문·구절 범위·날짜를
+꾸밈 설정과 분리해 보존한다. [합성 예시](https://namsoon00.github.io/writing-human/?demo=reference)도 같은 배포다.
+
+실제 index HTML·bootstrap·main JS·FontManifest·쓰는 인간체 TTF·잉크/종이 자산 7개 요청이
+모두 HTTP 200이었다. main JS는 2,687,640바이트이며 SHA-256은
+`339ca71884c9612c1c305c2ccb88d469e63cf8e45e1403c4136092cd6eeadfc6`으로 검증한 release와 같다.
+이 중 bootstrap을 제외한 6개는 바이트가 동일했다. bootstrap은 생성된 serviceWorkerVersion
+값만 다르고 나머지 로더·엔진·실행 경로가 동일했다. 추가로 서비스 워커도 HTTP 200 및
+784바이트의 정확한 일치를 확인했다. 결과는 artifacts/book-details-deployment-check.json,
+소스·빌드 기준은 artifacts/book-details-release-state.json에 보관한다.
+
+현재 Mac이 잠겨 있고 활성 브라우저가 없어 실제 브라우저 조작·캡처는 수행하지 못했다.
+테스트 렌더·HTTP·파일 일치를 실제 iOS/Android 키보드·터치·접근성 검증으로 보고하지 않는다.
+이번 배포는 기존 공개 GitHub Pages를 갱신한 것이며, 비공개 Sites의 project_id·접근 범위·기록은 변경하지 않았다.
+
 ## 2026-11-10 · 독서와 쓰기의 일곱 요소 배포 전 검증
 
 최신 공개 소스 9d7826efa7b69e9f4522b48b47e5c4cde91cc602를 기준으로 별도의 작업본을 만들고 일곱 요소·개별 설정·원문/소유자/날짜/연필 표시 보존을 합쳤다. 기존 전체 서체·종이 전체 넘김·스와이프 흐름을 유지했다. 사용자 기록·자격 증명·로컬 실행 산출물을 업로드하지 않는다.

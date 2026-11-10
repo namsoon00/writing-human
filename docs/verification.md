@@ -1,5 +1,17 @@
 # 검증 기록
 
+## 2026-11-11 · 페이지 넘김과 앞표지 웹 게시 완료
+
+[Actions 42913862981](https://github.com/namsoon00/writing-human/actions/runs/42913862981)의
+`9445cf49d0fbf91d2f9e1bdc2df25cc6506d4224`에서 검사·빌드·게시가 성공했다.
+[공개 웹](https://namsoon00.github.io/writing-human/)의 HTML, main.dart.js, 번들 쓰는 인간체가
+HTTP 200이며 검증한 로컬 빌드와 바이트 단위로 일치했다.
+main.dart.js SHA-256: `3ccb2048417439a3cb6dedf1912fe0964e6b2e2b9d6459fc5b74459d6c13614b`.
+공개 URL에서도 임시 Chrome 프로필의 터치 에뮬레이션으로 본문 드래그·취소·확정,
+앞표지 왕복, 세로 스크롤과 한글 입력의 브라우저 저장을 확인했다.
+`artifacts/book-turn-deployment-check.json`과 `artifacts/chrome-turn-*.png`는 검증 작업본에 있다.
+기존 비공개 Sites의 project_id와 접근 범위는 유지했다.
+
 ## 2026-11-11 · 손가락을 따라 넘기는 페이지와 앞표지
 
 - 작업본과 배포용 작업본에서 Dart 포맷 55개 변경 없음, `flutter analyze --no-pub` 문제 없음,

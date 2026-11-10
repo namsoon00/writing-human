@@ -1,5 +1,27 @@
 # 구현 구조
 
+## 원문 가져오기와 보관 · 2026-11-11
+
+`lib/source/`는 이미지 선택·문자 인식·수신함을 플랫폼별로 연결한다.
+`SourceImportSheet`는 원문 편집을 별도 입력기에 두고, 사용자 확인 후 기존
+`TranscriptionRecord.source`에 저장한다. 책·기록·쪽 구조나 저장 버전은 그대로다.
+조합 입력과 저장 대기, 편집 중인 쪽 또는 계정이 바뀌는 경우를 확인한다.
+받은 글은 전용 수신함에 먼저 보관한다. 확인해서 새 기록을 저장한 뒤 해당 항목만
+삭제한다. 저장 실패 시 재시도하고, 수신 ID를 새 기록 ID에 연결해 중복을 막는다.
+
+Android는 [ML Kit 한글 모델](https://developers.google.com/ml-kit/vision/text-recognition/v2/android)을
+앱에 포함한다. iOS 16 이상은 [Apple Vision](https://developer.apple.com/documentation/vision/recognizing-text-in-images)으로
+책 사진을 읽는다. iOS 공유 확장과 앱은 [App Group](https://docs.flutter.dev/platform-integration/ios/app-extensions)을
+통해 텍스트 수신함을 사용한다. 서명 배포 시 두 대상에
+`group.com.writinghuman.writingHuman` 프로비저닝이 필요하다.
+
+웹은 촬영본이나 이미지 파일을 브라우저의 [Tesseract.js](https://github.com/naptha/tesseract.js/blob/master/docs/api.md)
+작업자에서 한글 중심으로 인식한다. `tool/prepare_ocr.mjs`가 검증한 모델·엔진은
+빌드와 함께 같은 출처에 둔다. 인식할 때만 받아오며 사진은 전송하지 않는다.
+로컬 웹 실행은 `node tool/prepare_ocr.mjs` 후
+`flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true`를 사용한다.
+GitHub Pages·Sites의 빌드 스크립트에는 준비 단계가 포함된다.
+
 ## 색인 탭·구분표·압화의 표현과 저장 · 2026-11-11
 
 `ui/reading_details.dart`가 종이·천·반달 탭, 구분표, 식물 세 가지를 정적인 벡터로 그린다.

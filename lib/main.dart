@@ -4,6 +4,7 @@ import 'data/library_controller.dart';
 import 'entry_location.dart';
 import 'data/store.dart';
 import 'sync/context.dart';
+import 'source/source_intake.dart';
 import 'sync/context_factory.dart';
 import 'sync/coordinator.dart';
 import 'ui/workspace.dart';
@@ -19,8 +20,9 @@ void main() {
 }
 
 class WritingHumanApp extends StatelessWidget {
-  const WritingHumanApp({super.key, this.store});
+  const WritingHumanApp({super.key, this.store, this.sourceIntake});
   final LibraryStore? store;
+  final SourceIntake? sourceIntake;
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: '쓰는 인간',
@@ -73,13 +75,14 @@ class WritingHumanApp extends StatelessWidget {
         ),
       ),
     ),
-    home: _Bootstrap(store: store),
+    home: _Bootstrap(store: store, sourceIntake: sourceIntake),
   );
 }
 
 class _Bootstrap extends StatefulWidget {
-  const _Bootstrap({this.store});
+  const _Bootstrap({this.store, this.sourceIntake});
   final LibraryStore? store;
+  final SourceIntake? sourceIntake;
   @override
   State<_Bootstrap> createState() => _BootstrapState();
 }
@@ -151,7 +154,11 @@ class _BootstrapState extends State<_Bootstrap> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     if (controller != null) {
-      return Workspace(controller: controller!, sync: sync);
+      return Workspace(
+        controller: controller!,
+        sync: sync,
+        sourceIntake: widget.sourceIntake,
+      );
     }
     return Scaffold(
       body: Center(

@@ -320,7 +320,8 @@ void main() {
         find.byKey(const ValueKey('source-text')),
         '먼저 골라 둔 원문',
       );
-      await tester.tap(find.text('저장'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('이 원문으로 쓰기'));
       await tester.pumpAndSettle();
       expect(store.data.records.single.source, '먼저 골라 둔 원문');
       expect(store.data.activePage!.text, '');

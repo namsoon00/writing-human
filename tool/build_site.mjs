@@ -1,5 +1,8 @@
 import {spawnSync} from 'node:child_process';
 import {cpSync, mkdirSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {prepareOcr} from './prepare_ocr.mjs';
+
+await prepareOcr();
 
 const r = spawnSync('flutter', ['build', 'web', '--release', '--no-wasm-dry-run', '--no-web-resources-cdn', '--output', 'build/web'], {stdio: 'inherit'});
 if (r.status !== 0) process.exit(r.status ?? 1);

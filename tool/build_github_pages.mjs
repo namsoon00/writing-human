@@ -1,5 +1,8 @@
 import {spawnSync} from 'node:child_process';
 import {readFileSync, writeFileSync} from 'node:fs';
+import {prepareOcr} from './prepare_ocr.mjs';
+
+await prepareOcr();
 
 // A separate output prevents the static preview from replacing the Sites Worker.
 const repository = process.env.GITHUB_REPOSITORY?.split('/')[1];

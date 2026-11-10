@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'paper.dart';
-import 'book_details.dart';
-import '../data/book_detail_style.dart';
 
 class NewBookDialog extends StatefulWidget {
   const NewBookDialog({super.key});
@@ -85,18 +83,6 @@ class NewBookDialogState extends State<NewBookDialog> {
   );
 }
 
-class SourceDialog extends StatefulWidget {
-  const SourceDialog({
-    super.key,
-    required this.source,
-    this.choice = const BookDetailChoice(),
-  });
-  final String source;
-  final BookDetailChoice choice;
-  @override
-  State<SourceDialog> createState() => _SourceDialogState();
-}
-
 class BookOwnerDialog extends StatefulWidget {
   const BookOwnerDialog({super.key, required this.owner});
   final String owner;
@@ -134,51 +120,6 @@ class _BookOwnerDialogState extends State<BookOwnerDialog> {
           hintText: '이름이나 필명을 적어 주세요.',
         ),
         onSubmitted: (_) => Navigator.pop(context, text.text),
-      ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('취소'),
-      ),
-      TextButton(
-        onPressed: () => Navigator.pop(context, text.text),
-        child: const Text('저장'),
-      ),
-    ],
-  );
-}
-
-class _SourceDialogState extends State<SourceDialog> {
-  late final text = TextEditingController(text: widget.source);
-  @override
-  void dispose() {
-    text.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    scrollable: true,
-    title: const Text('원문 메모', style: TextStyle(fontSize: 20)),
-    content: SizedBox(
-      width: 320,
-      child: SourceSlip(
-        choice: widget.choice,
-        child: TextField(
-          key: const ValueKey('source-text'),
-          controller: text,
-          minLines: 3,
-          maxLines: 8,
-          decoration: const InputDecoration(
-            hintText: '옮겨 쓸 원문을 적어 주세요.',
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            contentPadding: EdgeInsets.zero,
-            filled: false,
-          ),
-        ),
       ),
     ),
     actions: [

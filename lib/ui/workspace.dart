@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -5,6 +7,9 @@ import 'package:uuid/uuid.dart';
 import '../data/library_controller.dart';
 import '../data/model.dart';
 import '../sync/coordinator.dart';
+import '../source/source_intake.dart';
+import '../source/source_platform.dart';
+import 'source_import_sheet.dart';
 import 'collection_sheet.dart';
 import 'editor.dart';
 import 'new_book_dialog.dart';
@@ -19,14 +24,20 @@ import 'book_front_cover.dart';
 import 'page_read_preview.dart';
 
 class Workspace extends StatefulWidget {
-  const Workspace({super.key, required this.controller, this.sync});
+  const Workspace({
+    super.key,
+    required this.controller,
+    this.sync,
+    this.sourceIntake,
+  });
   final LibraryController controller;
   final SyncCoordinator? sync;
+  final SourceIntake? sourceIntake;
   @override
   State<Workspace> createState() => _WorkspaceState();
 }
 
-class _WorkspaceState extends State<Workspace> {
+class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   LibraryController get c => widget.controller;
   final editorFocus = FocusNode();
   final _pageTurn = PageTurnController();
@@ -39,6 +50,13 @@ class _WorkspaceState extends State<Workspace> {
   String? draftBookId;
   bool _pageNavigationBusy = false;
   bool _editorComposing = false;
+  late final SourceIntake _intake = widget.sourceIntake ?? createSourceIntake();
+  StreamSubscription<void>? _incomingEvents;
+  IncomingSource? _incoming;
+  SourcePhoto? _recoveredPhoto;
+  final _shownShares = <String>{};
+  bool _sourceBusy = false, _pollingSources = false, _pollAgain = false;
+  bool _checkedPhotoRecovery = false;
   Future<void>? _sheetClosed;
   LibraryController? _sheetOwner;
   bool get _accountLocked =>
@@ -173,6 +191,11 @@ class _WorkspaceState extends State<Workspace> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _incomingEvents = _intake.incomingChanges.listen((_) => _pollSources());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _pollSources();
+    });
     c.addListener(_changed);
     widget.sync?.addListener(_changed);
   }
@@ -211,6 +234,9 @@ class _WorkspaceState extends State<Workspace> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _incomingEvents?.cancel();
+    if (widget.sourceIntake == null) _intake.dispose();
     c.removeListener(_changed);
     widget.sync?.removeListener(_changed);
     editorFocus.dispose();
@@ -318,23 +344,195 @@ class _WorkspaceState extends State<Workspace> {
     _sheet(ToolsScreen(controller: c, onBack: () => Navigator.pop(context)));
   }
 
-  Future<void> _source() async {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _pollSources();
+  }
+
+  String _sharedRecordId(IncomingSource share) => 'shared-source-${share.id}';
+
+  Future<void> _pollSources() async {
+    if (!mounted || _accountLocked) return;
+    if (_pollingSources) {
+      _pollAgain = true;
+      return;
+    }
+    _pollingSources = true;
+    try {
+      if (!_checkedPhotoRecovery) {
+        _checkedPhotoRecovery = true;
+        try {
+          final photo = await _intake.recoverPhoto();
+          if (mounted && photo != null) setState(() => _recoveredPhoto = photo);
+        } on SourceIntakeException catch (error) {
+          if (mounted) _sourceNotice(error.message);
+        }
+      }
+      final shares = await _intake.pendingShares();
+      if (!mounted || _accountLocked) return;
+      IncomingSource? pending;
+      for (final share in shares) {
+        final imported = c.library.records.any(
+          (r) => r.id == _sharedRecordId(share),
+        );
+        if (imported && !c.saving && c.saveError == null) {
+          // A crash after a successful save and before acknowledgement must
+          // not import the same OS delivery twice.
+          await _intake.acknowledgeShare(share.id);
+          if (!mounted || _accountLocked) return;
+        } else {
+          pending ??= share;
+        }
+      }
+      if (_incoming?.id != pending?.id) setState(() => _incoming = pending);
+      if (!_sourceBusy &&
+          !_pageNavigationBusy &&
+          !editorFocus.hasFocus &&
+          !_editorComposing &&
+          !c.composing &&
+          c.saveError == null &&
+          ModalRoute.of(context)?.isCurrent == true &&
+          (_recoveredPhoto != null ||
+              (pending != null && !_shownShares.contains(pending.id)))) {
+        unawaited(_openPendingSource());
+      }
+    } catch (_) {
+      if (mounted && !_accountLocked) {
+        _sourceNotice('가져온 원문을 열지 못했어요. 다시 시도해 주세요.');
+      }
+    } finally {
+      _pollingSources = false;
+      if (_pollAgain && mounted) {
+        _pollAgain = false;
+        unawaited(_pollSources());
+      }
+    }
+  }
+
+  void _sourceNotice(String message) => ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(SnackBar(content: Text(message)));
+
+  Future<void> _openPendingSource() async {
+    if (_sourceBusy ||
+        _accountLocked ||
+        !_canLeaveInput() ||
+        c.saveError != null) {
+      return;
+    }
+    if (_recoveredPhoto case final photo?) {
+      setState(() => _recoveredPhoto = null);
+      await _source(initialPhoto: photo);
+    } else if (_incoming case final share?) {
+      _shownShares.add(share.id);
+      await _source(shared: share);
+    }
+  }
+
+  Future<void> _discardPendingSource() async {
+    if (_recoveredPhoto != null) {
+      setState(() => _recoveredPhoto = null);
+      return;
+    }
+    final share = _incoming;
+    if (share == null) return;
+    try {
+      await _intake.acknowledgeShare(share.id);
+      if (mounted) await _pollSources();
+    } catch (_) {
+      if (mounted) _sourceNotice('받은 원문을 지우지 못했어요. 다시 시도해 주세요.');
+    }
+  }
+
+  void _retrySave() {
+    c.retrySave();
+    c.settled.then((_) {
+      if (mounted && c.saveError == null && _incoming != null) _pollSources();
+    });
+  }
+
+  Future<void> _source({
+    IncomingSource? shared,
+    SourcePhoto? initialPhoto,
+  }) async {
+    if (_sourceBusy ||
+        _pageNavigationBusy ||
+        _accountLocked ||
+        !_canLeaveInput()) {
+      return;
+    }
+    final owner = c, selectedPage = page, selectedRecord = record;
+    final initial = shared?.text ?? selectedRecord?.source ?? draftSource;
+    final choice = c.library.style.bookDetails.sourceSlip;
     _blur();
-    final selectedPage = page, selectedRecord = record;
-    userFresh = fresh;
-    final source = await showDialog<String>(
-      context: context,
-      builder: (_) => SourceDialog(
-        source: selectedRecord?.source ?? draftSource,
-        choice: c.library.style.bookDetails.sourceSlip,
-      ),
-    );
-    if (source == null || !mounted) return;
-    if (selectedRecord != null) {
-      c.setSource(selectedRecord.id, source);
-    } else if (source.isNotEmpty) {
-      fresh = false;
-      c.saveDraft(selectedPage, source: source, bookId: draftBookId);
+    _sourceBusy = true;
+    try {
+      await owner.settled;
+      if (!mounted ||
+          c != owner ||
+          page.id != selectedPage.id ||
+          _accountLocked ||
+          owner.saveError != null ||
+          owner.composing ||
+          editorFocus.hasFocus) {
+        return;
+      }
+      if (shared != null &&
+          owner.library.records.any((r) => r.id == _sharedRecordId(shared))) {
+        await _pollSources();
+        return;
+      }
+      final route = ModalBottomSheetRoute<String>(
+        isScrollControlled: true,
+        showDragHandle: true,
+        barrierLabel: MaterialLocalizations.of(
+          context,
+        ).modalBarrierDismissLabel,
+        constraints: const BoxConstraints(maxWidth: 600),
+        builder: (_) => SourceImportSheet(
+          intake: _intake,
+          initialText: initial,
+          initialPhoto: initialPhoto,
+          choice: choice,
+          shared: shared != null,
+        ),
+      );
+      final source = await Navigator.of(context).push(route);
+      await route.completed;
+      if (source == null || !mounted || c != owner || _accountLocked) return;
+      if (page.id != selectedPage.id || owner.composing) {
+        _sourceNotice('작성 중인 쪽이 바뀌었어요. 원문을 다시 확인해 주세요.');
+        return;
+      }
+      if (owner.saveError != null) return;
+      if (shared != null) {
+        final id = _sharedRecordId(shared);
+        fresh = false;
+        userFresh = false;
+        owner.saveDraft(
+          WritingPage(id: '$id-page', recordId: id, number: 1),
+          source: source,
+        );
+      } else if (selectedRecord != null) {
+        owner.setSource(selectedRecord.id, source);
+      } else if (source.isNotEmpty) {
+        fresh = false;
+        userFresh = false;
+        owner.saveDraft(selectedPage, source: source, bookId: draftBookId);
+      }
+      final destination = page.id;
+      await owner.settled;
+      if (!mounted || c != owner || _accountLocked || owner.saveError != null) {
+        return;
+      }
+      if (shared != null) unawaited(_pollSources());
+      if (source.isNotEmpty &&
+          page.id == destination &&
+          (shared != null || selectedPage.text.isEmpty)) {
+        editorFocus.requestFocus();
+      }
+    } finally {
+      _sourceBusy = false;
     }
   }
 
@@ -441,10 +639,7 @@ class _WorkspaceState extends State<Workspace> {
                 ListTile(
                   leading: const Icon(CupertinoIcons.quote_bubble, size: 20),
                   title: const Text('원문 메모'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _source();
-                  },
+                  onTap: () => _afterSheet(() => _source()),
                 ),
                 ListTile(
                   leading: const Icon(CupertinoIcons.book, size: 20),
@@ -702,13 +897,41 @@ class _WorkspaceState extends State<Workspace> {
                         ),
                       ),
                       TextButton(
-                        onPressed: c.retrySave,
+                        onPressed: _retrySave,
                         child: const Text(
                           '저장 재시도',
                           style: TextStyle(fontSize: 11),
                         ),
                       ),
                     ],
+                  ),
+                ),
+              if (_incoming != null || _recoveredPhoto != null)
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: _openPendingSource,
+                        child: Text(
+                          _recoveredPhoto != null ? '가져오던 사진 확인' : '공유한 원문 확인',
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: '받은 원문 지우기',
+                      onPressed: _discardPendingSource,
+                      icon: const Icon(CupertinoIcons.xmark, size: 16),
+                    ),
+                  ],
+                ),
+              if (source.isEmpty)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: const ValueKey('place-source'),
+                    onPressed: () => _source(),
+                    icon: const Icon(CupertinoIcons.quote_bubble, size: 15),
+                    label: const Text('원문 놓기'),
                   ),
                 ),
               if (source.isNotEmpty)
@@ -721,7 +944,7 @@ class _WorkspaceState extends State<Workspace> {
                     choice: c.library.style.bookDetails.sourceSlip,
                     compact: true,
                     child: TextButton.icon(
-                      onPressed: _source,
+                      onPressed: () => _source(),
                       icon: const Icon(
                         CupertinoIcons.quote_bubble,
                         size: 14,

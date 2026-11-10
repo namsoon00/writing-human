@@ -68,6 +68,17 @@ void main() {
     await tester.enterText(find.byType(TextFormField).first, '실제 파일 검수');
     await tester.tap(find.text('책 만들고 쓰기'));
     await saved();
+    await tester.tap(find.byKey(const ValueKey('place-source')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('source-text')),
+      '먼저 골라 둔 실제 파일 원문',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('source-confirm')));
+    await tester.pumpAndSettle();
+    await saved();
+    expect(controller.library.records.single.source, '먼저 골라 둔 실제 파일 원문');
     final field = find.byKey(const ValueKey('page-text'));
     final text = tester.widget<TextField>(field).controller!;
     expect(
@@ -134,6 +145,7 @@ void main() {
     expect(controller.library.style.useDevelopmentTypeface, isTrue);
     expect(controller.library.activePageId, pageId);
     expect(controller.library.books.single.title, '실제 파일 검수');
+    expect(controller.library.records.single.source, '먼저 골라 둔 실제 파일 원문');
     expect(
       controller.library.records.single.bookId,
       controller.library.books.single.id,

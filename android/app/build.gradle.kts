@@ -39,6 +39,11 @@ android {
     }
 }
 
+dependencies {
+    // Bundled model: a book photo is recognized on the device.
+    implementation("com.google.mlkit:text-recognition-korean:16.0.1")
+}
+
 flutter {
     source = "../.."
 }

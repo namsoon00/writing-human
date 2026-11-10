@@ -1,5 +1,27 @@
 # 검증 기록
 
+## 2026-11-11 · 원문 놓기
+
+- 최신 책장 넘김과 통합한 코드에서 Dart 포맷 62개 변경 없음, `flutter analyze --no-pub`
+  문제 없음, `flutter test --no-pub` 81개 통과. 붙여넣기, 문단 선택과 오탈자 수정,
+  한글 조합 중 공유 대기, 저장 실패 후 수신함 유지·재시도, 작은 화면과 키보드를 검사했다.
+  OCR·공유의 위젯 입력은 테스트 대역이다. 별도 호스트 테스트에서는 앱 화면에서 넣은
+  원문과 필사 본문을 임시 SQLite 파일에 기록하고 연결 종료·재열기 후 쪽·선택·스크롤도
+  확인했다.
+- `node --test tool/source_ocr.test.mjs` 2개 통과. 같은 출처의 인식 리소스,
+  문단 구분, 인식 취소를 검사했다. 고정 버전의 실제 WASM 엔진을 Node에서 실행해
+  합성 한글 이미지의 두 문단을 읽었다. 일부 오인식이 있었고 결과는
+  `artifacts/source-intake-ocr-check.json`에 기록했다.
+- `swiftc ios/Runner/SourceInbox.swift tool/check_source_inbox.swift`로 빌드한
+  파일 수신함 검사 통과. 재열기, 항목별 삭제, 과대 입력 및 손상 파일 보존을
+  확인했다. 실제 기기의 App Group 접근 검사는 아니다.
+- `flutter test --no-pub tool/capture_source_intake_test.dart`에서 390×844의
+  앱 화면을 렌더링했다. `artifacts/source-intake-{paper,choose,paragraphs,review,writing}.png`의
+  문단 선택·편집 화면은 검수용 인식 결과를 주입한 화면이다.
+- iOS 시뮬레이터용 무서명 빌드에 `SourceShare.appex`, Android 디버그 APK에
+  한국어 ML Kit 모델이 포함됨을 확인했다. 실제 카메라·공유 창·모바일 한글 입력,
+  iOS App Group 서명 배포, 공개 웹 브라우저의 OCR·클립보드 조작은 미검증이다.
+
 ## 2026-11-11 · 페이지 넘김과 앞표지 웹 게시 완료
 
 [Actions 42913862981](https://github.com/namsoon00/writing-human/actions/runs/42913862981)의

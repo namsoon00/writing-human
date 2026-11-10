@@ -1,5 +1,24 @@
 # 검증 기록
 
+## 2026-11-10 · 전체 화면 넘김 웹 배포 완료
+
+[Actions 42802397738](https://github.com/namsoon00/writing-human/actions/runs/42802397738),
+소스 `bcafc0ee6791138081e661252d4078ecf25c1949`의 포맷·분석·43개 검사·웹 빌드·배포가
+성공했다. [웹 앱](https://namsoon00.github.io/writing-human/)에서 페이지 추가·이동 시
+상단 브랜드부터 하단 도구까지 종이 한 장으로 넘어간다.
+
+기본/예시 HTML, main JS, FontManifest, 개발 TTF, Material 아이콘 6개 요청이
+HTTP 200이었다. 최초 로컬 캐시 빌드는 JS가 달라 `flutter clean` → pub get →
+release 빌드를 새로 수행했다. 새 빌드와 공개 JS는 2,637,077바이트로 동일하며
+SHA-256은 `3abeea53fddd9efad4b5c3514ea63ca6faefd3ef29b612bebd7ea8eb82f45064`다.
+최종 6개 파일이 모두 로컬과 일치했다. 기존 0.006 개발 서체도 유지했다.
+`artifacts/fullscreen-turn-{build-check,deployment-check}.json`에 결과를 기록했다.
+
+실제 UI 접근을 시도했으나 Mac 잠금과 Work 브라우저 사용 비활성화로 진행하지
+못했다. 설정을 바꾸거나 다른 UI 제어 수단으로 우회하지 않았다. 새로 만든 13개
+PNG는 제품 위젯의 Flutter 테스트 렌더다. 실제 브라우저·기기 IME·전환 성능은
+미검증이며 이번 변경에서 모바일 빌드/실행을 수행했다고 보고하지 않는다.
+
 ## 2026-11-10 · 일반 화면 전체에 쓰는 인간체 기본 적용
 
 사용자의 전체 적용 요청에 따라 일반 주소의 작성지·기존 페이지·브랜드 제목·보관함·

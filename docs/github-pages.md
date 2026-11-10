@@ -1,5 +1,12 @@
 # GitHub Pages 배포
 
+## 2026-11-10 · 전체 화면 종이 넘김
+
+[Actions 42802397738](https://github.com/namsoon00/writing-human/actions/runs/42802397738)의
+소스 `bcafc0ee6791138081e661252d4078ecf25c1949`에서 검사·빌드·배포가 성공했다.
+상단 브랜드·본문·하단 도구 전체에 종이 넘김을 적용했다. 공개 JS와 clean release
+빌드의 바이트 일치도 확인했다. 실제 브라우저/기기 검증 범위는 docs/verification.md를 따른다.
+
 ## 2026-11-10 · 페이지 넘김 배포
 
 [Actions 42800541152](https://github.com/namsoon00/writing-human/actions/runs/42800541152),

@@ -15,14 +15,7 @@ void main() {
   SemanticsBinding.instance.ensureSemantics();
   final demoKind = Uri.base.queryParameters['demo'];
   final demo = demoKind == 'reference' || demoKind == 'typeface';
-  runApp(
-    WritingHumanApp(
-      store: demo
-          ? DemoStore(useDevelopmentTypeface: demoKind == 'typeface')
-          : null,
-      demo: demo,
-    ),
-  );
+  runApp(WritingHumanApp(store: demo ? DemoStore() : null, demo: demo));
 }
 
 class WritingHumanApp extends StatelessWidget {
@@ -34,7 +27,8 @@ class WritingHumanApp extends StatelessWidget {
     title: '쓰는 인간',
     debugShowCheckedModeBanner: false,
     theme: ThemeData(
-      fontFamily: 'NanumGothic',
+      fontFamily: appFontFamily,
+      fontFamilyFallback: appFontFallback,
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
         seedColor: brandInk,
@@ -44,7 +38,8 @@ class WritingHumanApp extends StatelessWidget {
       ),
       scaffoldBackgroundColor: appPaper,
       textTheme: ThemeData.light().textTheme.apply(
-        fontFamily: 'NanumGothic',
+        fontFamily: appFontFamily,
+        fontFamilyFallback: appFontFallback,
         bodyColor: ink,
         displayColor: ink,
       ),

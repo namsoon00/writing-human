@@ -63,7 +63,9 @@ void main() {
     'Font fallback index and development flag remain one choice when merging',
     () {
       const base = Library();
-      final local = base.copy(style: base.style.copy(fontIndex: 2));
+      final local = base.copy(
+        style: base.style.copy(fontIndex: 2, useDevelopmentTypeface: false),
+      );
       final remote = base.copy(
         style: base.style.copy(useDevelopmentTypeface: true),
       );

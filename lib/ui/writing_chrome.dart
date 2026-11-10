@@ -11,7 +11,7 @@ class WritingHeader extends StatelessWidget {
     required this.onNewSheet,
     this.bookTitle,
     this.compact = false,
-    this.useDevelopmentTypeface = false,
+    this.useDevelopmentTypeface = true,
   });
   final VoidCallback onCollection, onNewSheet;
   final String? bookTitle;
@@ -37,10 +37,8 @@ class WritingHeader extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontFamily: useDevelopmentTypeface ? developmentSerif : serif,
-                  fontFamilyFallback: useDevelopmentTypeface
-                      ? const [serif]
-                      : null,
+                  fontFamily: appFontFamily,
+                  fontFamilyFallback: appFontFallback,
                   fontSize: 20,
                   color: brandInk,
                   height: 1.3,
@@ -180,7 +178,11 @@ class WritingFooter extends StatelessWidget {
                         padding: EdgeInsets.only(bottom: 5),
                         child: Text(
                           'Aa',
-                          style: TextStyle(fontFamily: serif, fontSize: 21),
+                          style: TextStyle(
+                            fontFamily: appFontFamily,
+                            fontFamilyFallback: appFontFallback,
+                            fontSize: 21,
+                          ),
                         ),
                       ),
                     ),

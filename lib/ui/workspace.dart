@@ -590,7 +590,8 @@ class _WorkspaceState extends State<Workspace> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontFamily: serif,
+                            fontFamily: appFontFamily,
+                            fontFamilyFallback: appFontFallback,
                             fontSize: 13,
                             color: muted,
                           ),

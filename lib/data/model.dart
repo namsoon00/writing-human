@@ -88,7 +88,7 @@ class WritingStyle {
     this.paperIndex = 0,
     this.penIndex = 0,
     this.fontIndex = 0,
-    this.useDevelopmentTypeface = false,
+    this.useDevelopmentTypeface = true,
     this.guides = false,
     this.penMotion = true,
     this.favoriteBookIds = const [],
@@ -119,16 +119,28 @@ class WritingStyle {
     'penIndex': penIndex,
     'fontIndex': fontIndex,
     'useDevelopmentTypeface': useDevelopmentTypeface,
+    'typefaceDefaultsVersion': 1,
     'guides': guides,
     'penMotion': penMotion,
     'favoriteBookIds': favoriteBookIds,
   };
   factory WritingStyle.fromJson(Json j) {
+    final defaultsVersion = j['typefaceDefaultsVersion'];
+    if (defaultsVersion != null &&
+        defaultsVersion != 0 &&
+        defaultsVersion != 1) {
+      throw const FormatException('알 수 없는 기본 글꼴 설정 버전입니다.');
+    }
+    final savedTypeface = j['useDevelopmentTypeface'] as bool?;
     final style = WritingStyle(
       paperIndex: j['paperIndex'] as int? ?? 0,
       penIndex: j['penIndex'] as int? ?? 0,
       fontIndex: j['fontIndex'] as int? ?? 1,
-      useDevelopmentTypeface: j['useDevelopmentTypeface'] as bool? ?? false,
+      // Apply the requested app-wide font once to existing settings. Later
+      // explicit alternatives carry version 1 and survive save/reopen/sync.
+      useDevelopmentTypeface: defaultsVersion == 1
+          ? savedTypeface ?? true
+          : true,
       guides: j['guides'] as bool? ?? false,
       penMotion: j['penMotion'] as bool? ?? true,
       favoriteBookIds: (j['favoriteBookIds'] as List? ?? []).cast<String>(),

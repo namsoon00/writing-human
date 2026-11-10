@@ -28,7 +28,8 @@ class ToolsScreen extends StatelessWidget {
                     child: Text(
                       '쓰기 취향',
                       style: TextStyle(
-                        fontFamily: serif,
+                        fontFamily: appFontFamily,
+                        fontFamilyFallback: appFontFallback,
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                       ),
@@ -149,7 +150,7 @@ class ToolsScreen extends StatelessWidget {
                 ),
               const SizedBox(height: 6),
               const Text(
-                '현대 한글 11,172자·자모·영문·숫자를 지원하는 개발판입니다.\n지원 범위 밖의 문자는 나눔명조 등으로 표시합니다.',
+                '현대 한글 11,172자·자모·영문·숫자를 지원합니다.\n지원 범위 밖의 문자는 나눔명조 등으로 표시합니다.',
                 style: TextStyle(color: muted, fontSize: 11, height: 1.7),
               ),
             ],

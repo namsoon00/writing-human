@@ -73,7 +73,8 @@ class _CollectionSheetState extends State<CollectionSheet> {
                       child: Text(
                         book?.title ?? '보관함',
                         style: const TextStyle(
-                          fontFamily: serif,
+                          fontFamily: appFontFamily,
+                          fontFamilyFallback: appFontFallback,
                           fontSize: 21,
                           fontWeight: FontWeight.w700,
                         ),
@@ -189,7 +190,8 @@ class _CollectionSheetState extends State<CollectionSheet> {
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                fontFamily: serif,
+                                fontFamily: appFontFamily,
+                                fontFamilyFallback: appFontFallback,
                                 fontSize: 18,
                                 height: 1.7,
                               ),

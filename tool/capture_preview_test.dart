@@ -13,7 +13,7 @@ import 'package:writing_human/main.dart';
 
 void main() {
   testWidgets(
-    'Render the continuous paper flow with bundled fonts and materials',
+    'Render ordinary app pages with the global Writing Human typeface',
     (tester) async {
       final previousShadows = debugDisableShadows;
       debugDisableShadows = false;
@@ -87,18 +87,23 @@ void main() {
           final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
           await Directory('artifacts').create(recursive: true);
           await File(
-            'artifacts/fullscreen-turn-$name.png',
+            'artifacts/global-typeface-$name.png',
           ).writeAsBytes(bytes!.buffer.asUint8List());
           image.dispose();
         });
       }
 
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('page-text')))
+            .style!
+            .fontFamily,
+        'WritingHumanDevelopment',
+      );
       await capture('blank');
       await tester.tap(find.byTooltip('쓰기 도구'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('쓰는 인간체 · 개발 중'));
-      await tester.pumpAndSettle();
-      await capture('selected');
+      await capture('tools');
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('page-text')));

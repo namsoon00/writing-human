@@ -27,14 +27,17 @@ TextField와 TextEditingController를 유지하고 TextStyle의 family/fallback�
 바꾼다. 개발 TTF의 미지원 글자는 NanumMyeongjo → NanumGothic → 플랫폼
 대체 글꼴로 표시한다. 문자열·선택 영역·composing을 나누거나 다시 설정하지 않는다.
 
-WritingStyle.useDevelopmentTypeface는 기본 false인 optional JSON bool이다.
-기존 fontIndex 0–2와 DB 버전 3을 유지하여 예전 데이터의 선택을 바꾸지 않는다.
+WritingStyle.useDevelopmentTypeface는 기본 true다. 전체 TextTheme와 명시적 UI 제목도
+WritingHumanDevelopment + NanumMyeongjo/NanumGothic 대체 체인을 사용한다.
+기존 설정은 typefaceDefaultsVersion이 없으면 쓰는 인간체로 한 번 전환한다.
+새 저장에는 typefaceDefaultsVersion: 1을 기록해 이후 명시적으로 선택한 다른 본문
+글꼴도 저장·복원한다. 본문·선택·스크롤·종이·잉크와 fontIndex 0–2, DB 버전은 유지한다.
 동기화 병합에서는 fontIndex와 개발 서체 여부를 한 선택으로 처리하며 종이·펜과
 독립적으로 합친다. 서버는 optional bool의 타입을 검증한다. 기존 서버도 style의
 추가 필드를 보존하므로 인증이나 요청 구조 변경은 없다.
 
-`?demo=typeface`는 DemoStore에서 개발 서체 선택만 활성화한 합성 예시다.
-실제 기록에 적용하려면 사용자가 쓰기 도구에서 선택한다.
+일반 주소·빈 종이·기존 페이지·보관함·도구·대화상자에 쓰는 인간체를 기본 적용한다.
+`?demo=reference`와 `?demo=typeface`도 같은 기본 글꼴을 쓰는 합성 예시다.
 
 ## 저장과 복원
 

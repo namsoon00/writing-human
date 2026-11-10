@@ -3,7 +3,7 @@ import 'store.dart';
 
 /// An explicitly chosen visual preview, completely separate from user storage.
 class DemoStore implements LibraryStore {
-  DemoStore({bool useDevelopmentTypeface = false})
+  DemoStore({bool useDevelopmentTypeface = true})
     : _data = referenceLibrary(useDevelopmentTypeface: useDevelopmentTypeface);
   Library _data;
   @override
@@ -17,7 +17,7 @@ class DemoStore implements LibraryStore {
   Future<void> close() async {}
 }
 
-Library referenceLibrary({bool useDevelopmentTypeface = false}) {
+Library referenceLibrary({bool useDevelopmentTypeface = true}) {
   const quote = '새는 알에서 나오려고\n투쟁한다.\n알은 세계다.';
   const titles = ['데미안', '나의 문장집', '좋은 것들의 힘'];
   const authors = ['헤르만 헤세', '나의 생각과 문장들', '앨리스 먼로'];

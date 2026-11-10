@@ -1,5 +1,29 @@
 # 검증 기록
 
+## 2026-11-10 · 일반 화면 전체에 쓰는 인간체 기본 적용
+
+사용자의 전체 적용 요청에 따라 일반 주소의 작성지·기존 페이지·브랜드 제목·보관함·
+페이지 목록·도구·대화상자의 기본 글꼴을 실제 WritingHumanDevelopment로 변경했다.
+예시 진입이나 사용자의 최초 선택은 필요하지 않다. 글꼴 선택지에는 쓰는 인간체로
+표시하며 TTF의 최종 광학/실기기 검수 상태를 출시 완료로 바꾸지 않는다.
+
+기존 style JSON은 typefaceDefaultsVersion이 없으면 useDevelopmentTypeface=true로
+한 번 읽고, 이후 저장에 typefaceDefaultsVersion: 1을 남긴다. 이후 명시적으로 선택한
+나눔 글꼴은 다시 강제 전환하지 않는다. 본문·페이지 ID·선택·스크롤·종이·펜·줄 가이드를
+보존한다. 새 DB 스키마나 입력 중 문자열/selection/composing 재설정은 추가하지 않았다.
+
+배포 대상 최신 페이지 넘김 코드에 통합 후 dart format 변경 없음, flutter analyze 문제 없음,
+flutter test 46개 통과. 새 회귀 검사 3개는 구형 웹 JSON의 1회 전환과 선택 보존,
+실제 SQLite 파일의 구형 설정 재열기 및 대체 글꼴 재열기, 일반 앱의 본문·테마·보관함·
+대화상자·도구 실제 스타일과 같은 편집 컨트롤러/선택 보존을 검사한다.
+
+`tool/capture_preview_test.dart`는 일반 WritingHumanApp에 실제 번들 TTF를 로드하고
+글꼴 선택 없이 작성 화면과 도구·보관함·페이지 이동·넓은 화면을 렌더한다.
+`artifacts/global-typeface-*.png`는 Flutter 테스트 렌더/합성 데이터이며 실제 브라우저나
+실기기 입력·사용자 디스크 기록의 검증 화면이 아니다. iPhone/Android 키보드와 최종
+가독성·광학 승인은 미검증이다. 최신 통합 코드로 렌더 검사 1개와
+GitHub Pages release 빌드도 성공했다. 실제 게시 결과는 후속 기록에 남긴다.
+
 ## 2026-11-10 · 화면 전체를 한 장으로 넘기기
 
 사용자 피드백으로 본문 안쪽에 한정됐던 전환을 앱의 종이 화면 전체로 넓혔다.

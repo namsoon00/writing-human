@@ -10,7 +10,9 @@ const paper = Color(0xfff7f2e8);
 const appPaper = Color(0xffeee9e0);
 const serif = 'NanumMyeongjo';
 const developmentSerif = 'WritingHumanDevelopment';
-const developmentFontLabel = '쓰는 인간체 · 개발 중';
+const developmentFontLabel = '쓰는 인간체';
+const appFontFamily = developmentSerif;
+const appFontFallback = [serif, 'NanumGothic'];
 const paperColors = [
   paper,
   Color(0xfff3e7d2),
@@ -32,7 +34,7 @@ TextStyle writingTextStyle(
   int font, {
   double size = 23,
   Color color = ink,
-  bool useDevelopmentTypeface = false,
+  bool useDevelopmentTypeface = true,
 }) => TextStyle(
   fontFamily: useDevelopmentTypeface
       ? developmentSerif
@@ -203,7 +205,8 @@ class BookCover extends StatelessWidget {
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontFamily: serif,
+                fontFamily: appFontFamily,
+                fontFamilyFallback: appFontFallback,
                 fontWeight: FontWeight.w700,
                 color: light ? ink : const Color(0xffdbc79a),
                 fontSize: width * .125,

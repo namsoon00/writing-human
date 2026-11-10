@@ -29,7 +29,11 @@ class PagesSheet extends StatelessWidget {
                 const Expanded(
                   child: Text(
                     '페이지',
-                    style: TextStyle(fontFamily: serif, fontSize: 21),
+                    style: TextStyle(
+                      fontFamily: appFontFamily,
+                      fontFamilyFallback: appFontFallback,
+                      fontSize: 21,
+                    ),
                   ),
                 ),
                 IconButton(

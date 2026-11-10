@@ -288,7 +288,7 @@ void main() {
     expect(data.books.single.title, '기존 책');
     expect(data.style.paperIndex, 0);
     expect(data.style.fontIndex, 1);
-    expect(data.style.useDevelopmentTypeface, isFalse);
+    expect(data.style.useDevelopmentTypeface, isTrue);
     expect(data.style.penMotion, isTrue);
   });
 

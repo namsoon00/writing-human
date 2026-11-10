@@ -50,10 +50,13 @@ void main() {
     await saved();
     final field = find.byKey(const ValueKey('page-text'));
     final text = tester.widget<TextField>(field).controller!;
-    expect(tester.widget<TextField>(field).style!.fontFamily, 'NanumMyeongjo');
+    expect(
+      tester.widget<TextField>(field).style!.fontFamily,
+      'WritingHumanDevelopment',
+    );
     await tester.tap(find.byTooltip('쓰기 도구'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('쓰는 인간체 · 개발 중'));
+    await tester.tap(find.text('쓰는 인간체'));
     await saved();
     await tester.tap(find.byTooltip('닫기'));
     await tester.pumpAndSettle();

@@ -1,5 +1,18 @@
 # 검증 기록
 
+## 2026-11-11 · 새 세 요소 웹 게시 완료
+
+[Actions 42912500229](https://github.com/namsoon00/writing-human/actions/runs/42912500229)의
+소스 `4f6b64b1d5648b06dfc37dcf291e4ecbbba69551`에서 포맷·분석·테스트·빌드·게시가 성공했다.
+[일반 웹](https://namsoon00.github.io/writing-human/)에서 색인 탭·문장 구분표·압화를 제공한다.
+HTML, main JS, FontManifest, 실제 쓰는 인간체 0.007 TTF, 종이 이미지 5개가 HTTP 200이며
+검증한 로컬 빌드와 바이트·SHA-256이 모두 일치했다. main.dart.js는 2,706,732바이트,
+SHA-256 `862e63368a86cf0ac4d678494b29f4130fa7e3bee41726fe54f0b705bf69b40e`다. 확인 시각은 2026-11-10 22:16 UTC다.
+`artifacts/additional-details-release-state.json`과 `artifacts/additional-details-deployment-check.json`에 기록했다.
+
+이 게시는 로컬 저장 전용이다. 기존 비공개 Sites의 project_id·접근 권한과 서버는 유지했다.
+기기와 실제 브라우저 조작의 검증 범위는 아래 기록과 같다.
+
 ## 2026-11-11 · 색인 탭·문장 구분표·압화 장식
 
 보관함의 실제 책 이동 탭과 책별 이름, 같은 책 기록 사이의 구분표, 표지와 장서표에
@@ -10,7 +23,7 @@
 - `flutter analyze --no-pub`: 문제 없음. `flutter test --no-pub`: 72개 통과.
   실제 SQLite v4 파일의 v5 이전과 재열기, 기존 기록·장서표·위치 보존, 책별 색인 이름과
   열 가지 독립 설정 저장, 한글 composing 유지, 320px·글씨 2배, 탭 48px, 오류 재시도를 포함한다.
-  책 이름과 소유자·압화의 모양/색/위치 병합과 저장 한도를 넘는 이름 거부도 확인했다.
+  색인 이름과 소유자·압화의 모양/색/위치 병합과 저장 한도를 넘는 이름 거부도 확인했다.
 - `node --test server/sync.test.mjs`: 6개 통과. 새 이름·스타일 검증, 기존 JSON 수용,
   계정 격리와 실제 임시 서버 테스트 DB 파일 재열기를 확인했다.
 - `flutter test --no-pub tool/capture_book_detail_design_test.dart`: 2개 통과.

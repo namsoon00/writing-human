@@ -2,6 +2,7 @@
 
 ## 2026-11-10 · 바로 쓰는 종이 UX
 
+- [GitHub Actions 42732777232](https://github.com/namsoon00/writing-human/actions/runs/42732777232)에서 소스 80ddcb5d75e93449a5824e1333c77ebe3dbebe3c의 분석·테스트 30개·release 빌드·Pages 배포가 성공했다. 공개 URL의 기본/예시 HTML, UI 나눔고딕 및 면지 자산이 HTTP 200이었다. 실제 제공 main.dart.js의 SHA-256 905485076443d1c821900ed124f294e6634f97da5f1b8558e0ba8e62f95b9bba가 로컬 검증 빌드와 일치했고 writing-surface 표식, 사진 배경/계정 API 경로 미포함을 확인했다. artifacts/calm-deployment-check.json에 기록했다. 이는 게시·파일 확인이며 실제 브라우저 실행 확인과 구분한다.
 - dart format lib test tool/capture_preview_test.dart 및 flutter analyze --no-pub 통과. flutter test --no-pub: 이번 개편 후 30개 통과.
 - node tool/build_github_pages.mjs /writing-human/: 새 정적 release 웹 빌드 성공. 실제 공개 URL 배포와 파일 일치는 게시 후 따로 확인한다.
 - 첫 진입에서 바로 입력창이 보이고, 열기/포커스만으로는 저장·빈 기록 생성이 발생하지 않는 것을 확인했다. 첫 한글 composing 입력으로 기록을 만들 때 TextEditingController와 TextEditingValue가 그대로인 것을 검사했다. 실제 입력 후에는 자동 저장·다시 열기·마지막 페이지/선택 영역 복원을 확인했다. 위젯의 저장소는 메모리이며 아래 실제 파일 검사와 구분한다.

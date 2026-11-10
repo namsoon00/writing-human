@@ -97,94 +97,135 @@ class WritingFooter extends StatelessWidget {
     required this.focused,
     this.pageLabel,
     this.onPages,
+    this.onPrevious,
+    this.onNext,
+    this.onAddPage,
     this.failed = false,
   });
   final String status;
   final VoidCallback onTools, onStatus, onMore, onDone;
-  final VoidCallback? onPages;
+  final VoidCallback? onPages, onPrevious, onNext, onAddPage;
   final String? pageLabel;
   final bool focused, failed;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 64,
-    child: Row(
-      children: [
-        SizedBox(
-          width: 64,
-          child: Tooltip(
-            message: '쓰기 도구',
-            child: TextButton(
-              onPressed: onTools,
-              style: TextButton.styleFrom(
-                foregroundColor: brandInk,
-                minimumSize: const Size(48, 48),
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      if (pageLabel != null)
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 280),
+            child: GestureDetector(
+              onHorizontalDragEnd: (details) {
+                final velocity = details.primaryVelocity ?? 0;
+                if (velocity < -250) onNext?.call();
+                if (velocity > 250) onPrevious?.call();
+              },
+              child: Row(
+                children: [
+                  IconButton(
+                    tooltip: '이전 페이지',
+                    onPressed: onPrevious,
+                    color: brandInk,
+                    icon: const Icon(CupertinoIcons.chevron_left, size: 17),
+                  ),
+                  Expanded(
+                    child: TextButton(
+                      onPressed: onPages,
+                      child: Text(
+                        pageLabel!,
+                        maxLines: 1,
+                        style: const TextStyle(color: muted, fontSize: 11),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: '다음 페이지',
+                    onPressed: onNext,
+                    color: brandInk,
+                    icon: const Icon(CupertinoIcons.chevron_right, size: 17),
+                  ),
+                  IconButton(
+                    tooltip: '페이지 추가',
+                    onPressed: onAddPage,
+                    color: brandInk,
+                    icon: const Icon(Icons.note_add_outlined, size: 21),
+                  ),
+                ],
               ),
-              child: Semantics(
-                label: '쓰기 도구',
-                excludeSemantics: true,
-                child: const CustomPaint(
-                  painter: _Underline(),
-                  child: Padding(
-                    padding: EdgeInsets.only(bottom: 5),
-                    child: Text(
-                      'Aa',
-                      style: TextStyle(fontFamily: serif, fontSize: 21),
+            ),
+          ),
+        ),
+      SizedBox(
+        height: 64,
+        child: Row(
+          children: [
+            SizedBox(
+              width: 64,
+              child: Tooltip(
+                message: '쓰기 도구',
+                child: TextButton(
+                  onPressed: onTools,
+                  style: TextButton.styleFrom(
+                    foregroundColor: brandInk,
+                    minimumSize: const Size(48, 48),
+                  ),
+                  child: Semantics(
+                    label: '쓰기 도구',
+                    excludeSemantics: true,
+                    child: const CustomPaint(
+                      painter: _Underline(),
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: 5),
+                        child: Text(
+                          'Aa',
+                          style: TextStyle(fontFamily: serif, fontSize: 21),
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ),
-        Expanded(
-          child: Tooltip(
-            message: '저장 상태와 동기화',
-            child: TextButton(
-              onPressed: onStatus,
-              child: Semantics(
-                liveRegion: failed,
-                child: Text(
-                  status,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: failed ? burgundy : muted,
+            Expanded(
+              child: Tooltip(
+                message: '저장 상태와 동기화',
+                child: TextButton(
+                  onPressed: onStatus,
+                  child: Semantics(
+                    liveRegion: failed,
+                    child: Text(
+                      status,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: failed ? burgundy : muted,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ),
-        if (pageLabel != null)
-          TextButton(
-            onPressed: onPages,
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              minimumSize: const Size(40, 48),
+            SizedBox(
+              width: 64,
+              child: focused
+                  ? TextButton(
+                      onPressed: onDone,
+                      child: const Text('완료', style: TextStyle(fontSize: 12)),
+                    )
+                  : IconButton(
+                      tooltip: '더 보기',
+                      onPressed: onMore,
+                      color: brandInk,
+                      icon: const Icon(CupertinoIcons.ellipsis, size: 23),
+                    ),
             ),
-            child: Text(
-              pageLabel!,
-              style: const TextStyle(fontSize: 11, color: muted),
-            ),
-          ),
-        SizedBox(
-          width: 64,
-          child: focused
-              ? TextButton(
-                  onPressed: onDone,
-                  child: const Text('완료', style: TextStyle(fontSize: 12)),
-                )
-              : IconButton(
-                  tooltip: '더 보기',
-                  onPressed: onMore,
-                  color: brandInk,
-                  icon: const Icon(CupertinoIcons.ellipsis, size: 23),
-                ),
+          ],
         ),
-      ],
-    ),
+      ),
+    ],
   );
 }
 

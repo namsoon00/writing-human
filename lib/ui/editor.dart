@@ -106,14 +106,7 @@ class _PageEditorState extends State<PageEditor> {
     final style = widget.style;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxHeight < 400;
-        final horizontal = constraints.maxWidth < 500 ? 30.0 : 64.0;
-        final padding = EdgeInsets.fromLTRB(
-          horizontal,
-          compact ? 24 : 54,
-          horizontal,
-          44,
-        );
+        final padding = writingPagePadding(constraints.biggest);
         return Stack(
           children: [
             if (style.guides)

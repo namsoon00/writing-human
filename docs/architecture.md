@@ -69,3 +69,19 @@ lib/ui/writing_pen.dart는 TextEditingController·FocusNode·ScrollController를
 lib/sync/의 조건부 팩토리는 웹의 계정 세션과 계정별 localStorage를 연결한다. SyncCoordinator가 로컬 저장 후 원격 버전 확인·병합·재시도를 수행한다. server/index.mjs는 Sites 사용자 식별과 D1의 조건부 갱신을 사용한다. 서버 서비스 자격 증명을 클라이언트에 포함하지 않는다. SQLite 스키마는 sync_state를 추가한 버전 3이다. docs/sync.md에 병합·계정 변경·마지막 위치·IME 규칙과 설치형 앱의 현재 한계를 기록했다.
 
 GitHub Pages 등 정적 호스팅은 `WRITING_HUMAN_LOCAL_ONLY=true` 빌드에서 세션·동기화 클라이언트 생성 전에 WebLibraryStore만 반환한다. 기본 빌드는 기존 계정 동기화를 유지한다. Pages 산출물은 build/github-pages로 분리하며 Sites Worker·D1 배포와 섞지 않는다. docs/github-pages.md에 실행·배포 절차와 현재 접근 권한 한계를 기록한다.
+
+## 페이지 전환 · 2026-11-10
+
+PageTurnView는 실제 PageEditor 하나를 유지한다. 떠나는 쪽만 TextPainter로
+읽기 전용으로 그려 360ms 곡선 클립·종이 뒷면·그림자를 덧댄다. 장식은
+IgnorePointer/ExcludeSemantics이며 이전 편집기의 포커스·저장 리스너를 복제하지 않는다.
+같은 page ID의 첫 저장·도구 변경에는 전환하지 않는다. 새 쪽 입력은 연출을
+즉시 끝낸다. OS disableAnimations, 비활성 TickerMode, 20,000자 초과 본문은
+연출을 생략해 입력과 기록을 우선한다.
+
+Workspace는 조합 입력·계정 잠금·중복 이동을 검사하고 현재 저장 큐가 끝난 뒤
+이동한다. 실패하면 현재 쪽에 머문다. 시트의 쪽 선택은 route.completed 이후에
+실행하고 그동안 계정/컨트롤러/현재 쪽이 바뀌면 취소한다. PagesSheet는 본문
+일부만 담은 읽기 전용 미리보기다. 입력 리스너가 본문·selection·composing을
+다시 설정하지 않는다. 명시적인 빈 페이지 추가에만 saveDraft(keepBlank: true)를
+사용하며 기존 JSON/SQLite 구조와 도구 설정을 유지한다.

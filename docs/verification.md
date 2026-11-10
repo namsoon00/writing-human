@@ -1,5 +1,49 @@
 # 검증 기록
 
+## 2026-11-10 · 종이를 넘기는 페이지 추가·이동
+
+변경 파일:
+
+- `lib/ui/page_turn.dart`, `pages_sheet.dart`: 곡선 종이 넘김과 본문 미리보기.
+- `lib/ui/workspace.dart`, `writing_chrome.dart`: 쪽수·이전/다음·추가·하단 좌우
+  넘김, 시트를 닫은 후 전환, 한글 조합·저장 실패·계정 변경 보호.
+- `lib/ui/paper.dart`, `editor.dart`: 편집기와 전환 미리보기의 여백 공유.
+- `lib/data/library_controller.dart`: 명시적인 빈 쪽 보관과 다음 쪽 번호 계산.
+- `lib/data/demo_store.dart`: 비영구 예시의 첫 기록에 실제 두 쪽을 제공.
+- `test/page_navigation_test.dart`, `test/data/editor_disk_test.dart`,
+  `tool/capture_preview_test.dart` 및 제품·구조 문서.
+
+실행: `flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true`.
+하단 페이지 추가를 누르면 종이가 휘어 넘어가며 새 쪽이 나타난다. 이전/다음
+또는 하단 쪽수 영역의 좌우 넘김으로 이동한다. 쪽수 → 미리보기에서 쪽 선택과
+‘한 쪽 더’를 사용할 수 있다. 본문은 기존 선택·스크롤 동작을 유지한다.
+
+이번 소스의 검사:
+
+- `dart format lib test tool/capture_preview_test.dart`: 35개 파일, 변경 없음.
+  `flutter analyze --no-pub`: 문제 없음. `flutter test --no-pub`: 40개 통과.
+- 새 위젯 검사 7개: 빈 쪽 추가·복원, 전환 중 실제 편집기 하나와 즉시 입력,
+  각 쪽 선택 영역·스크롤 복원, 미리보기 종료 후 이동, 조합 입력 중 이동 금지,
+  동작 줄이기, 저장 실패 후 재시도, 하단 넘김과 본문 드래그 분리를 확인했다.
+- 호스트 실제 SQLite UI 검사를 확장했다. 첫 쪽 본문·선택 영역·스크롤 710을
+  저장하고 둘째 쪽 작성 후 DB 연결을 종료/재연결했다. 둘째 쪽과 마지막 위치가
+  복원되고 이전 쪽으로 이동하면 첫 쪽 본문·선택 영역·스크롤도 복원됐다.
+  메모리 저장을 디스크 검증으로 계산하지 않았다.
+- `flutter test tool/capture_preview_test.dart --no-pub`: 1개 통과. 실제 제품
+  위젯·번들 글꼴·Material/Cupertino 아이콘·종이 소재로 13개 프레임을 렌더한다.
+  `artifacts/page-turn-{forward-middle,backward-middle,overview,new-page,desktop}.png`
+  등을 직접 확인했다. 합성 문장과 테스트 키보드 inset이며 실제 브라우저/폰
+  실행 캡처가 아니다. 초기 캡처의 Material 아이콘 폰트 누락을 수정해 재생성했다.
+
+페이지 변경은 별도 체크아웃에서 검증했다. 병행 작업에서 이미 원격 main에
+게시된 서체 확장 커밋 `9150f6f`를 받아 보존한 뒤 포맷·분석·40개 검사를
+다시 통과했다. 공유 작업 공간의 미게시 서체/기록 모델 변경을 섞거나 덮어쓰지 않았다.
+
+미검증: 실제 브라우저·iOS/Android 한국어 IME와 키보드, 모바일 애니메이션
+프레임 성능, OS 강제 종료, 실제 두 기기의 동기화. 넘김 소리·자동 쪽 나누기는
+추가하지 않았다. 통합 소스의 웹 release 빌드와 iOS 시뮬레이터 빌드도 성공했다.
+시뮬레이터 설치·실행 검증과는 구분한다. 배포 결과는 후속 항목에 기록한다.
+
 ## 2026-11-10 · 전체 한글 쓰는 인간체 웹 게시 완료
 
 [Actions 42799991684](https://github.com/namsoon00/writing-human/actions/runs/42799991684)에서

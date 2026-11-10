@@ -12,6 +12,8 @@ import 'new_book_dialog.dart';
 import 'paper.dart';
 import 'tools_screen.dart';
 import 'writing_chrome.dart';
+import 'page_turn.dart';
+import 'pages_sheet.dart';
 
 class Workspace extends StatefulWidget {
   const Workspace({
@@ -37,6 +39,84 @@ class _WorkspaceState extends State<Workspace> {
   bool userFresh = false;
   String draftSource = '';
   String? draftBookId;
+  bool _pageNavigationBusy = false;
+  bool _editorComposing = false;
+  Future<void>? _sheetClosed;
+  LibraryController? _sheetOwner;
+  bool get _accountLocked =>
+      (widget.sync?.accountMismatch ?? false) ||
+      (widget.sync?.signInRequired == true && c.library.sync.accountId != null);
+
+  List<WritingPage> get _recordPages {
+    final current = page;
+    final pages =
+        c.library.pages.where((p) => p.recordId == current.recordId).toList()
+          ..sort((a, b) => a.number.compareTo(b.number));
+    return pages.isEmpty ? [current] : pages;
+  }
+
+  bool _canLeaveInput() {
+    if (!_editorComposing && !c.composing) return true;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('입력을 마친 뒤 페이지를 넘겨 주세요.')));
+    return false;
+  }
+
+  Future<void> _navigatePage(Future<void> Function() action) async {
+    if (_pageNavigationBusy || _accountLocked || !_canLeaveInput()) return;
+    final owner = c, origin = page.id;
+    _blur();
+    setState(() => _pageNavigationBusy = true);
+    try {
+      await owner.settled;
+      if (!mounted ||
+          c != owner ||
+          page.id != origin ||
+          _accountLocked ||
+          editorFocus.hasFocus ||
+          c.composing) {
+        return;
+      }
+      if (c.saveError != null) return;
+      await action();
+      await owner.settled;
+    } finally {
+      if (mounted) setState(() => _pageNavigationBusy = false);
+    }
+  }
+
+  Future<void> _openPage(String id) => _navigatePage(() async {
+    if (!c.library.pages.any((p) => p.id == id) || page.id == id) return;
+    fresh = false;
+    userFresh = false;
+    c.openPage(id);
+  });
+
+  void _stepPage(int step) {
+    final pages = _recordPages,
+        index = _recordPages.indexWhere((p) => p.id == page.id);
+    if (index + step >= 0 && index + step < pages.length) {
+      _openPage(pages[index + step].id);
+    }
+  }
+
+  Future<void> _appendPage() => _navigatePage(() async {
+    if (fresh) {
+      // Explicitly adding a page is intent to keep blank pages as well.
+      fresh = false;
+      userFresh = false;
+      c.saveDraft(
+        draft,
+        source: draftSource,
+        bookId: draftBookId,
+        keepBlank: true,
+      );
+      await c.settled;
+      if (!mounted || c.saveError != null) return;
+    }
+    c.addPage();
+  });
   WritingPage _blank() => WritingPage(
     id: const Uuid().v4(),
     recordId: const Uuid().v4(),
@@ -98,7 +178,7 @@ class _WorkspaceState extends State<Workspace> {
 
   void _blur() {
     editorFocus.unfocus();
-    c.setEditorState(focused: false, isComposing: false);
+    c.setEditorState(focused: false, isComposing: _editorComposing);
   }
 
   void _edit(String id, String text, int base, int extent, double scroll) {
@@ -119,8 +199,7 @@ class _WorkspaceState extends State<Workspace> {
     }
   }
 
-  void _newSheet([String? bookId]) {
-    _blur();
+  Future<void> _newSheet([String? bookId]) => _navigatePage(() async {
     setState(() {
       draft = _blank();
       draftSource = '';
@@ -128,42 +207,51 @@ class _WorkspaceState extends State<Workspace> {
       fresh = true;
       userFresh = true;
     });
+  });
+
+  Future<void> _sheet(Widget child) {
+    final route = ModalBottomSheetRoute<void>(
+      isScrollControlled: true,
+      showDragHandle: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      constraints: const BoxConstraints(maxWidth: 600),
+      builder: (_) => child,
+    );
+    _sheetClosed = route.completed.then((_) {});
+    _sheetOwner = c;
+    return Navigator.of(context).push<void>(route);
   }
 
-  Future<void> _sheet(Widget child) => showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    constraints: const BoxConstraints(maxWidth: 600),
-    builder: (_) => child,
-  );
+  Future<void> _afterSheet(Future<void> Function() action) async {
+    final closed = _sheetClosed;
+    final owner = _sheetOwner;
+    Navigator.pop(context);
+    await closed;
+    if (mounted && c == owner && !_accountLocked) await action();
+  }
 
   void _collection() {
+    if (!_canLeaveInput()) return;
     _blur();
     _sheet(
       CollectionSheet(
         controller: c,
         onRecord: (r) {
-          Navigator.pop(context);
           final pages = c.library.pages.where((p) => p.recordId == r.id);
           if (pages.isEmpty) return;
-          fresh = false;
-          userFresh = false;
-          c.openPage(
-            pages
-                    .where((p) => p.id == c.library.activePageId)
-                    .firstOrNull
-                    ?.id ??
-                pages.last.id,
-          );
+          final id =
+              pages
+                  .where((p) => p.id == c.library.activePageId)
+                  .firstOrNull
+                  ?.id ??
+              pages.last.id;
+          _afterSheet(() => _openPage(id));
         },
         onNewSheet: (bookId) {
-          Navigator.pop(context);
-          _newSheet(bookId);
+          _afterSheet(() => _newSheet(bookId));
         },
         onNewBook: () {
-          Navigator.pop(context);
-          _createBook();
+          _afterSheet(_createBook);
         },
         onDemo: widget.demo
             ? null
@@ -266,67 +354,37 @@ class _WorkspaceState extends State<Workspace> {
     }
   }
 
-  void _pages() {
+  Future<void> _pages() async {
+    if (_pageNavigationBusy || !_canLeaveInput()) return;
     _blur();
-    final selectedPage = page;
-    final pages = c.library.pages
-        .where((p) => p.recordId == selectedPage.recordId)
-        .toList();
-    if (pages.isEmpty) return;
-    _sheet(
-      SafeArea(
-        top: false,
-        child: SizedBox(
-          height: MediaQuery.sizeOf(context).height * .55,
-          child: Column(
-            children: [
-              const ListTile(
-                title: Text(
-                  '페이지',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-                ),
-              ),
-              Expanded(
-                child: ListView(
-                  children: [
-                    for (final p in pages)
-                      ListTile(
-                        title: Text('${p.number}쪽'),
-                        subtitle: Text(
-                          p.text.isEmpty
-                              ? '빈 종이'
-                              : p.text.replaceAll('\n', ' '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: p.id == selectedPage.id
-                            ? const Icon(CupertinoIcons.checkmark, size: 16)
-                            : null,
-                        onTap: () {
-                          Navigator.pop(context);
-                          c.openPage(p.id);
-                        },
-                      ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: FilledButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    c.openPage(selectedPage.id);
-                    c.addPage();
-                  },
-                  icon: const Icon(CupertinoIcons.plus, size: 16),
-                  label: const Text('한 쪽 더'),
-                ),
-              ),
-            ],
-          ),
-        ),
+    final selectedId = page.id;
+    final owner = c;
+    final route = ModalBottomSheetRoute<PageChoice>(
+      isScrollControlled: true,
+      showDragHandle: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      constraints: const BoxConstraints(maxWidth: 600),
+      builder: (_) => PagesSheet(
+        pages: _recordPages,
+        currentId: selectedId,
+        style: c.library.style,
       ),
     );
+    final choice = await Navigator.of(context).push<PageChoice>(route);
+    // Let the overview finish closing so the actual paper turn is visible.
+    await route.completed;
+    if (!mounted ||
+        c != owner ||
+        _accountLocked ||
+        choice == null ||
+        page.id != selectedId) {
+      return;
+    }
+    if (choice.append) {
+      await _appendPage();
+    } else if (choice.pageId != null) {
+      await _openPage(choice.pageId!);
+    }
   }
 
   void _more() {
@@ -361,8 +419,7 @@ class _WorkspaceState extends State<Workspace> {
                   leading: const Icon(CupertinoIcons.doc_on_doc, size: 20),
                   title: const Text('페이지'),
                   onTap: () {
-                    Navigator.pop(context);
-                    _pages();
+                    _afterSheet(_pages);
                   },
                 ),
               if (!widget.demo)
@@ -428,9 +485,13 @@ class _WorkspaceState extends State<Workspace> {
     }
     final currentPage = page;
     final source = record?.source ?? (fresh ? draftSource : '');
-    final count = c.library.pages
-        .where((p) => p.recordId == currentPage.recordId)
-        .length;
+    final pages = _recordPages;
+    final index = pages.indexWhere((p) => p.id == currentPage.id);
+    final navigationEnabled =
+        !_pageNavigationBusy &&
+        !_editorComposing &&
+        !c.composing &&
+        c.saveError == null;
     final compact =
         MediaQuery.viewInsetsOf(context).bottom > 0 ||
         MediaQuery.sizeOf(context).height < 520;
@@ -533,15 +594,23 @@ class _WorkspaceState extends State<Workspace> {
                   ),
                 Expanded(
                   key: const ValueKey('writing-surface'),
-                  child: PageEditor(
-                    key: ValueKey('${currentPage.id}:${c.editorEpoch}'),
+                  child: PageTurnView(
                     page: currentPage,
                     style: c.library.style,
-                    focusNode: editorFocus,
-                    onChanged: _edit,
-                    onEditingState: (focused, composing) => c.setEditorState(
-                      focused: focused,
-                      isComposing: composing,
+                    editing: c.editorFocused || c.composing,
+                    child: PageEditor(
+                      key: ValueKey('${currentPage.id}:${c.editorEpoch}'),
+                      page: currentPage,
+                      style: c.library.style,
+                      focusNode: editorFocus,
+                      onChanged: _edit,
+                      onEditingState: (focused, composing) {
+                        _editorComposing = composing;
+                        c.setEditorState(
+                          focused: focused,
+                          isComposing: composing,
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -552,10 +621,15 @@ class _WorkspaceState extends State<Workspace> {
                   onDone: _blur,
                   focused: editorFocus.hasFocus,
                   failed: c.saveError != null,
-                  pageLabel: count > 1
-                      ? '${currentPage.number} / $count'
+                  pageLabel: '${index + 1} / ${pages.length}',
+                  onPages: navigationEnabled ? _pages : null,
+                  onPrevious: navigationEnabled && index > 0
+                      ? () => _stepPage(-1)
                       : null,
-                  onPages: _pages,
+                  onNext: navigationEnabled && index < pages.length - 1
+                      ? () => _stepPage(1)
+                      : null,
+                  onAddPage: navigationEnabled ? _appendPage : null,
                   status: c.saveError != null
                       ? '저장 실패'
                       : record == null

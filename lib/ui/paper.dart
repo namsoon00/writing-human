@@ -21,6 +21,13 @@ const paperNames = ['순면지', '미색지', '회백지', '크림지'];
 const penColors = [ink, brandInk, Color(0xff5b6f8e)];
 const fontNames = ['나눔명조', '나눔명조 Bold', '나눔고딕'];
 
+EdgeInsets writingPagePadding(Size size) => EdgeInsets.fromLTRB(
+  size.width < 500 ? 30 : 64,
+  size.height < 400 ? 24 : 54,
+  size.width < 500 ? 30 : 64,
+  44,
+);
+
 TextStyle writingTextStyle(
   int font, {
   double size = 23,

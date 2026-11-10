@@ -117,6 +117,46 @@ void main() {
     );
     expect(find.text('저장됨'), findsOneWidget);
     expect(tester.takeException(), isNull);
+    await tester.tap(find.byTooltip('페이지 추가'));
+    await saved();
+    expect(find.text('2 / 2'), findsOneWidget);
+    const next = TextEditingValue(
+      text: '두 번째 쪽도 실제 파일에 남깁니다.',
+      selection: TextSelection(baseOffset: 2, extentOffset: 5),
+    );
+    await tester.tap(field);
+    tester.testTextInput.updateEditingValue(next);
+    await saved();
+    final secondId = controller.library.activePageId;
+    expect(controller.library.pages.length, 2);
+    expect(controller.library.pages.first.text, body);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      await controller.settled;
+      controller.dispose();
+      await store.close();
+      store = await SqliteLibraryStore.open(
+        '${directory.path}/library.db',
+        factory: databaseFactoryFfi,
+      );
+      controller = LibraryController(store, await store.load());
+    });
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    expect(controller.library.activePageId, secondId);
+    expect(find.text('2 / 2'), findsOneWidget);
+    expect(tester.widget<TextField>(field).controller!.value, next);
+    await tester.tap(find.byTooltip('이전 페이지'));
+    await saved();
+    expect(controller.library.activePageId, pageId);
+    expect(tester.widget<TextField>(field).controller!.text, body);
+    expect(
+      tester.widget<TextField>(field).controller!.selection,
+      committed.selection,
+    );
+    expect(tester.widget<TextField>(field).scrollController!.offset, 710);
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();
     await tester.runAsync(() => controller.settled);

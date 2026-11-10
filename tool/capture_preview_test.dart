@@ -24,6 +24,9 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetViewInsets);
       await tester.runAsync(() async {
+        await (FontLoader(
+          'MaterialIcons',
+        )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
         await (FontLoader('WritingHumanDevelopment')..addFont(
               rootBundle.load(
                 'assets/fonts/WritingHumanDevelopment-Regular.ttf',
@@ -84,7 +87,7 @@ void main() {
           final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
           await Directory('artifacts').create(recursive: true);
           await File(
-            'artifacts/typeface-live-$name.png',
+            'artifacts/page-turn-$name.png',
           ).writeAsBytes(bytes!.buffer.asUint8List());
           image.dispose();
         });
@@ -134,6 +137,28 @@ void main() {
       await tester.tap(find.text('완료'));
       await tester.pumpAndSettle();
       await capture('resting');
+      await tester.tap(find.byTooltip('페이지 추가'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 180));
+      expect(find.byKey(const ValueKey('page-turn-overlay')), findsOneWidget);
+      await capture('forward-middle');
+      await tester.pumpAndSettle();
+      await capture('new-page');
+      await tester.enterText(
+        find.byKey(const ValueKey('page-text')),
+        '새는 알에서 나오려고\n투쟁한다. 알은 세계다.',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('이전 페이지'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 180));
+      await capture('backward-middle');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('1 / 2'));
+      await tester.pumpAndSettle();
+      await capture('overview');
+      await tester.tap(find.byTooltip('닫기'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('쓰기 도구'));
       await tester.pumpAndSettle();
       await capture('tools');

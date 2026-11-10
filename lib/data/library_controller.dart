@@ -121,12 +121,17 @@ class LibraryController extends ChangeNotifier {
 
   /// Commit an already-mounted blank sheet on its first real input, retaining
   /// its IDs so the editor and an in-flight IME composition stay mounted.
-  void saveDraft(WritingPage page, {String source = '', String? bookId}) {
+  void saveDraft(
+    WritingPage page, {
+    String source = '',
+    String? bookId,
+    bool keepBlank = false,
+  }) {
     if (library.pages.any((p) => p.id == page.id)) {
       editPage(page.id, page.text, page.base, page.extent, page.scroll);
       return;
     }
-    if (page.text.isEmpty && source.isEmpty) return;
+    if (page.text.isEmpty && source.isEmpty && !keepBlank) return;
     final record = WritingRecord(
       id: page.recordId,
       title: '필사 ${library.records.length + 1}',
@@ -225,7 +230,11 @@ class LibraryController extends ChangeNotifier {
     final page = WritingPage(
       id: _id(),
       recordId: record.id,
-      number: library.pages.where((p) => p.recordId == record.id).length + 1,
+      number:
+          library.pages
+              .where((p) => p.recordId == record.id)
+              .fold<int>(0, (max, p) => p.number > max ? p.number : max) +
+          1,
     );
     _publish(
       library.copy(pages: [...library.pages, page], activePageId: page.id),

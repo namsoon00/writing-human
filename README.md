@@ -10,7 +10,7 @@ Flutter로 만든 타이핑 전용 필사 앱. iOS·Android 대상이며 같은 
 
 [웹 앱 열기](https://namsoon00.github.io/writing-human/)
 
-GitHub Pages는 로그인 없이 열 수 있으며 이 브라우저에 기록을 저장한다. 일곱 스타일 요소는 일반 화면에 적용되며 Aa → 책의 디테일에서 즉시 바꿀 수 있다. 이전 데모 링크로 들어와도 같은 실제 기록을 연다.
+GitHub Pages는 로그인 없이 열 수 있으며 이 브라우저에 기록을 저장한다. 열 가지 스타일 요소는 일반 화면에 적용되며 Aa → 책의 디테일에서 즉시 바꿀 수 있다. 이전 데모 링크로 들어와도 같은 실제 기록을 연다.
 
 [계정 동기화 버전](https://writing-human.giving-box-8515.chatgpt.site)은 소유자 ChatGPT 로그인으로 접근하는 별도의 비공개 Sites다. 두 주소의 기록 저장 위치는 다르다.
 

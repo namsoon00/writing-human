@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'book_details.dart';
+import 'reading_details.dart';
 import 'paper_palette.dart';
 import '../data/book_detail_style.dart';
 export 'paper_palette.dart';
@@ -162,7 +163,7 @@ class BookCover extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final light = variant % 3 == 1;
-    return SizedBox(
+    final cover = SizedBox(
       width: width,
       height: width * 1.36,
       child: Stack(
@@ -189,6 +190,19 @@ class BookCover extends StatelessWidget {
                 choice: details.ribbon,
               ),
             ),
+          if (details.pressedFlower.enabled)
+            Positioned(
+              left: width * .12,
+              right: width * .09,
+              bottom: width * .08,
+              child: Align(
+                alignment: flowerAlignment(details.pressedFlower),
+                child: PressedFlower(
+                  choice: details.pressedFlower,
+                  size: width * .27,
+                ),
+              ),
+            ),
           Positioned(
             left: width * .12,
             right: width * .09,
@@ -212,6 +226,17 @@ class BookCover extends StatelessWidget {
           ),
         ],
       ),
+    );
+    if (!details.indexTab.enabled) return cover;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        cover,
+        Padding(
+          padding: EdgeInsets.only(bottom: width * .16),
+          child: BookIndexEdge(choice: details.indexTab, width: width * .22),
+        ),
+      ],
     );
   }
 }

@@ -1,9 +1,11 @@
+import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../data/library_controller.dart';
 import '../data/model.dart';
 import 'paper.dart';
 import 'book_details.dart';
+import 'reading_details.dart';
 import 'new_book_dialog.dart';
 
 class CollectionSheet extends StatefulWidget {
@@ -37,6 +39,45 @@ class _CollectionSheetState extends State<CollectionSheet> {
       c.setBookOwner(book.id, name);
     }
   }
+
+  Future<void> _indexName(Book book) async {
+    final controller = c;
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) =>
+          BookIndexDialog(label: book.indexLabel, title: book.title),
+    );
+    if (name != null && mounted && controller == c) {
+      c.setBookIndexLabel(book.id, name);
+    }
+  }
+
+  Widget _indexTabs() => SizedBox(
+    height: math.max(
+      64.0,
+      MediaQuery.textScalerOf(context).scale(13) * 1.4 + 40,
+    ),
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(24, 6, 24, 10),
+      itemCount: c.library.books.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 10),
+      itemBuilder: (context, i) {
+        final book = c.library.books[i];
+        return BookIndexTab(
+          key: ValueKey('book-index-${book.id}'),
+          label: book.indexLabel.isEmpty ? book.title : book.indexLabel,
+          choice: c.library.style.bookDetails.indexTab,
+          selected: bookId == book.id,
+          onTap: () => setState(() {
+            books = false;
+            bookId = book.id;
+            query = '';
+          }),
+        );
+      },
+    ),
+  );
 
   String _excerpt(WritingRecord r) {
     final pages = c.library.pages.where((p) => p.recordId == r.id);
@@ -83,6 +124,8 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     Expanded(
                       child: Text(
                         book?.title ?? '보관함',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontFamily: appFontFamily,
                           fontFamilyFallback: appFontFallback,
@@ -130,6 +173,10 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     ],
                   ),
                 ),
+              if ((books || bookId != null) &&
+                  c.library.books.isNotEmpty &&
+                  c.library.style.bookDetails.indexTab.enabled)
+                _indexTabs(),
               if (!books && c.library.records.length > 5)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
@@ -174,8 +221,17 @@ class _CollectionSheetState extends State<CollectionSheet> {
                           vertical: 8,
                         ),
                         itemCount: records.length + (book == null ? 0 : 1),
-                        separatorBuilder: (_, _) =>
-                            const Divider(color: line, height: 1),
+                        separatorBuilder: (_, i) => book != null
+                            ? i == 0
+                                  ? const SizedBox(height: 12)
+                                  : RecordDivider(
+                                      choice: c
+                                          .library
+                                          .style
+                                          .bookDetails
+                                          .recordDivider,
+                                    )
+                            : const Divider(color: line, height: 1),
                         itemBuilder: (context, i) {
                           if (book != null && i == 0) {
                             final ids = c.library.records
@@ -185,13 +241,39 @@ class _CollectionSheetState extends State<CollectionSheet> {
                             final pageCount = c.library.pages
                                 .where((p) => ids.contains(p.recordId))
                                 .length;
-                            return Bookplate(
-                              choice: c.library.style.bookDetails.bookplate,
-                              title: book.title,
-                              owner: book.owner,
-                              onOwner: () => _owner(book),
-                              summary:
-                                  '${ids.length}편 · $pageCount쪽${book.author.isEmpty ? '' : ' · ${book.author}'}',
+                            return Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Bookplate(
+                                  flower:
+                                      c.library.style.bookDetails.pressedFlower,
+                                  choice: c.library.style.bookDetails.bookplate,
+                                  title: book.title,
+                                  owner: book.owner,
+                                  onOwner: () => _owner(book),
+                                  summary:
+                                      '${ids.length}편 · $pageCount쪽${book.author.isEmpty ? '' : ' · ${book.author}'}',
+                                ),
+                                Tooltip(
+                                  message: '색인 이름 고치기',
+                                  child: TextButton.icon(
+                                    key: const ValueKey('edit-book-index'),
+                                    onPressed: () => _indexName(book),
+                                    icon: const Icon(
+                                      Icons.label_outline,
+                                      size: 16,
+                                    ),
+                                    label: Text(
+                                      '색인 이름 · ${book.indexLabel.isEmpty ? book.title : book.indexLabel}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    style: TextButton.styleFrom(
+                                      minimumSize: const Size(48, 48),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             );
                           }
                           final r = records[i - (book == null ? 0 : 1)];

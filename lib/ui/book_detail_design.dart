@@ -69,6 +69,27 @@ class BookDetailDesign {
       ['브라운', '포도', '올리브', '회청'],
       [brandInk, burgundy, green, Color(0xff4c607a)],
     ),
+    BookDetailKind.indexTab => const BookDetailDesign(
+      '색인 탭',
+      '보관함에서 책을 바로 여는 작은 표식',
+      ['종이 탭', '천 탭', '반달 탭'],
+      ['올리브', '포도', '브라운', '회청'],
+      [green, burgundy, brandInk, Color(0xff4c607a)],
+    ),
+    BookDetailKind.recordDivider => const BookDetailDesign(
+      '문장 구분표',
+      '필사 기록과 기록 사이에 두는 작은 쉼',
+      ['세 점', '짧은 선', '작은 꽃'],
+      ['브라운', '포도', '올리브', '회청'],
+      [brandInk, burgundy, green, Color(0xff4c607a)],
+    ),
+    BookDetailKind.pressedFlower => const BookDetailDesign(
+      '압화 장식',
+      '표지와 장서표 모서리에 남기는 식물 한 조각',
+      ['작은 잎', '들꽃', '고사리'],
+      ['올리브', '포도', '브라운', '회청'],
+      [green, burgundy, brandInk, Color(0xff4c607a)],
+    ),
   };
   static Color color(BookDetailKind kind, BookDetailChoice choice) =>
       of(kind).colors[choice.tone];

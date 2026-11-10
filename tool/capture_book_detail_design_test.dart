@@ -11,9 +11,11 @@ import 'package:writing_human/main.dart';
 import 'package:writing_human/ui/book_detail_design.dart';
 import 'package:writing_human/ui/book_detail_tools.dart';
 import 'package:writing_human/ui/paper.dart';
+import 'package:writing_human/ui/collection_sheet.dart';
+import 'package:writing_human/ui/reading_details.dart';
 
 void main() {
-  testWidgets('Render seven independent design sheets with shapes and palettes', (
+  testWidgets('Render ten independent design sheets with shapes and palettes', (
     tester,
   ) async {
     final shadows = debugDisableShadows;
@@ -159,7 +161,7 @@ void main() {
         final data = await rendered.toByteData(format: ui.ImageByteFormat.png);
         await Directory('artifacts').create(recursive: true);
         await File(
-          'artifacts/book-detail-polished-${kind.name}.png',
+          'artifacts/book-detail-elements-${kind.name}.png',
         ).writeAsBytes(data!.buffer.asUint8List());
         rendered.dispose();
       });
@@ -169,7 +171,7 @@ void main() {
     debugDisableShadows = shadows;
   });
 
-  testWidgets('Render polished details inside the ordinary application', (
+  testWidgets('Render new elements inside the ordinary application', (
     tester,
   ) async {
     final shadows = debugDisableShadows;
@@ -197,10 +199,52 @@ void main() {
       }
     });
     final key = GlobalKey();
+    final store = DemoStore();
+    final library = await store.load();
+    final book = library.books.first;
+    final details = library.style.bookDetails
+        .withChoice(
+          BookDetailKind.indexTab,
+          const BookDetailChoice(variant: 1, tone: 1),
+        )
+        .withChoice(
+          BookDetailKind.recordDivider,
+          const BookDetailChoice(variant: 2),
+        )
+        .withChoice(
+          BookDetailKind.pressedFlower,
+          const BookDetailChoice(variant: 1, tone: 1),
+        );
+    await store.save(
+      library.copy(
+        books: [
+          book.copy(indexLabel: '다시 읽기'),
+          ...library.books.skip(1),
+        ],
+        records: [
+          ...library.records,
+          WritingRecord(
+            id: 'render-record',
+            bookId: book.id,
+            title: '다시 꺼낸 문장',
+          ),
+        ],
+        pages: [
+          ...library.pages,
+          const WritingPage(
+            id: 'render-page',
+            recordId: 'render-record',
+            number: 1,
+            text: '오래 곁에 둔 문장은 다시 읽을 때 달라진다.',
+          ),
+        ],
+        style: library.style.copy(bookDetails: details),
+      ),
+    );
     await tester.pumpWidget(
       RepaintBoundary(
         key: key,
-        child: WritingHumanApp(store: DemoStore()),
+        child: WritingHumanApp(store: store),
       ),
     );
     await tester.pumpAndSettle();
@@ -230,7 +274,7 @@ void main() {
         final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
         await Directory('artifacts').create(recursive: true);
         await File(
-          'artifacts/book-details-polished-$name.png',
+          'artifacts/book-details-elements-$name.png',
         ).writeAsBytes(bytes!.buffer.asUint8List());
         image.dispose();
       });
@@ -246,9 +290,22 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('책'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('데미안').last);
+    await capture('shelf');
+    await tester.tap(find.byKey(ValueKey('book-index-${book.id}')));
     await tester.pumpAndSettle();
     await capture('bookplate');
+    await tester.scrollUntilVisible(
+      find.byType(RecordDivider),
+      160,
+      scrollable: find
+          .descendant(
+            of: find.byType(CollectionSheet),
+            matching: find.byType(Scrollable),
+          )
+          .last,
+    );
+    await tester.pumpAndSettle();
+    await capture('records');
     await tester.tap(find.byTooltip('닫기'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('쓰기 도구'));

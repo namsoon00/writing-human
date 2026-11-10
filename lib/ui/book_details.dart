@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/book_detail_style.dart';
 import 'book_detail_design.dart';
 import 'ink_mark.dart';
+import 'reading_details.dart';
 import 'paper_palette.dart';
 
 const detailMetadataInk = Color(0xff655747);
@@ -562,11 +563,13 @@ class Bookplate extends StatelessWidget {
     required this.summary,
     this.choice = const BookDetailChoice(),
     this.margin = const EdgeInsets.fromLTRB(24, 4, 24, 16),
+    this.flower = const BookDetailChoice(enabled: false),
   });
   final String title, owner, summary;
   final VoidCallback onOwner;
   final BookDetailChoice choice;
   final EdgeInsets margin;
+  final BookDetailChoice flower;
   @override
   Widget build(BuildContext context) {
     final color = BookDetailDesign.color(BookDetailKind.bookplate, choice);
@@ -650,6 +653,14 @@ class Bookplate extends StatelessWidget {
                   ),
                 ),
               ),
+              if (flower.enabled)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Align(
+                    alignment: flowerAlignment(flower),
+                    child: PressedFlower(choice: flower, size: 58),
+                  ),
+                ),
             ],
           ),
         ),

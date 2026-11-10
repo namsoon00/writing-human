@@ -6,6 +6,7 @@ import 'book_detail_design.dart';
 import 'book_details.dart';
 import 'paper_palette.dart';
 import 'pencil_marks.dart';
+import 'reading_details.dart';
 
 class BookDetailTools extends StatelessWidget {
   const BookDetailTools({super.key, required this.controller});
@@ -182,6 +183,31 @@ class BookDetailTools extends StatelessWidget {
             ],
           ),
         ),
+        if (kind == BookDetailKind.pressedFlower) ...[
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (var i = 0; i < 3; i++)
+                  ChoiceChip(
+                    key: ValueKey('detail-pressedFlower-placement-$i'),
+                    label: Text(
+                      ['오른쪽 아래', '왼쪽 아래', '아래 가운데'][i],
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    selected: choice.placement == i,
+                    showCheckmark: false,
+                    onSelected: choice.enabled
+                        ? (_) => _change(kind, choice.copy(placement: i))
+                        : null,
+                  ),
+              ],
+            ),
+          ),
+        ],
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
@@ -309,6 +335,21 @@ class BookDetailPreview extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    ),
+    BookDetailKind.indexTab => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: BookIndexTab(label: '나의 문장', choice: choice),
+      ),
+    ),
+    BookDetailKind.recordDivider => RecordDivider(choice: choice),
+    BookDetailKind.pressedFlower => SizedBox(
+      height: 112,
+      child: Align(
+        alignment: flowerAlignment(choice),
+        child: PressedFlower(choice: choice, size: 92),
       ),
     ),
     BookDetailKind.dateStamp => Padding(

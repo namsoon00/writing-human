@@ -115,16 +115,15 @@ class LibraryController extends ChangeNotifier {
   void setBookOwner(String id, String owner) => _publish(
     library.copy(
       books: library.books
-          .map(
-            (b) => b.id == id
-                ? Book(
-                    id: b.id,
-                    title: b.title,
-                    author: b.author,
-                    owner: owner.trim(),
-                  )
-                : b,
-          )
+          .map((b) => b.id == id ? b.copy(owner: owner.trim()) : b)
+          .toList(),
+    ),
+  );
+
+  void setBookIndexLabel(String id, String label) => _publish(
+    library.copy(
+      books: library.books
+          .map((b) => b.id == id ? b.copy(indexLabel: label.trim()) : b)
           .toList(),
     ),
   );

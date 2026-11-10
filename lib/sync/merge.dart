@@ -53,6 +53,7 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         title: _field(old.title, b.title, r.title),
         author: _field(old.author, b.author, r.author),
         owner: _field(old.owner, b.owner, r.owner),
+        indexLabel: _field(old.indexLabel, b.indexLabel, r.indexLabel),
       );
     } else if (r == null ||
         old == null ||
@@ -219,6 +220,11 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
             base.style.bookDetails.choice(kind).variant,
             local.style.bookDetails.choice(kind).variant,
             remote.style.bookDetails.choice(kind).variant,
+          ),
+          'placement': _field(
+            base.style.bookDetails.choice(kind).placement,
+            local.style.bookDetails.choice(kind).placement,
+            remote.style.bookDetails.choice(kind).placement,
           ),
           'tone': _field(
             base.style.bookDetails.choice(kind).tone,

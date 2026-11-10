@@ -30,7 +30,7 @@ void main() {
     }
   });
   test(
-    'Seven independent choices survive SQLite reopen with annotations, owner and position',
+    'Ten independent choices survive SQLite reopen with annotations, owner and position',
     () async {
       final directory = await Directory.systemTemp.createTemp(
         'writing-independent-details-',
@@ -284,7 +284,7 @@ void main() {
   );
 
   testWidgets(
-    'All 21 shapes, four tones and hidden states fit 320px with enlarged text',
+    'All 30 shapes, four tones and hidden states fit 320px with enlarged text',
     (tester) async {
       tester.view.physicalSize = const Size(320, 640);
       tester.view.devicePixelRatio = 1;

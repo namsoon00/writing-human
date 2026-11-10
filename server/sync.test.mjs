@@ -31,6 +31,16 @@ test('Bookplate, date and pencil marks remain optional and reject malformed valu
   assert.equal(validLibrary(library), true);
 });
 
+test('Book index labels are optional text and reject damaged values', () => {
+  const library = empty();
+  library.books = [{id:'b',title:'책',author:'',indexLabel:'다시 읽기'}];
+  assert.equal(validLibrary(library),true);
+  for (const value of [null, 12, '가'.repeat(81)]) {
+    library.books[0].indexLabel=value; assert.equal(validLibrary(library),false);
+  }
+  delete library.books[0].indexLabel; assert.equal(validLibrary(library),true);
+});
+
 test('Development typeface flag is optional and validated without changing legacy indices', () => {
   const library = empty();
   assert.equal(validLibrary(library), true);
@@ -44,11 +54,11 @@ test('Development typeface flag is optional and validated without changing legac
 
 test('Independent book details accept legacy defaults and validate every separate choice', () => {
   const library = empty();
-  for (const bookDetails of [{}, {ribbon:{enabled:false,variant:1,tone:2},dateStamp:{enabled:true,variant:2,tone:3}}]) {
+  for (const bookDetails of [{}, {indexTab:{enabled:true,variant:1,tone:2}, recordDivider:{variant:2}, pressedFlower:{variant:1,tone:1,placement:2}}, {ribbon:{enabled:false,variant:1,tone:2},dateStamp:{enabled:true,variant:2,tone:3}}]) {
     library.style.bookDetails = bookDetails;
     assert.equal(validLibrary(library), true);
   }
-  for (const bookDetails of [null, [], {ribbon:{enabled:'yes'}}, {pencil:{variant:3}}, {binding:{tone:-1}}, {dateStamp:{tone:1.5}}, {unknown:{}}]) {
+  for (const bookDetails of [null, [], {ribbon:{enabled:'yes'}}, {pencil:{variant:3}}, {binding:{tone:-1}}, {dateStamp:{tone:1.5}}, {unknown:{}}, {pressedFlower:{placement:3}}, {pressedFlower:{placement:null}}]) {
     library.style.bookDetails = bookDetails;
     assert.equal(validLibrary(library), false);
   }

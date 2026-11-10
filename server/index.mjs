@@ -13,6 +13,7 @@ export function validLibrary(l) {
   for (const b of l.books) {
     if (!object(b) || !id(b.id) || books.has(b.id) || !text(b.title, 500) || !text(b.author, 500)) return false;
     if ('owner' in b && !text(b.owner, 80)) return false;
+    if ('indexLabel' in b && !text(b.indexLabel, 80)) return false;
     books.add(b.id);
   }
   for (const r of l.records) {
@@ -31,11 +32,12 @@ export function validLibrary(l) {
   if (!object(s) || !integer(s.paperIndex) || s.paperIndex < 0 || s.paperIndex > 3 || !integer(s.penIndex) || s.penIndex < 0 || s.penIndex > 2 || !integer(s.fontIndex) || s.fontIndex < 0 || s.fontIndex > 2 || typeof s.guides !== 'boolean' || !Array.isArray(s.favoriteBookIds) || s.favoriteBookIds.some(v => !id(v))) return false;
   if ('useDevelopmentTypeface' in s && typeof s.useDevelopmentTypeface !== 'boolean') return false;
   if ('bookDetails' in s) {
-    const kinds = ['ribbon', 'bookplate', 'sourceSlip', 'pencil', 'ornament', 'binding', 'dateStamp'];
+    const kinds = ['ribbon', 'bookplate', 'sourceSlip', 'pencil', 'ornament', 'binding', 'dateStamp', 'indexTab', 'recordDivider', 'pressedFlower'];
     if (!object(s.bookDetails) || Object.entries(s.bookDetails).some(([kind, choice]) =>
-      !kinds.includes(kind) || !object(choice) || Object.keys(choice).some(k => !['enabled', 'variant', 'tone'].includes(k)) ||
+      !kinds.includes(kind) || !object(choice) || Object.keys(choice).some(k => !['enabled', 'variant', 'tone', 'placement'].includes(k)) ||
       ('enabled' in choice && typeof choice.enabled !== 'boolean') ||
       ('variant' in choice && (!integer(choice.variant) || choice.variant < 0 || choice.variant > 2)) ||
+      ('placement' in choice && (!integer(choice.placement) || choice.placement < 0 || choice.placement > 2)) ||
       ('tone' in choice && (!integer(choice.tone) || choice.tone < 0 || choice.tone > 3)))) return false;
   }
   // Do not let clients smuggle extra secrets or alternate identities into storage.

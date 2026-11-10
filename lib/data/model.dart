@@ -10,15 +10,35 @@ class Book {
     required this.title,
     this.author = '',
     this.owner = '',
+    this.indexLabel = '',
   });
-  final String id, title, author, owner;
-  Json toJson() => {'id': id, 'title': title, 'author': author, 'owner': owner};
-  factory Book.fromJson(Json j) => Book(
-    id: j['id'] as String,
-    title: j['title'] as String,
-    author: j['author'] as String,
-    owner: j['owner'] as String? ?? '',
+  final String id, title, author, owner, indexLabel;
+  Book copy({String? owner, String? indexLabel}) => Book(
+    id: id,
+    title: title,
+    author: author,
+    owner: owner ?? this.owner,
+    indexLabel: indexLabel ?? this.indexLabel,
   );
+  Json toJson() => {
+    'id': id,
+    'title': title,
+    'author': author,
+    'owner': owner,
+    'indexLabel': indexLabel,
+  };
+  factory Book.fromJson(Json j) {
+    if (j.containsKey('indexLabel') && j['indexLabel'] is! String) {
+      throw const FormatException('책의 색인 이름을 확인할 수 없습니다.');
+    }
+    return Book(
+      id: j['id'] as String,
+      title: j['title'] as String,
+      author: j['author'] as String,
+      owner: j['owner'] as String? ?? '',
+      indexLabel: j['indexLabel'] as String? ?? '',
+    );
+  }
 }
 
 /// UTF-16 offsets, matching Flutter's selection. These never alter input values.
@@ -404,7 +424,7 @@ class Library {
         recordIds.length != records.length ||
         pageIds.length != pages.length ||
         numbers.length != pages.length ||
-        books.any((b) => b.owner.length > 80) ||
+        books.any((b) => b.owner.length > 80 || b.indexLabel.length > 80) ||
         records.any((r) => r.bookId != null && !bookIds.contains(r.bookId)) ||
         pages.any(
           (p) =>

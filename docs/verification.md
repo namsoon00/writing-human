@@ -1,5 +1,27 @@
 # 검증 기록
 
+## 2026-11-11 · 색인 탭·문장 구분표·압화 장식
+
+보관함의 실제 책 이동 탭과 책별 이름, 같은 책 기록 사이의 구분표, 표지와 장서표에
+놓는 압화를 추가했다. `Aa → 책의 디테일`에서 모양·색·표시를 따로 바꾸고 압화의
+위치를 고를 수 있다. 기존 일곱 요소의 설정과 본문·원문·선택·composing을 보존한다.
+
+- `dart format --output=none --set-exit-if-changed lib test tool/capture_book_detail_design_test.dart tool/capture_preview_test.dart`: 54개 파일, 변경 없음.
+- `flutter analyze --no-pub`: 문제 없음. `flutter test --no-pub`: 72개 통과.
+  실제 SQLite v4 파일의 v5 이전과 재열기, 기존 기록·장서표·위치 보존, 책별 색인 이름과
+  열 가지 독립 설정 저장, 한글 composing 유지, 320px·글씨 2배, 탭 48px, 오류 재시도를 포함한다.
+  책 이름과 소유자·압화의 모양/색/위치 병합과 저장 한도를 넘는 이름 거부도 확인했다.
+- `node --test server/sync.test.mjs`: 6개 통과. 새 이름·스타일 검증, 기존 JSON 수용,
+  계정 격리와 실제 임시 서버 테스트 DB 파일 재열기를 확인했다.
+- `flutter test --no-pub tool/capture_book_detail_design_test.dart`: 2개 통과.
+  `artifacts/book-detail-elements-{indexTab,recordDivider,pressedFlower}.png`와
+  `artifacts/book-details-elements-{shelf,bookplate,records}.png`에서 실제 Flutter 위젯을 확인했다.
+  이 이미지는 번들 서체와 합성 테스트 기록으로 렌더한 것이며 실제 브라우저나 실기기 캡처가 아니다.
+- `node tool/build_github_pages.mjs /writing-human/`: 로컬 저장 전용 웹 빌드 성공.
+
+실제 iOS/Android 빌드·IME 조작과 실제 브라우저 조작, 비공개 동기화 서버 배포/실서버 기록 저장은
+검증하지 않았다. 비공개 Sites project_id·접근 권한과 쓰는 인간체 0.007을 유지했다.
+
 ## 2026-11-10 · 일곱 디테일 다듬기 웹 게시 완료
 
 [Actions 42830964689](https://github.com/namsoon00/writing-human/actions/runs/42830964689)의

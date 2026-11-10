@@ -19,7 +19,9 @@
 
 사용자가 Public 저장소 [namsoon00/writing-human](https://github.com/namsoon00/writing-human)을 생성했다. 원래 환경의 PAT를 이용한 일반 Git 푸시는 403으로 거절됐으나, 연결된 GitHub 도구로 파일 쓰기는 성공했다. 해당 도구를 통해 폰트·이미지의 Git blob SHA와 소스 트리를 확인해 업로드한다. 저장소에 자격 증명·사용자 기록·로컬 실행 산출물은 포함하지 않는다.
 
-현재 연결 도구에는 Pages 설정 변경 기능이 없고 환경 PAT의 Pages 생성 요청도 403이었다. Settings → Pages → Source를 GitHub Actions로 선택하는 최초 설정은 사용자에게 요청했다. 원격 Actions 및 최종 Pages URL의 검증 결과는 docs/verification.md와 최종 보고를 따른다.
+연결 도구에는 Pages 설정 변경 기능이 없고 환경 PAT의 Pages 생성 요청도 403이어서, 사용자가 Settings → Pages → Source를 GitHub Actions로 설정했다. Pages API에서 build_type=workflow를 확인한 뒤 실패 작업을 재실행했다. 실행 [42727457916](https://github.com/namsoon00/writing-human/actions/runs/42727457916)의 배포가 성공했다.
+
+운영 주소: [웹 앱](https://namsoon00.github.io/writing-human/) · [예시 책장](https://namsoon00.github.io/writing-human/?demo=reference). 실제 URL에서 HTML, bootstrap/main JS, 나눔명조 및 질감 자산의 HTTP 200 응답을 확인했다. 실제 브라우저 화면·실기기 조작 검증과는 구별하며 세부 결과는 docs/verification.md를 따른다.
 
 ## 근거 문서
 

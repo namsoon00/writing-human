@@ -4,9 +4,11 @@
 
 Flutter로 만든 타이핑 전용 필사 앱. iOS·Android 대상이며 같은 코드를 웹 미리보기로 제공한다. 책 만들기, 책 상세, 필사 작성, 원문 메모, 페이지 추가/이동, 로컬 자동 저장, 마지막 본문·페이지·선택 영역·스크롤 복원. 종이·펜·글꼴을 독립적으로 선택하고 줄 가이드와 즐겨찾기를 사용할 수 있다. 책 없이 쓰기와 기존 책에 묶기도 가능하다.
 
-[나의 책장](https://writing-human.giving-box-8515.chatgpt.site) · [참조 이미지의 예시 책장](https://writing-human.giving-box-8515.chatgpt.site/?demo=reference)
+[웹 앱 열기](https://namsoon00.github.io/writing-human/) · [참조 이미지의 예시 책장](https://namsoon00.github.io/writing-human/?demo=reference)
 
-예시 책장은 사용자 저장소와 분리된 비영구 미리보기다. ‘내 책장’을 누르면 실제 기록으로 돌아간다. 링크는 비공개이며 소유자 ChatGPT 계정 로그인이 필요하다.
+GitHub Pages는 로그인 없이 열 수 있으며 이 브라우저에 기록을 저장한다. 예시 책장은 사용자 저장소와 분리된 비영구 미리보기다. ‘내 책장’을 누르면 실제 기록으로 돌아간다.
+
+[계정 동기화 버전](https://writing-human.giving-box-8515.chatgpt.site)은 소유자 ChatGPT 로그인으로 접근하는 별도의 비공개 Sites다. 두 주소의 기록 저장 위치는 다르다.
 
 ## 실행
 

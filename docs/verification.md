@@ -1,7 +1,16 @@
 # 검증 기록
 
+## 2026-11-10 · GitHub Pages 게시 완료
+
+- 사용자의 Pages 설정 완료 후 API에서 build_type=workflow 및 https://namsoon00.github.io/writing-human/ 주소를 확인했다. 실행 42727457916의 실패 작업을 재실행했고 Configure Pages, Deploy to GitHub Pages가 성공했다. 배포 소스는 bb82d230d576f452ec077189929c968aef512ca4다.
+- 해당 소스의 GitHub Actions에서 포맷·flutter analyze·테스트 22개·release 웹 빌드·github-pages 산출물 업로드가 통과했다. 문서 링크 반영만 추가했으므로 앱 검사와 빌드를 불필요하게 반복하지 않았다.
+- 실제 공개 URL의 기본/예시 HTML GET 200, base href=/writing-human/ 및 bootstrap 참조를 확인했다. flutter_bootstrap.js, main.dart.js, 나눔명조 Regular, 면지·아이보리 표지·햇빛 배경 HEAD도 모두 200이었다. artifacts/github-pages-deployment-check.json에 결과를 남겼다. 이 결과는 HTTP/배포 확인이며 브라우저 내 실행을 검증한 것은 아니다.
+- 실행 주소는 https://namsoon00.github.io/writing-human/ 이며 예시는 ?demo=reference다. GitHub Pages 버전은 브라우저 로컬 저장만 제공한다. 계정 동기화 Sites와 사용자 기록을 공유하지 않는다.
+- 미검증: 브라우저 제어가 비활성화되어 실제 브라우저·실기기 조작/화면 캡처는 이번 게시에서도 수행하지 못했다. 과거 캡처를 새 배포의 실행 결과로 재사용하지 않았다.
+
 ## 2026-11-10 · GitHub 저장소 업로드 및 원격 검사
 
+- 두 번째 실행 [42727457916](https://github.com/namsoon00/writing-human/actions/runs/42727457916), 소스 bb82d230d576f452ec077189929c968aef512ca4에서 포맷·분석·테스트 22개, Flutter Pages release 웹 빌드와 github-pages 산출물 업로드가 통과했다. Pages 활성화가 되지 않아 실제 웹 게시 확인은 아직 남아 있다. Settings → Pages → Source를 GitHub Actions로 선택하도록 사용자에게 요청했다. 이 상태를 웹 게시 성공으로 안내하지 않는다.
 - 사용자가 namsoon00/writing-human Public 저장소를 생성했다. 환경 PAT의 Git 푸시·Pages 설정 요청은 403이었으나 연결된 GitHub 도구의 파일 쓰기는 성공했다.
 - 연결 도구로 37개 바이너리의 Git blob SHA와 99개 텍스트를 확인해 총 136개 소스 파일을 업로드했다. 원격 main의 파일 트리와 로컬 스냅샷은 git diff로 동일함을 확인했다. 토큰·사용자 기록·빌드 산출물은 업로드하지 않았다. GitHub 최초 소스 반영 커밋은 183ea5282a0cca9cd5db87bbf6d659214a3d9295다.
 - GitHub Actions 실행 42727127765의 Ubuntu runner에서 포맷·flutter analyze·flutter test가 통과했다. 로그의 실제 결과는 No issues found, 22 tests passed였다. Pages API가 Not Found를 반환해 Configure Pages에서 실패했으며, 이 실행을 게시 성공으로 보고하지 않는다.

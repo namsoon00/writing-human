@@ -1,5 +1,17 @@
 # 검증 기록
 
+## 2026-11-10 · 독서와 쓰기의 일곱 요소 배포 전 검증
+
+최신 공개 소스 9d7826efa7b69e9f4522b48b47e5c4cde91cc602를 기준으로 별도의 작업본을 만들고 일곱 요소·개별 설정·원문/소유자/날짜/연필 표시 보존을 합쳤다. 기존 전체 서체·종이 전체 넘김·스와이프 흐름을 유지했다. 사용자 기록·자격 증명·로컬 실행 산출물을 업로드하지 않는다.
+
+- dart format lib test tool/capture_preview_test.dart tool/capture_book_detail_design_test.dart: 47개 파일, 변경 없음. flutter analyze --no-pub: 문제 없음.
+- flutter test --no-pub: 이 배포 작업본에서 64개 통과. 실제 SQLite 파일 재열기·v3→v4 이전, 한글 composing·선택·스크롤 보존, 스타일 독립 저장/병합, 구절 표시/지우기, 실패 재시도, 기존 기본 서체·스와이프·페이지 넘김 회귀를 포함한다. 메모리 원격 어댑터 검사를 실제 다기기 동기화로 보고하지 않는다.
+- npm run test:server: 5개 통과. Node SQLite 파일의 실제 재열기, optional 메타데이터·독립 선택의 검증 및 보존을 포함한다. 배포 서버 검증과 구분한다.
+- node tool/build_github_pages.mjs /writing-human/: release 웹 빌드 성공. 출력은 build/github-pages이며 /writing-human/ base href, 로컬 저장 전용 설정, .nojekyll을 확인했다.
+- 기존 .openai/hosting.json의 project_id와 서체 파일이 변경되지 않았음을 확인했다. 비공개 Sites 접근 설정은 변경하지 않는다.
+- 현재 컴퓨터가 잠겨 있고 활성 브라우저가 없어 실제 브라우저 조작·캡처는 수행하지 못했다. 실제 모바일 한국어 키보드·접근성·실기기 성능은 미검증이다. 실제 게시 성공과 제공 파일 일치 결과는 배포 후 검증 기록으로 구분한다.
+
+
 ## 2026-11-10 · 쪽수·스와이프 웹 배포 완료
 
 [Actions 42823317701](https://github.com/namsoon00/writing-human/actions/runs/42823317701)의

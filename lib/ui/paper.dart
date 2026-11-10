@@ -1,27 +1,9 @@
 import 'package:flutter/material.dart';
-
-const ink = Color(0xff302c27);
-const brandInk = Color(0xff70472f);
-const muted = Color(0xff776a5b);
-const green = Color(0xff4e5a42);
-const burgundy = Color(0xff7a4a4a);
-const line = Color(0xffe4dacb);
-const paper = Color(0xfff7f2e8);
-const appPaper = Color(0xffeee9e0);
-const serif = 'NanumMyeongjo';
-const developmentSerif = 'WritingHumanDevelopment';
-const developmentFontLabel = '쓰는 인간체';
-const appFontFamily = developmentSerif;
-const appFontFallback = [serif, 'NanumGothic'];
-const paperColors = [
-  paper,
-  Color(0xfff3e7d2),
-  Color(0xffe9e6df),
-  Color(0xfff3dfbd),
-];
-const paperNames = ['순면지', '미색지', '회백지', '크림지'];
-const penColors = [ink, brandInk, Color(0xff5b6f8e)];
-const fontNames = ['나눔명조', '나눔명조 Bold', '나눔고딕'];
+import 'book_details.dart';
+import 'paper_palette.dart';
+import '../data/book_detail_style.dart';
+export 'paper_palette.dart';
+export 'ink_mark.dart';
 
 EdgeInsets writingPagePadding(Size size) => EdgeInsets.fromLTRB(
   size.width < 500 ? 30 : 64,
@@ -56,9 +38,15 @@ TextStyle writingTextStyle(
 /// A continuous interior page behind header, editable text and footer.
 /// The material is static and never participates in hit testing or semantics.
 class PaperBackdrop extends StatelessWidget {
-  const PaperBackdrop({super.key, required this.child, this.color = paper});
+  const PaperBackdrop({
+    super.key,
+    required this.child,
+    this.color = paper,
+    this.binding = const BookDetailChoice(),
+  });
   final Widget child;
   final Color color;
+  final BookDetailChoice binding;
 
   @override
   Widget build(BuildContext context) => ColoredBox(
@@ -91,14 +79,18 @@ class PaperBackdrop extends StatelessWidget {
                       ),
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              const Color(0xff92816a).withValues(alpha: .17),
-                              color.withValues(alpha: 0),
-                              const Color(0x12ffffff),
-                            ],
-                            stops: const [0, .045, 1],
-                          ),
+                          gradient: !binding.enabled
+                              ? null
+                              : LinearGradient(
+                                  colors: [
+                                    const Color(
+                                      0xff92816a,
+                                    ).withValues(alpha: .10),
+                                    color.withValues(alpha: 0),
+                                    const Color(0x12ffffff),
+                                  ],
+                                  stops: const [0, .045, 1],
+                                ),
                         ),
                       ),
                     ),
@@ -106,25 +98,10 @@ class PaperBackdrop extends StatelessWidget {
                 ),
               ),
             ),
+            Positioned.fill(child: BookBinding(choice: binding)),
             child,
           ],
         ),
-      ),
-    ),
-  );
-}
-
-class InkMark extends StatelessWidget {
-  const InkMark({super.key, this.size = 20});
-  final double size;
-  @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-    child: IgnorePointer(
-      child: Image.asset(
-        'assets/images/ink-mark.png',
-        width: size,
-        height: size,
-        filterQuality: FilterQuality.medium,
       ),
     ),
   );
@@ -174,10 +151,14 @@ class BookCover extends StatelessWidget {
     required this.title,
     this.width = 132,
     this.variant = 0,
+    this.bookmarked = false,
+    this.details = const BookDetailsStyle(),
   });
   final String title;
   final double width;
   final int variant;
+  final bool bookmarked;
+  final BookDetailsStyle details;
   @override
   Widget build(BuildContext context) {
     final light = variant % 3 == 1;
@@ -195,6 +176,19 @@ class BookCover extends StatelessWidget {
             ][variant % 3],
             fit: BoxFit.fill,
           ),
+          Positioned.fill(
+            child: BookBinding(choice: details.binding, cover: true),
+          ),
+          if (bookmarked)
+            Positioned(
+              right: width * .14,
+              top: 0,
+              child: RibbonBookmark(
+                width: width * .13,
+                height: width * .42,
+                choice: details.ribbon,
+              ),
+            ),
           Positioned(
             left: width * .12,
             right: width * .09,

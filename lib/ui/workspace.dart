@@ -15,6 +15,7 @@ import 'writing_chrome.dart';
 import 'page_turn.dart';
 import 'paper_swipe.dart';
 import 'pages_sheet.dart';
+import 'book_details.dart';
 
 class Workspace extends StatefulWidget {
   const Workspace({
@@ -295,8 +296,10 @@ class _WorkspaceState extends State<Workspace> {
     userFresh = fresh;
     final source = await showDialog<String>(
       context: context,
-      builder: (_) =>
-          SourceDialog(source: selectedRecord?.source ?? draftSource),
+      builder: (_) => SourceDialog(
+        source: selectedRecord?.source ?? draftSource,
+        choice: c.library.style.bookDetails.sourceSlip,
+      ),
     );
     if (source == null || !mounted) return;
     if (selectedRecord != null) {
@@ -397,46 +400,72 @@ class _WorkspaceState extends State<Workspace> {
     _sheet(
       SafeArea(
         top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 18),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(CupertinoIcons.quote_bubble, size: 20),
-                title: const Text('원문 메모'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _source();
-                },
-              ),
-              ListTile(
-                leading: const Icon(CupertinoIcons.book, size: 20),
-                title: const Text('책으로 묶기'),
-                subtitle: book == null ? null : Text(book!.title),
-                onTap: () {
-                  Navigator.pop(context);
-                  _bind();
-                },
-              ),
-              if (record != null)
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 ListTile(
-                  leading: const Icon(CupertinoIcons.doc_on_doc, size: 20),
-                  title: const Text('페이지'),
-                  onTap: () {
-                    _afterSheet(_pages);
-                  },
-                ),
-              if (!widget.demo)
-                ListTile(
-                  leading: const Icon(CupertinoIcons.cloud, size: 20),
-                  title: const Text('기기 동기화'),
+                  leading: const Icon(CupertinoIcons.quote_bubble, size: 20),
+                  title: const Text('원문 메모'),
                   onTap: () {
                     Navigator.pop(context);
-                    _syncInfo();
+                    _source();
                   },
                 ),
-            ],
+                ListTile(
+                  leading: const Icon(CupertinoIcons.book, size: 20),
+                  title: const Text('책으로 묶기'),
+                  subtitle: book == null ? null : Text(book!.title),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _bind();
+                  },
+                ),
+                if (record != null)
+                  ListTile(
+                    leading: const Icon(CupertinoIcons.doc_on_doc, size: 20),
+                    title: const Text('페이지'),
+                    onTap: () {
+                      _afterSheet(_pages);
+                    },
+                  ),
+                const ListTile(
+                  leading: Icon(CupertinoIcons.pencil, size: 20, color: muted),
+                  title: Text('연필로 남기는 독서 흔적'),
+                  subtitle: Text(
+                    '본문에서 구절을 선택한 뒤 ‘연필 표시’를 누르세요.\n표시한 구절을 다시 선택하면 지울 수 있어요.',
+                    style: TextStyle(fontSize: 12, height: 1.6, color: muted),
+                  ),
+                ),
+                if (page.writtenOn != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    child: Row(
+                      children: [
+                        const Text(
+                          '기록 시작  ',
+                          style: TextStyle(fontSize: 11, color: muted),
+                        ),
+                        DateStamp(
+                          date: page.writtenOn!,
+                          choice: c.library.style.bookDetails.dateStamp,
+                        ),
+                      ],
+                    ),
+                  ),
+                if (!widget.demo)
+                  ListTile(
+                    leading: const Icon(CupertinoIcons.cloud, size: 20),
+                    title: const Text('기기 동기화'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _syncInfo();
+                    },
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -517,6 +546,7 @@ class _WorkspaceState extends State<Workspace> {
               ? () => _stepPage(1)
               : null,
           child: PaperBackdrop(
+            binding: c.library.style.bookDetails.binding,
             color: paperColors[c.library.style.paperIndex],
             child: SafeArea(
               child: Padding(
@@ -546,6 +576,8 @@ class _WorkspaceState extends State<Workspace> {
                         ),
                       ),
                     WritingHeader(
+                      ribbon: c.library.style.bookDetails.ribbon,
+                      bookmarked: record != null,
                       useDevelopmentTypeface:
                           c.library.style.useDevelopmentTypeface,
                       compact: compact,
@@ -590,24 +622,34 @@ class _WorkspaceState extends State<Workspace> {
                         ),
                       ),
                     if (source.isNotEmpty)
-                      TextButton.icon(
-                        onPressed: _source,
-                        icon: const Icon(
-                          CupertinoIcons.quote_bubble,
-                          size: 14,
-                          color: muted,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 4,
                         ),
-                        label: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            source.replaceAll('\n', ' '),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: appFontFamily,
-                              fontFamilyFallback: appFontFallback,
-                              fontSize: 13,
+                        child: SourceSlip(
+                          choice: c.library.style.bookDetails.sourceSlip,
+                          compact: true,
+                          child: TextButton.icon(
+                            onPressed: _source,
+                            icon: const Icon(
+                              CupertinoIcons.quote_bubble,
+                              size: 14,
                               color: muted,
+                            ),
+                            label: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                source.replaceAll('\n', ' '),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontFamily: appFontFamily,
+                                  fontFamilyFallback: appFontFallback,
+                                  fontSize: 13,
+                                  color: muted,
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -620,6 +662,7 @@ class _WorkspaceState extends State<Workspace> {
                         style: c.library.style,
                         focusNode: editorFocus,
                         onChanged: _edit,
+                        onPencilMark: c.togglePencilMark,
                         onEditingState: (focused, composing) {
                           _editorComposing = composing;
                           c.setEditorState(
@@ -630,6 +673,7 @@ class _WorkspaceState extends State<Workspace> {
                       ),
                     ),
                     WritingFooter(
+                      ornament: c.library.style.bookDetails.ornament,
                       onTools: _tools,
                       onMore: _more,
                       onDone: _blur,

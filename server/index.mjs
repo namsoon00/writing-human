@@ -12,6 +12,7 @@ export function validLibrary(l) {
   const books = new Set(), records = new Set(), pages = new Set(), numbers = new Set();
   for (const b of l.books) {
     if (!object(b) || !id(b.id) || books.has(b.id) || !text(b.title, 500) || !text(b.author, 500)) return false;
+    if ('owner' in b && !text(b.owner, 80)) return false;
     books.add(b.id);
   }
   for (const r of l.records) {
@@ -21,12 +22,22 @@ export function validLibrary(l) {
   for (const p of l.pages) {
     const n = JSON.stringify([p?.recordId, p?.number]);
     if (!object(p) || !id(p.id) || pages.has(p.id) || !records.has(p.recordId) || !integer(p.number) || p.number < 1 || numbers.has(n) || !text(p.text) || !integer(p.base) || !integer(p.extent) || p.base < -1 || p.extent < -1 || p.base > p.text.length || p.extent > p.text.length || typeof p.scroll !== 'number' || !Number.isFinite(p.scroll) || p.scroll < 0) return false;
+    if ('writtenOn' in p && (typeof p.writtenOn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(p.writtenOn) || !Number.isFinite(Date.parse(p.writtenOn)) || new Date(p.writtenOn).toISOString().slice(0, 10) !== p.writtenOn)) return false;
+    if ('pencilMarks' in p && (!Array.isArray(p.pencilMarks) || p.pencilMarks.length > p.text.length || p.pencilMarks.some(m => !object(m) || !integer(m.start) || !integer(m.end) || m.start < 0 || m.end <= m.start || m.end > p.text.length))) return false;
     pages.add(p.id); numbers.add(n);
   }
   if ((l.activePageId !== null && !pages.has(l.activePageId)) || (l.writing && l.activePageId === null)) return false;
   const s = l.style;
   if (!object(s) || !integer(s.paperIndex) || s.paperIndex < 0 || s.paperIndex > 3 || !integer(s.penIndex) || s.penIndex < 0 || s.penIndex > 2 || !integer(s.fontIndex) || s.fontIndex < 0 || s.fontIndex > 2 || typeof s.guides !== 'boolean' || !Array.isArray(s.favoriteBookIds) || s.favoriteBookIds.some(v => !id(v))) return false;
   if ('useDevelopmentTypeface' in s && typeof s.useDevelopmentTypeface !== 'boolean') return false;
+  if ('bookDetails' in s) {
+    const kinds = ['ribbon', 'bookplate', 'sourceSlip', 'pencil', 'ornament', 'binding', 'dateStamp'];
+    if (!object(s.bookDetails) || Object.entries(s.bookDetails).some(([kind, choice]) =>
+      !kinds.includes(kind) || !object(choice) || Object.keys(choice).some(k => !['enabled', 'variant', 'tone'].includes(k)) ||
+      ('enabled' in choice && typeof choice.enabled !== 'boolean') ||
+      ('variant' in choice && (!integer(choice.variant) || choice.variant < 0 || choice.variant > 2)) ||
+      ('tone' in choice && (!integer(choice.tone) || choice.tone < 0 || choice.tone > 3)))) return false;
+  }
   // Do not let clients smuggle extra secrets or alternate identities into storage.
   const keys = ['version', 'books', 'records', 'pages', 'activePageId', 'writing', 'style'];
   return Object.keys(l).every(k => keys.includes(k));

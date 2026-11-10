@@ -18,7 +18,7 @@ class SqliteLibraryStore implements LibraryStore {
     final db = await (factory ?? databaseFactory).openDatabase(
       file,
       options: OpenDatabaseOptions(
-        version: 3,
+        version: 4,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
         onUpgrade: (db, oldVersion, newVersion) async {
           if (oldVersion < 2) {
@@ -34,16 +34,25 @@ class SqliteLibraryStore implements LibraryStore {
               "ALTER TABLE app_state ADD COLUMN sync_state TEXT NOT NULL DEFAULT '{}'",
             );
           }
+          if (oldVersion < 4) {
+            await db.execute(
+              "ALTER TABLE books ADD COLUMN owner TEXT NOT NULL DEFAULT ''",
+            );
+            await db.execute('ALTER TABLE pages ADD COLUMN written_on TEXT');
+            await db.execute(
+              "ALTER TABLE pages ADD COLUMN pencil_marks TEXT NOT NULL DEFAULT '[]'",
+            );
+          }
         },
         onCreate: (db, version) async {
           await db.execute(
-            'CREATE TABLE books (id TEXT PRIMARY KEY, title TEXT NOT NULL, author TEXT NOT NULL)',
+            "CREATE TABLE books (id TEXT PRIMARY KEY, title TEXT NOT NULL, author TEXT NOT NULL, owner TEXT NOT NULL DEFAULT '')",
           );
           await db.execute(
             "CREATE TABLE records (id TEXT PRIMARY KEY, book_id TEXT REFERENCES books(id), title TEXT NOT NULL, source TEXT NOT NULL DEFAULT '')",
           );
           await db.execute(
-            'CREATE TABLE pages (id TEXT PRIMARY KEY, record_id TEXT NOT NULL REFERENCES records(id), number INTEGER NOT NULL, text TEXT NOT NULL, selection_base INTEGER NOT NULL, selection_extent INTEGER NOT NULL, scroll REAL NOT NULL, UNIQUE(record_id, number))',
+            "CREATE TABLE pages (id TEXT PRIMARY KEY, record_id TEXT NOT NULL REFERENCES records(id), number INTEGER NOT NULL, text TEXT NOT NULL, selection_base INTEGER NOT NULL, selection_extent INTEGER NOT NULL, scroll REAL NOT NULL, written_on TEXT, pencil_marks TEXT NOT NULL DEFAULT '[]', UNIQUE(record_id, number))",
           );
           await db.execute(
             "CREATE TABLE app_state (id INTEGER PRIMARY KEY CHECK(id = 1), active_page_id TEXT REFERENCES pages(id), writing INTEGER NOT NULL, settings TEXT NOT NULL DEFAULT '{}', sync_state TEXT NOT NULL DEFAULT '{}')",
@@ -67,6 +76,7 @@ class SqliteLibraryStore implements LibraryStore {
               id: j['id'] as String,
               title: j['title'] as String,
               author: j['author'] as String,
+              owner: j['owner'] as String,
             ),
           )
           .toList(),
@@ -90,6 +100,10 @@ class SqliteLibraryStore implements LibraryStore {
               base: j['selection_base'] as int,
               extent: j['selection_extent'] as int,
               scroll: (j['scroll'] as num).toDouble(),
+              writtenOn: j['written_on'] as String?,
+              pencilMarks: (jsonDecode(j['pencil_marks'] as String) as List)
+                  .map((m) => PencilMark.fromJson(m as Json))
+                  .toList(),
             ),
           )
           .toList(),
@@ -143,6 +157,10 @@ class SqliteLibraryStore implements LibraryStore {
           'selection_base': p.base,
           'selection_extent': p.extent,
           'scroll': p.scroll,
+          'written_on': p.writtenOn,
+          'pencil_marks': jsonEncode(
+            p.pencilMarks.map((m) => m.toJson()).toList(),
+          ),
         });
       }
       await upsert('app_state', {

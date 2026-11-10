@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../data/library_controller.dart';
 import 'paper.dart';
+import 'book_detail_tools.dart';
 
 /// Secondary preferences, deliberately kept off the writing surface.
 class ToolsScreen extends StatelessWidget {
@@ -142,6 +143,33 @@ class ToolsScreen extends StatelessWidget {
                 value: style.guides,
                 activeTrackColor: burgundy,
                 onChanged: (v) => controller.setStyle(style.copy(guides: v)),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text(
+                  '책의 디테일',
+                  style: TextStyle(
+                    fontFamily: appFontFamily,
+                    fontFamilyFallback: appFontFallback,
+                    fontSize: 17,
+                  ),
+                ),
+                subtitle: const Text(
+                  '책갈피 · 장서표 · 쪽지와 작은 흔적들',
+                  style: TextStyle(color: muted, fontSize: 11),
+                ),
+                trailing: const Icon(
+                  CupertinoIcons.chevron_right,
+                  size: 16,
+                  color: muted,
+                ),
+                onTap: () => showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  showDragHandle: true,
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  builder: (_) => BookDetailTools(controller: controller),
+                ),
               ),
               if (controller.saveError != null)
                 TextButton(

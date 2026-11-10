@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../data/library_controller.dart';
 import '../data/model.dart';
 import 'paper.dart';
+import 'book_details.dart';
+import 'new_book_dialog.dart';
 
 class CollectionSheet extends StatefulWidget {
   const CollectionSheet({
@@ -27,6 +29,17 @@ class _CollectionSheetState extends State<CollectionSheet> {
   String? bookId;
   String query = '';
   LibraryController get c => widget.controller;
+  Future<void> _owner(Book book) async {
+    final controller = c;
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => BookOwnerDialog(owner: book.owner),
+    );
+    if (name != null && mounted && controller == c) {
+      c.setBookOwner(book.id, name);
+    }
+  }
+
   String _excerpt(WritingRecord r) {
     final pages = c.library.pages.where((p) => p.recordId == r.id);
     final text = pages
@@ -134,7 +147,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
               Expanded(
                 child: books && bookId == null
                     ? _books()
-                    : records.isEmpty
+                    : records.isEmpty && book == null
                     ? Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -170,17 +183,37 @@ class _CollectionSheetState extends State<CollectionSheet> {
                           horizontal: 24,
                           vertical: 8,
                         ),
-                        itemCount: records.length,
+                        itemCount: records.length + (book == null ? 0 : 1),
                         separatorBuilder: (_, _) =>
                             const Divider(color: line, height: 1),
                         itemBuilder: (context, i) {
-                          final r = records[i];
+                          if (book != null && i == 0) {
+                            final ids = c.library.records
+                                .where((r) => r.bookId == book.id)
+                                .map((r) => r.id)
+                                .toSet();
+                            final pageCount = c.library.pages
+                                .where((p) => ids.contains(p.recordId))
+                                .length;
+                            return Bookplate(
+                              choice: c.library.style.bookDetails.bookplate,
+                              title: book.title,
+                              owner: book.owner,
+                              onOwner: () => _owner(book),
+                              summary:
+                                  '${ids.length}편 · $pageCount쪽${book.author.isEmpty ? '' : ' · ${book.author}'}',
+                            );
+                          }
+                          final r = records[i - (book == null ? 0 : 1)];
                           final b = c.library.books
                               .where((b) => b.id == r.bookId)
                               .firstOrNull;
-                          final pages = c.library.pages
-                              .where((p) => p.recordId == r.id)
-                              .length;
+                          final recordPages =
+                              c.library.pages
+                                  .where((p) => p.recordId == r.id)
+                                  .toList()
+                                ..sort((a, b) => a.number.compareTo(b.number));
+                          final date = recordPages.firstOrNull?.writtenOn;
                           return ListTile(
                             contentPadding: const EdgeInsets.symmetric(
                               vertical: 10,
@@ -198,27 +231,61 @@ class _CollectionSheetState extends State<CollectionSheet> {
                             ),
                             subtitle: Padding(
                               padding: const EdgeInsets.only(top: 9),
-                              child: Text(
-                                '${b?.title ?? '책 없이 쓴 글'} · $pages쪽',
-                                style: const TextStyle(
-                                  color: muted,
-                                  fontSize: 11,
-                                ),
+                              child: Wrap(
+                                spacing: 10,
+                                runSpacing: 8,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  Text(
+                                    '${b?.title ?? '책 없이 쓴 글'} · ${recordPages.length}쪽',
+                                    style: const TextStyle(
+                                      color: muted,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                  if (date != null)
+                                    DateStamp(
+                                      date: date,
+                                      choice:
+                                          c.library.style.bookDetails.dateStamp,
+                                    ),
+                                ],
                               ),
                             ),
-                            trailing: const Icon(
-                              CupertinoIcons.chevron_right,
-                              size: 13,
-                              color: muted,
-                            ),
+                            trailing: r.id == c.library.activeRecord?.id
+                                ? Semantics(
+                                    label: '이어서 쓰는 글',
+                                    child: RibbonBookmark(
+                                      choice:
+                                          c.library.style.bookDetails.ribbon,
+                                      width: 10,
+                                      height: 30,
+                                    ),
+                                  )
+                                : const Icon(
+                                    CupertinoIcons.chevron_right,
+                                    size: 13,
+                                    color: muted,
+                                  ),
                             onTap: () => widget.onRecord(r),
                           );
                         },
                       ),
               ),
+              if (c.saveError != null)
+                TextButton(
+                  onPressed: c.retrySave,
+                  child: const Text(
+                    '저장 실패 · 다시 시도',
+                    style: TextStyle(color: burgundy),
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
-                child: Row(
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  spacing: 16,
+                  runSpacing: 8,
                   children: [
                     TextButton(
                       onPressed: widget.onNewBook,
@@ -227,7 +294,6 @@ class _CollectionSheetState extends State<CollectionSheet> {
                         style: TextStyle(fontSize: 13),
                       ),
                     ),
-                    const Spacer(),
                     FilledButton.icon(
                       onPressed: () => widget.onNewSheet(bookId),
                       icon: const Icon(CupertinoIcons.plus, size: 16),
@@ -269,7 +335,13 @@ class _CollectionSheetState extends State<CollectionSheet> {
                 .length;
             return ListTile(
               contentPadding: const EdgeInsets.symmetric(vertical: 12),
-              leading: BookCover(title: book.title, width: 42, variant: i),
+              leading: BookCover(
+                details: c.library.style.bookDetails,
+                title: book.title,
+                width: 42,
+                variant: i,
+                bookmarked: book.id == c.library.activeBook?.id,
+              ),
               title: Text(
                 book.title,
                 style: const TextStyle(

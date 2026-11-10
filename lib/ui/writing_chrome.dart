@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'paper.dart';
 import 'paper_swipe.dart';
+import 'book_details.dart';
+import '../data/book_detail_style.dart';
 
 /// Small, native controls over the same paper as the editor. Decorative
 /// materials never replace editable text or accessible button labels.
@@ -13,10 +15,14 @@ class WritingHeader extends StatelessWidget {
     this.bookTitle,
     this.compact = false,
     this.useDevelopmentTypeface = true,
+    this.bookmarked = false,
+    this.ribbon = const BookDetailChoice(),
   });
   final VoidCallback onCollection, onNewSheet;
   final String? bookTitle;
   final bool compact, useDevelopmentTypeface;
+  final bool bookmarked;
+  final BookDetailChoice ribbon;
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -26,6 +32,12 @@ class WritingHeader extends StatelessWidget {
     child: Stack(
       alignment: Alignment.center,
       children: [
+        if (bookmarked)
+          Positioned(
+            right: 64,
+            top: 0,
+            child: RibbonBookmark(height: compact ? 23 : 38, choice: ribbon),
+          ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 88),
           child: Column(
@@ -99,6 +111,7 @@ class WritingFooter extends StatelessWidget {
     this.onPrevious,
     this.onNext,
     this.failed = false,
+    this.ornament = const BookDetailChoice(),
   });
   final String status;
   final VoidCallback onTools, onMore, onDone;
@@ -106,6 +119,7 @@ class WritingFooter extends StatelessWidget {
   final String? pageLabel;
   final int pageCount;
   final bool focused, failed;
+  final BookDetailChoice ornament;
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -168,11 +182,13 @@ class WritingFooter extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        pageLabel ?? '',
-                        style: const TextStyle(fontSize: 13),
+                      PageOrnament(
+                        choice: ornament,
+                        child: Text(
+                          pageLabel ?? '',
+                          style: const TextStyle(fontSize: 13),
+                        ),
                       ),
-
                       const SizedBox(height: 3),
                       Semantics(
                         liveRegion: failed,

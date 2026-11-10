@@ -8,6 +8,32 @@ String _hash(Object value) =>
 T _field<T>(T? base, T local, T remote) =>
     sameData(local, base) ? remote : local;
 
+List<PencilMark> _mergeMarks(
+  WritingPage? base,
+  WritingPage local,
+  WritingPage remote,
+  String text,
+) {
+  final before = base == null
+      ? <PencilMark>[]
+      : PencilMark.afterEdit(base.text, text, base.pencilMarks);
+  final left = PencilMark.afterEdit(local.text, text, local.pencilMarks);
+  final right = PencilMark.afterEdit(remote.text, text, remote.pencilMarks);
+  String key(PencilMark m) => '${m.start}:${m.end}';
+  final all = {
+    for (final m in [...before, ...left, ...right]) key(m): m,
+  };
+  return PencilMark.normalize(
+    all.values.where(
+      (m) => _field(
+        before.any((v) => key(v) == key(m)),
+        left.any((v) => key(v) == key(m)),
+        right.any((v) => key(v) == key(m)),
+      ),
+    ),
+  );
+}
+
 class MergeResult {
   const MergeResult(this.library, this.conflictCopies);
   final Library library;
@@ -21,7 +47,16 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
   final baseBooks = {for (final b in base.books) b.id: b};
   for (final b in local.books) {
     final r = books[b.id], old = baseBooks[b.id];
-    if (r == null || old == null || !sameData(b.toJson(), old.toJson())) {
+    if (r != null && old != null) {
+      books[b.id] = Book(
+        id: b.id,
+        title: _field(old.title, b.title, r.title),
+        author: _field(old.author, b.author, r.author),
+        owner: _field(old.owner, b.owner, r.owner),
+      );
+    } else if (r == null ||
+        old == null ||
+        !sameData(b.toJson(), old.toJson())) {
       books[b.id] = b;
     }
   }
@@ -42,7 +77,15 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
     final signature = _hash([
       r.toJson(),
       sourcePages
-          .map((p) => {'id': p.id, 'number': p.number, 'text': p.text})
+          .map(
+            (p) => {
+              'id': p.id,
+              'number': p.number,
+              'text': p.text,
+              'pencilMarks': p.pencilMarks.map((m) => m.toJson()).toList(),
+              'writtenOn': p.writtenOn,
+            },
+          )
           .toList(),
     ]);
     final id = 'conflict-$signature';
@@ -66,6 +109,8 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         base: p.base,
         extent: p.extent,
         scroll: p.scroll,
+        writtenOn: p.writtenOn,
+        pencilMarks: p.pencilMarks,
       );
     }
     copies++;
@@ -97,9 +142,16 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
           l.base == b.base &&
           l.extent == b.extent &&
           l.scroll == b.scroll;
-      pages[l.id] = useRemotePosition ? r : l;
+      // Annotation changes are independent of caret/scroll changes.
+      pages[l.id] = (useRemotePosition ? r : l).withDetails(
+        writtenOn: b?.writtenOn ?? l.writtenOn ?? r.writtenOn,
+        pencilMarks: _mergeMarks(b, l, r, l.text),
+      );
     } else if (b != null && l.text == b.text) {
-      pages[l.id] = r;
+      pages[l.id] = r.withDetails(
+        writtenOn: b.writtenOn ?? l.writtenOn ?? r.writtenOn,
+        pencilMarks: _mergeMarks(b, l, r, r.text),
+      );
     } else {
       if (b == null || r.text != b.text) {
         final record = remote.records
@@ -107,7 +159,12 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
             .first;
         keepRemote(record, [r], ' (${r.number}쪽)');
       }
-      pages[l.id] = l;
+      pages[l.id] = b != null && r.text == b.text
+          ? l.withDetails(
+              writtenOn: b.writtenOn ?? l.writtenOn ?? r.writtenOn,
+              pencilMarks: _mergeMarks(b, l, r, l.text),
+            )
+          : l;
     }
   }
 
@@ -132,6 +189,8 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         base: p.base,
         extent: p.extent,
         scroll: p.scroll,
+        writtenOn: p.writtenOn,
+        pencilMarks: p.pencilMarks,
       ),
   ];
   final allFavorites = {
@@ -148,6 +207,26 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
       ? local.style
       : remote.style;
   final style = WritingStyle(
+    bookDetails: BookDetailsStyle.fromJson({
+      for (final kind in BookDetailKind.values)
+        kind.name: {
+          'enabled': _field(
+            base.style.bookDetails.choice(kind).enabled,
+            local.style.bookDetails.choice(kind).enabled,
+            remote.style.bookDetails.choice(kind).enabled,
+          ),
+          'variant': _field(
+            base.style.bookDetails.choice(kind).variant,
+            local.style.bookDetails.choice(kind).variant,
+            remote.style.bookDetails.choice(kind).variant,
+          ),
+          'tone': _field(
+            base.style.bookDetails.choice(kind).tone,
+            local.style.bookDetails.choice(kind).tone,
+            remote.style.bookDetails.choice(kind).tone,
+          ),
+        },
+    }),
     paperIndex: _field(
       base.style.paperIndex,
       local.style.paperIndex,

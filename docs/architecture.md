@@ -1,5 +1,21 @@
 # 구현 구조
 
+## 책의 물성과 독서 흔적
+
+일곱 요소의 독립 설정은 `data/book_detail_style.dart`의 BookDetailsStyle 아래 ribbon/bookplate/sourceSlip/pencil/ornament/binding/dateStamp로 나뉜다. 각 BookDetailChoice는 enabled·variant·tone만 가진다. WritingStyle.bookDetails의 optional JSON을 기존 SQLite v4 settings와 웹 라이브러리에 저장하므로 이 설정 추가로 DB 버전을 올리지 않는다. 동기화는 요소별 필드를 따로 병합한다. 화면의 각 위젯은 해당 선택을 매개변수로 받아 표현만 담당한다.
+
+`ui/book_detail_design.dart`는 요소별 이름·세 모양·네 색을 정의하고, `ui/book_detail_tools.dart`는 개별 미리보기·표시 스위치·모양/색 칩·해당 요소만 초기화를 제공한다. 설정 진입은 기존 쓰기 취향의 ‘책의 디테일’이다. 장식 숨김은 메타데이터를 지우지 않으며 평문 책 정보·원문·날짜를 유지한다. `paper_palette.dart`와 `ink_mark.dart`를 분리하여 종이 면과 장식이 서로를 가져오는 의존 순환을 제거했다. 자세한 조형·상태·경계는 [독립 설계](book-details-design.md)를 따른다.
+
+`ui/book_details.dart`의 천 책갈피·직조 헤드밴드는 정적인 CustomPainter다. 종이쪽지·장서표·날짜인·판면 장식은 실제 Flutter 위젯으로 표시한다. 장식 그림은 IgnorePointer/ExcludeSemantics로 입력과 분리하고, 날짜·이름·조작부는 텍스트와 접근성 이름을 유지한다. 장서표는 보관함의 책 안쪽 스크롤 목록에 배치해 작은 화면에서도 넘쳐나지 않는다.
+
+Book.owner는 저자와 별개인 장서표 이름이다. WritingPage.writtenOn은 생성 시 기기 현지 날짜의 YYYY-MM-DD이며, 과거 페이지는 null을 유지한다. WritingPage.pencilMarks는 UTF-16 start/end 목록이다. Library JSON 버전 1의 optional 필드로 추가했다. SQLite v4는 books.owner, pages.written_on, pages.pencil_marks를 ALTER TABLE로 추가하고, 데이터·선택·스크롤을 보존한다. 종이·펜·글꼴 설정과 분리된 기록 메타데이터다.
+
+`ui/pencil_marks.dart`의 PencilTextController는 표시 span만 생성한다. composing 밑줄을 함께 표현하며, controller.value·selection·composing을 리스너에서 되쓰지 않는다. 구절 표시/부분 지우기는 LibraryController에서 저장하며 기존 편집기 키와 컨트롤러를 유지한다. 본문 수정은 공통 앞/뒤 문자열의 바깥에 남은 표시를 이동·분할하고, 바뀐 글자의 표시는 제거한다. emoji surrogate pair를 편집 경계에서 분리하지 않는다. 페이지 미리보기·넘김에도 같은 span 표현을 사용한다.
+
+동기화에서는 장서표 이름을 책 제목/저자와 독립적으로 병합한다. 같은 본문 및 한쪽 본문 변경에서는 표시 범위를 대상 본문으로 이동한 뒤 3-way membership으로 병합하고, 본문 충돌 사본에도 날짜와 표시를 복사한다. 서버는 optional 이름·날짜·범위를 검증하며 이전 JSON도 허용한다. 현재 위치의 책갈피 표시는 기존 activePageId를 읽으며 별도의 책별 책갈피 데이터를 만들지 않는다.
+
+
+
 Flutter 3.41.2 / Dart 3.11.0. iOS·Android는 sqflite, 웹 미리보기는 package:web의 localStorage. 하나의 Flutter 화면을 반응형으로 배치한다. 웹용 별도 HTML 모조 앱은 없다.
 
 ## 현재 작성 흐름
@@ -14,7 +30,7 @@ collection_sheet.dart는 필요할 때 여는 글/책 보관함이다. tools_scr
 
 - lib/data/model.dart: Book, WritingRecord(bookId nullable), WritingPage(recordId, number, text, selection, scroll), Library(activePageId, writing). 버전 1 JSON 및 참조 구조 검증.
 - lib/data/library_controller.dart: 사용자 동작, 변경 스냅샷의 순차 저장, 저장 상태와 재시도. 저장 순서가 역전되지 않도록 Future 체인을 사용한다.
-- lib/data/sqlite_store.dart: 네 개의 관계형 테이블, 외래 키, 현재 버전 3. 이전 버전 1·2의 파일을 자동 이전한다. 부모를 REPLACE로 삭제하지 않고 갱신한다. 각 스냅샷은 트랜잭션으로 저장한다.
+- lib/data/sqlite_store.dart: 네 개의 관계형 테이블, 외래 키, 현재 버전 4. 이전 버전 1·2·3의 파일을 자동 이전한다. 부모를 REPLACE로 삭제하지 않고 갱신한다. 각 스냅샷은 트랜잭션으로 저장한다.
 - lib/data/web_store.dart: 버전 1 단일 키 writing-human.library.v1. 동기·원자적인 setItem을 호출하며 할당량/접근 오류는 UI까지 전달한다. 모바일의 SQLite와 저장 구현은 다르다.
 - lib/main.dart: 저장소를 연 뒤 기존 기록을 읽는다. 실패하면 복구 화면을 표시하며 빈 라이브러리로 대체하지 않는다.
 - lib/ui/workspace.dart: 책장, 책 생성, 편집. 본문 controller는 페이지마다 한 번 생성하고 입력 중 되쓰지 않는다. TextEditingValue를 관찰해서 조합 중 텍스트도 보관하되 IME composing 영역은 재실행 시 복원하지 않는다. 선택 영역은 UTF-16 offset이며 복원 시 범위를 제한한다.

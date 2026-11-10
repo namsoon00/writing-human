@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../data/model.dart';
 import 'paper.dart';
+import 'book_details.dart';
+import 'pencil_marks.dart';
 
 typedef PageChoice = ({String? pageId, bool append});
 
@@ -101,39 +103,67 @@ class PagesSheet extends StatelessWidget {
                             width: selected ? 1.5 : 1,
                           ),
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            children: [
-                              Expanded(
-                                child: ClipRect(
-                                  child: Align(
-                                    alignment: Alignment.topLeft,
-                                    child: Text(
-                                      excerpt.isEmpty ? '빈 종이' : excerpt,
-                                      maxLines: 8,
-                                      overflow: TextOverflow.clip,
-                                      style: writingTextStyle(
-                                        style.fontIndex,
-                                        size: 12,
-                                        color: excerpt.isEmpty ? muted : ink,
-                                        useDevelopmentTypeface:
-                                            style.useDevelopmentTypeface,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                children: [
+                                  Expanded(
+                                    child: ClipRect(
+                                      child: Align(
+                                        alignment: Alignment.topLeft,
+                                        child: Text.rich(
+                                          pencilTextSpan(
+                                            choice: style.bookDetails.pencil,
+                                            value: TextEditingValue(
+                                              text: excerpt.isEmpty
+                                                  ? '빈 종이'
+                                                  : excerpt,
+                                            ),
+                                            marks: page.pencilMarks,
+                                          ),
+                                          maxLines: 8,
+                                          overflow: TextOverflow.clip,
+                                          style: writingTextStyle(
+                                            style.fontIndex,
+                                            size: 12,
+                                            color: excerpt.isEmpty
+                                                ? muted
+                                                : ink,
+                                            useDevelopmentTypeface:
+                                                style.useDevelopmentTypeface,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
+                                  const SizedBox(height: 8),
+                                  PageOrnament(
+                                    choice: style.bookDetails.ornament,
+                                    child: Text(
+                                      '${page.number}쪽${selected ? ' · 현재' : ''}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: brandInk,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (selected)
+                              Positioned(
+                                right: 12,
+                                top: 0,
+                                child: RibbonBookmark(
+                                  width: 10,
+                                  height: 25,
+                                  choice: style.bookDetails.ribbon,
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${page.number}쪽${selected ? ' · 현재' : ''}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: brandInk,
-                                ),
-                              ),
-                            ],
-                          ),
+                          ],
                         ),
                       ),
                     ),

@@ -17,6 +17,7 @@ class LibraryController extends ChangeNotifier {
   bool editorFocused = false, composing = false;
   Future<void> _tail = Future.value();
   String _id() => const Uuid().v4();
+  String _today() => DateTime.now().toIso8601String().substring(0, 10);
   Future<void> get settled => _tail;
 
   void _publish(
@@ -111,6 +112,52 @@ class LibraryController extends ChangeNotifier {
   );
 
   void setStyle(WritingStyle style) => _publish(library.copy(style: style));
+  void setBookOwner(String id, String owner) => _publish(
+    library.copy(
+      books: library.books
+          .map(
+            (b) => b.id == id
+                ? Book(
+                    id: b.id,
+                    title: b.title,
+                    author: b.author,
+                    owner: owner.trim(),
+                  )
+                : b,
+          )
+          .toList(),
+    ),
+  );
+
+  void togglePencilMark(String id, int start, int end) {
+    if (composing) return;
+    final page = library.pages.where((p) => p.id == id).firstOrNull;
+    if (page == null || start < 0 || end <= start || end > page.text.length) {
+      return;
+    }
+    final marks = page.pencilMarks;
+    final removing = marks.any((m) => m.start <= start && m.end >= end);
+    final next = removing
+        ? [
+            for (final m in marks) ...[
+              if (m.end <= start || m.start >= end)
+                m
+              else ...[
+                if (m.start < start) PencilMark(m.start, start),
+                if (m.end > end) PencilMark(end, m.end),
+              ],
+            ],
+          ]
+        : PencilMark.normalize([...marks, PencilMark(start, end)]);
+    _publish(
+      library.copy(
+        pages: library.pages
+            .map((p) => p.id == id ? p.withDetails(pencilMarks: next) : p)
+            .toList(),
+      ),
+    );
+  }
+
   void toggleFavorite(String bookId) {
     final ids = [...library.style.favoriteBookIds];
     ids.contains(bookId) ? ids.remove(bookId) : ids.add(bookId);
@@ -119,8 +166,8 @@ class LibraryController extends ChangeNotifier {
 
   void retrySave() => _publish(library);
 
-  /// Commit an already-mounted blank sheet on its first real input, retaining
-  /// its IDs so the editor and an in-flight IME composition stay mounted.
+  /// Commit a mounted draft on first input, or an explicit page-add request.
+  /// Retain its IDs so a live editor/IME composition stays mounted.
   void saveDraft(
     WritingPage page, {
     String source = '',
@@ -141,7 +188,10 @@ class LibraryController extends ChangeNotifier {
     _publish(
       library.copy(
         records: [...library.records, record],
-        pages: [...library.pages, page],
+        pages: [
+          ...library.pages,
+          page.withDetails(writtenOn: page.writtenOn ?? _today()),
+        ],
         activePageId: page.id,
         writing: true,
       ),
@@ -168,7 +218,12 @@ class LibraryController extends ChangeNotifier {
       bookId: bookId,
       title: '필사 $number',
     );
-    final page = WritingPage(id: _id(), recordId: record.id, number: 1);
+    final page = WritingPage(
+      id: _id(),
+      recordId: record.id,
+      number: 1,
+      writtenOn: _today(),
+    );
     _publish(
       source.copy(
         records: [...source.records, record],
@@ -230,6 +285,7 @@ class LibraryController extends ChangeNotifier {
     final page = WritingPage(
       id: _id(),
       recordId: record.id,
+      writtenOn: _today(),
       number:
           library.pages
               .where((p) => p.recordId == record.id)

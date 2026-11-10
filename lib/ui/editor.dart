@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/model.dart';
 import 'paper.dart';
 import 'writing_pen.dart';
+import 'pencil_marks.dart';
 
 class PageEditor extends StatefulWidget {
   const PageEditor({
@@ -11,18 +12,20 @@ class PageEditor extends StatefulWidget {
     this.style = const WritingStyle(),
     this.focusNode,
     this.onEditingState,
+    this.onPencilMark,
   });
   final FocusNode? focusNode;
   final void Function(bool focused, bool composing)? onEditingState;
   final WritingPage page;
   final WritingStyle style;
   final void Function(String, String, int, int, double) onChanged;
+  final void Function(String, int, int)? onPencilMark;
   @override
   State<PageEditor> createState() => _PageEditorState();
 }
 
 class _PageEditorState extends State<PageEditor> {
-  late final TextEditingController text;
+  late final PencilTextController text;
   late final ScrollController scroll;
   late final focus = widget.focusNode ?? FocusNode();
   bool restoring = true;
@@ -32,8 +35,11 @@ class _PageEditorState extends State<PageEditor> {
     super.initState();
     focus.addListener(_focusChanged);
     final p = widget.page;
-    text = TextEditingController.fromValue(
-      TextEditingValue(
+    text = PencilTextController(
+      annotatedText: p.text,
+      marks: p.pencilMarks,
+      choice: widget.style.bookDetails.pencil,
+      value: TextEditingValue(
         text: p.text,
         selection: TextSelection(
           baseOffset: p.base.clamp(0, p.text.length),
@@ -54,6 +60,14 @@ class _PageEditorState extends State<PageEditor> {
       restoring = false;
       _emitEditingState();
     });
+  }
+
+  @override
+  void didUpdateWidget(PageEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    text.annotatedText = widget.page.text;
+    text.marks = widget.page.pencilMarks;
+    text.choice = widget.style.bookDetails.pencil;
   }
 
   void _emitEditingState() {
@@ -145,6 +159,37 @@ class _PageEditorState extends State<PageEditor> {
                 textInputAction: TextInputAction.newline,
                 autocorrect: false,
                 enableSuggestions: false,
+                contextMenuBuilder: (context, state) {
+                  final selection = text.selection;
+                  final canMark =
+                      widget.onPencilMark != null &&
+                      selection.isValid &&
+                      !selection.isCollapsed &&
+                      (!text.value.composing.isValid ||
+                          text.value.composing.isCollapsed);
+                  final marked = widget.page.pencilMarks.any(
+                    (m) => m.start <= selection.start && m.end >= selection.end,
+                  );
+                  return AdaptiveTextSelectionToolbar.buttonItems(
+                    anchors: state.contextMenuAnchors,
+                    buttonItems: [
+                      if (canMark)
+                        ContextMenuButtonItem(
+                          label: marked ? '연필 표시 지우기' : '연필 표시',
+                          onPressed: () {
+                            // The selection is read only, including during toolbar actions.
+                            state.hideToolbar();
+                            widget.onPencilMark!(
+                              widget.page.id,
+                              selection.start,
+                              selection.end,
+                            );
+                          },
+                        ),
+                      ...state.contextMenuButtonItems,
+                    ],
+                  );
+                },
                 style: writingTextStyle(
                   style.fontIndex,
                   size: 23,

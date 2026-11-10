@@ -1,16 +1,100 @@
 import 'dart:convert';
+import 'book_detail_style.dart';
+export 'book_detail_style.dart';
 
 typedef Json = Map<String, dynamic>;
 
 class Book {
-  const Book({required this.id, required this.title, this.author = ''});
-  final String id, title, author;
-  Json toJson() => {'id': id, 'title': title, 'author': author};
+  const Book({
+    required this.id,
+    required this.title,
+    this.author = '',
+    this.owner = '',
+  });
+  final String id, title, author, owner;
+  Json toJson() => {'id': id, 'title': title, 'author': author, 'owner': owner};
   factory Book.fromJson(Json j) => Book(
     id: j['id'] as String,
     title: j['title'] as String,
     author: j['author'] as String,
+    owner: j['owner'] as String? ?? '',
   );
+}
+
+/// UTF-16 offsets, matching Flutter's selection. These never alter input values.
+class PencilMark {
+  const PencilMark(this.start, this.end);
+  final int start, end;
+  Json toJson() => {'start': start, 'end': end};
+  factory PencilMark.fromJson(Json j) =>
+      PencilMark(j['start'] as int, j['end'] as int);
+
+  static List<PencilMark> normalize(Iterable<PencilMark> values) {
+    final sorted = values.toList()..sort((a, b) => a.start.compareTo(b.start));
+    final result = <PencilMark>[];
+    for (final mark in sorted) {
+      if (mark.end <= mark.start) continue;
+      if (result.isNotEmpty && mark.start <= result.last.end) {
+        final previous = result.removeLast();
+        result.add(
+          PencilMark(
+            previous.start,
+            mark.end > previous.end ? mark.end : previous.end,
+          ),
+        );
+      } else {
+        result.add(mark);
+      }
+    }
+    return result;
+  }
+
+  /// Preserve unaffected characters; freshly replaced text is left unmarked.
+  static List<PencilMark> afterEdit(
+    String before,
+    String after,
+    List<PencilMark> marks,
+  ) {
+    if (before == after || marks.isEmpty) return marks;
+    var prefix = 0;
+    while (prefix < before.length &&
+        prefix < after.length &&
+        before.codeUnitAt(prefix) == after.codeUnitAt(prefix)) {
+      prefix++;
+    }
+    var oldEnd = before.length, newEnd = after.length;
+    while (oldEnd > prefix &&
+        newEnd > prefix &&
+        before.codeUnitAt(oldEnd - 1) == after.codeUnitAt(newEnd - 1)) {
+      oldEnd--;
+      newEnd--;
+    }
+    // Keep emoji surrogate pairs together even when two emoji share a prefix.
+    bool splitsPair(String value, int offset) =>
+        offset > 0 &&
+        offset < value.length &&
+        value.codeUnitAt(offset - 1) >= 0xd800 &&
+        value.codeUnitAt(offset - 1) <= 0xdbff &&
+        value.codeUnitAt(offset) >= 0xdc00 &&
+        value.codeUnitAt(offset) <= 0xdfff;
+    if (splitsPair(before, prefix) || splitsPair(after, prefix)) prefix--;
+    if (splitsPair(before, oldEnd) || splitsPair(after, newEnd)) {
+      oldEnd++;
+      newEnd++;
+    }
+    final delta = newEnd - oldEnd;
+    return normalize([
+      for (final mark in marks) ...[
+        if (mark.start < prefix)
+          PencilMark(mark.start, mark.end < prefix ? mark.end : prefix),
+        if (mark.end > oldEnd)
+          PencilMark(
+            (mark.start > oldEnd ? mark.start : oldEnd) + delta,
+            mark.end + delta,
+          ),
+      ],
+    ]);
+  }
 }
 
 class WritingRecord {
@@ -45,10 +129,26 @@ class WritingPage {
     this.base = 0,
     this.extent = 0,
     this.scroll = 0,
+    this.writtenOn,
+    this.pencilMarks = const [],
   });
   final String id, recordId, text;
   final int number, base, extent;
   final double scroll;
+  final String? writtenOn;
+  final List<PencilMark> pencilMarks;
+  WritingPage withDetails({String? writtenOn, List<PencilMark>? pencilMarks}) =>
+      WritingPage(
+        id: id,
+        recordId: recordId,
+        number: number,
+        text: text,
+        base: base,
+        extent: extent,
+        scroll: scroll,
+        writtenOn: writtenOn ?? this.writtenOn,
+        pencilMarks: pencilMarks ?? this.pencilMarks,
+      );
   WritingPage edited({
     required String text,
     required int base,
@@ -62,6 +162,8 @@ class WritingPage {
     base: base,
     extent: extent,
     scroll: scroll,
+    writtenOn: writtenOn,
+    pencilMarks: PencilMark.afterEdit(this.text, text, pencilMarks),
   );
   Json toJson() => {
     'id': id,
@@ -71,6 +173,8 @@ class WritingPage {
     'base': base,
     'extent': extent,
     'scroll': scroll,
+    if (writtenOn != null) 'writtenOn': writtenOn,
+    'pencilMarks': pencilMarks.map((m) => m.toJson()).toList(),
   };
   factory WritingPage.fromJson(Json j) => WritingPage(
     id: j['id'] as String,
@@ -80,6 +184,10 @@ class WritingPage {
     base: j['base'] as int,
     extent: j['extent'] as int,
     scroll: (j['scroll'] as num).toDouble(),
+    writtenOn: j['writtenOn'] as String?,
+    pencilMarks: (j['pencilMarks'] as List? ?? [])
+        .map((m) => PencilMark.fromJson(m as Json))
+        .toList(),
   );
 }
 
@@ -92,10 +200,12 @@ class WritingStyle {
     this.guides = false,
     this.penMotion = true,
     this.favoriteBookIds = const [],
+    this.bookDetails = const BookDetailsStyle(),
   });
   final int paperIndex, penIndex, fontIndex;
   final bool guides, penMotion, useDevelopmentTypeface;
   final List<String> favoriteBookIds;
+  final BookDetailsStyle bookDetails;
   WritingStyle copy({
     int? paperIndex,
     int? penIndex,
@@ -104,6 +214,7 @@ class WritingStyle {
     bool? guides,
     bool? penMotion,
     List<String>? favoriteBookIds,
+    BookDetailsStyle? bookDetails,
   }) => WritingStyle(
     paperIndex: paperIndex ?? this.paperIndex,
     penIndex: penIndex ?? this.penIndex,
@@ -113,6 +224,7 @@ class WritingStyle {
     guides: guides ?? this.guides,
     penMotion: penMotion ?? this.penMotion,
     favoriteBookIds: favoriteBookIds ?? this.favoriteBookIds,
+    bookDetails: bookDetails ?? this.bookDetails,
   );
   Json toJson() => {
     'paperIndex': paperIndex,
@@ -123,15 +235,20 @@ class WritingStyle {
     'guides': guides,
     'penMotion': penMotion,
     'favoriteBookIds': favoriteBookIds,
+    'bookDetails': bookDetails.toJson(),
   };
   factory WritingStyle.fromJson(Json j) {
     final defaultsVersion = j['typefaceDefaultsVersion'];
     if (defaultsVersion != null &&
-        defaultsVersion != 0 &&
-        defaultsVersion != 1) {
+        (defaultsVersion is! int ||
+            defaultsVersion < 0 ||
+            defaultsVersion > 1)) {
       throw const FormatException('알 수 없는 기본 글꼴 설정 버전입니다.');
     }
     final savedTypeface = j['useDevelopmentTypeface'] as bool?;
+    if (j.containsKey('bookDetails') && j['bookDetails'] is! Json) {
+      throw const FormatException('책의 디테일 설정을 확인할 수 없습니다.');
+    }
     final style = WritingStyle(
       paperIndex: j['paperIndex'] as int? ?? 0,
       penIndex: j['penIndex'] as int? ?? 0,
@@ -144,6 +261,7 @@ class WritingStyle {
       guides: j['guides'] as bool? ?? false,
       penMotion: j['penMotion'] as bool? ?? true,
       favoriteBookIds: (j['favoriteBookIds'] as List? ?? []).cast<String>(),
+      bookDetails: BookDetailsStyle.fromJson(j['bookDetails'] as Json? ?? {}),
     );
     if (style.paperIndex < 0 ||
         style.paperIndex > 3 ||
@@ -277,6 +395,7 @@ class Library {
     return result;
   }
   void validate() {
+    style.bookDetails.validate();
     final bookIds = books.map((b) => b.id).toSet();
     final recordIds = records.map((r) => r.id).toSet();
     final pageIds = pages.map((p) => p.id).toSet();
@@ -285,13 +404,24 @@ class Library {
         recordIds.length != records.length ||
         pageIds.length != pages.length ||
         numbers.length != pages.length ||
+        books.any((b) => b.owner.length > 80) ||
         records.any((r) => r.bookId != null && !bookIds.contains(r.bookId)) ||
         pages.any(
           (p) =>
               !recordIds.contains(p.recordId) ||
               p.number < 1 ||
               !p.scroll.isFinite ||
-              p.scroll < 0,
+              p.scroll < 0 ||
+              (p.writtenOn != null &&
+                  (DateTime.tryParse(p.writtenOn!) == null ||
+                      !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(p.writtenOn!) ||
+                      DateTime.parse(
+                            p.writtenOn!,
+                          ).toIso8601String().substring(0, 10) !=
+                          p.writtenOn)) ||
+              p.pencilMarks.any(
+                (m) => m.start < 0 || m.end <= m.start || m.end > p.text.length,
+              ),
         ) ||
         (activePageId != null && !pageIds.contains(activePageId)) ||
         (writing && activePage == null)) {

@@ -25,7 +25,9 @@ Library referenceLibrary({bool useDevelopmentTypeface = true}) {
   final books = <Book>[], records = <WritingRecord>[], pages = <WritingPage>[];
   for (var i = 0; i < titles.length; i++) {
     final id = 'demo-book-$i', r = 'demo-record-$i';
-    books.add(Book(id: id, title: titles[i], author: authors[i]));
+    books.add(
+      Book(id: id, title: titles[i], author: authors[i], owner: '쓰는 사람'),
+    );
     records.add(
       WritingRecord(
         id: r,
@@ -40,6 +42,8 @@ Library referenceLibrary({bool useDevelopmentTypeface = true}) {
           id: '$r-page-$n',
           recordId: r,
           number: n,
+          writtenOn: '2026-11-10',
+          pencilMarks: i == 0 && n == 1 ? const [PencilMark(0, 7)] : const [],
           text: i == 0
               ? n == 1
                     ? quote

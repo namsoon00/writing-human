@@ -1,5 +1,14 @@
 # GitHub Pages 배포
 
+## 2026-11-10 · 쪽수와 종이 스와이프
+
+[Actions 42823317701](https://github.com/namsoon00/writing-human/actions/runs/42823317701),
+소스 `9d7826efa7b69e9f4522b48b47e5c4cde91cc602`의 검사·빌드·배포가 성공했다.
+하단 이전/다음/추가 버튼을 제거하고 작은 쪽수와 좌우 넘김으로 바꿨다.
+읽는 상태에서는 종이 위를, 입력 중에는 쪽수 영역을 넘긴다. 마지막 쪽의 다음
+넘김은 새 빈 쪽을 보관한다. 공개 JS·서체·아이콘이 로컬 release와 일치했다.
+실제 브라우저/기기 검증 범위는 docs/verification.md를 따른다.
+
 ## 2026-11-10 · 전체 화면 종이 넘김
 
 [Actions 42802397738](https://github.com/namsoon00/writing-human/actions/runs/42802397738)의

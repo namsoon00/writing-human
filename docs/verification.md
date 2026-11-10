@@ -1,5 +1,22 @@
 # 검증 기록
 
+## 2026-11-10 · 쪽수·스와이프 웹 배포 완료
+
+[Actions 42823317701](https://github.com/namsoon00/writing-human/actions/runs/42823317701)의
+소스 `9d7826efa7b69e9f4522b48b47e5c4cde91cc602`에서 포맷·분석·49개 검사·웹 빌드·배포가
+성공했다. [웹 앱](https://namsoon00.github.io/writing-human/)의 하단 화살표·추가 버튼을
+제거하고 현재 쪽수·좌우 넘김·마지막 쪽에서 새 종이 추가를 반영했다.
+
+기본/예시 HTML, 실행 JS, FontManifest, 개발 TTF, Material 아이콘 6개 요청이
+HTTP 200이었고 검증한 로컬 release와 바이트가 일치했다. main.dart.js는
+2,640,177바이트, SHA-256 `d7fb332a48adb834819742d446aaa4295d38096ced3a58dbf1597c914dc9d83f`다.
+`artifacts/paper-swipe-{build-check,deployment-check}.json`에 기록했다.
+
+실제 UI 확인은 Mac 잠금·Work의 브라우저 사용 비활성화로 진행하지 못했다.
+설정을 바꾸거나 다른 UI 제어로 우회하지 않았다. 새 PNG 12개는 현재 제품 위젯의
+Flutter 테스트 렌더이며 실기기/브라우저 실행 화면과 구분한다. 실제 한국어 IME,
+트랙패드·모바일 전환 성능은 미검증이다. 기존 비공개 hosting 설정·기록을 유지했다.
+
 ## 2026-11-10 · 버튼 없이 쪽수와 스와이프로 넘기기
 
 변경 파일: `lib/ui/paper_swipe.dart`, `writing_chrome.dart`, `workspace.dart`,

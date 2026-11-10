@@ -1,23 +1,22 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 
-const ink = Color(0xff5b4636);
-const muted = Color(0xff806b59);
+const ink = Color(0xff302c27);
+const brandInk = Color(0xff70472f);
+const muted = Color(0xff776a5b);
 const green = Color(0xff4e5a42);
 const burgundy = Color(0xff7a4a4a);
-const gold = Color(0xffad8b51);
-const line = Color(0xffe3d3c1);
+const line = Color(0xffe4dacb);
 const paper = Color(0xfff7f2e8);
-const appPaper = Color(0xfff5e9dc);
+const appPaper = Color(0xffeee9e0);
 const serif = 'NanumMyeongjo';
 const paperColors = [
-  Color(0xfffbf5e9),
+  paper,
   Color(0xfff3e7d2),
   Color(0xffe9e6df),
   Color(0xfff3dfbd),
 ];
 const paperNames = ['순면지', '미색지', '회백지', '크림지'];
-const penColors = [Color(0xff5b4636), Color(0xff79503c), Color(0xff5b6f8e)];
+const penColors = [ink, brandInk, Color(0xff5b6f8e)];
 const fontNames = ['나눔명조', '나눔명조 Bold', '나눔고딕'];
 
 TextStyle writingTextStyle(int font, {double size = 23, Color color = ink}) =>
@@ -30,238 +29,119 @@ TextStyle writingTextStyle(int font, {double size = 23, Color color = ink}) =>
       letterSpacing: .15,
     );
 
-class PaperSurface extends StatelessWidget {
-  const PaperSurface({
-    super.key,
-    required this.child,
-    this.color = paper,
-    this.torn = false,
-    this.guides = false,
-  });
+/// A continuous interior page behind header, editable text and footer.
+/// The material is static and never participates in hit testing or semantics.
+class PaperBackdrop extends StatelessWidget {
+  const PaperBackdrop({super.key, required this.child, this.color = paper});
   final Widget child;
   final Color color;
-  final bool torn, guides;
+
   @override
-  Widget build(BuildContext context) => PhysicalShape(
-    clipper: _PaperEdge(torn),
-    color: color,
-    elevation: 2,
-    shadowColor: const Color(0x305b4636),
-    clipBehavior: Clip.antiAlias,
-    child: Stack(
-      fit: StackFit.passthrough,
-      children: [
-        Positioned.fill(child: _PaperMaterial(color: color, strength: .48)),
-        CustomPaint(
-          painter: PaperGrain(guides: guides, opacity: .28),
-          child: child,
+  Widget build(BuildContext context) => ColoredBox(
+    color: appPaper,
+    child: Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 760),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: ExcludeSemantics(
+                child: IgnorePointer(
+                  child: RepaintBoundary(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: color,
+                        image: DecorationImage(
+                          image: const AssetImage(
+                            'assets/images/cotton-paper.jpg',
+                          ),
+                          repeat: ImageRepeat.repeat,
+                          scale: 2,
+                          opacity: .24,
+                          colorFilter: ColorFilter.mode(
+                            color,
+                            BlendMode.modulate,
+                          ),
+                        ),
+                      ),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xff92816a).withValues(alpha: .17),
+                              color.withValues(alpha: 0),
+                              const Color(0x12ffffff),
+                            ],
+                            stops: const [0, .045, 1],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            child,
+          ],
         ),
-      ],
+      ),
     ),
   );
 }
 
-/// Static material lives behind the editor, outside its text/selection painting.
-/// RepaintBoundary keeps fibers and lighting from repainting on every keystroke.
-class PaperBackdrop extends StatelessWidget {
-  const PaperBackdrop({super.key, required this.child});
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Stack(
-    fit: StackFit.passthrough,
-    children: [
-      const Positioned.fill(
-        child: _PaperMaterial(color: appPaper, strength: .18),
-      ),
-      child,
-    ],
-  );
-}
-
-class _PaperMaterial extends StatelessWidget {
-  const _PaperMaterial({required this.color, required this.strength});
-  final Color color;
-  final double strength;
-
+class InkMark extends StatelessWidget {
+  const InkMark({super.key, this.size = 20});
+  final double size;
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
     child: IgnorePointer(
-      child: RepaintBoundary(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: color,
-            image: DecorationImage(
-              image: const AssetImage('assets/images/cotton-paper.jpg'),
-              repeat: ImageRepeat.repeat,
-              scale: 2,
-              opacity: strength,
-              colorFilter: ColorFilter.mode(color, BlendMode.modulate),
-            ),
-          ),
-          child: const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                stops: [0, .24, .7, 1],
-                colors: [
-                  Color(0x38ffffff),
-                  Color(0x10ffffff),
-                  Color(0x00bd8b51),
-                  Color(0x12b68a59),
-                ],
-              ),
-              border: Border(
-                top: BorderSide(color: Color(0x90fffaf0), width: .8),
-                left: BorderSide(color: Color(0x65fffaf0), width: .7),
-                right: BorderSide(color: Color(0x18a1815c), width: .6),
-              ),
-            ),
-          ),
-        ),
+      child: Image.asset(
+        'assets/images/ink-mark.png',
+        width: size,
+        height: size,
+        filterQuality: FilterQuality.medium,
       ),
     ),
   );
 }
 
-class _PaperEdge extends CustomClipper<Path> {
-  _PaperEdge(this.torn);
-  final bool torn;
-  @override
-  Path getClip(Size s) {
-    if (!torn) {
-      return Path()..addRRect(
-        RRect.fromRectAndRadius(Offset.zero & s, const Radius.circular(3)),
-      );
-    }
-    final p = Path()
-      ..moveTo(0, 0)
-      ..lineTo(s.width, 0)
-      ..lineTo(s.width, s.height - 3);
-    final random = Random(42);
-    for (double x = s.width; x > 0; x -= 1.8) {
-      final wave = sin(x * .12) * .35 + sin(x * .031) * .4;
-      p.lineTo(x, s.height - 1.8 - random.nextDouble() * 1.4 - wave);
-    }
-    return p
-      ..lineTo(0, s.height - 2)
-      ..close();
-  }
-
-  @override
-  bool shouldReclip(_PaperEdge old) => old.torn != torn;
-}
-
-class PaperGrain extends CustomPainter {
-  PaperGrain({this.guides = false, this.opacity = 1});
-  final bool guides;
-  final double opacity;
+/// Guides follow the actual text padding, line height and scroll without
+/// changing the editor controller, selection or composing range.
+class WritingGuides extends CustomPainter {
+  const WritingGuides({
+    required this.top,
+    required this.left,
+    required this.right,
+    required this.lineHeight,
+    required this.scroll,
+    required this.enabled,
+  });
+  final double top, left, right, lineHeight, scroll;
+  final bool enabled;
   @override
   void paint(Canvas canvas, Size size) {
-    final random = Random(17);
-    final p = Paint()..strokeWidth = .5;
-    for (var i = 0; i < size.width * size.height / 48; i++) {
-      p.color = Color.fromRGBO(
-        117,
-        81,
-        47,
-        (.035 + random.nextDouble() * .04) * opacity,
-      );
-      final x = random.nextDouble() * size.width,
-          y = random.nextDouble() * size.height;
-      canvas.drawLine(
-        Offset(x, y),
-        Offset(x + random.nextDouble() * 2.1, y + .6),
-        p,
-      );
-    }
-    if (guides) {
-      p
-        ..color = const Color(0x18a48460)
-        ..strokeWidth = .6;
-      for (double y = 56; y < size.height; y += 41.4) {
-        canvas.drawLine(Offset(27, y), Offset(size.width - 27, y), p);
-      }
+    if (!enabled) return;
+    final paint = Paint()
+      ..color = const Color(0x188c765d)
+      ..strokeWidth = .6;
+    final first = top + lineHeight * .83 - scroll;
+    final start = first < 0
+        ? first + ((-first / lineHeight).ceil() * lineHeight)
+        : first;
+    for (var y = start; y < size.height; y += lineHeight) {
+      canvas.drawLine(Offset(left, y), Offset(size.width - right, y), paint);
     }
   }
 
   @override
-  bool shouldRepaint(PaperGrain old) =>
-      old.guides != guides || old.opacity != opacity;
-}
-
-class BotanicalMark extends StatelessWidget {
-  const BotanicalMark({super.key, this.size = 34, this.color = ink});
-  final double size;
-  final Color color;
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: size,
-    height: size,
-    child: CustomPaint(painter: _Twig(color)),
-  );
-}
-
-class _Twig extends CustomPainter {
-  _Twig(this.color);
-  final Color color;
-  @override
-  void paint(Canvas c, Size size) {
-    c.save();
-    c.scale(size.width / 80, size.height / 80);
-    final p = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..strokeCap = StrokeCap.round;
-    c.drawPath(
-      Path()
-        ..moveTo(12, 74)
-        ..quadraticBezierTo(46, 44, 60, 8),
-      p,
-    );
-    for (final leaf in [
-      const Offset(22, 63),
-      const Offset(32, 50),
-      const Offset(41, 36),
-      const Offset(49, 22),
-    ]) {
-      c.drawPath(
-        Path()
-          ..moveTo(leaf.dx, leaf.dy)
-          ..quadraticBezierTo(
-            leaf.dx - 18,
-            leaf.dy - 20,
-            leaf.dx - 9,
-            leaf.dy - 23,
-          )
-          ..quadraticBezierTo(leaf.dx + 3, leaf.dy - 15, leaf.dx, leaf.dy),
-        p,
-      );
-      c.drawPath(
-        Path()
-          ..moveTo(leaf.dx + 3, leaf.dy - 5)
-          ..quadraticBezierTo(
-            leaf.dx + 18,
-            leaf.dy - 24,
-            leaf.dx + 24,
-            leaf.dy - 18,
-          )
-          ..quadraticBezierTo(
-            leaf.dx + 20,
-            leaf.dy - 6,
-            leaf.dx + 3,
-            leaf.dy - 5,
-          ),
-        p,
-      );
-    }
-    c.restore();
-  }
-
-  @override
-  bool shouldRepaint(_Twig old) => old.color != color;
+  bool shouldRepaint(WritingGuides old) =>
+      old.top != top ||
+      old.left != left ||
+      old.right != right ||
+      old.lineHeight != lineHeight ||
+      old.scroll != scroll ||
+      old.enabled != enabled;
 }
 
 class BookCover extends StatelessWidget {

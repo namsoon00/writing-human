@@ -143,6 +143,18 @@ void main() {
       tester.view.physicalSize = const Size(844, 390);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
+      // The paper controls must leave the same live editor usable with
+      // enlarged system text and a narrow viewport, including a keyboard.
+      final controller = tester.widget<TextField>(editor).controller!;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(editor).controller, same(controller));
+      expect(tester.getSize(editor).height, greaterThan(80));
+      expect(tester.getRect(find.text('완료')).bottom, lessThanOrEqualTo(360));
+      expect(tester.takeException(), isNull);
     },
   );
 
@@ -173,7 +185,7 @@ void main() {
       await tester.pumpAndSettle();
       final editor = find.byKey(const ValueKey('page-text'));
       final controller = tester.widget<TextField>(editor).controller!;
-      await tester.tap(find.text('쓰기 도구'));
+      await tester.tap(find.byTooltip('쓰기 도구'));
       await tester.pumpAndSettle();
       expect(find.textContaining('쓰는 인간체'), findsOneWidget);
       await tester.tap(find.text('나눔고딕'));
@@ -247,10 +259,10 @@ void main() {
       await tester.enterText(editor, '먼저 남긴 글');
       await tester.pumpAndSettle();
       final firstId = store.data.activePageId;
-      await tester.tap(find.text('새 종이'));
+      await tester.tap(find.byTooltip('새 종이'));
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(editor).controller!.text, '');
-      await tester.tap(find.text('새 종이'));
+      await tester.tap(find.byTooltip('새 종이'));
       await tester.pumpAndSettle();
       expect(store.data.records.length, 1);
       expect(store.data.activePageId, firstId);

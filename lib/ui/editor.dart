@@ -104,59 +104,88 @@ class _PageEditorState extends State<PageEditor> {
   @override
   Widget build(BuildContext context) {
     final style = widget.style;
-    return PaperSurface(
-      color: paperColors[style.paperIndex],
-      torn: true,
-      guides: style.guides,
-      child: Stack(
-        children: [
-          RepaintBoundary(
-            key: fieldRenderKey,
-            child: TextField(
-              key: const ValueKey('page-text'),
-              controller: text,
-              scrollController: scroll,
-              focusNode: focus,
-              maxLines: null,
-              minLines: null,
-              expands: true,
-              textAlignVertical: TextAlignVertical.top,
-              keyboardType: TextInputType.multiline,
-              textInputAction: TextInputAction.newline,
-              autocorrect: false,
-              enableSuggestions: false,
-              style: writingTextStyle(
-                style.fontIndex,
-                size: 23,
-                color: penColors[style.penIndex],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxHeight < 400;
+        final horizontal = constraints.maxWidth < 500 ? 30.0 : 64.0;
+        final padding = EdgeInsets.fromLTRB(
+          horizontal,
+          compact ? 24 : 54,
+          horizontal,
+          44,
+        );
+        return Stack(
+          children: [
+            if (style.guides)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: ExcludeSemantics(
+                    child: AnimatedBuilder(
+                      animation: scroll,
+                      builder: (context, _) => CustomPaint(
+                        painter: WritingGuides(
+                          enabled: style.guides,
+                          top: padding.top,
+                          left: padding.left,
+                          right: padding.right,
+                          lineHeight:
+                              MediaQuery.textScalerOf(context).scale(23) * 1.8,
+                          scroll: scroll.hasClients ? scroll.offset : 0,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
-              cursorColor: burgundy,
-              cursorWidth: 1.2,
-              decoration: InputDecoration(
-                hintText: '여기를 눌러 써보세요.',
-                hintStyle: writingTextStyle(
+            RepaintBoundary(
+              key: fieldRenderKey,
+              child: TextField(
+                key: const ValueKey('page-text'),
+                controller: text,
+                scrollController: scroll,
+                focusNode: focus,
+                maxLines: null,
+                minLines: null,
+                expands: true,
+                textAlignVertical: TextAlignVertical.top,
+                keyboardType: TextInputType.multiline,
+                textInputAction: TextInputAction.newline,
+                autocorrect: false,
+                enableSuggestions: false,
+                style: writingTextStyle(
                   style.fontIndex,
                   size: 23,
-                  color: const Color(0xffa18b75),
+                  color: penColors[style.penIndex],
                 ),
-                contentPadding: const EdgeInsets.fromLTRB(26, 38, 25, 42),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
+                cursorColor: brandInk,
+                cursorWidth: 1.2,
+                decoration: InputDecoration(
+                  hintText: '마음에 남은 문장을\n천천히 옮겨 적어보세요.',
+                  hintStyle: writingTextStyle(
+                    style.fontIndex,
+                    size: 21,
+                    color: muted,
+                  ),
+                  contentPadding: padding,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
+                ),
               ),
             ),
-          ),
-          Positioned.fill(
-            child: WritingPen(
-              controller: text,
-              scroll: scroll,
-              focus: focus,
-              fieldKey: fieldRenderKey,
-              enabled: style.penMotion,
+            Positioned.fill(
+              child: WritingPen(
+                controller: text,
+                scroll: scroll,
+                focus: focus,
+                fieldKey: fieldRenderKey,
+                enabled: style.penMotion,
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 }

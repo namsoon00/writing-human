@@ -10,7 +10,7 @@ Workspace는 마지막 활성 페이지를 즉시 보여 주며, 기록이 없�
 
 collection_sheet.dart는 필요할 때 여는 글/책 보관함이다. tools_screen.dart는 종이·잉크·글꼴과 펜/줄 가이드를 한 시트에서 독립 선택한다. 원문·페이지·동기화도 보조 시트이며 기존 계정 보호·저장 실패/재시도·기존 기기 기록 가져오기를 유지한다. 작성 화면은 폭 760 이하의 한 면으로 적응하고, 마케팅 배경과 휴대폰 프레임은 사용하지 않는다. 아래 첨부 이미지 개편 기록은 이전 UI 구조다.
 
-룩앤필 재정렬은 이 흐름과 데이터 계층을 바꾸지 않고 paper.dart의 공통 팔레트와 소재 표시를 조정한다. 작성지는 면지 48%, 바탕은 18% 강도로 구분하며 정적인 RepaintBoundary 안에서 그린다. 작은 명조/금박 식물 표식, 브라운 본문, 포도빛 선택 상태를 사용한다. 종이의 하단 결은 최대 몇 논리 픽셀 정도로 잘라 입력 면을 유지한다.
+현재 종이 화면은 paper.dart의 PaperBackdrop이 최대 폭 760의 연속된 면지·왼쪽 음영을 담당한다. 면지 소재는 24% 강도의 정적인 RepaintBoundary이며 입력/접근성 트리에서 제외한다. PageEditor는 별도 종이 카드 없이 실제 TextField와 읽기 전용 펜 레이어를 올린다. WritingGuides는 실제 본문 패딩·행 높이·스크롤을 읽어 줄 가이드를 그린다. writing_chrome.dart의 WritingHeader/WritingFooter가 최소 조작부를 담당한다. 브랜드 이름은 책과 구분하고 작은 투명 잉크 표식을 사용한다. 포커스·키보드·크기 변경은 레이아웃만 조정하며 controller·selection·composing을 되쓰지 않는다.
 
 - lib/data/model.dart: Book, WritingRecord(bookId nullable), WritingPage(recordId, number, text, selection, scroll), Library(activePageId, writing). 버전 1 JSON 및 참조 구조 검증.
 - lib/data/library_controller.dart: 사용자 동작, 변경 스냅샷의 순차 저장, 저장 상태와 재시도. 저장 순서가 역전되지 않도록 Future 체인을 사용한다.
@@ -18,7 +18,7 @@ collection_sheet.dart는 필요할 때 여는 글/책 보관함이다. tools_scr
 - lib/data/web_store.dart: 버전 1 단일 키 writing-human.library.v1. 동기·원자적인 setItem을 호출하며 할당량/접근 오류는 UI까지 전달한다. 모바일의 SQLite와 저장 구현은 다르다.
 - lib/main.dart: 저장소를 연 뒤 기존 기록을 읽는다. 실패하면 복구 화면을 표시하며 빈 라이브러리로 대체하지 않는다.
 - lib/ui/workspace.dart: 책장, 책 생성, 편집. 본문 controller는 페이지마다 한 번 생성하고 입력 중 되쓰지 않는다. TextEditingValue를 관찰해서 조합 중 텍스트도 보관하되 IME composing 영역은 재실행 시 복원하지 않는다. 선택 영역은 UTF-16 offset이며 복원 시 범위를 제한한다.
-- lib/ui/paper.dart: 면지 이미지와 결정적인 미세 섬유 패턴, 종이색·그림자, 린넨 표지. 소재는 RepaintBoundary로 편집과 분리하며 포인터·접근성 트리에서 제외한다. 애니메이션은 없다. 넓은 화면의 햇빛 배경도 실제 편집 위에 겹치지 않는다. 소재 경로와 프롬프트는 docs/visual-assets.md를 따른다.
+- lib/ui/paper.dart: 공통 종이/잉크 팔레트, 면지 이미지와 얕은 왼쪽 음영, 잉크 표식, 줄 가이드와 보관함의 린넨 표지. 소재는 RepaintBoundary로 편집과 분리하며 포인터·접근성 트리에서 제외한다. 애니메이션은 없다. lib/ui/writing_chrome.dart는 상단/하단의 실제 조작부를 담당한다. 소재 경로와 프롬프트는 docs/visual-assets.md를 따른다.
 
 ## 저장과 복원
 

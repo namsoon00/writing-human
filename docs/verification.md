@@ -1,5 +1,78 @@
 # 검증 기록
 
+## 2026-11-10 · 개발 계획 첫 구현 단위: 연속된 종이 작성 화면
+
+최신 시안을 실제 Flutter 작성 화면에 반영했다. 이번 단위는 디자인 요소와
+작성 화면의 구현이며 백업·복원·설치형 계정 동기화까지 완료한 단계는 아니다.
+
+변경 파일:
+
+- `lib/ui/paper.dart`: 종이 #F7F2E8, 브랜드 잉크 #70472F, 본문 #302C27,
+  은은한 면지와 왼쪽 안쪽 음영을 한 장의 정적인 배경으로 통합했다.
+- `lib/ui/writing_chrome.dart`: 보관함·브랜드·＋, Aa·저장 상태·더 보기/완료를
+  실제 위젯으로 분리했다. 아이콘의 접근성 이름과 터치 영역을 유지한다.
+- `lib/ui/workspace.dart`, `editor.dart`, `main.dart`: 본문의 별도 종이 카드와
+  금박 식물 표식을 제거하고 브랜드/책 이름을 구분했다. 키보드·작은 화면에서는
+  여백을 줄이며, 기존 TextEditingController와 저장·동기화 계층은 유지한다.
+  입력 리스너에서 본문·selection·composing을 다시 설정하지 않는다.
+- `assets/images/ink-mark.png`: 내장 imagegen으로 최신 시안의 작은 잉크
+  자국을 참조해 만든 투명 소재. 원본·프롬프트는 `docs/visual-assets.md`에 기록.
+- `test/data/editor_disk_test.dart`, `test/widget_test.dart`,
+  `tool/capture_preview_test.dart` 및 제품·구조·소재 문서.
+
+실행 방법:
+
+```sh
+# 현재 실행 중인 로컬 미리보기와 같은 빌드/서버
+node tool/build_github_pages.mjs /
+python3 -m http.server 4186 --bind 127.0.0.1 --directory build/github-pages
+# 개발 실행이 필요한 경우
+flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
+```
+
+`http://127.0.0.1:4186/`은 이 Mac의 로컬 저장용 미리보기다. root base href로
+빌드했으며 원격 GitHub Pages나 비공개 Sites 배포를 갱신하지 않았다.
+기존 hosting project_id/접근 범위와 사용자 저장 데이터는 수정하지 않았다.
+
+이번 변경 후 실행한 검사:
+
+- `dart format --output=none --set-exit-if-changed lib test tool`: 33개 파일,
+  변경 없음. `flutter analyze --no-pub`: 문제 없음.
+- `flutter test --no-pub`: 31개 통과. 새 SQLite UI 검사는 새 화면의
+  보관함 → 책 만들기 → 한글 composing 값 입력 → 긴 본문 확정 → 선택 영역과
+  스크롤 710 저장 → 실제 DB 연결 종료·재열기 → 화면 재생성 흐름을 수행했다.
+  본문·책 연결·페이지 ID·선택 영역·스크롤·나눔명조 복원을 확인했다.
+  이는 호스트 SQLite 파일과 Flutter 위젯의 결합 검사이며 iOS/Android
+  실제 키보드나 프로세스 강제 종료 검사가 아니다.
+- 기존 입력·저장 실패·펜 추적 검사와 함께 320×640, 시스템 글자 배율 2,
+  280px 키보드 inset에서도 같은 본문 controller와 조작 가능한 영역이
+  유지되고 overflow가 없음을 확인했다. 실제 OS 키보드 대신 test input을 사용했다.
+- `flutter test tool/capture_preview_test.dart --no-pub`: 1개 통과.
+  합성 데이터로 실제 제품 위젯과 번들 나눔 글꼴·종이·잉크 소재를 렌더했다.
+- `node tool/build_github_pages.mjs /`: 로컬 저장용 웹 release 빌드 성공.
+- `flutter build ios --simulator --no-codesign --no-pub`: 성공.
+  `build/ios/iphonesimulator/Runner.app` 생성. 설치·실행·실기기 검증과 구별한다.
+- 로컬 HTTP 검사에서 HTML·bootstrap·main JS·잉크/종이/나눔명조 자산 6개가
+  모두 200이었다. 제공한 새 잉크 파일의 SHA-256이 소스와 일치했다.
+  `artifacts/paper-v1-preview-check.json`에 기록했다. HTTP 검사는 타이핑 검사가 아니다.
+
+화면 확인:
+
+- `artifacts/paper-v1-{blank,writing,pen-stroke,keyboard,resting,tools,collection,desktop}.png`
+  8개를 새 코드로 생성하고 직접 확인했다. 모바일 390×844와 데스크톱
+  1440×1000 논리 픽셀, PNG는 2배 해상도다. keyboard 화면은
+  키보드 높이만 모사한 상태이며 OS 키보드를 그린 캡처가 아니다.
+- 실제 컴퓨터/브라우저 실행 확인을 시도했으나 Mac 잠금과 Work 설정의
+  로컬 브라우저 비활성화로 접근하지 못했다. 설정 변경이나 다른 UI 제어 수단으로
+  우회하지 않았다. 위 PNG는 Flutter 테스트 렌더이며 실제 브라우저·실기기
+  실행 화면으로 보고하지 않는다. 이번 결과를 과거 시안 이미지로 대체하지 않았다.
+
+미검증·후속 범위: 실제 iPhone/Android 한국어 IME와 키보드 전환·백그라운드·
+강제 종료, Android 빌드, 실제 브라우저 타이핑·새로고침, 설치형 계정 인증과
+실제 PC·모바일 양방향 동기화, 백업·복원과 소리. 장문·대량 기록의 저장 성능도
+별도 점검이 필요하다. 개발 중인 쓰는 인간체는 제품에 연결하지 않았으며
+현재 본문은 나눔명조다. 사용자 글꼴·종이·펜 선택 값과 DB 구조는 유지했다.
+
 ## 2026-11-10 · 단순한 UX와 기획 이미지의 룩앤필
 
 - [GitHub Actions 42740934395](https://github.com/namsoon00/writing-human/actions/runs/42740934395)에서 소스 26fedeaabb6dcab65e84db42025a62d2703cd41f의 분석·테스트 30개·빌드·배포가 성공했다. 기본/예시 HTML, 면지/만년필 자산이 HTTP 200이었으며 제공 main.dart.js의 SHA-256 9716d882acb787d86ed3c930c19bea2a87fb9acd2c633df81c3cfa1d78d5441a가 로컬 검증 빌드와 일치했다. writing-surface 표식도 확인했다. artifacts/brand-deployment-check.json에 기록했다. 이는 HTTP/파일 검증이며 실제 브라우저 타이핑 검사로 보고하지 않는다.

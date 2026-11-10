@@ -1,12 +1,38 @@
 # 첨부 이미지 기반 UI 소재
 
-## 현재 룩앤필 · 기획 이미지 재정렬
+## 현재 화면 · 종이 한 면 / 2026-11-10
+
+최근 종이 시안을 실제 Flutter 작성 화면에 반영했다. 상단·본문·하단은 같은
+PaperBackdrop을 공유한다. 기본 종이는 #F7F2E8, 브랜드 잉크는 #70472F,
+본문은 #302C27이다. 면지 강도 24%, 작은 번짐 잉크 표식, 얕은 왼쪽 음영을
+사용한다. 금박 식물 표식과 찢어진 입력 카드의 처리는 이전 디자인 이력이다.
+저장 상태 색은 기본 종이색에 대해 계산한 명암비 약 4.71:1의 #776A5B다.
+
+`assets/images/ink-mark.png`는 내장 imagegen 편집으로 만든 128×128 RGBA
+소재다. 종이 시안의 작은 잉크 자국을 참조해 투명 배경으로 재현했다. 원본은
+Codex generated_images의 `exec-f867c256-feff-4053-93dc-cac35c2fee98.png`에
+보존하고 sips로 화면용 크기만 최적화했다. 알파 범위 0–255를 확인했다.
+텍스트·조작부를 이미지로 굳히지 않으며 본문은 현재 나눔명조다.
+
+새 화면은 `flutter test tool/capture_preview_test.dart --no-pub`로 재현한다.
+`artifacts/paper-v1-{blank,writing,pen-stroke,keyboard,resting,tools,collection,desktop}.png`
+8개는 현재 제품 위젯을 합성 예시 데이터로 Flutter 테스트 런타임에서 렌더한
+결과다. 실제 브라우저·실기기 캡처나 영구 저장 검증은 아니다. keyboard는
+키보드 높이만 모사한 화면이며 OS 키보드 이미지가 아니다.
+별도의 `test/data/editor_disk_test.dart`가 실제 호스트 SQLite 파일과
+작성 화면을 연결한 저장·재열기 검증을 담당한다.
+
+### 번짐 잉크 표식의 최종 프롬프트 · 내장 imagegen
+
+Use case: background-extraction / precise-object-edit. Supporting reference: the supplied ivory paper page. Extract and faithfully recreate ONLY the tiny organic burnt-umber ink stain at the top center of that page as an isolated high-resolution production brand mark. Keep the naturally irregular almost-round ink blot with softly feathered capillary bleeding edges, dark translucent center and subtle warmer thin ink toward the perimeter. Deep warm ink brown #70472F. This is a flat ink stain soaked into paper, not a falling droplet silhouette, not wax, not a burn mark, not embossing, no hard circular rim, no highlights, no cast shadow. No leaf, no lettering, no UI, no paper rectangle. Genuine transparent alpha background including irregular soft translucent perimeter. One centered compact stain, occupying about 70 percent of a square canvas, ample clear margin. The mark must remain legible and natural at 16 pixels wide in a minimalist premium writing app.
+
+## 이전 룩앤필 · 기획 이미지 재정렬
 
 단순화한 작성 UX를 유지하면서 최초 이미지의 따뜻한 종이빛·브라운 잉크·포도빛 버튼·금박 식물 표식을 다시 맞췄다. 작성지의 cotton-paper.jpg 강도는 48%, 주변 바탕은 18%다. 종이 끝은 가늘고 불규칙하게 표시한다. 린넨 표지는 보관함에서 그대로 사용하며, 사진 배경과 휴대폰 프레임은 추가하지 않았다. 새 소재를 생성하거나 사용자 이미지를 수정하지 않고 기존 소재의 Flutter 표시만 조정했다.
 
 이번 버전 렌더는 artifacts/brand-{blank,writing,pen-stroke,keyboard,resting,tools,collection,desktop}.png다. Flutter 테스트 런타임/예시 데이터로, 실제 브라우저 캡처와 구분한다. 아래 회백색/16% 소재 사용 기록은 직전 버전의 이력이다.
 
-## 현재 화면 · 2026-11-10
+## 이전 화면 · 2026-11-10
 
 작성 우선 UX로 개편하며 면지 이미지는 16% 강도로만 사용한다. 찢어진 끝과 큰 정지 펜 장식은 작성 화면에서 제거했고 입력 중 추적 펜은 120×80 논리 픽셀이다. 사진 배경과 휴대폰 모형은 현재 레이아웃에 사용하지 않는다. sunlit-desk.jpg는 이전 브랜드 소재로 저장소에 보관하며 로딩하지 않는다. 표지 이미지는 보관함의 작은 책 표시에서만 쓴다. 새 이미지를 생성하지 않고 기존 소재의 표시 방식을 Flutter 코드에서 조정했다.
 

@@ -29,9 +29,9 @@ class WritingHumanApp extends StatelessWidget {
       fontFamily: 'NanumGothic',
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: green,
+        seedColor: brandInk,
         surface: paper,
-        primary: burgundy,
+        primary: brandInk,
         onSurface: ink,
       ),
       scaffoldBackgroundColor: appPaper,
@@ -46,7 +46,7 @@ class WritingHumanApp extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: green),
+          borderSide: BorderSide(color: brandInk),
         ),
       ),
       bottomSheetTheme: const BottomSheetThemeData(

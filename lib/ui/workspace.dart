@@ -1036,7 +1036,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                     key: const ValueKey('place-source'),
                     onPressed: () => _source(),
                     icon: const Icon(CupertinoIcons.quote_bubble, size: 15),
-                    label: const Text('원문 놓고 따라 쓰기'),
+                    label: const Text('따라 쓰기'),
                   ),
                 ),
               if (hasSource)

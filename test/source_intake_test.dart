@@ -125,7 +125,7 @@ void main() {
     const source = '새로운 문장을 읽습니다.\n\n내 글로 남깁니다.';
     final store = MemoryStore();
     await open(tester, store, FakeIntake());
-    expect(find.text('원문 놓고 따라 쓰기'), findsOneWidget);
+    expect(find.text('따라 쓰기'), findsOneWidget);
     await tester.tap(place);
     await tester.pumpAndSettle();
     await tester.enterText(sourceField, source);

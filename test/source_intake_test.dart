@@ -221,6 +221,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(remainder(), ' 천천히 내려앉았다.');
     final before = body.value;
+    tester.widget<TextField>(bodyField).focusNode!.unfocus();
+    await tester.pump();
 
     await tester.tap(place);
     await tester.pumpAndSettle();
@@ -233,6 +235,16 @@ void main() {
     expect(body.value, before);
     expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isTrue);
     expect(store.data.activePage!.text, before.text);
+    expect(tester.testTextInput.isVisible, isTrue);
+    final resumed = '${before.text} 천';
+    tester.testTextInput.updateEditingValue(
+      TextEditingValue(
+        text: resumed,
+        selection: TextSelection.collapsed(offset: resumed.length),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(store.data.activePage!.text, resumed);
     expect(store.data.activePage!.passages, isEmpty);
     expect(tester.takeException(), isNull);
   });

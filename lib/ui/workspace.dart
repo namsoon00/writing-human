@@ -56,6 +56,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   String? draftBookId;
   bool _pageNavigationBusy = false;
   bool _editorComposing = false;
+  String? _editingPageId;
   ({String pageId, int offset, int request})? _reveal;
   int _revealRequest = 0;
   late final SourceIntake _intake = widget.sourceIntake ?? createSourceIntake();
@@ -277,6 +278,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       c.addListener(_changed);
       widget.sync?.addListener(_changed);
       editorFocus.unfocus();
+      _editingPageId = null;
       _coverAnchor = null;
       _reveal = null;
       fresh = c.library.pages.isEmpty;
@@ -315,6 +317,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   }
 
   void _blur() {
+    _editingPageId = null;
     editorFocus.unfocus();
     c.setEditorState(focused: false, isComposing: _editorComposing);
   }
@@ -670,7 +673,10 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     final selectedPage = page;
     final bookId = (bookDetails ?? book)?.id;
     final manage = bookDetails != null || bookId == null;
-    final wasFocused = editorFocus.hasFocus;
+    // Web accessibility can move focus to the button before its handler.
+    final wasEditing =
+        bookDetails == null &&
+        (editorFocus.hasFocus || _editingPageId == selectedPage.id);
     _blur();
     _readingSource = true;
     final initial = bookDetails == null
@@ -712,12 +718,18 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     try {
       await Navigator.of(context).push(route);
       await route.completed;
-      if (wasFocused &&
+      if (wasEditing &&
           mounted &&
           c == owner &&
           !_accountLocked &&
           selectedPage.id == page.id) {
-        editorFocus.requestFocus();
+        final editable = editorFocus.context
+            ?.findAncestorStateOfType<EditableTextState>();
+        if (editable == null) {
+          editorFocus.requestFocus();
+        } else {
+          editable.requestKeyboard();
+        }
       }
     } finally {
       _readingSource = false;
@@ -1142,6 +1154,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         onChanged: _edit,
                         onPencilMark: c.togglePencilMark,
                         onEditingState: (focused, composing) {
+                          if (focused) _editingPageId = currentPage.id;
                           _editorComposing = composing;
                           c.setEditorState(
                             focused: focused,

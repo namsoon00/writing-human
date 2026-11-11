@@ -1,5 +1,21 @@
 # 검증 기록
 
+## 2026-11-11 · 한 문단씩 읽고 옮겨 쓰기
+
+- Dart 포맷과 분석을 확인했다. 작업 폴더의 Flutter 테스트 85개와 GitHub Pages용
+  작업본의 82개가 통과했다.
+- 키보드 높이 300px·글자 배율 1.4의 320×640 위젯 테스트에서 긴 원문 스크롤 영역,
+  한글 조합 중 문단 넘김 대기, 문단을 넘긴 뒤 편집기 위치·포커스·텍스트·선택과
+  저장 횟수를 확인했다. 기존 SQLite 재열기 검사도 통과했다.
+- `flutter test --no-pub tool/capture_source_intake_test.dart`로 390×844 Flutter 화면을
+  렌더링했다. 합성 문단을 사용한 읽기·작성·다음 문단 화면은
+  `artifacts/source-reading-{first,writing,next}.png`에 있다.
+- [GitHub Actions 42929373524](https://github.com/namsoon00/writing-human/actions/runs/42929373524)의
+  `d2a9bfa7daf8a3b4f1b7b94aa565c1789113a011`에서 웹 검사·빌드·게시를 완료했다.
+  공개 주소의 HTML, main.dart.js, 쓰는 인간체 TTF가 검증한 로컬 빌드와 일치했다.
+  main.dart.js SHA-256은 `f2a824e0b490437d4d88c386cb356f54d06d05c5a9d510e52f3fd1f631d2e262`다.
+- 물리 iOS·Android 기기의 입력 및 브라우저에서의 직접 조작은 미검증이다.
+
 ## 2026-11-11 · 원문 놓기 웹 게시 완료
 
 [Actions 42915266930](https://github.com/namsoon00/writing-human/actions/runs/42915266930)의

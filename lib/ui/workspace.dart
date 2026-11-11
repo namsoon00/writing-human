@@ -672,52 +672,50 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     final owner = c;
     final selectedPage = page;
     final bookId = (bookDetails ?? book)?.id;
-    final manage = bookDetails != null || bookId == null;
     // Web accessibility can move focus to the button before its handler.
     final wasEditing =
         bookDetails == null &&
         (editorFocus.hasFocus || _editingPageId == selectedPage.id);
     _blur();
     _readingSource = true;
-    final initial = bookDetails == null
-        ? matchOriginal(
-            originalsFor(
-              owner.library,
-              bookId: bookId,
-              recordId: selectedPage.recordId,
-            ),
-            selectedPage.text,
-            selectedPage.extent,
-          )
-        : null;
-    final route = ModalBottomSheetRoute<void>(
-      isScrollControlled: true,
-      showDragHandle: true,
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      constraints: const BoxConstraints(maxWidth: 600),
-      builder: (_) => ListenableBuilder(
-        listenable: owner,
-        builder: (context, _) => SourceReading(
-          originals: originalsFor(
-            owner.library,
-            bookId: bookId,
-            recordId: selectedPage.recordId,
-          ),
-          match: initial,
-          onRegister: manage && owner.saveError == null
-              ? () => _registerOriginal(
-                  bookId: bookId,
-                  selectedPage: bookDetails == null ? selectedPage : null,
-                )
-              : null,
-          onRetry: owner.saveError == null ? null : _retrySave,
-          bookDetailsRegistration: !manage,
-        ),
-      ),
+    List<RegisteredOriginal> originals() => originalsFor(
+      owner.library,
+      bookId: bookId,
+      recordId: selectedPage.recordId,
     );
+    Future<void> register() => _registerOriginal(
+      bookId: bookId,
+      selectedPage: bookDetails == null ? selectedPage : null,
+    );
+
     try {
-      await Navigator.of(context).push(route);
-      await route.completed;
+      final available = originals();
+      if (bookDetails == null && available.isEmpty) {
+        await register();
+      } else {
+        final initial = bookDetails == null
+            ? matchOriginal(available, selectedPage.text, selectedPage.extent)
+            : null;
+        final route = ModalBottomSheetRoute<void>(
+          isScrollControlled: true,
+          showDragHandle: true,
+          barrierLabel: MaterialLocalizations.of(
+            context,
+          ).modalBarrierDismissLabel,
+          constraints: const BoxConstraints(maxWidth: 600),
+          builder: (_) => ListenableBuilder(
+            listenable: owner,
+            builder: (context, _) => SourceReading(
+              originals: originals(),
+              match: initial,
+              onRegister: owner.saveError == null ? register : null,
+              onRetry: owner.saveError == null ? null : _retrySave,
+            ),
+          ),
+        );
+        await Navigator.of(context).push(route);
+        await route.completed;
+      }
       if (wasEditing &&
           mounted &&
           c == owner &&

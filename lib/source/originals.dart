@@ -1,5 +1,3 @@
-import 'package:flutter/widgets.dart';
-
 import '../data/model.dart';
 
 List<RegisteredOriginal> originalsFor(
@@ -60,6 +58,19 @@ class OriginalMatch {
   }
 }
 
+const _wordPattern = r'[\p{L}\p{M}\p{N}]';
+final _wordCharacter = RegExp(_wordPattern, unicode: true);
+final _wordCharacters = RegExp('$_wordPattern+', unicode: true);
+
+bool _isWithinWord(String text, int index) {
+  if (index <= 0 || index >= text.length) return false;
+  var previous = index - 1;
+  final unit = text.codeUnitAt(previous);
+  if (unit >= 0xdc00 && unit <= 0xdfff && previous > 0) previous--;
+  return _wordCharacter.matchAsPrefix(text, previous)?.end == index &&
+      _wordCharacter.matchAsPrefix(text, index) != null;
+}
+
 OriginalMatch? matchOriginal(
   List<RegisteredOriginal> originals,
   String text,
@@ -68,21 +79,26 @@ OriginalMatch? matchOriginal(
   if (caret <= 0 || caret > text.length || originals.isEmpty) return null;
   final lineStart = text.lastIndexOf('\n', caret - 1) + 1;
   final prefix = text.substring(lineStart, caret).trimLeft();
-  if (prefix.characters
-          .where((letter) => letter.trim().isNotEmpty)
-          .take(5)
-          .length <
-      5) {
-    return null;
-  }
+  final words = _wordCharacters.allMatches(prefix).take(2).toList();
+  if (words.isEmpty) return null;
+  final singleWord = words.length == 1;
+  final needsWordEnd = singleWord && words.single.end == prefix.length;
   OriginalMatch? match;
   for (final original in originals) {
-    final start = original.text.indexOf(prefix);
-    if (start < 0) continue;
-    if (match != null || original.text.indexOf(prefix, start + 1) >= 0) {
-      return null;
+    final source = original.text;
+    for (
+      var start = source.indexOf(prefix);
+      start >= 0;
+      start = source.indexOf(prefix, start + 1)
+    ) {
+      final end = start + prefix.length;
+      if (_isWithinWord(source, start) ||
+          (needsWordEnd && _isWithinWord(source, end))) {
+        continue;
+      }
+      if (match != null) return null;
+      match = OriginalMatch(original, start, end);
     }
-    match = OriginalMatch(original, start, start + prefix.length);
   }
   return match;
 }

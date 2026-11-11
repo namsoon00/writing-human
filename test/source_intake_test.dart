@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/main.dart';
 import 'package:writing_human/source/source_intake.dart';
+import 'package:writing_human/source/originals.dart';
 import 'package:writing_human/ui/collection_sheet.dart';
 import 'package:writing_human/ui/source_import_sheet.dart';
 import 'package:writing_human/ui/source_reading.dart';
@@ -24,11 +25,11 @@ final readingText = find.byKey(const ValueKey('source-reading-text'));
 Finder closeIn(Finder parent) =>
     find.descendant(of: parent, matching: find.byTooltip('닫기'));
 
-Future<void> registerFromPanel(WidgetTester tester) async {
+Future<void> openRegistration(WidgetTester tester) async {
   await tester.tap(place);
   await tester.pumpAndSettle();
-  await tester.tap(find.text('원문 등록'));
-  await tester.pumpAndSettle();
+  expect(find.byType(SourceImportSheet), findsOneWidget);
+  expect(reading, findsNothing);
 }
 
 class FakeIntake extends SourceIntake {
@@ -132,6 +133,30 @@ Future<void> takePhoto(WidgetTester tester, {bool settle = true}) async {
 }
 
 void main() {
+  test('A complete unique word can suggest text before a second word', () {
+    const original = RegisteredOriginal('a', '아침이다. 햇빛이 책장에 내려앉았다.');
+    const repeated = RegisteredOriginal('b', '햇빛이 창문에 번졌다.');
+    const duplicateWithin = RegisteredOriginal('c', '햇빛이 곁에, 햇빛이 앞에.');
+    OriginalMatch? findMatch(
+      List<RegisteredOriginal> originals,
+      String typed,
+    ) => matchOriginal(originals, typed, typed.length);
+
+    expect(findMatch([original], '햇빛이')?.remainder, ' 책장에 내려앉았다.');
+    expect(
+      findMatch([
+        const RegisteredOriginal('short', '봄 바람이 분다.'),
+      ], '봄')?.remainder,
+      ' 바람이 분다.',
+    );
+    expect(findMatch([original], '햇빛'), isNull);
+    expect(findMatch([original], '빛이'), isNull);
+    expect(findMatch([original], '햇빛이 책')?.remainder, '장에 내려앉았다.');
+    expect(findMatch([original, repeated], '햇빛이'), isNull);
+    expect(findMatch([duplicateWithin], '햇빛이'), isNull);
+    expect(findMatch([original], '햇빛이 문'), isNull);
+  });
+
   testWidgets('Book originals register once and match in another record', (
     tester,
   ) async {
@@ -164,6 +189,20 @@ void main() {
     await open(tester, store, FakeIntake());
     expect(find.byTooltip('여기에 필사 추가'), findsNothing);
     expect(find.text('다음 쪽'), findsNothing);
+    Future<void> saveOriginal(String source, String citation) async {
+      await tester.enterText(sourceField, source);
+      await tester.enterText(
+        find.byKey(const ValueKey('original-citation')),
+        citation,
+      );
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+    }
+
+    await openRegistration(tester);
+    await saveOriginal(first, '12쪽');
+    expect(store.data.books.first.originals.single.text, first);
+    expect(store.data.records.first.originals, isEmpty);
     await tester.tap(find.text('보관함'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('책'));
@@ -178,17 +217,9 @@ void main() {
     await tester.ensureVisible(bookOriginals);
     await tester.tap(bookOriginals);
     await tester.pumpAndSettle();
-    for (final (source, citation) in [(first, '12쪽'), (second, '45쪽')]) {
-      await tester.tap(find.text('원문 등록'));
-      await tester.pumpAndSettle();
-      await tester.enterText(sourceField, source);
-      await tester.enterText(
-        find.byKey(const ValueKey('original-citation')),
-        citation,
-      );
-      await tester.tap(confirm);
-      await tester.pumpAndSettle();
-    }
+    await tester.tap(find.text('원문 등록'));
+    await tester.pumpAndSettle();
+    await saveOriginal(second, '45쪽');
     expect(store.data.books.first.originals.map((entry) => entry.text), [
       first,
       second,
@@ -208,6 +239,12 @@ void main() {
                 as TranscriptionGuidePainter)
             .remainderFor(body.value);
     expect(remainder(), isEmpty);
+    await tester.enterText(bodyField, '햇빛이');
+    await tester.pumpAndSettle();
+    expect(remainder(), isEmpty);
+    await tester.enterText(bodyField, '책장에');
+    await tester.pumpAndSettle();
+    expect(remainder(), ' 천천히 내려앉았다.');
     await tester.enterText(bodyField, '햇빛이 책장');
     await tester.pumpAndSettle();
     expect(remainder(), isEmpty);
@@ -229,6 +266,11 @@ void main() {
     expect(find.text('12쪽'), findsOneWidget);
     expect(tester.widget<Text>(readingText).textSpan!.toPlainText(), first);
     expect(tester.getTopLeft(reading).dy, greaterThan(250));
+    await tester.tap(find.text('원문 등록'));
+    await tester.pumpAndSettle();
+    await saveOriginal('정오의 종소리가 들렸다.', '60쪽');
+    expect(store.data.books.first.originals, hasLength(3));
+    expect(tester.widget<Text>(readingText).textSpan!.toPlainText(), first);
     await tester.tap(closeIn(reading));
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(bodyField).controller, same(body));
@@ -309,7 +351,7 @@ void main() {
       await open(tester, store, intake);
       final body = tester.widget<TextField>(bodyField).controller!;
       final original = body.value;
-      await registerFromPanel(tester);
+      await openRegistration(tester);
       expect(reads, 0);
       await tester.tap(find.byKey(const ValueKey('source-paste')));
       await tester.pumpAndSettle();
@@ -322,8 +364,7 @@ void main() {
       await tester.tap(confirm);
       await tester.pumpAndSettle();
       expect(store.data.records.single.originals.single.text, '첫 줄\n\n둘째 줄');
-      await tester.tap(closeIn(reading));
-      await tester.pumpAndSettle();
+      expect(reading, findsNothing);
       expect(tester.widget<TextField>(bodyField).controller, same(body));
       expect(body.value, original);
       expect(store.data.activePageId, 'p');
@@ -346,7 +387,7 @@ void main() {
       final intake = FakeIntake();
       await open(tester, store, intake);
       final body = tester.widget<TextField>(bodyField).controller!;
-      await registerFromPanel(tester);
+      await openRegistration(tester);
       await takePhoto(tester);
       expect(intake.photos, 1);
       expect(find.text('문단 고르기'), findsOneWidget);
@@ -364,8 +405,7 @@ void main() {
       await tester.tap(confirm);
       await tester.pumpAndSettle();
       expect(store.data.records.single.originals.single.text, '둘째 문단입니다.');
-      await tester.tap(closeIn(reading));
-      await tester.pumpAndSettle();
+      expect(reading, findsNothing);
       expect(store.data.activePage!.text, isEmpty);
       expect(tester.widget<TextField>(bodyField).controller, same(body));
       expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isFalse);
@@ -453,7 +493,7 @@ void main() {
       final store = MemoryStore();
       final intake = FakeIntake()..cancelPicker = true;
       await open(tester, store, intake);
-      await registerFromPanel(tester);
+      await openRegistration(tester);
       await tester.enterText(sourceField, '직접 입력한 원문');
       await takePhoto(tester);
       expect(
@@ -562,7 +602,7 @@ void main() {
       await open(tester, store, FakeIntake());
       tester.view.physicalSize = const Size(320, 640);
       await tester.pumpAndSettle();
-      await registerFromPanel(tester);
+      await openRegistration(tester);
       await tester.tap(sourceField);
       tester.view.viewInsets = const FakeViewPadding(bottom: 270);
       const composing = TextEditingValue(

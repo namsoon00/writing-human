@@ -129,8 +129,6 @@ void main() {
     );
     await tester.tap(originals);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('원문 등록'));
-    await tester.pumpAndSettle();
     await capture('choose');
     await tester.tap(find.byKey(const ValueKey('source-photo')));
     await tester.pumpAndSettle();
@@ -147,8 +145,6 @@ void main() {
       store.data.records.single.originals.single.text,
       paragraphs.join('\n\n'),
     );
-    await tester.tap(closeReading);
-    await tester.pumpAndSettle();
     expect(store.data.activePage!.text, isEmpty);
     expect(find.byKey(const ValueKey('transcription-guide')), findsOneWidget);
     await capture('guide');

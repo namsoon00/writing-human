@@ -12,14 +12,12 @@ class SourceReading extends StatefulWidget {
     this.match,
     this.onRegister,
     this.onRetry,
-    this.bookDetailsRegistration = false,
   });
 
   final List<RegisteredOriginal> originals;
   final OriginalMatch? match;
   final VoidCallback? onRegister;
   final VoidCallback? onRetry;
-  final bool bookDetailsRegistration;
 
   @override
   State<SourceReading> createState() => _SourceReadingState();
@@ -58,7 +56,7 @@ class _SourceReadingState extends State<SourceReading> {
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
-                  if (original == null && widget.onRegister != null)
+                  if (widget.onRegister != null)
                     TextButton(
                       onPressed: widget.onRegister,
                       child: const Text('원문 등록'),
@@ -84,13 +82,7 @@ class _SourceReadingState extends State<SourceReading> {
                         match: match,
                       )
                     : widget.originals.isEmpty
-                    ? Center(
-                        child: Text(
-                          widget.bookDetailsRegistration
-                              ? '책 상세에서 원문을 등록할 수 있습니다.'
-                              : '등록한 원문이 없습니다.',
-                        ),
-                      )
+                    ? const Center(child: Text('등록한 원문이 없습니다.'))
                     : ListView.separated(
                         itemCount: widget.originals.length,
                         separatorBuilder: (_, _) => const Divider(height: 1),

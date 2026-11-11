@@ -130,7 +130,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(sourceField, source);
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('source-confirm-follow')));
+    await tester.tap(confirm);
     await tester.pumpAndSettle();
 
     final field = tester.widget<TextField>(bodyField);
@@ -228,6 +228,8 @@ void main() {
       expect(tester.widget<TextField>(bodyField).controller, same(body));
       expect(body.value, original);
       expect(store.data.activePageId, 'p');
+      await tester.tap(find.text('원문 보기'));
+      await tester.pumpAndSettle();
       expect(find.text('첫 줄'), findsOneWidget);
       expect(find.text('둘째 줄'), findsNothing);
       expect(tester.takeException(), isNull);
@@ -262,8 +264,8 @@ void main() {
       expect(store.data.records.single.source, '둘째 문단입니다.');
       expect(store.data.activePage!.text, isEmpty);
       expect(tester.widget<TextField>(bodyField).controller, same(body));
-      expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isFalse);
-      expect(find.text('둘째 문단입니다.'), findsOneWidget);
+      expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isTrue);
+      expect(find.byKey(const ValueKey('transcription-guide')), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

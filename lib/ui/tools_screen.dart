@@ -154,7 +154,7 @@ class ToolsScreen extends StatelessWidget {
               const Divider(color: line),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('펜 움직임', style: TextStyle(fontSize: 14)),
+                title: const Text('잉크 반응', style: TextStyle(fontSize: 14)),
                 value: style.penMotion,
                 activeTrackColor: burgundy,
                 onChanged: (v) => controller.setStyle(style.copy(penMotion: v)),

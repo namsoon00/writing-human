@@ -181,13 +181,10 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     }
   }
 
-  void _submit({required bool follow}) {
+  void _submit() {
     final text = normalizeSource(_text.text);
     if (_editable && text.isNotEmpty && text.length <= sourceLengthLimit) {
-      Navigator.pop<SourceImportResult>(context, (
-        source: text,
-        follow: follow,
-      ));
+      Navigator.pop<SourceImportResult>(context, (source: text, follow: true));
     }
   }
 
@@ -389,43 +386,20 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-                child: blocks != null
-                    ? SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          key: const ValueKey('source-confirm'),
-                          onPressed: _selected.isEmpty
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    key: const ValueKey('source-confirm'),
+                    onPressed: blocks != null
+                        ? _selected.isEmpty
                               ? null
-                              : _reviewSelection,
-                          child: const Text('선택한 문단 확인'),
-                        ),
-                      )
-                    : Row(
-                        children: [
-                          Expanded(
-                            child: FilledButton.tonal(
-                              key: const ValueKey('source-confirm'),
-                              onPressed: canSubmit
-                                  ? () => _submit(follow: false)
-                                  : null,
-                              child: const Text(
-                                '이 원문으로 쓰기',
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: FilledButton(
-                              key: const ValueKey('source-confirm-follow'),
-                              onPressed: canSubmit
-                                  ? () => _submit(follow: true)
-                                  : null,
-                              child: const Text('따라 쓰기'),
-                            ),
-                          ),
-                        ],
-                      ),
+                              : _reviewSelection
+                        : canSubmit
+                        ? _submit
+                        : null,
+                    child: Text(blocks == null ? '따라 쓰기' : '선택한 문단 확인'),
+                  ),
+                ),
               ),
             ],
           ),

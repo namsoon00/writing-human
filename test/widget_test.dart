@@ -195,8 +195,8 @@ void main() {
       expect(store.data.style.paperIndex, 1);
       expect(store.data.style.fontIndex, 2);
       expect(store.data.style.penIndex, 0);
-      await tester.ensureVisible(find.text('펜 움직임'));
-      await tester.tap(find.widgetWithText(SwitchListTile, '펜 움직임'));
+      await tester.ensureVisible(find.text('잉크 반응'));
+      await tester.tap(find.widgetWithText(SwitchListTile, '잉크 반응'));
       await tester.pumpAndSettle();
       expect(store.data.style.penMotion, isFalse);
       await tester.tap(find.byTooltip('닫기'));
@@ -321,7 +321,7 @@ void main() {
         '먼저 골라 둔 원문',
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('이 원문으로 쓰기'));
+      await tester.tap(find.byKey(const ValueKey('source-confirm')));
       await tester.pumpAndSettle();
       expect(store.data.records.single.source, '먼저 골라 둔 원문');
       expect(store.data.activePage!.text, '');

@@ -155,7 +155,7 @@ class _PageEditorState extends State<PageEditor> {
                 controller: text,
                 scrollController: scroll,
                 focusNode: focus,
-                // Keep native input/selection, but let the pen mark the position.
+                // Keep native input/selection, with a separate ink indicator.
                 showCursor: false,
                 maxLines: null,
                 minLines: null,
@@ -247,6 +247,7 @@ class _PageEditorState extends State<PageEditor> {
                 focus: focus,
                 fieldKey: fieldRenderKey,
                 enabled: style.penMotion,
+                color: penColors[style.penIndex],
               ),
             ),
           ],

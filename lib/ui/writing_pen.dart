@@ -1,9 +1,8 @@
-import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
-/// A read-only, non-interactive companion to the actual editable caret.
-/// Never writes text, selection, composing, focus or scroll positions.
+/// Read-only feedback beside the native editable. Never writes input state.
 class WritingPen extends StatefulWidget {
   const WritingPen({
     super.key,
@@ -12,12 +11,14 @@ class WritingPen extends StatefulWidget {
     required this.focus,
     required this.fieldKey,
     required this.enabled,
+    this.color = const Color(0xff302c27),
   });
   final TextEditingController controller;
   final ScrollController scroll;
   final FocusNode focus;
   final GlobalKey fieldKey;
   final bool enabled;
+  final Color color;
 
   @override
   State<WritingPen> createState() => _WritingPenState();
@@ -25,20 +26,22 @@ class WritingPen extends StatefulWidget {
 
 class _WritingPenState extends State<WritingPen>
     with SingleTickerProviderStateMixin {
-  // The nib tip in the bundled, transparent 768:512 image.
-  static const nib = FractionalOffset(.185, .95);
-  static const penSize = Size(120, 80);
-  late final motion = AnimationController(
+  late final drying = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 130),
+    duration: const Duration(milliseconds: 420),
+    value: 1,
   );
   late TextEditingValue observed;
-  Offset? from, target;
+  Offset? target;
   Size? viewport;
-  bool queued = false, stroke = false, snap = true, reduced = false;
+  bool queued = false, reduced = false, newStroke = false;
+  TextRange? freshRange;
+  TextPainter? freshText;
+  Path? freshClip;
+  Offset freshOrigin = Offset.zero;
 
   bool get composing =>
-      widget.controller.value.composing.isValid &&
+      widget.controller.value.isComposingRangeValid &&
       !widget.controller.value.composing.isCollapsed;
 
   @override
@@ -52,12 +55,12 @@ class _WritingPenState extends State<WritingPen>
   void _listen(WritingPen pen, bool add) {
     if (add) {
       pen.controller.addListener(_textChanged);
-      pen.scroll.addListener(_snapChanged);
-      pen.focus.addListener(_snapChanged);
+      pen.scroll.addListener(_geometryChanged);
+      pen.focus.addListener(_geometryChanged);
     } else {
       pen.controller.removeListener(_textChanged);
-      pen.scroll.removeListener(_snapChanged);
-      pen.focus.removeListener(_snapChanged);
+      pen.scroll.removeListener(_geometryChanged);
+      pen.focus.removeListener(_geometryChanged);
     }
   }
 
@@ -67,8 +70,7 @@ class _WritingPenState extends State<WritingPen>
     reduced =
         MediaQuery.disableAnimationsOf(context) ||
         !TickerMode.valuesOf(context).enabled;
-    snap = true;
-    motion.stop();
+    _settle();
     _schedule();
   }
 
@@ -81,27 +83,56 @@ class _WritingPenState extends State<WritingPen>
       _listen(oldWidget, false);
       _listen(widget, true);
       observed = widget.controller.value;
-      snap = true;
+      _settle();
+    }
+    if (oldWidget.color != widget.color ||
+        oldWidget.enabled != widget.enabled) {
+      _settle();
     }
     _schedule();
+  }
+
+  void _settle() {
+    drying.stop();
+    drying.value = 1;
+    freshRange = null;
+    newStroke = false;
+    freshText?.dispose();
+    freshText = null;
+    freshClip = null;
   }
 
   void _textChanged() {
+    final before = observed;
     final next = widget.controller.value;
-    final wasComposing =
-        observed.composing.isValid && !observed.composing.isCollapsed;
-    stroke = next.text != observed.text || (wasComposing && !composing);
-    if (!stroke || composing) {
-      snap = true;
-      motion.stop();
-    }
     observed = next;
+    final wasComposing =
+        before.isComposingRangeValid && !before.composing.isCollapsed;
+    final caret = next.selection.extentOffset;
+    final typed =
+        next.text != before.text &&
+        next.text.length >= before.text.length &&
+        next.text.length - before.text.length <= 4;
+    final committed = wasComposing && caret > before.composing.start;
+    if (next == before) return;
+    _settle();
+    if (!composing &&
+        next.selection.isValid &&
+        next.selection.isCollapsed &&
+        caret > 0 &&
+        (typed || committed)) {
+      final glyph = next.text.substring(0, caret).characters.last;
+      if (glyph.trim().isNotEmpty) {
+        freshRange = TextRange(start: caret - glyph.length, end: caret);
+        newStroke = true;
+      }
+    }
     _schedule();
   }
 
-  void _snapChanged() {
-    snap = true;
-    motion.stop();
+  void _geometryChanged() {
+    // Scrolling or moving focus must never leave wet ink at an old position.
+    _settle();
     _schedule();
   }
 
@@ -110,7 +141,7 @@ class _WritingPenState extends State<WritingPen>
     queued = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       queued = false;
-      if (mounted) _readCaret();
+      if (mounted) _readGeometry();
     });
     WidgetsBinding.instance.ensureVisualUpdate();
   }
@@ -122,66 +153,86 @@ class _WritingPenState extends State<WritingPen>
     return found;
   }
 
-  Offset get position =>
-      Offset.lerp(from, target, Curves.easeOutCubic.transform(motion.value))!;
-
-  void _readCaret() {
+  void _readGeometry() {
     final value = widget.controller.value;
     Offset? next;
+    final editable = _findEditable(
+      widget.fieldKey.currentContext?.findRenderObject(),
+    );
+    final overlay = context.findRenderObject();
     if (widget.enabled &&
         !reduced &&
         widget.focus.hasFocus &&
         value.selection.isValid &&
-        value.selection.isCollapsed) {
-      final editable = _findEditable(
-        widget.fieldKey.currentContext?.findRenderObject(),
-      );
-      final overlay = context.findRenderObject();
-      if (editable != null &&
-          editable.attached &&
-          editable.hasSize &&
-          overlay is RenderBox &&
-          overlay.hasSize) {
-        final caret = editable.getLocalRectForCaret(value.selection.extent);
-        if (caret.overlaps(Offset.zero & editable.size)) {
-          final point = overlay.globalToLocal(
-            editable.localToGlobal(caret.bottomRight + const Offset(3, -3)),
-          );
-          if ((Offset.zero & overlay.size).contains(point)) next = point;
-        }
+        value.selection.isCollapsed &&
+        editable != null &&
+        editable.attached &&
+        editable.hasSize &&
+        overlay is RenderBox &&
+        overlay.hasSize) {
+      final caret = editable.getLocalRectForCaret(value.selection.extent);
+      if (caret.overlaps(Offset.zero & editable.size)) {
+        final point = overlay.globalToLocal(
+          editable.localToGlobal(caret.bottomRight + const Offset(2, -3)),
+        );
+        if ((Offset.zero & overlay.size).contains(point)) next = point;
+      }
+      if (newStroke &&
+          next != null &&
+          !composing &&
+          value.text.length <= 20000) {
+        _prepareInk(editable, overlay);
       }
     }
-    if (next == target && !stroke && !snap && !composing) return;
-    final animate =
-        next != null && target != null && stroke && !snap && !composing;
-    final start = target == null ? next : position;
-    // Lift/snap across line breaks, large pastes, taps and viewport changes;
-    // a small horizontal stroke follows normal committed typing only.
-    final sameLine =
-        next != null &&
-        start != null &&
-        (next.dy - start.dy).abs() < 12 &&
-        (next - start).distance < 90;
-    motion.stop();
-    if (next != target || stroke || target != null && next == null) {
-      setState(() {
-        target = next;
-        from = animate && sameLine ? start : next;
-      });
+    final animate = newStroke && freshText != null && next != null;
+    newStroke = false;
+    if (target != next || animate) {
+      setState(() => target = next);
     }
-    if (animate) {
-      motion.forward(from: 0);
-    } else {
-      motion.value = 1;
+    if (animate) drying.forward(from: 0);
+  }
+
+  void _prepareInk(RenderEditable editable, RenderBox overlay) {
+    final range = freshRange;
+    if (range == null) return;
+    final width = editable.size.width - editable.cursorWidth - 1;
+    if (width <= 0) return;
+    freshText?.dispose();
+    final text = TextPainter(
+      text: editable.text,
+      textDirection: editable.textDirection,
+      textAlign: editable.textAlign,
+      textScaler: editable.textScaler,
+      locale: editable.locale,
+      strutStyle: editable.strutStyle,
+      textHeightBehavior: editable.textHeightBehavior,
+      textWidthBasis: editable.textWidthBasis,
+    )..layout(maxWidth: width);
+    final origin = overlay.globalToLocal(editable.localToGlobal(Offset.zero));
+    final firstLine =
+        editable
+            .getEndpointsForSelection(const TextSelection.collapsed(offset: 0))
+            .single
+            .point
+            .dy -
+        editable.preferredLineHeight;
+    freshOrigin = origin + Offset(0, firstLine);
+    final clip = Path();
+    for (final box in text.getBoxesForSelection(
+      TextSelection(baseOffset: range.start, extentOffset: range.end),
+      boxHeightStyle: ui.BoxHeightStyle.tight,
+    )) {
+      clip.addRect(box.toRect().shift(freshOrigin));
     }
-    stroke = false;
-    snap = false;
+    freshText = text;
+    freshClip = clip;
   }
 
   @override
   void dispose() {
     _listen(widget, false);
-    motion.dispose();
+    freshText?.dispose();
+    drying.dispose();
     super.dispose();
   }
 
@@ -191,38 +242,45 @@ class _WritingPenState extends State<WritingPen>
       child: RepaintBoundary(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final size = constraints.biggest;
-            if (viewport != size) {
-              viewport = size;
-              snap = true;
+            if (viewport != constraints.biggest) {
+              viewport = constraints.biggest;
               _schedule();
             }
             return AnimatedBuilder(
-              animation: motion,
+              animation: drying,
               builder: (context, _) {
-                final at = target == null ? null : position;
-                final wave = math.sin(motion.value * math.pi);
+                final at = widget.enabled && !reduced ? target : null;
+                final wet = (1 - drying.value * 3).clamp(0.0, 1.0);
                 return Stack(
                   clipBehavior: Clip.hardEdge,
                   children: [
+                    if (at != null && freshText != null && wet > 0)
+                      Positioned.fill(
+                        child: CustomPaint(
+                          key: const ValueKey('fresh-ink'),
+                          painter: FreshInkPainter(
+                            text: freshText!,
+                            clip: freshClip!,
+                            origin: freshOrigin,
+                            opacity: wet * .2,
+                          ),
+                        ),
+                      ),
                     if (at != null)
                       Positioned(
-                        left: at.dx - penSize.width * nib.dx,
-                        top: at.dy - penSize.height * nib.dy - wave * 1.3,
-                        child: Transform.rotate(
-                          angle:
-                              math.pi / 2 +
-                              math.sin(motion.value * math.pi * 3) *
-                                  (1 - motion.value) *
-                                  .035,
-                          alignment: nib,
-                          child: SizedBox(
-                            key: const ValueKey('writing-pen'),
-                            width: penSize.width,
-                            height: penSize.height,
-                            child: Image.asset(
-                              'assets/images/fountain-pen.png',
-                              fit: BoxFit.fill,
+                        left: at.dx - 1.2,
+                        top: at.dy - 1.2,
+                        child: Opacity(
+                          opacity: .2 + (1 - drying.value) * .45,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: widget.color,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                            child: const SizedBox(
+                              key: ValueKey('writing-ink-point'),
+                              width: 2.4,
+                              height: 2.4,
                             ),
                           ),
                         ),
@@ -236,4 +294,37 @@ class _WritingPenState extends State<WritingPen>
       ),
     ),
   );
+}
+
+class FreshInkPainter extends CustomPainter {
+  const FreshInkPainter({
+    required this.text,
+    required this.clip,
+    required this.origin,
+    required this.opacity,
+  });
+  final TextPainter text;
+  final Path clip;
+  final Offset origin;
+  final double opacity;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.clipPath(clip);
+    canvas.saveLayer(
+      clip.getBounds(),
+      Paint()..color = Colors.white.withValues(alpha: opacity),
+    );
+    text.paint(canvas, origin);
+    canvas.restore();
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(FreshInkPainter oldDelegate) =>
+      text != oldDelegate.text ||
+      opacity != oldDelegate.opacity ||
+      clip != oldDelegate.clip ||
+      origin != oldDelegate.origin;
 }

@@ -52,13 +52,11 @@ class PenHarnessState extends State<PenHarness> {
 }
 
 final _field = find.byKey(const ValueKey('page-text'));
-final _pen = find.byKey(const ValueKey('writing-pen'));
+final _pen = find.byKey(const ValueKey('writing-ink-point'));
 
 Offset nibPoint(WidgetTester tester) {
   final box = tester.renderObject<RenderBox>(_pen);
-  return box.localToGlobal(
-    Offset(box.size.width * .185, box.size.height * .95),
-  );
+  return box.localToGlobal(box.size.center(Offset.zero));
 }
 
 void expectNibAtCaret(WidgetTester tester) {
@@ -70,7 +68,7 @@ void expectNibAtCaret(WidgetTester tester) {
   final value = tester.widget<TextField>(_field).controller!.value;
   final expected = editable.localToGlobal(
     editable.getLocalRectForCaret(value.selection.extent).bottomRight +
-        const Offset(3, -3),
+        const Offset(2, -3),
   );
   expect((nibPoint(tester) - expected).distance, lessThan(.2));
 }
@@ -94,7 +92,7 @@ void main() {
   }
 
   testWidgets(
-    'Nib follows committed typing, wrapping, newline and cursor taps',
+    'Ink settles after committed typing and follows wrapping and taps',
     (tester) async {
       final key = await open(tester);
       expectNibAtCaret(tester);
@@ -104,10 +102,12 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 40));
       final duringStroke = nibPoint(tester);
+      expect(find.byKey(const ValueKey('fresh-ink')), findsOneWidget);
       await tester.pumpAndSettle();
       expectNibAtCaret(tester);
       expect(duringStroke.dx, greaterThan(first.dx));
-      expect(duringStroke.dx, lessThan(nibPoint(tester).dx));
+      expect(duringStroke, nibPoint(tester));
+      expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
       expect(nibPoint(tester).dx, greaterThan(first.dx));
       final singleLine = nibPoint(tester);
       final prose = '한 문장\n${List.filled(4, '천천히 옮겨 쓰는 문장 ').join()}';
@@ -129,7 +129,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 650));
       expectNibAtCaret(tester);
       expect(controller.value, beforeIdle);
-      // The overlaid barrel must not intercept a tap in the writing field.
+      // The ink overlay must not intercept a tap in the writing field.
       await tester.tapAt(tester.getCenter(_field));
       await tester.pumpAndSettle();
       expect(controller.text, prose);
@@ -157,6 +157,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(controller.value, value);
+        expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
         expectNibAtCaret(tester);
         final point = nibPoint(tester);
         await tester.pump(const Duration(milliseconds: 60));

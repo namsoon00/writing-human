@@ -136,16 +136,31 @@ void main() {
     await tester.pumpAndSettle();
     expect(store.data.records.single.source, paragraphs.join('\n\n'));
     expect(store.data.activePage!.text, isEmpty);
-    expect(find.text(paragraphs.first), findsOneWidget);
-    await capture('reading');
-    await tester.tap(find.text('따라 쓰기'));
-    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('transcription-guide')), findsOneWidget);
     await capture('guide');
     await tester.enterText(find.byKey(const ValueKey('page-text')), '책장을 넘기면 ');
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('page-text')),
+      '책장을 넘기면 새',
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 35));
+    expect(find.byKey(const ValueKey('fresh-ink')), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const ValueKey('page-text')))
+          .controller!
+          .text,
+      '책장을 넘기면 새',
+    );
+    await capture('ink-writing');
     await tester.pumpAndSettle();
     await capture('guide-writing');
     await tester.tap(find.text('원문 보기'));
     await tester.pumpAndSettle();
+    await capture('reading');
     await tester.enterText(
       find.byKey(const ValueKey('page-text')),
       '책장을 넘기면 새로운 문장이 보입니다.',

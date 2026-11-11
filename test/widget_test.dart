@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/main.dart';
+import 'package:writing_human/ui/transcription_guide.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/data/store.dart';
 
@@ -305,9 +306,11 @@ void main() {
   });
 
   testWidgets(
-    'Source-first saving preserves an empty editor and restores the source',
+    'Reopen a saved passage with the guide and only the unwritten suffix',
     (tester) async {
       final store = MemoryStore();
+      const source = '먼저 골라 둔 원문\n\n다음에 골라 둔 원문';
+      const written = '먼저 골라 둔 원문\n다음에 골라';
       await tester.pumpWidget(WritingHumanApp(store: store));
       await tester.pumpAndSettle();
       final editor = find.byKey(const ValueKey('page-text'));
@@ -316,21 +319,37 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('원문 메모'));
       await tester.pumpAndSettle();
-      await tester.enterText(
-        find.byKey(const ValueKey('source-text')),
-        '먼저 골라 둔 원문',
-      );
+      await tester.enterText(find.byKey(const ValueKey('source-text')), source);
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('source-confirm')));
       await tester.pumpAndSettle();
-      expect(store.data.records.single.source, '먼저 골라 둔 원문');
+      expect(store.data.records.single.source, source);
       expect(store.data.activePage!.text, '');
       expect(tester.widget<TextField>(editor).controller, same(controller));
+      await tester.tap(find.byTooltip('다음 문단'));
+      await tester.pumpAndSettle();
+      await tester.enterText(editor, written);
+      await tester.pumpAndSettle();
+      expect(store.data.records.single.sourceParagraph, 1);
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();
       await tester.pumpWidget(WritingHumanApp(store: store));
       await tester.pumpAndSettle();
-      expect(find.text('먼저 골라 둔 원문'), findsOneWidget);
+      final overlay = find.byKey(const ValueKey('transcription-guide'));
+      final field = tester.widget<TextField>(editor);
+      final painter =
+          tester.widget<CustomPaint>(overlay).painter
+              as TranscriptionGuidePainter;
+      expect(field.controller!.text, written);
+      expect(field.focusNode!.hasFocus, isFalse);
+      expect(painter.guide.remaining(field.controller!.value), ' 둔 원문');
+      expect(
+        find.byKey(const ValueKey('source-reading-paragraph')),
+        findsNothing,
+      );
+      await tester.tap(find.text('원문 보기'));
+      await tester.pumpAndSettle();
+      expect(find.text('다음에 골라 둔 원문'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

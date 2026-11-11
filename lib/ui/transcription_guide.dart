@@ -7,6 +7,32 @@ class TranscriptionGuide {
     required this.initialText,
   });
 
+  factory TranscriptionGuide.resume({
+    required String paragraph,
+    required String text,
+  }) {
+    final source = paragraph.trimLeft();
+    if (!source.startsWith(text.trimLeft())) {
+      // A saved page can contain earlier paragraphs. Only resume a matching
+      // suffix that starts at a line boundary.
+      final paragraphBreak = text.lastIndexOf('\n\n');
+      final lineBreak = text.lastIndexOf('\n');
+      for (final start in {
+        if (paragraphBreak >= 0) paragraphBreak + 2,
+        if (lineBreak >= 0) lineBreak + 1,
+      }) {
+        final written = text.substring(start).trimLeft();
+        if (written.isNotEmpty && source.startsWith(written)) {
+          return TranscriptionGuide(
+            paragraph: paragraph,
+            initialText: text.substring(0, start),
+          );
+        }
+      }
+    }
+    return TranscriptionGuide(paragraph: paragraph, initialText: '');
+  }
+
   final String paragraph, initialText;
 
   String remaining(TextEditingValue value) {

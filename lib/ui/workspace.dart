@@ -66,7 +66,13 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   final _shownShares = <String>{};
   bool _sourceBusy = false, _pollingSources = false, _pollAgain = false;
   bool _checkedPhotoRecovery = false;
-  ({String pageId, String source, TranscriptionGuide passage, bool visible})?
+  ({
+    String pageId,
+    String source,
+    int paragraphIndex,
+    TranscriptionGuide passage,
+    bool visible,
+  })?
   _guide;
   Future<void>? _sheetClosed;
   LibraryController? _sheetOwner;
@@ -303,7 +309,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       if (_accountLocked || _reveal?.pageId != page.id) _reveal = null;
       if (_accountLocked ||
           _guide?.pageId != page.id ||
-          _guide?.source != record?.source) {
+          _guide?.source != record?.source ||
+          _guide?.paragraphIndex != record?.sourceParagraph) {
         _guide = null;
       }
     });
@@ -635,6 +642,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           _guide = (
             pageId: destination,
             source: source,
+            paragraphIndex: index,
             passage: TranscriptionGuide(
               paragraph: paragraphs[index.clamp(0, paragraphs.length - 1)],
               initialText: page.text,
@@ -970,14 +978,25 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         record?.source ??
         (fresh && currentPage.recordId == draft.recordId ? draftSource : '');
     final hasSource = source.trim().isNotEmpty;
-    final activeGuide = switch (_guide) {
-      final guide?
-          when !preview &&
-              guide.pageId == currentPage.id &&
-              guide.source == source =>
-        guide,
-      _ => null,
-    };
+    final paragraphIndex = record?.sourceParagraph ?? 0;
+    if (hasSource &&
+        !preview &&
+        (_guide?.pageId != currentPage.id ||
+            _guide?.source != source ||
+            _guide?.paragraphIndex != paragraphIndex)) {
+      final paragraphs = splitSourceParagraphs(source);
+      _guide = (
+        pageId: currentPage.id,
+        source: source,
+        paragraphIndex: paragraphIndex,
+        passage: TranscriptionGuide.resume(
+          paragraph: paragraphs[paragraphIndex.clamp(0, paragraphs.length - 1)],
+          text: currentPage.text,
+        ),
+        visible: true,
+      );
+    }
+    final activeGuide = hasSource && !preview ? _guide : null;
     final guide = activeGuide?.visible == true ? activeGuide?.passage : null;
     final media = MediaQuery.of(context);
     final availableHeight =
@@ -1079,29 +1098,28 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 SourceReading(
                   choice: style.bookDetails.sourceSlip,
                   source: source,
-                  paragraphIndex: record?.sourceParagraph ?? 0,
+                  paragraphIndex: paragraphIndex,
                   maxTextHeight: maxSourceTextHeight,
                   compact: compact,
-                  guiding: guide != null,
+                  guiding: preview || guide != null,
                   writing:
                       !preview &&
                       editorFocus.hasFocus &&
                       currentPage.text.isNotEmpty,
                   onParagraphChanged: navigationEnabled
                       ? (index, paragraph) {
-                          setState(
-                            () => _guide = guide == null
-                                ? null
-                                : (
-                                    pageId: currentPage.id,
-                                    source: source,
-                                    passage: TranscriptionGuide(
-                                      paragraph: paragraph,
-                                      initialText: currentPage.text,
-                                    ),
-                                    visible: true,
-                                  ),
-                          );
+                          setState(() {
+                            _guide = (
+                              pageId: currentPage.id,
+                              source: source,
+                              paragraphIndex: index,
+                              passage: TranscriptionGuide(
+                                paragraph: paragraph,
+                                initialText: currentPage.text,
+                              ),
+                              visible: guide != null,
+                            );
+                          });
                           c.setSourceParagraph(
                             currentPage.recordId,
                             source,
@@ -1115,6 +1133,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                             _guide = (
                               pageId: currentPage.id,
                               source: source,
+                              paragraphIndex: paragraphIndex,
                               passage:
                                   activeGuide?.passage ??
                                   TranscriptionGuide(

@@ -369,6 +369,8 @@ void main() {
       final store = MemoryStore()..data = specimen();
       await tester.pumpWidget(WritingHumanApp(store: store));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('원문 보기'));
+      await tester.pumpAndSettle();
       expect(find.byType(SourceSlip), findsOneWidget);
       await tester.tap(find.text('보관함'));
       await tester.pumpAndSettle();

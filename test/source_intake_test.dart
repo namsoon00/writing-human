@@ -286,6 +286,8 @@ void main() {
       (widget) => widget is IconButton && widget.tooltip == '다음 문단',
     );
     final previous = find.byTooltip('이전 문단');
+    await tester.tap(find.text('원문 보기'));
+    await tester.pumpAndSettle();
     expect(tester.widget<Text>(paragraph).data, first);
     final field = tester.widget<TextField>(bodyField);
     await tester.showKeyboard(bodyField);

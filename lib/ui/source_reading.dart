@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../data/book_detail_style.dart';
+import '../source/source_intake.dart';
 import 'book_details.dart';
 import 'paper_palette.dart';
 
@@ -35,19 +36,14 @@ class SourceReading extends StatefulWidget {
 }
 
 class _SourceReadingState extends State<SourceReading> {
-  static final _paragraphBreak = RegExp(r'\n[^\S\n]*\n(?:[^\S\n]*\n)*');
-  late List<String> _paragraphs = _readParagraphs();
-
-  List<String> _readParagraphs() => widget.source
-      .trim()
-      .replaceAll('\r\n', '\n')
-      .replaceAll('\r', '\n')
-      .split(_paragraphBreak);
+  late List<String> _paragraphs = splitSourceParagraphs(widget.source);
 
   @override
   void didUpdateWidget(SourceReading oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.source != widget.source) _paragraphs = _readParagraphs();
+    if (oldWidget.source != widget.source) {
+      _paragraphs = splitSourceParagraphs(widget.source);
+    }
   }
 
   @override

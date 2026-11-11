@@ -125,11 +125,12 @@ void main() {
     const source = '새로운 문장을 읽습니다.\n\n내 글로 남깁니다.';
     final store = MemoryStore();
     await open(tester, store, FakeIntake());
+    expect(find.text('원문 놓고 따라 쓰기'), findsOneWidget);
     await tester.tap(place);
     await tester.pumpAndSettle();
     await tester.enterText(sourceField, source);
     await tester.pumpAndSettle();
-    await tester.tap(confirm);
+    await tester.tap(find.byKey(const ValueKey('source-confirm-follow')));
     await tester.pumpAndSettle();
 
     final field = tester.widget<TextField>(bodyField);
@@ -140,9 +141,8 @@ void main() {
                 as TranscriptionGuidePainter)
             .guide
             .remaining(field.controller!.value);
-    await tester.tap(toggle);
-    await tester.pumpAndSettle();
     expect(remaining(), '새로운 문장을 읽습니다.');
+    expect(store.data.records.single.source, source);
     expect(store.data.activePage!.text, isEmpty);
     expect(field.focusNode!.hasFocus, isTrue);
 

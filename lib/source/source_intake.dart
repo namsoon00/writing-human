@@ -8,6 +8,11 @@ const _photoSizeLimit = 20 * 1024 * 1024;
 String normalizeSource(String text) =>
     text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
 
+final _paragraphBreak = RegExp(r'\n[^\S\n]*\n(?:[^\S\n]*\n)*');
+
+List<String> splitSourceParagraphs(String text) =>
+    normalizeSource(text).split(_paragraphBreak);
+
 class SourcePhoto {
   const SourcePhoto(this.path, this.bytes);
   final String path;

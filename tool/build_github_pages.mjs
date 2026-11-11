@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import {readFileSync, writeFileSync} from 'node:fs';
 import {prepareOcr} from './prepare_ocr.mjs';
@@ -24,5 +25,17 @@ const html = readFileSync(`${output}/index.html`, 'utf8');
 if (!html.includes(`<base href="${base}">`)) {
   throw new Error('The generated index has an unexpected base path.');
 }
+const version = bytes => createHash('sha256').update(bytes).digest('hex').slice(0, 16);
+const appVersion = version(readFileSync(`${output}/main.dart.js`));
+const bootstrapPath = `${output}/flutter_bootstrap.js`;
+const bootstrap = readFileSync(bootstrapPath, 'utf8');
+const appEntry = '"mainJsPath":"main.dart.js"';
+const loaderEntry = 'src="flutter_bootstrap.js"';
+if (!bootstrap.includes(appEntry) || !html.includes(loaderEntry)) {
+  throw new Error('The generated Flutter loader has an unexpected entry path.');
+}
+const loader = bootstrap.replace(appEntry, `"mainJsPath":"main.dart.js?v=${appVersion}"`);
+writeFileSync(bootstrapPath, loader);
+writeFileSync(`${output}/index.html`, html.replace(loaderEntry, `src="flutter_bootstrap.js?v=${version(loader)}"`));
 writeFileSync(`${output}/.nojekyll`, '');
 console.log(`GitHub Pages build ready at ${output}, base ${base}, local storage only.`);

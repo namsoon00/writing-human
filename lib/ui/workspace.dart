@@ -543,7 +543,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         await _pollSources();
         return;
       }
-      final route = ModalBottomSheetRoute<String>(
+      final route = ModalBottomSheetRoute<SourceImportResult>(
         isScrollControlled: true,
         showDragHandle: true,
         barrierLabel: MaterialLocalizations.of(
@@ -558,14 +558,18 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           shared: shared != null,
         ),
       );
-      final source = await Navigator.of(context).push(route);
+      final result = await Navigator.of(context).push(route);
       await route.completed;
-      if (source == null || !mounted || c != owner || _accountLocked) return;
+      if (result == null || !mounted || c != owner || _accountLocked) return;
+      final source = result.source;
       if (page.id != selectedPage.id || owner.composing) {
         _sourceNotice('작성 중인 쪽이 바뀌었어요. 원문을 다시 확인해 주세요.');
         return;
       }
       if (owner.saveError != null) return;
+      final destination = shared == null
+          ? selectedPage.id
+          : '${_sharedRecordId(shared)}-page';
       if (shared == null && source != initial) {
         _sourcePositions.remove(selectedPage.recordId);
       }
@@ -589,6 +593,26 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         return;
       }
       if (shared != null) unawaited(_pollSources(openAutomatically: false));
+      if (result.follow &&
+          page.id == destination &&
+          record?.source == source &&
+          !owner.composing) {
+        final paragraphs = splitSourceParagraphs(source);
+        final position = _sourcePositions[page.recordId];
+        final index = position?.source == source ? position!.index : 0;
+        setState(() {
+          _guide = (
+            pageId: destination,
+            source: source,
+            passage: TranscriptionGuide(
+              paragraph: paragraphs[index.clamp(0, paragraphs.length - 1)],
+              initialText: page.text,
+            ),
+            visible: true,
+          );
+        });
+        editorFocus.requestFocus();
+      }
     } finally {
       _sourceBusy = false;
     }
@@ -1012,7 +1036,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                     key: const ValueKey('place-source'),
                     onPressed: () => _source(),
                     icon: const Icon(CupertinoIcons.quote_bubble, size: 15),
-                    label: const Text('원문 놓기'),
+                    label: const Text('원문 놓고 따라 쓰기'),
                   ),
                 ),
               if (hasSource)

@@ -52,6 +52,27 @@ test('Development typeface flag is optional and validated without changing legac
   assert.equal(validLibrary(library), true);
 });
 
+test('Book materials and page feedback accept legacy snapshots and validate independently', () => {
+  const library = empty();
+  const book = {id: 'b', title: '책', author: ''};
+  library.books = [book];
+  assert.equal(validLibrary(library), true);
+  Object.assign(book, {coverIndex: 2, paperIndex: 3});
+  Object.assign(library.style, {pageMotion: false, pageSound: true});
+  assert.equal(validLibrary(library), true);
+  for (const [target, key, invalid] of [
+    [book, 'coverIndex', 3],
+    [book, 'paperIndex', -1],
+    [library.style, 'pageMotion', 1],
+    [library.style, 'pageSound', 'true'],
+  ]) {
+    const valid = target[key];
+    target[key] = invalid;
+    assert.equal(validLibrary(library), false);
+    target[key] = valid;
+  }
+});
+
 test('Independent book details accept legacy defaults and validate every separate choice', () => {
   const library = empty();
   for (const bookDetails of [{}, {indexTab:{enabled:true,variant:1,tone:2}, recordDivider:{variant:2}, pressedFlower:{variant:1,tone:1,placement:2}}, {ribbon:{enabled:false,variant:1,tone:2},dateStamp:{enabled:true,variant:2,tone:3}}]) {

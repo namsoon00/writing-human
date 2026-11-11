@@ -55,7 +55,7 @@ class BookFrontCover extends StatelessWidget {
             builder: (context, box) {
               final coverWidth =
                   (box.maxWidth - 12) /
-                  (style.bookDetails.indexTab.enabled ? 1.22 : 1);
+                  BookCover.totalWidthFactor(style.bookDetails);
               final width = math
                   .min(coverWidth, box.maxHeight / 1.36 - 12)
                   .clamp(1.0, 420.0);
@@ -66,6 +66,7 @@ class BookFrontCover extends StatelessWidget {
                       title: title,
                       width: width,
                       variant: variant,
+                      pageCount: pageCount,
                       details: style.bookDetails,
                     ),
                   ),

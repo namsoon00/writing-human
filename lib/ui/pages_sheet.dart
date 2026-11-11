@@ -79,6 +79,7 @@ class PagesSheet extends StatelessWidget {
                                 title: coverTitle,
                                 width: box.maxWidth * .72,
                                 variant: coverVariant,
+                                pageCount: pages.length,
                                 details: style.bookDetails,
                               ),
                             ),

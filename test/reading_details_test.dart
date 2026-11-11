@@ -8,13 +8,47 @@ import 'package:writing_human/data/model.dart';
 import 'package:writing_human/data/sqlite_store.dart';
 import 'package:writing_human/sync/merge.dart';
 import 'package:writing_human/ui/book_detail_tools.dart';
+import 'package:writing_human/ui/book_details.dart';
 import 'package:writing_human/ui/collection_sheet.dart';
+import 'package:writing_human/ui/paper.dart';
 import 'package:writing_human/ui/reading_details.dart';
 import 'book_details_test.dart' show specimen;
 import 'widget_test.dart' show MemoryStore;
 
 void main() {
   sqfliteFfiInit();
+  testWidgets(
+    'Cover binding stays on the board and the index tab overlaps it',
+    (tester) async {
+      for (final width in [48.0, 320.0]) {
+        for (var variant = 0; variant < coverNames.length; variant++) {
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Center(
+                child: BookCover(
+                  title: '필사',
+                  width: width,
+                  variant: variant,
+                  pageCount: 2,
+                ),
+              ),
+            ),
+          );
+          final cover = tester.getRect(find.byType(BookCover));
+          final image = tester.getRect(find.byType(Image));
+          final binding = tester.getRect(find.byType(BookBinding));
+          final tab = tester.getRect(find.byType(BookIndexEdge));
+          expect(binding.left, greaterThan(image.left + width * .04));
+          expect(binding.top, greaterThan(image.top));
+          expect(binding.bottom, lessThan(image.bottom));
+          expect(tab.left, lessThan(binding.right));
+          expect(tab.right, greaterThan(image.right));
+          expect(tab.right, lessThanOrEqualTo(cover.right));
+        }
+      }
+    },
+  );
+
   test(
     'Version four file migrates with original writing; index labels and all new choices reopen',
     () async {
@@ -66,6 +100,8 @@ void main() {
               'written_on': p.writtenOn,
             });
             final style = original.style.toJson();
+            style.remove('pageMotion');
+            style.remove('pageSound');
             final details = style['bookDetails'] as Json;
             for (final kind in [
               BookDetailKind.indexTab,
@@ -91,11 +127,13 @@ void main() {
       LibraryController? c;
       try {
         final migrated = await store.load();
-        expect(await store.db.getVersion(), 5);
+        expect(await store.db.getVersion(), 6);
         expect(migrated.encode(), original.encode());
         c = LibraryController(store, migrated);
         c.setBookIndexLabel('b', '다시 읽기');
         c.setBookOwner('b', '새 필명');
+        c.setBookMaterials('b', coverIndex: 2);
+        c.setBookMaterials('b', paperIndex: 3);
         var details = c.library.style.bookDetails;
         details = details.withChoice(
           BookDetailKind.indexTab,
@@ -109,7 +147,13 @@ void main() {
           BookDetailKind.pressedFlower,
           const BookDetailChoice(variant: 1, tone: 1, placement: 2),
         );
-        c.setStyle(c.library.style.copy(bookDetails: details));
+        c.setStyle(
+          c.library.style.copy(
+            bookDetails: details,
+            pageMotion: false,
+            pageSound: true,
+          ),
+        );
         await c.settled;
         expect(c.saveError, isNull);
         final expected = c.library.encode();
@@ -121,6 +165,11 @@ void main() {
         final restored = await store.load();
         expect(restored.encode(), expected);
         expect(restored.books.single.indexLabel, '다시 읽기');
+        expect(restored.books.single.coverIndex, 2);
+        expect(restored.books.single.paperIndex, 3);
+        expect(restored.style.paperIndex, original.style.paperIndex);
+        expect(restored.style.pageMotion, isFalse);
+        expect(restored.style.pageSound, isTrue);
         expect(restored.pages.single.toJson(), original.pages.single.toJson());
         expect(
           restored.records.single.toJson(),
@@ -139,8 +188,9 @@ void main() {
     () {
       final base = specimen();
       final local = base.copy(
-        books: [base.books.single.copy(indexLabel: '다시 읽기')],
+        books: [base.books.single.copy(indexLabel: '다시 읽기', coverIndex: 2)],
         style: base.style.copy(
+          pageMotion: false,
           bookDetails: base.style.bookDetails.withChoice(
             BookDetailKind.pressedFlower,
             const BookDetailChoice(placement: 2),
@@ -148,8 +198,9 @@ void main() {
         ),
       );
       final remote = base.copy(
-        books: [base.books.single.copy(owner: '필명')],
+        books: [base.books.single.copy(owner: '필명', paperIndex: 3)],
         style: base.style.copy(
+          pageSound: true,
           bookDetails: base.style.bookDetails
               .withChoice(
                 BookDetailKind.pressedFlower,
@@ -164,6 +215,10 @@ void main() {
       final result = mergeLibraries(base, local, remote).library;
       expect(result.books.single.indexLabel, '다시 읽기');
       expect(result.books.single.owner, '필명');
+      expect(result.books.single.coverIndex, 2);
+      expect(result.books.single.paperIndex, 3);
+      expect(result.style.pageMotion, isFalse);
+      expect(result.style.pageSound, isTrue);
       expect(result.style.bookDetails.pressedFlower.toJson(), {
         'enabled': true,
         'variant': 1,
@@ -234,6 +289,25 @@ void main() {
       await tester.tap(tab);
       await tester.pumpAndSettle();
       expect(find.byType(PressedFlower), findsOneWidget);
+      await tester.ensureVisible(find.text('표지 고르기'));
+      await tester.tap(find.text('표지 고르기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('푸른 리넨'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('내지 고르기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('크림지'));
+      await tester.pumpAndSettle();
+      expect(c.library.books.first.coverIndex, 2);
+      expect(c.library.books.first.paperIndex, 3);
+      expect(c.library.books.last.coverIndex, isNull);
+      expect(c.library.style.paperIndex, initial.style.paperIndex);
+      await tester.tap(find.text('내지 고르기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('기본 종이 사용'));
+      await tester.pumpAndSettle();
+      expect(c.library.books.first.paperIndex, isNull);
+      expect(c.library.books.first.coverIndex, 2);
       await tester.ensureVisible(find.byKey(const ValueKey('edit-book-index')));
       await tester.tap(find.byKey(const ValueKey('edit-book-index')));
       await tester.pumpAndSettle();

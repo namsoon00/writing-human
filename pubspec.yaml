@@ -41,6 +41,7 @@ dependencies:
   crypto: ^3.0.8
   uuid: ^4.6.0
   image_picker: 1.2.4
+  audioplayers: ">=6.5.0 <6.8.0"
 
 dev_dependencies:
   flutter_test:
@@ -98,6 +99,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/audio/page-turn.mp3
     - assets/fonts/WritingHumanDevelopment-info.json
 
   fonts:

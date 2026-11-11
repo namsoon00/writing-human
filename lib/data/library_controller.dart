@@ -112,6 +112,33 @@ class LibraryController extends ChangeNotifier {
   );
 
   void setStyle(WritingStyle style) => _publish(library.copy(style: style));
+  int coverIndexFor(Book? book) {
+    if (book == null) return 0;
+    final position = library.books.indexWhere((b) => b.id == book.id);
+    return book.coverIndex ?? (position < 0 ? 0 : position % 3);
+  }
+
+  void setBookMaterials(
+    String id, {
+    int? coverIndex,
+    int? paperIndex,
+    bool useDefaultPaper = false,
+  }) => _publish(
+    library.copy(
+      books: library.books
+          .map(
+            (b) => b.id == id
+                ? b.copy(
+                    coverIndex: coverIndex,
+                    paperIndex: paperIndex,
+                    useDefaultPaper: useDefaultPaper,
+                  )
+                : b,
+          )
+          .toList(),
+    ),
+  );
+
   void setBookOwner(String id, String owner) => _publish(
     library.copy(
       books: library.books

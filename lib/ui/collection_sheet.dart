@@ -52,6 +52,75 @@ class _CollectionSheetState extends State<CollectionSheet> {
     }
   }
 
+  Future<void> _cover(Book book) async {
+    final controller = c;
+    final selected = c.coverIndexFor(book);
+    final details = c.library.style.bookDetails;
+    final choice = await showDialog<int>(
+      context: context,
+      builder: (dialog) => SimpleDialog(
+        title: const Text('책 표지'),
+        children: [
+          for (var i = 0; i < coverNames.length; i++)
+            ListTile(
+              leading: ExcludeSemantics(
+                child: BookCover(
+                  title: book.title,
+                  width: 34,
+                  variant: i,
+                  details: details,
+                ),
+              ),
+              title: Text(coverNames[i]),
+              selected: selected == i,
+              trailing: selected == i ? const Icon(Icons.check) : null,
+              onTap: () => Navigator.pop(dialog, i),
+            ),
+        ],
+      ),
+    );
+    if (choice != null && mounted && c == controller) {
+      c.setBookMaterials(book.id, coverIndex: choice);
+    }
+  }
+
+  Future<void> _paper(Book book) async {
+    final controller = c;
+    final selected = book.paperIndex ?? -1;
+    final fallback = c.library.style.paperIndex;
+    final choice = await showDialog<int>(
+      context: context,
+      builder: (dialog) => SimpleDialog(
+        title: const Text('책 내지'),
+        children: [
+          for (var i = -1; i < paperNames.length; i++)
+            ListTile(
+              leading: Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: paperColors[i < 0 ? fallback : i],
+                  border: Border.all(color: line),
+                ),
+              ),
+              title: Text(i < 0 ? '기본 종이 사용' : paperNames[i]),
+              selected: selected == i,
+              trailing: selected == i ? const Icon(Icons.check) : null,
+              onTap: () => Navigator.pop(dialog, i),
+            ),
+        ],
+      ),
+    );
+    if (choice != null && mounted && c == controller) {
+      c.setBookMaterials(
+        book.id,
+        paperIndex: choice < 0 ? null : choice,
+        useDefaultPaper: choice < 0,
+      );
+    }
+  }
+
   Widget _indexTabs() => SizedBox(
     height: math.max(
       64.0,
@@ -254,6 +323,27 @@ class _CollectionSheetState extends State<CollectionSheet> {
                                   summary:
                                       '${ids.length}편 · $pageCount쪽${book.author.isEmpty ? '' : ' · ${book.author}'}',
                                 ),
+                                Wrap(
+                                  spacing: 12,
+                                  children: [
+                                    TextButton.icon(
+                                      onPressed: () => _cover(book),
+                                      icon: const Icon(
+                                        CupertinoIcons.book,
+                                        size: 16,
+                                      ),
+                                      label: const Text('표지 고르기'),
+                                    ),
+                                    TextButton.icon(
+                                      onPressed: () => _paper(book),
+                                      icon: const Icon(
+                                        CupertinoIcons.doc,
+                                        size: 16,
+                                      ),
+                                      label: const Text('내지 고르기'),
+                                    ),
+                                  ],
+                                ),
                                 Tooltip(
                                   message: '색인 이름 고치기',
                                   child: TextButton.icon(
@@ -389,58 +479,69 @@ class _CollectionSheetState extends State<CollectionSheet> {
     },
   );
 
-  Widget _books() => c.library.books.isEmpty
-      ? const Center(
-          child: Text(
-            '책으로 묶는 건, 나중에 해도 괜찮아요.',
-            style: TextStyle(color: muted, fontSize: 13),
-          ),
-        )
-      : ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          itemCount: c.library.books.length,
-          separatorBuilder: (_, _) => const Divider(color: line, height: 1),
-          itemBuilder: (context, i) {
-            final book = c.library.books[i];
-            final count = c.library.records
-                .where((r) => r.bookId == book.id)
-                .length;
-            return ListTile(
-              contentPadding: const EdgeInsets.symmetric(vertical: 12),
-              leading: BookCover(
-                details: c.library.style.bookDetails,
-                title: book.title,
-                width: 42,
-                variant: i,
-                bookmarked: book.id == c.library.activeBook?.id,
-              ),
-              title: Text(
-                book.title,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
+  Widget _books() {
+    final recordBooks = {for (final r in c.library.records) r.id: r.bookId};
+    final pageCounts = <String, int>{};
+    for (final page in c.library.pages) {
+      final bookId = recordBooks[page.recordId];
+      if (bookId != null) {
+        pageCounts.update(bookId, (count) => count + 1, ifAbsent: () => 1);
+      }
+    }
+    return c.library.books.isEmpty
+        ? const Center(
+            child: Text(
+              '책으로 묶는 건, 나중에 해도 괜찮아요.',
+              style: TextStyle(color: muted, fontSize: 13),
+            ),
+          )
+        : ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            itemCount: c.library.books.length,
+            separatorBuilder: (_, _) => const Divider(color: line, height: 1),
+            itemBuilder: (context, i) {
+              final book = c.library.books[i];
+              final count = c.library.records
+                  .where((r) => r.bookId == book.id)
+                  .length;
+              return ListTile(
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                leading: BookCover(
+                  details: c.library.style.bookDetails,
+                  title: book.title,
+                  width: 48,
+                  variant: c.coverIndexFor(book),
+                  pageCount: pageCounts[book.id] ?? 0,
+                  bookmarked: book.id == c.library.activeBook?.id,
                 ),
-              ),
-              subtitle: Text(
-                '${book.author.isEmpty ? '나의 문장 모음' : book.author} · $count편',
-                style: const TextStyle(color: muted, fontSize: 11),
-              ),
-              trailing: IconButton(
-                tooltip: '즐겨찾기',
-                onPressed: () => c.toggleFavorite(book.id),
-                icon: Icon(
-                  c.library.style.favoriteBookIds.contains(book.id)
-                      ? CupertinoIcons.bookmark_fill
-                      : CupertinoIcons.bookmark,
-                  size: 17,
-                  color: muted,
+                title: Text(
+                  book.title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              onTap: () => setState(() {
-                books = false;
-                bookId = book.id;
-              }),
-            );
-          },
-        );
+                subtitle: Text(
+                  '${book.author.isEmpty ? '나의 문장 모음' : book.author} · $count편',
+                  style: const TextStyle(color: muted, fontSize: 11),
+                ),
+                trailing: IconButton(
+                  tooltip: '즐겨찾기',
+                  onPressed: () => c.toggleFavorite(book.id),
+                  icon: Icon(
+                    c.library.style.favoriteBookIds.contains(book.id)
+                        ? CupertinoIcons.bookmark_fill
+                        : CupertinoIcons.bookmark,
+                    size: 17,
+                    color: muted,
+                  ),
+                ),
+                onTap: () => setState(() {
+                  books = false;
+                  bookId = book.id;
+                }),
+              );
+            },
+          );
+  }
 }

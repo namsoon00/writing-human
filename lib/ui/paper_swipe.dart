@@ -12,6 +12,7 @@ class PaperSwipe extends StatefulWidget {
     this.onNext,
     this.touchOnly = false,
     this.onTurnStart,
+    this.onTurnOrigin,
     this.onTurnUpdate,
     this.onTurnEnd,
     this.onTurnCancel,
@@ -20,6 +21,7 @@ class PaperSwipe extends StatefulWidget {
   final VoidCallback? onPrevious, onNext;
   final bool touchOnly;
   final VoidCallback? onTurnStart, onTurnCancel;
+  final ValueChanged<Offset>? onTurnOrigin;
   final ValueChanged<double>? onTurnUpdate;
   final void Function(double distance, double velocity)? onTurnEnd;
   @override
@@ -41,6 +43,7 @@ class _PaperSwipeState extends State<PaperSwipe> {
         distance = 0;
         originX = details.localPosition.dx;
         widget.onTurnStart?.call();
+        widget.onTurnOrigin?.call(details.localPosition);
       }
       ..onUpdate = (details) {
         distance = details.localPosition.dx - originX;

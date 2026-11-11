@@ -9,7 +9,7 @@ import 'paper.dart';
 /// Connects the paper and footer recognizers to the same turn surface.
 class PageTurnController {
   _PageTurnViewState? _view;
-  void start() => _view?._startDrag();
+  void start({Offset? origin}) => _view?._startDrag(origin);
   void update(double distance) => _view?._updateDrag(distance);
   void end(double distance, double velocity) =>
       unawaited(_view?._finishDrag(distance, velocity));
@@ -56,7 +56,8 @@ class _PageTurnViewState extends State<PageTurnView>
   bool _dragForward = true;
   int _gestureVersion = 0;
   Widget? _preview;
-  double _width = 0;
+  Size _surfaceSize = Size.zero;
+  Offset? _dragOrigin;
   final surface = GlobalKey();
   ui.Image? outgoing;
   WritingStyle? outgoingStyle;
@@ -94,16 +95,17 @@ class _PageTurnViewState extends State<PageTurnView>
     dragProgress.stop();
     _dragging = _ending = _committing = false;
     _preview = null;
+    _dragOrigin = null;
     _resetting = true;
     dragProgress.value = 0;
     _resetting = false;
   }
 
-  void _startDrag() {
+  void _startDrag(Offset? origin) {
     if (_dragging ||
         _ending ||
         widget.composing ||
-        _width <= 0 ||
+        _surfaceSize.isEmpty ||
         (widget.previous == null && widget.next == null)) {
       return;
     }
@@ -111,6 +113,7 @@ class _PageTurnViewState extends State<PageTurnView>
       _stopImage();
       _resetDrag();
       _dragging = true;
+      _dragOrigin = origin;
     });
   }
 
@@ -124,11 +127,20 @@ class _PageTurnViewState extends State<PageTurnView>
         : widget.previous;
     dragProgress.value = _preview == null
         ? 0
-        : (distance.abs() / _width).clamp(0.0, 1.0);
+        : (distance.abs() / _surfaceSize.width).clamp(0.0, 1.0);
+  }
+
+  bool get _fromCorner {
+    final origin = _dragOrigin;
+    if (origin == null || origin.dy < _surfaceSize.height * .64) return false;
+    final reach = math.min(96, _surfaceSize.width * .25);
+    return _dragForward
+        ? origin.dx >= _surfaceSize.width - reach
+        : origin.dx <= reach;
   }
 
   Future<void> _easeTo(double value) async {
-    if (reduced || !TickerMode.valuesOf(context).enabled) {
+    if (reduced || !widget.style.pageMotion) {
       dragProgress.value = value;
       return;
     }
@@ -230,7 +242,8 @@ class _PageTurnViewState extends State<PageTurnView>
       // the save queue writes the new active position.
       if (moved ||
           oldWidget.page.text != widget.page.text ||
-          oldWidget.style != widget.style) {
+          oldWidget.style.paperIndex != widget.style.paperIndex ||
+          oldWidget.style.pageMotion != widget.style.pageMotion) {
         _resetDrag();
       }
       return;
@@ -241,7 +254,11 @@ class _PageTurnViewState extends State<PageTurnView>
     }
     if (!moved) return;
     _stopImage();
-    if (reduced || oldWidget.page.text.length > 20000) return;
+    if (reduced ||
+        !widget.style.pageMotion ||
+        oldWidget.page.text.length > 20000) {
+      return;
+    }
     final boundary = surface.currentContext?.findRenderObject();
     if (boundary is! _PaperSurfaceBoundary ||
         !boundary.hasSize ||
@@ -275,9 +292,33 @@ class _PageTurnViewState extends State<PageTurnView>
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      _width = constraints.maxWidth;
-      final revealing = _preview != null && dragProgress.value > 0;
+      _surfaceSize = constraints.biggest;
+      final revealing =
+          _preview != null &&
+          dragProgress.value > 0 &&
+          !reduced &&
+          widget.style.pageMotion;
       final progress = dragProgress.value;
+      final corner = revealing && _fromCorner;
+      final color = paperColors[widget.style.paperIndex];
+      Widget clipped(Widget child, {required bool incoming}) {
+        final key = ValueKey(incoming ? 'page-turn-reveal' : 'page-turn-live');
+        // Keep one stable wrapper type and key around the actual editor.
+        return ClipRect(
+          key: key,
+          clipper: revealing && !corner
+              ? PageRevealClipper(progress, _dragForward, incoming: incoming)
+              : null,
+          child: ClipPath(
+            clipper: corner
+                ? _CornerPeel(progress, _dragForward, incoming)
+                : null,
+            clipBehavior: corner ? Clip.antiAlias : Clip.none,
+            child: child,
+          ),
+        );
+      }
+
       return Stack(
         clipBehavior: Clip.hardEdge,
         fit: StackFit.expand,
@@ -286,35 +327,25 @@ class _PageTurnViewState extends State<PageTurnView>
             Positioned.fill(
               child: ExcludeSemantics(
                 child: IgnorePointer(
-                  child: ClipRect(
-                    key: const ValueKey('page-turn-reveal'),
-                    clipper: PageRevealClipper(
-                      progress,
-                      _dragForward,
-                      incoming: true,
-                    ),
-                    child: RepaintBoundary(child: _preview),
+                  child: clipped(
+                    RepaintBoundary(child: _preview),
+                    incoming: true,
                   ),
                 ),
               ),
             ),
-          ClipRect(
-            key: const ValueKey('page-turn-live'),
-            clipper: revealing
-                ? PageRevealClipper(progress, _dragForward)
-                : null,
-            child: _PaperSurface(key: surface, child: widget.child),
+          clipped(
+            _PaperSurface(key: surface, child: widget.child),
+            incoming: false,
           ),
-          if (revealing && !reduced)
+          if (revealing)
             Positioned.fill(
               child: IgnorePointer(
                 child: CustomPaint(
                   key: const ValueKey('page-turn-fold'),
-                  painter: _DraggedFold(
-                    progress,
-                    _dragForward,
-                    paperColors[widget.style.paperIndex],
-                  ),
+                  painter: corner
+                      ? _CornerFold(progress, _dragForward, color)
+                      : _DraggedFold(progress, _dragForward, color),
                 ),
               ),
             ),
@@ -380,6 +411,112 @@ class PageRevealClipper extends CustomClipper<Rect> {
       old.progress != progress ||
       old.forward != forward ||
       old.incoming != incoming;
+}
+
+class _CornerGeometry {
+  _CornerGeometry(this.size, double progress, this.forward)
+    : top = size.width * (1 - progress * progress),
+      bottom = size.width * math.max(0, 1 - progress * 1.55),
+      lift = math.min(size.width * .18, 75) * math.sin(progress * math.pi);
+
+  final Size size;
+  final bool forward;
+  final double top, bottom, lift;
+
+  double x(double value) => forward ? value : size.width - value;
+
+  Path crease() {
+    final h = size.height;
+    return Path()
+      ..moveTo(x(top), 0)
+      ..cubicTo(x(top), h * .57, x(top), h * .76, x(bottom), h);
+  }
+
+  Path get page => crease()
+    ..lineTo(x(0), size.height)
+    ..lineTo(x(0), 0)
+    ..close();
+
+  Path get underside {
+    final h = size.height;
+    return crease()
+      ..cubicTo(
+        x(math.max(0, bottom - lift * .8)),
+        h * .92,
+        x(math.max(0, (top + bottom) / 2 - lift)),
+        h * .71,
+        x(math.max(0, top - lift * .38)),
+        h * .52,
+      )
+      ..quadraticBezierTo(x(top - lift * .1), h * .38, x(top), 0)
+      ..close();
+  }
+}
+
+class _CornerPeel extends CustomClipper<Path> {
+  const _CornerPeel(this.progress, this.forward, this.incoming);
+  final double progress;
+  final bool forward, incoming;
+
+  @override
+  Path getClip(Size size) {
+    final page = _CornerGeometry(size, progress, forward).page;
+    if (!incoming) return page;
+    return Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(Offset.zero & size)
+      ..addPath(page, Offset.zero);
+  }
+
+  @override
+  bool shouldReclip(_CornerPeel old) =>
+      old.progress != progress ||
+      old.forward != forward ||
+      old.incoming != incoming;
+}
+
+class _CornerFold extends CustomPainter {
+  const _CornerFold(this.progress, this.forward, this.color);
+  final double progress;
+  final bool forward;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final curl = _CornerGeometry(size, progress, forward);
+    if (curl.lift < .5) return;
+    final underside = curl.underside;
+    final bounds = underside.getBounds();
+    final dark = Color.lerp(color, const Color(0xff7c664c), .36)!;
+    final light = Color.lerp(color, Colors.white, .65)!;
+    canvas.drawShadow(
+      underside,
+      const Color(0x83614a35),
+      curl.lift * .16,
+      true,
+    );
+    canvas.drawPath(
+      underside,
+      Paint()
+        ..shader = LinearGradient(
+          begin: forward ? Alignment.bottomLeft : Alignment.bottomRight,
+          end: forward ? Alignment.topRight : Alignment.topLeft,
+          colors: [light, color, light, dark],
+          stops: const [0, .37, .58, 1],
+        ).createShader(bounds),
+    );
+    canvas.drawPath(
+      curl.crease(),
+      Paint()
+        ..color = light.withValues(alpha: .8)
+        ..strokeWidth = .85
+        ..style = PaintingStyle.stroke,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_CornerFold old) =>
+      old.progress != progress || old.forward != forward || old.color != color;
 }
 
 /// The shaded curl lies entirely on the departing paper, leaving the revealed

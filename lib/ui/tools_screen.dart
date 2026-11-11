@@ -6,8 +6,14 @@ import 'book_detail_tools.dart';
 
 /// Secondary preferences, deliberately kept off the writing surface.
 class ToolsScreen extends StatelessWidget {
-  const ToolsScreen({super.key, required this.controller, this.onBack});
+  const ToolsScreen({
+    super.key,
+    required this.controller,
+    this.bookId,
+    this.onBack,
+  });
   final LibraryController controller;
+  final String? bookId;
   final VoidCallback? onBack;
 
   @override
@@ -15,6 +21,9 @@ class ToolsScreen extends StatelessWidget {
     animation: controller,
     builder: (context, _) {
       final style = controller.library.style;
+      final book = controller.library.books
+          .where((b) => b.id == bookId)
+          .firstOrNull;
       return SafeArea(
         top: false,
         child: SingleChildScrollView(
@@ -45,7 +54,7 @@ class ToolsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               _row(
-                '종이',
+                book == null ? '기본 종이' : '이 책의 내지',
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -54,13 +63,26 @@ class ToolsScreen extends StatelessWidget {
                         label: paperNames[i],
                         color: paperColors[i],
                         sheet: true,
-                        selected: style.paperIndex == i,
-                        onTap: () =>
-                            controller.setStyle(style.copy(paperIndex: i)),
+                        selected: (book?.paperIndex ?? style.paperIndex) == i,
+                        onTap: () {
+                          if (book == null) {
+                            controller.setStyle(style.copy(paperIndex: i));
+                          } else {
+                            controller.setBookMaterials(book.id, paperIndex: i);
+                          }
+                        },
                       ),
                   ],
                 ),
               ),
+              if (book?.paperIndex != null)
+                TextButton(
+                  onPressed: () => controller.setBookMaterials(
+                    book!.id,
+                    useDefaultPaper: true,
+                  ),
+                  child: const Text('기본 종이 사용'),
+                ),
               const SizedBox(height: 16),
               _row(
                 '잉크',
@@ -136,6 +158,21 @@ class ToolsScreen extends StatelessWidget {
                 value: style.penMotion,
                 activeTrackColor: burgundy,
                 onChanged: (v) => controller.setStyle(style.copy(penMotion: v)),
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('종이 넘김 효과', style: TextStyle(fontSize: 14)),
+                value: style.pageMotion,
+                activeTrackColor: burgundy,
+                onChanged: (v) =>
+                    controller.setStyle(style.copy(pageMotion: v)),
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('종이 넘김 소리', style: TextStyle(fontSize: 14)),
+                value: style.pageSound,
+                activeTrackColor: burgundy,
+                onChanged: (v) => controller.setStyle(style.copy(pageSound: v)),
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,

@@ -11,14 +11,25 @@ class Book {
     this.author = '',
     this.owner = '',
     this.indexLabel = '',
+    this.coverIndex,
+    this.paperIndex,
   });
   final String id, title, author, owner, indexLabel;
-  Book copy({String? owner, String? indexLabel}) => Book(
+  final int? coverIndex, paperIndex;
+  Book copy({
+    String? owner,
+    String? indexLabel,
+    int? coverIndex,
+    int? paperIndex,
+    bool useDefaultPaper = false,
+  }) => Book(
     id: id,
     title: title,
     author: author,
     owner: owner ?? this.owner,
     indexLabel: indexLabel ?? this.indexLabel,
+    coverIndex: coverIndex ?? this.coverIndex,
+    paperIndex: useDefaultPaper ? null : paperIndex ?? this.paperIndex,
   );
   Json toJson() => {
     'id': id,
@@ -26,10 +37,18 @@ class Book {
     'author': author,
     'owner': owner,
     'indexLabel': indexLabel,
+    if (coverIndex != null) 'coverIndex': coverIndex,
+    if (paperIndex != null) 'paperIndex': paperIndex,
   };
   factory Book.fromJson(Json j) {
     if (j.containsKey('indexLabel') && j['indexLabel'] is! String) {
       throw const FormatException('책의 색인 이름을 확인할 수 없습니다.');
+    }
+    final cover = j['coverIndex'] as int?;
+    final paper = j['paperIndex'] as int?;
+    if ((cover != null && (cover < 0 || cover > 2)) ||
+        (paper != null && (paper < 0 || paper > 3))) {
+      throw const FormatException('알 수 없는 책 재질 설정입니다.');
     }
     return Book(
       id: j['id'] as String,
@@ -37,6 +56,8 @@ class Book {
       author: j['author'] as String,
       owner: j['owner'] as String? ?? '',
       indexLabel: j['indexLabel'] as String? ?? '',
+      coverIndex: cover,
+      paperIndex: paper,
     );
   }
 }
@@ -219,11 +240,14 @@ class WritingStyle {
     this.useDevelopmentTypeface = true,
     this.guides = false,
     this.penMotion = true,
+    this.pageMotion = true,
+    this.pageSound = false,
     this.favoriteBookIds = const [],
     this.bookDetails = const BookDetailsStyle(),
   });
   final int paperIndex, penIndex, fontIndex;
   final bool guides, penMotion, useDevelopmentTypeface;
+  final bool pageMotion, pageSound;
   final List<String> favoriteBookIds;
   final BookDetailsStyle bookDetails;
   WritingStyle copy({
@@ -233,6 +257,8 @@ class WritingStyle {
     bool? useDevelopmentTypeface,
     bool? guides,
     bool? penMotion,
+    bool? pageMotion,
+    bool? pageSound,
     List<String>? favoriteBookIds,
     BookDetailsStyle? bookDetails,
   }) => WritingStyle(
@@ -243,6 +269,8 @@ class WritingStyle {
         useDevelopmentTypeface ?? this.useDevelopmentTypeface,
     guides: guides ?? this.guides,
     penMotion: penMotion ?? this.penMotion,
+    pageMotion: pageMotion ?? this.pageMotion,
+    pageSound: pageSound ?? this.pageSound,
     favoriteBookIds: favoriteBookIds ?? this.favoriteBookIds,
     bookDetails: bookDetails ?? this.bookDetails,
   );
@@ -254,6 +282,8 @@ class WritingStyle {
     'typefaceDefaultsVersion': 1,
     'guides': guides,
     'penMotion': penMotion,
+    'pageMotion': pageMotion,
+    'pageSound': pageSound,
     'favoriteBookIds': favoriteBookIds,
     'bookDetails': bookDetails.toJson(),
   };
@@ -280,6 +310,8 @@ class WritingStyle {
           : true,
       guides: j['guides'] as bool? ?? false,
       penMotion: j['penMotion'] as bool? ?? true,
+      pageMotion: j['pageMotion'] as bool? ?? true,
+      pageSound: j['pageSound'] as bool? ?? false,
       favoriteBookIds: (j['favoriteBookIds'] as List? ?? []).cast<String>(),
       bookDetails: BookDetailsStyle.fromJson(j['bookDetails'] as Json? ?? {}),
     );

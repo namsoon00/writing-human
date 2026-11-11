@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -42,6 +43,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   LibraryController get c => widget.controller;
   final editorFocus = FocusNode();
   final _pageTurn = PageTurnController();
+  AudioPlayer? _pageAudio;
   String? _coverAnchor;
   bool get _showCover => _coverAnchor == page.id;
   late WritingPage draft = _blank();
@@ -91,9 +93,13 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     return false;
   }
 
-  Future<void> _navigatePage(Future<void> Function() action) async {
+  Future<void> _navigatePage(
+    Future<void> Function() action, {
+    bool paperTurn = true,
+  }) async {
     if (_pageNavigationBusy || _accountLocked || !_canLeaveInput()) return;
     final owner = c, origin = page.id;
+    final wasCover = _showCover;
     _blur();
     setState(() => _pageNavigationBusy = true);
     try {
@@ -109,8 +115,36 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       if (c.saveError != null) return;
       await action();
       await owner.settled;
+      if (paperTurn &&
+          mounted &&
+          c == owner &&
+          !_accountLocked &&
+          owner.saveError == null &&
+          c.library.style.pageSound &&
+          (page.id != origin || wasCover != _showCover)) {
+        unawaited(_playPageSound());
+      }
     } finally {
       if (mounted) setState(() => _pageNavigationBusy = false);
+    }
+  }
+
+  Future<void> _playPageSound() async {
+    try {
+      final player = _pageAudio ??= AudioPlayer();
+      await player.play(
+        AssetSource('audio/page-turn.mp3'),
+        volume: .42,
+        ctx: AudioContext(
+          android: const AudioContextAndroid(
+            audioFocus: AndroidAudioFocus.none,
+            usageType: AndroidUsageType.assistanceSonification,
+          ),
+          iOS: AudioContextIOS(category: AVAudioSessionCategory.ambient),
+        ),
+      );
+    } catch (error) {
+      debugPrint('Page sound unavailable: $error');
     }
   }
 
@@ -186,9 +220,15 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       .where((b) => b.id == (record?.bookId ?? (fresh ? draftBookId : null)))
       .firstOrNull;
 
-  int get _coverVariant => c.library.books
-      .indexWhere((b) => b.id == book?.id)
-      .clamp(0, c.library.books.length);
+  int get _coverVariant => c.coverIndexFor(book);
+
+  WritingStyle _paperStyle(Book? book) {
+    final style = c.library.style;
+    final index = book?.paperIndex;
+    return index == null || index == style.paperIndex
+        ? style
+        : style.copy(paperIndex: index);
+  }
 
   @override
   void initState() {
@@ -243,6 +283,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     c.removeListener(_changed);
     widget.sync?.removeListener(_changed);
     editorFocus.dispose();
+    final audio = _pageAudio;
+    if (audio != null) unawaited(audio.dispose());
     super.dispose();
   }
 
@@ -278,7 +320,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       fresh = true;
       userFresh = true;
     });
-  });
+  }, paperTurn: false);
 
   Future<void> _sheet(Widget child) {
     final route = ModalBottomSheetRoute<void>(
@@ -344,7 +386,13 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
 
   void _tools() {
     _blur();
-    _sheet(ToolsScreen(controller: c, onBack: () => Navigator.pop(context)));
+    _sheet(
+      ToolsScreen(
+        controller: c,
+        bookId: book?.id,
+        onBack: () => Navigator.pop(context),
+      ),
+    );
   }
 
   @override
@@ -602,7 +650,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       builder: (_) => PagesSheet(
         pages: _volumePages,
         currentId: selectedId,
-        style: c.library.style,
+        style: _paperStyle(book),
         coverTitle: book?.title ?? record?.title ?? '나의 필사',
         coverVariant: _coverVariant,
       ),
@@ -795,7 +843,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             key: ValueKey((c, c.editorEpoch)),
             controller: _pageTurn,
             page: current,
-            style: c.library.style,
+            style: _paperStyle(book),
             scopeId: book?.id ?? current.recordId,
             position: showingCover ? -1 : index,
             editing: c.editorFocused,
@@ -816,7 +864,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                   ? () => _stepPage(-1)
                   : null,
               onNext: canSwipe ? () => _stepPage(1) : null,
-              onTurnStart: _pageTurn.start,
+              onTurnOrigin: (origin) => _pageTurn.start(origin: origin),
               onTurnUpdate: _pageTurn.update,
               onTurnEnd: _pageTurn.end,
               onTurnCancel: _pageTurn.cancel,
@@ -862,9 +910,14 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     );
     final bookId = record?.bookId ?? (fresh ? draftBookId : null);
     final book = c.library.books.where((b) => b.id == bookId).firstOrNull;
+    final style = _paperStyle(book);
     return PaperBackdrop(
-      binding: c.library.style.bookDetails.binding,
-      color: paperColors[c.library.style.paperIndex],
+      binding: style.bookDetails.binding,
+      color: paperColors[style.paperIndex],
+      grainOpacity: paperGrainOpacity[style.paperIndex],
+      coverIndex: book == null ? null : c.coverIndexFor(book),
+      pagesBefore: index,
+      pagesAfter: count - index - 1,
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -946,7 +999,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 ),
               if (hasSource)
                 SourceReading(
-                  choice: c.library.style.bookDetails.sourceSlip,
+                  choice: style.bookDetails.sourceSlip,
                   source: source,
                   paragraphIndex: sourcePosition?.source == source
                       ? sourcePosition!.index
@@ -973,12 +1026,12 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                     ? PageReadPreview(
                         key: ValueKey(currentPage.id),
                         page: currentPage,
-                        style: c.library.style,
+                        style: style,
                       )
                     : PageEditor(
                         key: ValueKey('${currentPage.id}:${c.editorEpoch}'),
                         page: currentPage,
-                        style: c.library.style,
+                        style: style,
                         focusNode: editorFocus,
                         onChanged: _edit,
                         onPencilMark: c.togglePencilMark,

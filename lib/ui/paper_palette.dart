@@ -20,5 +20,6 @@ const paperColors = [
   Color(0xfff3dfbd),
 ];
 const paperNames = ['순면지', '미색지', '회백지', '크림지'];
+const paperGrainOpacity = [.24, .16, .11, .30];
 const penColors = [ink, brandInk, Color(0xff5b6f8e)];
 const fontNames = ['나눔명조', '나눔명조 Bold', '나눔고딕'];

@@ -14,6 +14,8 @@ export function validLibrary(l) {
     if (!object(b) || !id(b.id) || books.has(b.id) || !text(b.title, 500) || !text(b.author, 500)) return false;
     if ('owner' in b && !text(b.owner, 80)) return false;
     if ('indexLabel' in b && !text(b.indexLabel, 80)) return false;
+    if ('coverIndex' in b && (!integer(b.coverIndex) || b.coverIndex < 0 || b.coverIndex > 2)) return false;
+    if ('paperIndex' in b && (!integer(b.paperIndex) || b.paperIndex < 0 || b.paperIndex > 3)) return false;
     books.add(b.id);
   }
   for (const r of l.records) {
@@ -31,6 +33,7 @@ export function validLibrary(l) {
   const s = l.style;
   if (!object(s) || !integer(s.paperIndex) || s.paperIndex < 0 || s.paperIndex > 3 || !integer(s.penIndex) || s.penIndex < 0 || s.penIndex > 2 || !integer(s.fontIndex) || s.fontIndex < 0 || s.fontIndex > 2 || typeof s.guides !== 'boolean' || !Array.isArray(s.favoriteBookIds) || s.favoriteBookIds.some(v => !id(v))) return false;
   if ('useDevelopmentTypeface' in s && typeof s.useDevelopmentTypeface !== 'boolean') return false;
+  if (['pageMotion', 'pageSound'].some(k => k in s && typeof s[k] !== 'boolean')) return false;
   if ('bookDetails' in s) {
     const kinds = ['ribbon', 'bookplate', 'sourceSlip', 'pencil', 'ornament', 'binding', 'dateStamp', 'indexTab', 'recordDivider', 'pressedFlower'];
     if (!object(s.bookDetails) || Object.entries(s.bookDetails).some(([kind, choice]) =>

@@ -54,6 +54,8 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         author: _field(old.author, b.author, r.author),
         owner: _field(old.owner, b.owner, r.owner),
         indexLabel: _field(old.indexLabel, b.indexLabel, r.indexLabel),
+        coverIndex: _field(old.coverIndex, b.coverIndex, r.coverIndex),
+        paperIndex: _field(old.paperIndex, b.paperIndex, r.paperIndex),
       );
     } else if (r == null ||
         old == null ||
@@ -250,6 +252,16 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
       base.style.penMotion,
       local.style.penMotion,
       remote.style.penMotion,
+    ),
+    pageMotion: _field(
+      base.style.pageMotion,
+      local.style.pageMotion,
+      remote.style.pageMotion,
+    ),
+    pageSound: _field(
+      base.style.pageSound,
+      local.style.pageSound,
+      remote.style.pageSound,
     ),
     favoriteBookIds: allFavorites
         .where(

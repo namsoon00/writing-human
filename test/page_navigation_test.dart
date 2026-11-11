@@ -172,6 +172,51 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Bottom corner exposes the neighbour from the bottom up', (
+    tester,
+  ) async {
+    final store = MemoryStore()..data = twoPages();
+    await open(tester, store);
+    final paper = find.byKey(const ValueKey('paper-swipe'));
+    final origin = tester.getBottomRight(paper) - const Offset(27, 105);
+    final controller = tester.widget<TextField>(field).controller!;
+    final initial = controller.value;
+    final drag = await tester.startGesture(origin);
+    await drag.moveBy(const Offset(-74, 0));
+    await tester.pump();
+
+    final corner = find.descendant(of: reveal, matching: find.byType(ClipPath));
+    final clipper = tester.widget<ClipPath>(corner).clipper!;
+    final size = tester.getSize(corner);
+    final visible = clipper.getClip(size);
+    expect(visible.contains(Offset(size.width - 35, 20)), isFalse);
+    expect(visible.contains(Offset(size.width - 35, size.height - 20)), isTrue);
+    expect(find.byType(TextField), findsOneWidget);
+
+    await drag.cancel();
+    await tester.pumpAndSettle();
+    expect(reveal, findsNothing);
+    expect(store.data.activePageId, 'one');
+    expect(tester.widget<TextField>(field).controller, same(controller));
+    expect(controller.value, initial);
+  });
+
+  testWidgets('Turning with motion disabled still opens the next page', (
+    tester,
+  ) async {
+    final store = MemoryStore()
+      ..data = twoPages().copy(style: const WritingStyle(pageMotion: false));
+    await open(tester, store);
+    final drag = await tester.startGesture(tester.getCenter(field));
+    await drag.moveBy(const Offset(-160, 0));
+    await tester.pump();
+    expect(reveal, findsNothing);
+    await drag.up();
+    await tester.pumpAndSettle();
+    expect(store.data.activePageId, 'two');
+    expect(overlay, findsNothing);
+  });
+
   testWidgets('The first sheet peels back to a cover without a saved page', (
     tester,
   ) async {

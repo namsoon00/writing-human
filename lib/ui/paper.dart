@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'book_details.dart';
 import 'reading_details.dart';
@@ -44,10 +45,17 @@ class PaperBackdrop extends StatelessWidget {
     required this.child,
     this.color = paper,
     this.binding = const BookDetailChoice(),
+    this.coverIndex,
+    this.pagesBefore = 0,
+    this.pagesAfter = 0,
+    this.grainOpacity = .24,
   });
   final Widget child;
   final Color color;
   final BookDetailChoice binding;
+  final int? coverIndex;
+  final int pagesBefore, pagesAfter;
+  final double grainOpacity;
 
   @override
   Widget build(BuildContext context) => ColoredBox(
@@ -71,7 +79,7 @@ class PaperBackdrop extends StatelessWidget {
                           ),
                           repeat: ImageRepeat.repeat,
                           scale: 2,
-                          opacity: .24,
+                          opacity: grainOpacity,
                           colorFilter: ColorFilter.mode(
                             color,
                             BlendMode.modulate,
@@ -100,6 +108,15 @@ class PaperBackdrop extends StatelessWidget {
               ),
             ),
             Positioned.fill(child: BookBinding(choice: binding)),
+            if (coverIndex case final index?)
+              Positioned.fill(
+                child: _BookPageEdges(
+                  color: color,
+                  coverIndex: index,
+                  before: pagesBefore,
+                  after: pagesAfter,
+                ),
+              ),
             child,
           ],
         ),
@@ -146,6 +163,15 @@ class WritingGuides extends CustomPainter {
       old.enabled != enabled;
 }
 
+const coverNames = ['밤색 리넨', '아이보리 리넨', '푸른 리넨'];
+const _coverColors = [Color(0xff715344), Color(0xffa38b6f), Color(0xff454d64)];
+// The PNGs have transparent margins. Keep the decorations on the linen face.
+const _coverFaceBounds = [
+  Rect.fromLTRB(22 / 682, 37 / 1024, 659 / 682, 986 / 1024),
+  Rect.fromLTRB(21 / 738, 22 / 1024, 713 / 738, 1001 / 1024),
+  Rect.fromLTRB(27 / 738, 19 / 1024, 708 / 738, 1001 / 1024),
+];
+
 class BookCover extends StatelessWidget {
   const BookCover({
     super.key,
@@ -153,90 +179,233 @@ class BookCover extends StatelessWidget {
     this.width = 132,
     this.variant = 0,
     this.bookmarked = false,
+    this.pageCount = 0,
     this.details = const BookDetailsStyle(),
   });
   final String title;
   final double width;
-  final int variant;
+  final int variant, pageCount;
   final bool bookmarked;
   final BookDetailsStyle details;
+
+  static double totalWidthFactor(BookDetailsStyle details) =>
+      details.indexTab.enabled ? 1.04 : 1;
+
   @override
-  Widget build(BuildContext context) {
-    final light = variant % 3 == 1;
-    final cover = SizedBox(
-      width: width,
-      height: width * 1.36,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            [
-              'assets/images/linen-cover.png',
-              'assets/images/ivory-linen-cover.png',
-              'assets/images/blue-linen-cover.png',
-            ][variant % 3],
-            fit: BoxFit.fill,
-          ),
-          Positioned.fill(
-            child: BookBinding(choice: details.binding, cover: true),
-          ),
-          if (bookmarked)
-            Positioned(
-              right: width * .14,
-              top: 0,
-              child: RibbonBookmark(
-                width: width * .13,
-                height: width * .42,
-                choice: details.ribbon,
-              ),
-            ),
-          if (details.pressedFlower.enabled)
-            Positioned(
-              left: width * .12,
-              right: width * .09,
-              bottom: width * .08,
-              child: Align(
-                alignment: flowerAlignment(details.pressedFlower),
-                child: PressedFlower(
-                  choice: details.pressedFlower,
-                  size: width * .27,
+  Widget build(BuildContext context) => SizedBox(
+    width: width * totalWidthFactor(details),
+    height: width * 1.36,
+    child: LayoutBuilder(
+      builder: (context, box) {
+        final imageWidth = box.maxWidth / totalWidthFactor(details);
+        return _buildCover(imageWidth, box.maxHeight);
+      },
+    ),
+  );
+
+  Widget _buildCover(double width, double height) {
+    final index = variant % coverNames.length;
+    final light = index == 1;
+    final bounds = _coverFaceBounds[index];
+    final face = Rect.fromLTRB(
+      bounds.left * width,
+      bounds.top * height,
+      bounds.right * width,
+      bounds.bottom * height,
+    );
+    final pageDepth = math.min(5.0, width * .022);
+    final pages = Rect.fromLTRB(
+      face.left + width * .025,
+      face.top + height * .025,
+      face.right + pageDepth,
+      face.bottom + pageDepth * .45,
+    );
+    final tabWidth = width * .105;
+    return Stack(
+      children: [
+        if (pageCount > 0)
+          Positioned.fromRect(
+            rect: pages,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(width * .022),
+              child: ColoredBox(
+                color: paper,
+                child: _BookPageEdges(
+                  color: paper,
+                  coverIndex: index,
+                  before: 0,
+                  after: pageCount,
+                  maxDepth: pageDepth,
+                  bottomStart: 0,
                 ),
               ),
             ),
-          Positioned(
-            left: width * .12,
-            right: width * .09,
-            top: width * .34,
-            child: Text(
-              title,
-              textScaler: width < 80 ? TextScaler.noScaling : null,
-              maxLines: 3,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: appFontFamily,
-                fontFamilyFallback: appFontFallback,
-                fontWeight: FontWeight.w700,
-                color: light ? ink : const Color(0xffdbc79a),
-                fontSize: width * .125,
-                height: 1.65,
-                letterSpacing: width * .008,
-              ),
-            ),
           ),
-        ],
-      ),
-    );
-    if (!details.indexTab.enabled) return cover;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        cover,
-        Padding(
-          padding: EdgeInsets.only(bottom: width * .16),
-          child: BookIndexEdge(choice: details.indexTab, width: width * .22),
+        if (details.indexTab.enabled)
+          Positioned(
+            left: face.right + width * .065 - tabWidth,
+            top: face.top + face.height * .38,
+            child: BookIndexEdge(choice: details.indexTab, width: tabWidth),
+          ),
+        Positioned(
+          left: 0,
+          top: 0,
+          width: width,
+          height: height,
+          child: _coverArtwork(width, face, index, light),
         ),
       ],
     );
   }
+
+  Widget _coverArtwork(double width, Rect face, int index, bool light) => Stack(
+    fit: StackFit.expand,
+    children: [
+      Image.asset(
+        [
+          'assets/images/linen-cover.png',
+          'assets/images/ivory-linen-cover.png',
+          'assets/images/blue-linen-cover.png',
+        ][index],
+        fit: BoxFit.fill,
+      ),
+      Positioned.fromRect(
+        rect: face.deflate(width * .018),
+        child: BookBinding(choice: details.binding, cover: true),
+      ),
+      if (bookmarked)
+        Positioned(
+          right: width * .14,
+          top: 0,
+          child: RibbonBookmark(
+            width: width * .13,
+            height: width * .42,
+            choice: details.ribbon,
+          ),
+        ),
+      if (details.pressedFlower.enabled)
+        Positioned(
+          left: width * .12,
+          right: width * .09,
+          bottom: width * .08,
+          child: Align(
+            alignment: flowerAlignment(details.pressedFlower),
+            child: PressedFlower(
+              choice: details.pressedFlower,
+              size: width * .27,
+            ),
+          ),
+        ),
+      Positioned(
+        left: width * .12,
+        right: width * .09,
+        top: width * .34,
+        child: Text(
+          title,
+          textScaler: width < 80 ? TextScaler.noScaling : null,
+          maxLines: 3,
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontFamily: appFontFamily,
+            fontFamilyFallback: appFontFallback,
+            fontWeight: FontWeight.w700,
+            color: light ? ink : const Color(0xffdbc79a),
+            fontSize: width * .125,
+            height: 1.65,
+            letterSpacing: width * .008,
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+class _BookPageEdges extends StatelessWidget {
+  const _BookPageEdges({
+    required this.color,
+    required this.coverIndex,
+    required this.before,
+    required this.after,
+    this.maxDepth = 7,
+    this.bottomStart = .53,
+  });
+  final Color color;
+  final int coverIndex, before, after;
+  final double maxDepth, bottomStart;
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: IgnorePointer(
+      child: CustomPaint(
+        painter: _PageEdgesPainter(
+          color,
+          _coverColors[coverIndex],
+          before,
+          after,
+          maxDepth,
+          bottomStart,
+        ),
+      ),
+    ),
+  );
+}
+
+class _PageEdgesPainter extends CustomPainter {
+  const _PageEdgesPainter(
+    this.paper,
+    this.cover,
+    this.before,
+    this.after,
+    this.maxDepth,
+    this.bottomStart,
+  );
+  final Color paper, cover;
+  final int before, after;
+  final double maxDepth, bottomStart;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    void stack(int count, {required bool right}) {
+      if (count < 1 || size.shortestSide < 12) return;
+      final layers = (1 + math.log(count) / math.ln2).floor().clamp(1, 7);
+      final depth = math.min(maxDepth, 1 + layers * .8);
+      canvas.save();
+      if (!right) {
+        canvas.translate(size.width, 0);
+        canvas.scale(-1, 1);
+      }
+      for (var i = 0; i <= layers; i++) {
+        final offset = depth * i / (layers + 1);
+        final x = size.width - offset;
+        final bottom = size.height - offset * .65;
+        final foot = size.width * bottomStart;
+        final stroke = Paint()
+          ..color = i == 0
+              ? cover.withValues(alpha: .76)
+              : Color.lerp(paper, cover, i.isEven ? .35 : .16)!
+          ..strokeWidth = i == 0 ? 1.8 : .7
+          ..style = PaintingStyle.stroke;
+        final edge = Path()
+          ..moveTo(x, 0)
+          ..lineTo(x, bottom - 5)
+          ..quadraticBezierTo(x, bottom, x - 6, bottom)
+          ..lineTo(foot, bottom);
+        canvas.drawPath(edge, stroke);
+      }
+      canvas.restore();
+    }
+
+    stack(before, right: false);
+    stack(after, right: true);
+  }
+
+  @override
+  bool shouldRepaint(_PageEdgesPainter old) =>
+      paper != old.paper ||
+      cover != old.cover ||
+      before != old.before ||
+      after != old.after ||
+      maxDepth != old.maxDepth ||
+      bottomStart != old.bottomStart;
 }

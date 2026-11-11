@@ -18,7 +18,7 @@ class SqliteLibraryStore implements LibraryStore {
     final db = await (factory ?? databaseFactory).openDatabase(
       file,
       options: OpenDatabaseOptions(
-        version: 5,
+        version: 6,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
         onUpgrade: (db, oldVersion, newVersion) async {
           if (oldVersion < 2) {
@@ -48,10 +48,18 @@ class SqliteLibraryStore implements LibraryStore {
               "ALTER TABLE books ADD COLUMN index_label TEXT NOT NULL DEFAULT ''",
             );
           }
+          if (oldVersion < 6) {
+            await db.execute(
+              'ALTER TABLE books ADD COLUMN cover_index INTEGER CHECK(cover_index BETWEEN 0 AND 2)',
+            );
+            await db.execute(
+              'ALTER TABLE books ADD COLUMN paper_index INTEGER CHECK(paper_index BETWEEN 0 AND 3)',
+            );
+          }
         },
         onCreate: (db, version) async {
           await db.execute(
-            "CREATE TABLE books (id TEXT PRIMARY KEY, title TEXT NOT NULL, author TEXT NOT NULL, owner TEXT NOT NULL DEFAULT '', index_label TEXT NOT NULL DEFAULT '')",
+            "CREATE TABLE books (id TEXT PRIMARY KEY, title TEXT NOT NULL, author TEXT NOT NULL, owner TEXT NOT NULL DEFAULT '', index_label TEXT NOT NULL DEFAULT '', cover_index INTEGER CHECK(cover_index BETWEEN 0 AND 2), paper_index INTEGER CHECK(paper_index BETWEEN 0 AND 3))",
           );
           await db.execute(
             "CREATE TABLE records (id TEXT PRIMARY KEY, book_id TEXT REFERENCES books(id), title TEXT NOT NULL, source TEXT NOT NULL DEFAULT '')",
@@ -83,6 +91,8 @@ class SqliteLibraryStore implements LibraryStore {
               author: j['author'] as String,
               owner: j['owner'] as String,
               indexLabel: j['index_label'] as String,
+              coverIndex: j['cover_index'] as int?,
+              paperIndex: j['paper_index'] as int?,
             ),
           )
           .toList(),
@@ -147,6 +157,8 @@ class SqliteLibraryStore implements LibraryStore {
           'author': b.author,
           'owner': b.owner,
           'index_label': b.indexLabel,
+          'cover_index': b.coverIndex,
+          'paper_index': b.paperIndex,
         });
       }
       for (final r in library.records) {

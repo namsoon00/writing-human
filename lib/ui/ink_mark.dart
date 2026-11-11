@@ -8,7 +8,7 @@ class InkMark extends StatelessWidget {
   Widget build(BuildContext context) => ExcludeSemantics(
     child: IgnorePointer(
       child: Image.asset(
-        'assets/images/ink-mark.png',
+        'assets/images/ink-mark-person.png',
         width: size,
         height: size,
         filterQuality: FilterQuality.medium,

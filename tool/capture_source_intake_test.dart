@@ -94,7 +94,7 @@ void main() {
       );
       for (final name in [
         'cotton-paper.jpg',
-        'ink-mark.png',
+        'ink-mark-person.png',
         'fountain-pen.png',
       ]) {
         await precacheImage(

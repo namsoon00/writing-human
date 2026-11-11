@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/model.dart';
 import 'paper.dart';
 import 'page_turn.dart';
+import 'reading_details.dart';
 
 /// The cover is a reading position, never a synthetic page in the library.
 class BookFrontCover extends StatelessWidget {
@@ -28,124 +29,149 @@ class BookFrontCover extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final motion = CoverHinge.maybeOf(context);
-    final visibility = 1.0 - (motion?.fraction ?? 0.0);
-    return ColoredBox(
-      key: ValueKey(back ? 'book-back-cover' : 'book-front-cover'),
-      color: appPaper.withValues(alpha: visibility),
-      child: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, box) {
-            final scale = MediaQuery.textScalerOf(context);
-            final minHeight =
-                150 +
-                (onAppend == null ? 0 : 48) +
-                scale.scale(22) * 2.8 +
-                scale.scale(13) * (author.isEmpty ? 1 : 3);
-            final content = _content(motion, visibility);
-            if (box.maxHeight >= minHeight) return content;
-            return SingleChildScrollView(
-              child: SizedBox(height: minHeight, child: content),
-            );
-          },
+    final visibility = Curves.easeInCubic.transform(
+      1.0 - (motion?.fraction ?? 0.0),
+    );
+    final light = variant % coverNames.length == 1;
+    final lettering = light ? const Color(0xff402e22) : const Color(0xffffe9ba);
+    final artwork = Stack(
+      fit: StackFit.expand,
+      children: [
+        BookCoverMaterial(
+          key: const ValueKey('full-cover-material'),
+          variant: variant,
+          back: back,
+          binding: style.bookDetails.binding,
         ),
-      ),
+        _lettering(lettering),
+        if (!back && style.bookDetails.pressedFlower.enabled)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(32, 0, 32, 144),
+            child: Align(
+              alignment: flowerAlignment(style.bookDetails.pressedFlower),
+              child: PressedFlower(choice: style.bookDetails.pressedFlower),
+            ),
+          ),
+      ],
+    );
+
+    return Stack(
+      key: ValueKey(back ? 'book-back-cover' : 'book-front-cover'),
+      fit: StackFit.expand,
+      children: [
+        motion?.transformArtwork(artwork) ?? artwork,
+        IgnorePointer(
+          ignoring: visibility < 1,
+          child: Opacity(
+            opacity: visibility,
+            child: SafeArea(
+              minimum: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: _controls(lettering, light),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _content(CoverHinge? motion, double visibility) {
-    Widget caption(Widget child) => Opacity(opacity: visibility, child: child);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          caption(
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: onCollection,
-                child: const Text('보관함'),
-              ),
-            ),
-          ),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, box) {
-                final coverWidth =
-                    (box.maxWidth - 12) /
-                    BookCover.totalWidthFactor(style.bookDetails);
-                final width = math
-                    .min(coverWidth, box.maxHeight / 1.36 - 12)
-                    .clamp(1.0, 420.0);
-                final artwork = BookCover(
-                  title: title,
-                  width: width,
-                  variant: variant,
-                  pageCount: pageCount,
-                  details: style.bookDetails,
-                  back: back,
-                );
-                return Center(
-                  child: ExcludeSemantics(
-                    child: MediaQuery.withNoTextScaling(
-                      child: motion?.transformArtwork(artwork) ?? artwork,
+  Widget _lettering(Color color) => SafeArea(
+    child: LayoutBuilder(
+      builder: (context, box) {
+        final titleSize = (box.biggest.shortestSide * .105).clamp(24.0, 54.0);
+        final width = math.min(620.0, box.maxWidth * .78);
+        return Align(
+          alignment: const Alignment(0, -.40),
+          child: SizedBox(
+            width: width,
+            height: box.maxHeight * .32,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: SizedBox(
+                width: width,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Semantics(
+                      header: true,
+                      child: Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: color,
+                          fontSize: back ? titleSize * .65 : titleSize,
+                          fontWeight: FontWeight.w700,
+                          height: 1.35,
+                        ),
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 12),
-          caption(
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 22, color: ink, height: 1.4),
-            ),
-          ),
-          if (author.isNotEmpty)
-            caption(
-              Text(
-                author,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13, color: muted),
-              ),
-            ),
-          caption(
-            Text(
-              '$pageCount쪽 · ${back ? '뒷표지' : '앞표지'}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12, color: muted),
-            ),
-          ),
-          const SizedBox(height: 12),
-          caption(
-            Center(
-              child: OutlinedButton(
-                onPressed: onOpen,
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(140, 48),
+                    if (author.isNotEmpty && !back)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Text(
+                          author,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: color, fontSize: 16),
+                        ),
+                      ),
+                  ],
                 ),
-                child: Text(back ? '마지막 장 펼치기' : '책 펼치기'),
               ),
             ),
+          ),
+        );
+      },
+    ),
+  );
+
+  Widget _controls(Color color, bool light) => LayoutBuilder(
+    builder: (context, box) {
+      final button = TextButton.styleFrom(
+        foregroundColor: color,
+        backgroundColor: light
+            ? const Color(0xfff2e6ce)
+            : const Color(0xff292721),
+        minimumSize: const Size(48, 48),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+      );
+      final controls = Column(
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              style: button,
+              onPressed: onCollection,
+              child: const Text('보관함'),
+            ),
+          ),
+          const Spacer(),
+          Text('$pageCount쪽', style: TextStyle(color: color, fontSize: 13)),
+          const SizedBox(height: 10),
+          TextButton(
+            style: button,
+            onPressed: onOpen,
+            child: Text(back ? '마지막 장 펼치기' : '책 펼치기'),
           ),
           if (onAppend != null)
-            caption(
-              Center(
-                child: TextButton(
-                  onPressed: onAppend,
-                  style: TextButton.styleFrom(minimumSize: const Size(140, 48)),
-                  child: const Text('한 쪽 더'),
-                ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: TextButton(
+                style: button,
+                onPressed: onAppend,
+                child: const Text('한 쪽 더'),
               ),
             ),
         ],
-      ),
-    );
-  }
+      );
+      final scale = MediaQuery.textScalerOf(context);
+      final minHeight = (onAppend == null ? 3 : 4) * (scale.scale(14) + 34);
+      if (box.maxHeight >= minHeight) return controls;
+      return SingleChildScrollView(
+        child: SizedBox(height: minHeight, child: controls),
+      );
+    },
+  );
 }

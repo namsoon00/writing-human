@@ -882,58 +882,52 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           );
     return Scaffold(
       backgroundColor: appPaper,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 760),
-          child: PageTurnView(
-            key: ValueKey((c, c.editorEpoch)),
-            controller: _pageTurn,
-            page: current,
-            style: _paperStyle(book),
-            scopeId: book?.id ?? current.recordId,
-            position: showingCover ? (_coverAtBack ? pages.length : -1) : index,
-            isCover: showingCover,
-            coverSurface: showingCover ? cover(back: _coverAtBack) : null,
-            previousIsCover: !showingCover && index == 0,
-            nextIsCover: !showingCover && !fresh && index == pages.length - 1,
-            editing: c.editorFocused,
-            composing: _editorComposing || c.composing,
-            onTurn: _commitTurn,
-            previous: showingCover
-                ? (_coverAtBack ? paper(current, index) : null)
-                : index == 0
-                ? cover()
-                : paper(pages[index - 1], index - 1),
-            next: showingCover
-                ? (_coverAtBack ? null : paper(current, index))
-                : !fresh && index == pages.length - 1
-                ? cover(back: true)
-                : paper(nextPage, index + 1),
-            child: PaperSwipe(
-              key: const ValueKey('paper-swipe'),
-              touchOnly: !showingCover,
-              onPrevious: canSwipe && (!showingCover || _coverAtBack)
-                  ? () => _stepPage(-1)
-                  : null,
-              onNext: canSwipe && (!showingCover || !_coverAtBack)
-                  ? () => _stepPage(1)
-                  : null,
-              onTurnOrigin: (origin) => _pageTurn.start(origin: origin),
-              onTurnUpdate: _pageTurn.update,
-              onTurnEnd: _pageTurn.end,
-              onTurnCancel: _pageTurn.cancel,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Offstage(
-                    offstage: showingCover,
-                    child: paper(current, index, preview: false),
-                  ),
-                  if (showingCover) cover(back: _coverAtBack),
-                ],
+      body: PageTurnView(
+        key: ValueKey((c, c.editorEpoch)),
+        controller: _pageTurn,
+        page: current,
+        style: _paperStyle(book),
+        scopeId: book?.id ?? current.recordId,
+        position: showingCover ? (_coverAtBack ? pages.length : -1) : index,
+        isCover: showingCover,
+        coverSurface: showingCover ? cover(back: _coverAtBack) : null,
+        previousIsCover: !showingCover && index == 0,
+        nextIsCover: !showingCover && !fresh && index == pages.length - 1,
+        editing: c.editorFocused,
+        composing: _editorComposing || c.composing,
+        onTurn: _commitTurn,
+        previous: showingCover
+            ? (_coverAtBack ? paper(current, index) : null)
+            : index == 0
+            ? cover()
+            : paper(pages[index - 1], index - 1),
+        next: showingCover
+            ? (_coverAtBack ? null : paper(current, index))
+            : !fresh && index == pages.length - 1
+            ? cover(back: true)
+            : paper(nextPage, index + 1),
+        child: PaperSwipe(
+          key: const ValueKey('paper-swipe'),
+          touchOnly: !showingCover,
+          onPrevious: canSwipe && (!showingCover || _coverAtBack)
+              ? () => _stepPage(-1)
+              : null,
+          onNext: canSwipe && (!showingCover || !_coverAtBack)
+              ? () => _stepPage(1)
+              : null,
+          onTurnOrigin: (origin) => _pageTurn.start(origin: origin),
+          onTurnUpdate: _pageTurn.update,
+          onTurnEnd: _pageTurn.end,
+          onTurnCancel: _pageTurn.cancel,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Offstage(
+                offstage: showingCover,
+                child: paper(current, index, preview: false),
               ),
-            ),
+              if (showingCover) cover(back: _coverAtBack),
+            ],
           ),
         ),
       ),

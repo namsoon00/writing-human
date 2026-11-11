@@ -314,60 +314,79 @@ class _PageTurnViewState extends State<PageTurnView>
     return Positioned.fill(
       child: IgnorePointer(
         child: ExcludeSemantics(
-          child: AnimatedBuilder(
-            animation: turn,
-            child: RepaintBoundary(
-              child:
-                  _departingCover ??
-                  RawImage(
-                    image: outgoing,
-                    fit: BoxFit.fill,
-                    filterQuality: FilterQuality.medium,
-                  ),
-            ),
-            builder: (context, child) {
-              final progress = Curves.easeInOutCubic.transform(turn.value);
-              if (outgoingCover || incomingCover) {
-                return Stack(
+          child: _frame(
+            cover: outgoingCover,
+            child: AnimatedBuilder(
+              animation: turn,
+              child: RepaintBoundary(
+                child:
+                    _departingCover ??
+                    RawImage(
+                      image: outgoing,
+                      fit: BoxFit.fill,
+                      filterQuality: FilterQuality.medium,
+                    ),
+              ),
+              builder: (context, child) {
+                final progress = Curves.easeInOutCubic.transform(turn.value);
+                if (outgoingCover || incomingCover) {
+                  return Stack(
+                    key: const ValueKey('page-turn-overlay'),
+                    fit: StackFit.expand,
+                    children: [
+                      if (outgoingCover)
+                        CoverHinge(
+                          progress: progress,
+                          incoming: false,
+                          forward: forward,
+                          enabled: true,
+                          child: child!,
+                        )
+                      else
+                        child!,
+                    ],
+                  );
+                }
+                return CustomPaint(
                   key: const ValueKey('page-turn-overlay'),
-                  fit: StackFit.expand,
-                  children: [
-                    if (outgoingCover)
-                      CoverHinge(
-                        progress: progress,
-                        incoming: false,
-                        forward: forward,
-                        enabled: true,
-                        child: child!,
-                      )
-                    else
-                      child!,
-                  ],
+                  foregroundPainter: _Fold(
+                    progress,
+                    forward,
+                    paperColors[outgoingStyle!.paperIndex],
+                  ),
+                  child: ClipPath(
+                    clipper: _Peel(progress, forward),
+                    child: child,
+                  ),
                 );
-              }
-              return CustomPaint(
-                key: const ValueKey('page-turn-overlay'),
-                foregroundPainter: _Fold(
-                  progress,
-                  forward,
-                  paperColors[outgoingStyle!.paperIndex],
-                ),
-                child: ClipPath(
-                  clipper: _Peel(progress, forward),
-                  child: child,
-                ),
-              );
-            },
+              },
+            ),
           ),
         ),
       ),
     );
   }
 
+  Widget _frame({required bool cover, required Widget child, Key? key}) =>
+      Center(
+        key: key,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: cover ? double.infinity : writingSurfaceMaxWidth,
+          ),
+          child: SizedBox.expand(child: child),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      _surfaceSize = constraints.biggest;
+      _surfaceSize = Size(
+        widget.isCover
+            ? constraints.maxWidth
+            : math.min(constraints.maxWidth, writingSurfaceMaxWidth),
+        constraints.maxHeight,
+      );
       final revealing =
           _preview != null &&
           dragProgress.value > 0 &&
@@ -383,33 +402,38 @@ class _PageTurnViewState extends State<PageTurnView>
       Widget clipped(Widget child, {required bool incoming}) {
         final key = ValueKey(incoming ? 'page-turn-reveal' : 'page-turn-live');
         // Keep one stable wrapper type and key around the actual editor.
-        return ClipRect(
-          key: key,
-          clipper: revealing && !corner && !coverTurn
-              ? PageRevealClipper(progress, _dragForward, incoming: incoming)
-              : null,
-          child: ClipPath(
-            clipper: corner
-                ? _CornerPeel(progress, _dragForward, incoming)
+        return _frame(
+          key: ValueKey(incoming ? 'page-preview-frame' : 'page-live-frame'),
+          cover: incoming ? targetCover : widget.isCover,
+          child: ClipRect(
+            key: key,
+            clipper: revealing && !corner && !coverTurn
+                ? PageRevealClipper(progress, _dragForward, incoming: incoming)
                 : null,
-            clipBehavior: corner ? Clip.antiAlias : Clip.none,
-            child: AnimatedBuilder(
-              animation: turn,
-              child: child,
-              builder: (context, child) {
-                final arriving = !incoming && _hasOutgoing && incomingCover;
-                return CoverHinge(
-                  progress: arriving
-                      ? Curves.easeInOutCubic.transform(turn.value)
-                      : progress,
-                  incoming: arriving || incoming,
-                  forward: arriving ? forward : _dragForward,
-                  enabled:
-                      arriving ||
-                      (coverTurn && (incoming ? targetCover : widget.isCover)),
-                  child: child!,
-                );
-              },
+            child: ClipPath(
+              clipper: corner
+                  ? _CornerPeel(progress, _dragForward, incoming)
+                  : null,
+              clipBehavior: corner ? Clip.antiAlias : Clip.none,
+              child: AnimatedBuilder(
+                animation: turn,
+                child: child,
+                builder: (context, child) {
+                  final arriving = !incoming && _hasOutgoing && incomingCover;
+                  return CoverHinge(
+                    progress: arriving
+                        ? Curves.easeInOutCubic.transform(turn.value)
+                        : progress,
+                    incoming: arriving || incoming,
+                    forward: arriving ? forward : _dragForward,
+                    enabled:
+                        arriving ||
+                        (coverTurn &&
+                            (incoming ? targetCover : widget.isCover)),
+                    child: child!,
+                  );
+                },
+              ),
             ),
           ),
         );
@@ -437,11 +461,14 @@ class _PageTurnViewState extends State<PageTurnView>
           if (revealing && !coverTurn)
             Positioned.fill(
               child: IgnorePointer(
-                child: CustomPaint(
-                  key: const ValueKey('page-turn-fold'),
-                  painter: corner
-                      ? _CornerFold(progress, _dragForward, color)
-                      : _DraggedFold(progress, _dragForward, color),
+                child: _frame(
+                  cover: false,
+                  child: CustomPaint(
+                    key: const ValueKey('page-turn-fold'),
+                    painter: corner
+                        ? _CornerFold(progress, _dragForward, color)
+                        : _DraggedFold(progress, _dragForward, color),
+                  ),
                 ),
               ),
             ),

@@ -7,6 +7,8 @@ import '../data/book_detail_style.dart';
 export 'paper_palette.dart';
 export 'ink_mark.dart';
 
+const writingSurfaceMaxWidth = 760.0;
+
 EdgeInsets writingPagePadding(Size size) => EdgeInsets.fromLTRB(
   size.width < 500 ? 30 : 64,
   size.height < 400 ? 24 : 54,
@@ -63,7 +65,7 @@ class PaperBackdrop extends StatelessWidget {
     child: Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 760),
+        constraints: const BoxConstraints(maxWidth: writingSurfaceMaxWidth),
         child: Stack(
           children: [
             Positioned.fill(
@@ -165,12 +167,68 @@ class WritingGuides extends CustomPainter {
 
 const coverNames = ['밤색 리넨', '아이보리 리넨', '푸른 리넨'];
 const _coverColors = [Color(0xff715344), Color(0xffa38b6f), Color(0xff454d64)];
+const _coverAssets = [
+  'assets/images/linen-cover.png',
+  'assets/images/ivory-linen-cover.png',
+  'assets/images/blue-linen-cover.png',
+];
 // The PNGs have transparent margins. Keep the decorations on the linen face.
 const _coverFaceBounds = [
   Rect.fromLTRB(22 / 682, 37 / 1024, 659 / 682, 986 / 1024),
   Rect.fromLTRB(21 / 738, 22 / 1024, 713 / 738, 1001 / 1024),
   Rect.fromLTRB(27 / 738, 19 / 1024, 708 / 738, 1001 / 1024),
 ];
+
+/// Aligns the actual cloth face to the viewport edges, excluding the PNG's
+/// transparent margins. Wide covers crop vertically to retain their spine.
+class BookCoverMaterial extends StatelessWidget {
+  const BookCoverMaterial({
+    super.key,
+    required this.variant,
+    required this.back,
+    required this.binding,
+  });
+  final int variant;
+  final bool back;
+  final BookDetailChoice binding;
+
+  @override
+  Widget build(BuildContext context) {
+    final index = variant % _coverAssets.length;
+    final face = _coverFaceBounds[index];
+    return Transform.flip(
+      flipX: back,
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final faceHeight = math.max(box.maxHeight, box.maxWidth / .88);
+          final width = box.maxWidth / face.width;
+          final height = faceHeight / face.height;
+          final top = (box.maxHeight - faceHeight) / 2;
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              ColoredBox(
+                color: const [
+                  Color(0xff41432d),
+                  Color(0xffe8d8bc),
+                  Color(0xff3f4a59),
+                ][index],
+              ),
+              Positioned(
+                left: -face.left * width,
+                top: top - face.top * height,
+                width: width,
+                height: height,
+                child: Image.asset(_coverAssets[index], fit: BoxFit.fill),
+              ),
+              BookBinding(choice: binding, cover: true),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
 
 class BookCover extends StatelessWidget {
   const BookCover({
@@ -265,14 +323,7 @@ class BookCover extends StatelessWidget {
   Widget _coverArtwork(double width, Rect face, int index, bool light) => Stack(
     fit: StackFit.expand,
     children: [
-      Image.asset(
-        [
-          'assets/images/linen-cover.png',
-          'assets/images/ivory-linen-cover.png',
-          'assets/images/blue-linen-cover.png',
-        ][index],
-        fit: BoxFit.fill,
-      ),
+      Image.asset(_coverAssets[index], fit: BoxFit.fill),
       Positioned.fromRect(
         rect: face.deflate(width * .018),
         child: BookBinding(choice: details.binding, cover: true),

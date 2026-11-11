@@ -385,6 +385,39 @@ void main() {
     },
   );
 
+  testWidgets('The covers fill a wide viewport around the centered editor', (
+    tester,
+  ) async {
+    final store = MemoryStore()..data = twoPages();
+    await open(tester, store);
+    const viewport = Size(1440, 900);
+    tester.view.physicalSize = viewport;
+    tester.view.padding = const FakeViewPadding(top: 28, bottom: 24);
+    addTearDown(tester.view.resetPadding);
+    await tester.pumpAndSettle();
+    final surface = find.byKey(const ValueKey('paper-swipe'));
+    final material = find.byKey(const ValueKey('full-cover-material'));
+    final editor = tester.widget<TextField>(field).controller;
+    expect(tester.getSize(surface).width, 760);
+
+    await previousSheet(tester);
+    await tester.pumpAndSettle();
+    expect(tester.getRect(material), Offset.zero & viewport);
+    expect(tester.getTopLeft(find.text('보관함')).dy, greaterThan(28));
+    await tester.tap(find.text('책 펼치기'));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(surface).width, 760);
+    expect(tester.widget<TextField>(field).controller, same(editor));
+
+    await nextSheet(tester);
+    await tester.pumpAndSettle();
+    await nextSheet(tester);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('book-back-cover')), findsOneWidget);
+    expect(tester.getRect(material), Offset.zero & viewport);
+    expect(store.data.pages.length, 2);
+  });
+
   testWidgets('Paper swipes turn pages; editing gestures stay in the text', (
     tester,
   ) async {

@@ -109,6 +109,16 @@ class PaperBackdrop extends StatelessWidget {
                 ),
               ),
             ),
+            if (coverIndex case final index? when binding.enabled)
+              Positioned(
+                top: 0,
+                bottom: 0,
+                left: 0,
+                width: 3,
+                child: IgnorePointer(
+                  child: ColoredBox(color: _coverColors[index]),
+                ),
+              ),
             Positioned.fill(child: BookBinding(choice: binding)),
             if (coverIndex case final index?)
               Positioned.fill(

@@ -36,6 +36,31 @@ List<PencilMark> _mergeMarks(
   );
 }
 
+List<PagePassage> _mergePassages(
+  WritingPage? base,
+  WritingPage local,
+  WritingPage remote,
+  String text,
+) {
+  Map<String, PagePassage> aligned(WritingPage page) => {
+    for (final entry in PagePassage.afterEdit(page.text, text, page.passages))
+      entry.id: entry,
+  };
+  final before = base == null ? <String, PagePassage>{} : aligned(base);
+  final left = aligned(local);
+  final right = aligned(remote);
+  return [
+    for (final id in {...left.keys, ...right.keys})
+      if (left[id] == null)
+        right[id]!
+      else if (right[id] == null ||
+          !sameData(left[id]!.toJson(), before[id]?.toJson()))
+        left[id]!
+      else
+        right[id]!,
+  ];
+}
+
 class MergeResult {
   const MergeResult(this.library, this.conflictCopies);
   final Library library;
@@ -89,6 +114,8 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
               'text': p.text,
               'pencilMarks': p.pencilMarks.map((m) => m.toJson()).toList(),
               'writtenOn': p.writtenOn,
+              if (p.passages.isNotEmpty)
+                'passages': p.passages.map((entry) => entry.toJson()).toList(),
             },
           )
           .toList(),
@@ -117,6 +144,7 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         scroll: p.scroll,
         writtenOn: p.writtenOn,
         pencilMarks: p.pencilMarks,
+        passages: p.passages,
       );
     }
     copies++;
@@ -166,11 +194,13 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
       pages[l.id] = (useRemotePosition ? r : l).withDetails(
         writtenOn: b?.writtenOn ?? l.writtenOn ?? r.writtenOn,
         pencilMarks: _mergeMarks(b, l, r, l.text),
+        passages: _mergePassages(b, l, r, l.text),
       );
     } else if (b != null && l.text == b.text) {
       pages[l.id] = r.withDetails(
         writtenOn: b.writtenOn ?? l.writtenOn ?? r.writtenOn,
         pencilMarks: _mergeMarks(b, l, r, r.text),
+        passages: _mergePassages(b, l, r, r.text),
       );
     } else {
       if (b == null || r.text != b.text) {
@@ -183,6 +213,7 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
           ? l.withDetails(
               writtenOn: b.writtenOn ?? l.writtenOn ?? r.writtenOn,
               pencilMarks: _mergeMarks(b, l, r, l.text),
+              passages: _mergePassages(b, l, r, l.text),
             )
           : l;
     }
@@ -211,6 +242,7 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         scroll: p.scroll,
         writtenOn: p.writtenOn,
         pencilMarks: p.pencilMarks,
+        passages: p.passages,
       ),
   ];
   final allFavorites = {

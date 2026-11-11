@@ -127,7 +127,7 @@ void main() {
       LibraryController? c;
       try {
         final migrated = await store.load();
-        expect(await store.db.getVersion(), 7);
+        expect(await store.db.getVersion(), 8);
         expect(migrated.encode(), original.encode());
         c = LibraryController(store, migrated);
         c.setBookIndexLabel('b', '다시 읽기');
@@ -154,6 +154,14 @@ void main() {
             pageSound: true,
           ),
         );
+        expect(migrated.pages.single.passages, isEmpty);
+        const passage = PagePassage(
+          id: 'passage',
+          start: 0,
+          source: '원문',
+          citation: '필사집 · 12쪽',
+        );
+        c.savePagePassage(migrated.pages.single, passage);
         await c.settled;
         expect(c.saveError, isNull);
         final expected = c.library.encode();
@@ -170,7 +178,11 @@ void main() {
         expect(restored.style.paperIndex, original.style.paperIndex);
         expect(restored.style.pageMotion, isFalse);
         expect(restored.style.pageSound, isTrue);
-        expect(restored.pages.single.toJson(), original.pages.single.toJson());
+        expect(restored.pages.single.text, original.pages.single.text);
+        expect(
+          restored.pages.single.passages.single.toJson(),
+          passage.toJson(),
+        );
         expect(
           restored.records.single.toJson(),
           original.records.single.toJson(),

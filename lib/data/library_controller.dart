@@ -339,6 +339,47 @@ class LibraryController extends ChangeNotifier {
     );
   }
 
+  void savePagePassage(
+    WritingPage page,
+    PagePassage passage, {
+    String lineBreak = '',
+    String? draftBookId,
+  }) {
+    final stored = library.pages
+        .where((entry) => entry.id == page.id)
+        .firstOrNull;
+    final old = stored ?? page;
+    if (old.text != page.text) return;
+    final next = lineBreak.isNotEmpty
+        ? old.edited(
+            text: old.text + lineBreak,
+            base: old.text.length + lineBreak.length,
+            extent: old.text.length + lineBreak.length,
+            scroll: old.scroll,
+          )
+        : old;
+    final passages = [
+      for (final entry in next.passages)
+        if (entry.id != passage.id) entry,
+      passage,
+    ];
+    final updated = next.withDetails(passages: passages);
+    if (stored == null) {
+      saveDraft(updated, bookId: draftBookId, keepBlank: true);
+      return;
+    }
+    if (lineBreak.isNotEmpty) editorEpoch++;
+    _publish(
+      library.copy(
+        pages: [
+          for (final entry in library.pages)
+            entry.id == updated.id ? updated : entry,
+        ],
+      ),
+      positionChanged: lineBreak.isNotEmpty,
+    );
+  }
+
   void showShelf() =>
       _publish(library.copy(writing: false), positionChanged: true);
   void openPage(String id) => _publish(
@@ -362,12 +403,15 @@ class LibraryController extends ChangeNotifier {
     );
   }
 
-  void addPage() {
+  void addPage({PagePassage? continuation}) {
     final record = library.activeRecord!;
     final page = WritingPage(
       id: _id(),
       recordId: record.id,
       writtenOn: _today(),
+      passages: continuation == null
+          ? const []
+          : [continuation.copy(start: 0, continued: true)],
       number:
           library.pages
               .where((p) => p.recordId == record.id)

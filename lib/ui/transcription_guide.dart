@@ -60,6 +60,13 @@ class TranscriptionGuide {
     return original;
   }
 
+  int? consumed(String text) => text.startsWith(initialText)
+      ? _matchedLength(
+          paragraph.trimLeft(),
+          text.substring(initialText.length).trimLeft(),
+        )
+      : null;
+
   String remaining(TextEditingValue value) {
     final text = value.text;
     if (!text.startsWith(initialText)) return '';

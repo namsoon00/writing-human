@@ -326,7 +326,11 @@ void main() {
       expect(store.data.records.single.source, source);
       expect(store.data.activePage!.text, '');
       expect(tester.widget<TextField>(editor).controller, same(controller));
+      await tester.tap(find.text('원문 보기'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('다음 문단'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('따라 쓰기'));
       await tester.pumpAndSettle();
       await tester.enterText(editor, written);
       await tester.pumpAndSettle();

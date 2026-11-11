@@ -169,7 +169,11 @@ void main() {
     final body = field.controller!.value;
     expect(store.data.activePage!.text, body.text);
 
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('다음 문단'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('따라 쓰기'));
     await tester.pumpAndSettle();
     expect(remaining(), '내 글로 남깁니다.');
     expect(field.controller!.value, body);
@@ -180,16 +184,114 @@ void main() {
     await tester.pumpAndSettle();
     expect(overlay, findsNothing);
     expect(find.text('내 글로 남깁니다.'), findsOneWidget);
+    await tester.tap(find.text('닫기'));
+    await tester.pumpAndSettle();
     expect(
       tester.widget<TextField>(bodyField).controller,
       same(field.controller),
     );
     expect(store.data.activePage!.text, '${body.text}\n내 글');
     expect(store.data.records.single.source, source);
-    await tester.tap(toggle);
-    await tester.pumpAndSettle();
     expect(remaining(), '로 남깁니다.');
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Blank lines start separate passages on the same paper', (
+    tester,
+  ) async {
+    final store = MemoryStore();
+    await open(tester, store, FakeIntake());
+    final add = find.byTooltip('여기에 필사 추가');
+    final original = find.byKey(const ValueKey('passage-source'));
+    final citation = find.byKey(const ValueKey('passage-citation'));
+    Future<void> start(String source, String label) async {
+      await tester.tap(add);
+      await tester.pumpAndSettle();
+      await tester.enterText(original, source);
+      await tester.enterText(citation, label);
+      await tester.tap(find.text('이 줄에서 시작'));
+      await tester.pumpAndSettle();
+    }
+
+    await tester.tapAt(tester.getTopLeft(bodyField) + const Offset(100, 80));
+    await tester.pumpAndSettle();
+    await start('첫 문장', '첫째 책 · 10쪽');
+    await tester.enterText(bodyField, '첫 문장');
+    await tester.pumpAndSettle();
+    final pageId = store.data.activePageId;
+
+    await tester.tapAt(tester.getTopLeft(bodyField) + const Offset(100, 170));
+    await tester.pumpAndSettle();
+    await start('둘째 문장', '둘째 책 · 20쪽');
+    final page = store.data.activePage!;
+    expect(page.id, pageId);
+    expect(store.data.records, hasLength(1));
+    expect(store.data.pages, hasLength(1));
+    expect(page.text, '첫 문장\n\n');
+    expect(find.text('다음 쪽'), findsNothing);
+    expect(page.passages.map((entry) => entry.start), [0, page.text.length]);
+    expect(find.text('첫째 책 · 10쪽'), findsOneWidget);
+    expect(find.text('둘째 책 · 20쪽'), findsOneWidget);
+
+    final controller = tester.widget<TextField>(bodyField).controller!;
+    await tester.tap(find.text('원문 보기'));
+    await tester.pumpAndSettle();
+    expect(find.text('둘째 문장'), findsOneWidget);
+    await tester.tap(find.text('닫기'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(bodyField).controller, same(controller));
+    expect(controller.selection.extentOffset, page.text.length);
+    controller.selection = const TextSelection.collapsed(offset: 1);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('원문 보기'));
+    await tester.pumpAndSettle();
+    expect(find.text('첫 문장'), findsOneWidget);
+    await tester.tap(find.text('닫기'));
+    await tester.pumpAndSettle();
+    expect(controller.selection.extentOffset, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Next paper carries the unwritten part of the last passage', (
+    tester,
+  ) async {
+    final written = List.generate(22, (index) => '줄 ${index + 1}').join('\n');
+    const remainder = ' 이어 쓸 부분';
+    final store = MemoryStore()
+      ..data = existing().copy(
+        pages: [
+          WritingPage(
+            id: 'p',
+            recordId: 'r',
+            number: 1,
+            text: written,
+            base: written.length,
+            extent: written.length,
+            passages: [
+              PagePassage(id: 'entry', start: 0, source: '$written$remainder'),
+            ],
+          ),
+        ],
+      );
+    await open(tester, store, FakeIntake());
+    await tester.tap(find.text('다음 쪽'));
+    await tester.pumpAndSettle();
+    expect(store.data.pages, hasLength(2));
+    expect(store.data.pages.first.text, written);
+    final page = store.data.activePage!;
+    expect(page.number, 2);
+    expect(page.text, isEmpty);
+    expect(page.passages.single.id, 'entry');
+    expect(page.passages.single.continued, isTrue);
+    expect(page.passages.single.sourceOffset, written.length);
+    final overlay = find.byKey(const ValueKey('transcription-guide'));
+    final painter =
+        tester.widget<CustomPaint>(overlay).painter!
+            as TranscriptionGuidePainter;
+    expect(
+      painter.guide.remaining(TextEditingValue.empty),
+      remainder.trimLeft(),
+    );
   });
 
   testWidgets('Long guide scrolls on the same page without saving guide text', (
@@ -219,9 +321,13 @@ void main() {
     expect(store.data.pages.single.id, 'p');
     expect(store.data.pages.single.text, isEmpty);
     expect(store.data.pages.single.scroll, 0);
+    final readingOffset = scroll.offset;
     await tester.tap(find.text('원문 보기'));
     await tester.pumpAndSettle();
-    expect(scroll.position.maxScrollExtent, 0);
+    expect(find.text('문단 1을 이어 씁니다.'), findsOneWidget);
+    await tester.tap(find.text('닫기'));
+    await tester.pumpAndSettle();
+    expect(scroll.offset, readingOffset);
     expect(tester.takeException(), isNull);
   });
 
@@ -323,9 +429,7 @@ void main() {
       (widget) => widget is IconButton && widget.tooltip == '다음 문단',
     );
     final previous = find.byTooltip('이전 문단');
-    await tester.tap(find.text('원문 보기'));
-    await tester.pumpAndSettle();
-    expect(tester.widget<Text>(paragraph).data, first);
+    final openOriginal = find.text('원문 보기');
     final field = tester.widget<TextField>(bodyField);
     await tester.showKeyboard(bodyField);
     tester.view.physicalSize = const Size(320, 640);
@@ -341,7 +445,14 @@ void main() {
     );
     tester.testTextInput.updateEditingValue(composing);
     await tester.pump();
-    expect(tester.widget<IconButton>(next).onPressed, isNull);
+    expect(
+      tester
+          .widget<TextButton>(
+            find.ancestor(of: openOriginal, matching: find.byType(TextButton)),
+          )
+          .onPressed,
+      isNull,
+    );
     expect(field.controller!.value, composing);
 
     final committed = composing.copyWith(
@@ -350,6 +461,10 @@ void main() {
     );
     tester.testTextInput.updateEditingValue(committed);
     await tester.pumpAndSettle();
+    final writingArea = tester.getRect(bodyField);
+    await tester.tap(openOriginal);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(paragraph).data, first);
     final scrollView = find.ancestor(
       of: paragraph,
       matching: find.byType(SingleChildScrollView),
@@ -363,11 +478,17 @@ void main() {
       greaterThan(0),
     );
     final writes = store.writes;
-    final writingArea = tester.getRect(bodyField);
     await tester.tap(next, kind: PointerDeviceKind.mouse);
     await tester.pumpAndSettle();
     expect(tester.widget<Text>(paragraph).data, second);
     expect(tester.widget<IconButton>(next).onPressed, isNull);
+    await tester.tap(previous);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(paragraph).data, first);
+    await tester.tap(next);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('닫기'));
+    await tester.pumpAndSettle();
     expect(
       tester.widget<TextField>(bodyField).controller,
       same(field.controller),
@@ -378,9 +499,6 @@ void main() {
     expect(store.writes, writes + 1);
     expect(store.data.records.single.source, source);
     expect(store.data.records.single.sourceParagraph, 1);
-    await tester.tap(previous);
-    await tester.pumpAndSettle();
-    expect(tester.widget<Text>(paragraph).data, first);
     expect(tester.takeException(), isNull);
   });
 

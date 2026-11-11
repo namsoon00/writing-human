@@ -8,6 +8,7 @@ import 'package:writing_human/data/sqlite_store.dart';
 import 'package:writing_human/main.dart';
 import 'package:writing_human/sync/merge.dart';
 import 'package:writing_human/ui/book_details.dart';
+import 'package:writing_human/ui/source_reading.dart';
 import 'widget_test.dart' show MemoryStore;
 
 Library specimen() => const Library(
@@ -371,7 +372,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('원문 보기'));
       await tester.pumpAndSettle();
-      expect(find.byType(SourceSlip), findsOneWidget);
+      expect(find.byType(SourceReading), findsOneWidget);
+      await tester.tap(find.text('닫기'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('보관함'));
       await tester.pumpAndSettle();
       expect(find.byType(DateStamp), findsOneWidget);

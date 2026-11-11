@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../data/model.dart';
@@ -19,6 +20,8 @@ class PageEditor extends StatefulWidget {
     this.onPencilMark,
     this.guide,
     this.reveal,
+    this.onAddPassage,
+    this.onNextSheet,
   });
   final FocusNode? focusNode;
   final void Function(bool focused, bool composing)? onEditingState;
@@ -27,6 +30,7 @@ class PageEditor extends StatefulWidget {
   final void Function(String, String, int, int, double) onChanged;
   final void Function(String, int, int)? onPencilMark;
   final TranscriptionGuide? guide;
+  final VoidCallback? onAddPassage, onNextSheet;
   final ({int offset, int request})? reveal;
   @override
   State<PageEditor> createState() => _PageEditorState();
@@ -42,6 +46,90 @@ class _PageEditorState extends State<PageEditor> {
   late final focus = widget.focusNode ?? FocusNode();
   bool restoring = true;
   final fieldRenderKey = GlobalKey();
+  Offset? _pointerDown;
+  Offset? _paperTap;
+  String? _tapText;
+  bool _geometryQueued = false;
+  double? _addTop;
+  bool _atLastLine = false;
+  List<({int start, String citation, double top})> _lineMarkers = const [];
+
+  void _readPaperGeometry(EdgeInsets padding, double height) {
+    if (_geometryQueued) return;
+    _geometryQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _geometryQueued = false;
+      if (!mounted || !scroll.hasClients) return;
+      final field = fieldRenderKey.currentContext?.findRenderObject();
+      final editable = findEditable(field);
+      if (field == null || editable == null || !editable.hasSize) return;
+      final origin = MatrixUtils.transformPoint(
+        editable.getTransformTo(field),
+        Offset.zero,
+      );
+      Rect caretAt(int offset) => editable
+          .getLocalRectForCaret(
+            TextPosition(offset: offset.clamp(0, text.text.length)),
+          )
+          .shift(origin);
+
+      final value = text.value;
+      final end = caretAt(value.text.length);
+      final markers = [
+        for (final passage in widget.page.passages.where(
+          (entry) => !entry.continued,
+        ))
+          if (caretAt(passage.start).top >= 0 &&
+              caretAt(passage.start).top < height - padding.bottom)
+            (
+              start: passage.start,
+              citation: passage.citation,
+              top: caretAt(passage.start).top,
+            ),
+      ];
+      final composing =
+          value.isComposingRangeValid && !value.composing.isCollapsed;
+      final atEnd =
+          value.selection.isCollapsed &&
+          value.selection.extentOffset == value.text.length;
+      final nextLine =
+          _tapText == value.text && (_paperTap?.dy ?? 0) > end.bottom;
+      final blank = value.text.isEmpty || value.text.endsWith('\n');
+      final alreadyStarted =
+          widget.page.passageAt(value.text.length)?.start == value.text.length;
+      final top = blank ? end.top : end.top + editable.preferredLineHeight;
+      final addTop =
+          focus.hasFocus &&
+              value.selection.isCollapsed &&
+              !composing &&
+              !alreadyStarted &&
+              ((blank && atEnd) || nextLine) &&
+              top < height - 24
+          ? top.clamp(0.0, (height - 48).clamp(0.0, double.infinity)).toDouble()
+          : null;
+      final paperHeight = height + MediaQuery.viewInsetsOf(context).bottom;
+      final lastLine =
+          value.text.isNotEmpty &&
+          atEnd &&
+          !composing &&
+          end.bottom +
+                  scroll.offset.clamp(0.0, scroll.textExtent) +
+                  padding.bottom +
+                  editable.preferredLineHeight >=
+              paperHeight;
+      if (_addTop == addTop &&
+          _atLastLine == lastLine &&
+          listEquals(_lineMarkers, markers)) {
+        return;
+      }
+      setState(() {
+        _addTop = addTop;
+        _atLastLine = lastLine;
+        _lineMarkers = markers;
+      });
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -194,6 +282,7 @@ class _PageEditorState extends State<PageEditor> {
       builder: (context, constraints) {
         final padding = writingPagePadding(constraints.biggest);
         final guide = widget.guide;
+        _readPaperGeometry(padding, constraints.maxHeight);
         final paper = Stack(
           children: [
             if (style.guides)
@@ -219,66 +308,75 @@ class _PageEditorState extends State<PageEditor> {
               ),
             RepaintBoundary(
               key: fieldRenderKey,
-              child: TextField(
-                key: const ValueKey('page-text'),
-                controller: text,
-                scrollController: scroll,
-                focusNode: focus,
-                // Keep native input/selection, with a separate ink indicator.
-                showCursor: false,
-                maxLines: null,
-                minLines: null,
-                expands: true,
-                textAlignVertical: TextAlignVertical.top,
-                keyboardType: TextInputType.multiline,
-                textInputAction: TextInputAction.newline,
-                autocorrect: false,
-                enableSuggestions: false,
-                contextMenuBuilder: (context, state) {
-                  final selection = text.selection;
-                  final canMark =
-                      widget.onPencilMark != null &&
-                      selection.isValid &&
-                      !selection.isCollapsed &&
-                      (!text.value.composing.isValid ||
-                          text.value.composing.isCollapsed);
-                  final marked = widget.page.pencilMarks.any(
-                    (m) => m.start <= selection.start && m.end >= selection.end,
-                  );
-                  return AdaptiveTextSelectionToolbar.buttonItems(
-                    anchors: state.contextMenuAnchors,
-                    buttonItems: [
-                      if (canMark)
-                        ContextMenuButtonItem(
-                          label: marked ? '연필 표시 지우기' : '연필 표시',
-                          onPressed: () {
-                            // The selection is read only, including during toolbar actions.
-                            state.hideToolbar();
-                            widget.onPencilMark!(
-                              widget.page.id,
-                              selection.start,
-                              selection.end,
-                            );
-                          },
-                        ),
-                      ...state.contextMenuButtonItems,
-                    ],
-                  );
-                },
-                style: writingTextStyle(
-                  style.fontIndex,
-                  size: 23,
-                  color: penColors[style.penIndex],
-                  useDevelopmentTypeface: style.useDevelopmentTypeface,
-                ),
-                cursorColor: brandInk,
-                cursorWidth: 1.2,
-                decoration: InputDecoration(
-                  contentPadding: padding,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  filled: false,
+              child: Listener(
+                onPointerDown: (event) => _pointerDown = event.localPosition,
+                child: TextField(
+                  onTap: () {
+                    _paperTap = _pointerDown;
+                    _tapText = text.text;
+                    _readPaperGeometry(padding, constraints.maxHeight);
+                  },
+                  key: const ValueKey('page-text'),
+                  controller: text,
+                  scrollController: scroll,
+                  focusNode: focus,
+                  // Keep native input/selection, with a separate ink indicator.
+                  showCursor: false,
+                  maxLines: null,
+                  minLines: null,
+                  expands: true,
+                  textAlignVertical: TextAlignVertical.top,
+                  keyboardType: TextInputType.multiline,
+                  textInputAction: TextInputAction.newline,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  contextMenuBuilder: (context, state) {
+                    final selection = text.selection;
+                    final canMark =
+                        widget.onPencilMark != null &&
+                        selection.isValid &&
+                        !selection.isCollapsed &&
+                        (!text.value.composing.isValid ||
+                            text.value.composing.isCollapsed);
+                    final marked = widget.page.pencilMarks.any(
+                      (m) =>
+                          m.start <= selection.start && m.end >= selection.end,
+                    );
+                    return AdaptiveTextSelectionToolbar.buttonItems(
+                      anchors: state.contextMenuAnchors,
+                      buttonItems: [
+                        if (canMark)
+                          ContextMenuButtonItem(
+                            label: marked ? '연필 표시 지우기' : '연필 표시',
+                            onPressed: () {
+                              // The selection is read only, including during toolbar actions.
+                              state.hideToolbar();
+                              widget.onPencilMark!(
+                                widget.page.id,
+                                selection.start,
+                                selection.end,
+                              );
+                            },
+                          ),
+                        ...state.contextMenuButtonItems,
+                      ],
+                    );
+                  },
+                  style: writingTextStyle(
+                    style.fontIndex,
+                    size: 23,
+                    color: penColors[style.penIndex],
+                    useDevelopmentTypeface: style.useDevelopmentTypeface,
+                  ),
+                  cursorColor: brandInk,
+                  cursorWidth: 1.2,
+                  decoration: InputDecoration(
+                    contentPadding: padding,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
+                  ),
                 ),
               ),
             ),
@@ -301,6 +399,67 @@ class _PageEditorState extends State<PageEditor> {
                         useDevelopmentTypeface: style.useDevelopmentTypeface,
                       ),
                     ),
+                  ),
+                ),
+              ),
+            for (final marker in _lineMarkers)
+              Positioned(
+                left: 8,
+                right: padding.right,
+                top: (marker.top - 20).clamp(0.0, double.infinity),
+                child: IgnorePointer(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text(
+                        '·',
+                        style: TextStyle(color: brandInk, fontSize: 21),
+                      ),
+                      if (marker.citation.isNotEmpty)
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              left: (padding.left - 17).clamp(
+                                0.0,
+                                double.infinity,
+                              ),
+                            ),
+                            child: Text(
+                              marker.citation,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: muted,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            if (_addTop != null && widget.onAddPassage != null)
+              Positioned(
+                top: _addTop,
+                left: 0,
+                child: TextFieldTapRegion(
+                  child: IconButton(
+                    tooltip: '여기에 필사 추가',
+                    icon: const Icon(Icons.add, color: brandInk, size: 20),
+                    onPressed: widget.onAddPassage,
+                  ),
+                ),
+              ),
+            if (_atLastLine && widget.onNextSheet != null)
+              Positioned(
+                right: padding.right,
+                bottom: 0,
+                child: TextFieldTapRegion(
+                  child: TextButton(
+                    style: TextButton.styleFrom(backgroundColor: appPaper),
+                    onPressed: widget.onNextSheet,
+                    child: const Text('다음 쪽'),
                   ),
                 ),
               ),

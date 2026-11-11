@@ -166,6 +166,92 @@ class WritingRecord {
   );
 }
 
+/// A transcription that starts at a UTF-16 offset on the physical page.
+class PagePassage {
+  const PagePassage({
+    required this.id,
+    required this.start,
+    this.source = '',
+    this.citation = '',
+    this.paragraph = 0,
+    this.sourceOffset = 0,
+    this.continued = false,
+  });
+
+  final String id, source, citation;
+  final int start, paragraph, sourceOffset;
+  final bool continued;
+
+  PagePassage copy({
+    int? start,
+    String? source,
+    String? citation,
+    int? paragraph,
+    int? sourceOffset,
+    bool? continued,
+  }) => PagePassage(
+    id: id,
+    start: start ?? this.start,
+    source: source ?? this.source,
+    citation: citation ?? this.citation,
+    paragraph: paragraph ?? this.paragraph,
+    sourceOffset: sourceOffset ?? this.sourceOffset,
+    continued: continued ?? this.continued,
+  );
+
+  Json toJson() => {
+    'id': id,
+    'start': start,
+    'source': source,
+    'citation': citation,
+    'paragraph': paragraph,
+    'sourceOffset': sourceOffset,
+    if (continued) 'continued': true,
+  };
+
+  factory PagePassage.fromJson(Json j) => PagePassage(
+    id: j['id'] as String,
+    start: j['start'] as int,
+    source: j['source'] as String,
+    citation: j['citation'] as String,
+    paragraph: j['paragraph'] as int,
+    sourceOffset: j['sourceOffset'] as int,
+    continued: j['continued'] as bool? ?? false,
+  );
+
+  static List<PagePassage> afterEdit(
+    String before,
+    String after,
+    List<PagePassage> passages,
+  ) {
+    if (passages.isEmpty || before == after) return passages;
+    var prefix = 0;
+    while (prefix < before.length &&
+        prefix < after.length &&
+        before.codeUnitAt(prefix) == after.codeUnitAt(prefix)) {
+      prefix++;
+    }
+    var oldEnd = before.length;
+    var newEnd = after.length;
+    while (oldEnd > prefix &&
+        newEnd > prefix &&
+        before.codeUnitAt(oldEnd - 1) == after.codeUnitAt(newEnd - 1)) {
+      oldEnd--;
+      newEnd--;
+    }
+    return [
+      for (final entry in passages)
+        entry.start <= prefix
+            ? entry
+            : entry.copy(
+                start: entry.start < oldEnd
+                    ? prefix
+                    : entry.start + newEnd - oldEnd,
+              ),
+    ];
+  }
+}
+
 class WritingPage {
   const WritingPage({
     required this.id,
@@ -177,24 +263,42 @@ class WritingPage {
     this.scroll = 0,
     this.writtenOn,
     this.pencilMarks = const [],
+    this.passages = const [],
   });
   final String id, recordId, text;
   final int number, base, extent;
   final double scroll;
   final String? writtenOn;
   final List<PencilMark> pencilMarks;
-  WritingPage withDetails({String? writtenOn, List<PencilMark>? pencilMarks}) =>
-      WritingPage(
-        id: id,
-        recordId: recordId,
-        number: number,
-        text: text,
-        base: base,
-        extent: extent,
-        scroll: scroll,
-        writtenOn: writtenOn ?? this.writtenOn,
-        pencilMarks: pencilMarks ?? this.pencilMarks,
-      );
+  final List<PagePassage> passages;
+
+  PagePassage? passageAt(int offset) {
+    PagePassage? active;
+    for (final entry in passages) {
+      if (entry.start <= offset &&
+          (active == null || entry.start >= active.start)) {
+        active = entry;
+      }
+    }
+    return active;
+  }
+
+  WritingPage withDetails({
+    String? writtenOn,
+    List<PencilMark>? pencilMarks,
+    List<PagePassage>? passages,
+  }) => WritingPage(
+    id: id,
+    recordId: recordId,
+    number: number,
+    text: text,
+    base: base,
+    extent: extent,
+    scroll: scroll,
+    writtenOn: writtenOn ?? this.writtenOn,
+    pencilMarks: pencilMarks ?? this.pencilMarks,
+    passages: passages ?? this.passages,
+  );
   WritingPage edited({
     required String text,
     required int base,
@@ -210,6 +314,7 @@ class WritingPage {
     scroll: scroll,
     writtenOn: writtenOn,
     pencilMarks: PencilMark.afterEdit(this.text, text, pencilMarks),
+    passages: PagePassage.afterEdit(this.text, text, passages),
   );
   Json toJson() => {
     'id': id,
@@ -221,6 +326,8 @@ class WritingPage {
     'scroll': scroll,
     if (writtenOn != null) 'writtenOn': writtenOn,
     'pencilMarks': pencilMarks.map((m) => m.toJson()).toList(),
+    if (passages.isNotEmpty)
+      'passages': passages.map((entry) => entry.toJson()).toList(),
   };
   factory WritingPage.fromJson(Json j) => WritingPage(
     id: j['id'] as String,
@@ -231,6 +338,9 @@ class WritingPage {
     extent: j['extent'] as int,
     scroll: (j['scroll'] as num).toDouble(),
     writtenOn: j['writtenOn'] as String?,
+    passages: (j['passages'] as List? ?? [])
+        .map((entry) => PagePassage.fromJson(entry as Json))
+        .toList(),
     pencilMarks: (j['pencilMarks'] as List? ?? [])
         .map((m) => PencilMark.fromJson(m as Json))
         .toList(),
@@ -488,6 +598,19 @@ class Library {
                             p.writtenOn!,
                           ).toIso8601String().substring(0, 10) !=
                           p.writtenOn)) ||
+              p.passages.map((entry) => entry.id).toSet().length !=
+                  p.passages.length ||
+              p.passages.any(
+                (entry) =>
+                    entry.id.isEmpty ||
+                    entry.id.length > 250 ||
+                    entry.start < 0 ||
+                    entry.start > p.text.length ||
+                    entry.citation.length > 500 ||
+                    entry.paragraph < 0 ||
+                    entry.sourceOffset < 0 ||
+                    entry.sourceOffset > entry.source.length,
+              ) ||
               p.pencilMarks.any(
                 (m) => m.start < 0 || m.end <= m.start || m.end > p.text.length,
               ),

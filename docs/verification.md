@@ -1,5 +1,20 @@
 # 검증 기록
 
+## 2026-11-11 · 앞뒤 표지의 책등과 손가락 움직임
+
+- 포맷과 분석을 확인했고 Flutter 테스트 95개가 통과했다. 앞뒤 표지를 열고 닫을 때
+  책등 위치, 바깥 가장자리의 방향·이동량, 독자 쪽으로 들리는 원근을 검사했다.
+  1440px 화면에서도 뒷표지의 바깥 가장자리가 드래그 거리와 일치했다.
+  중간 취소와 글·선택·스크롤 보존 검사도 통과했다.
+- Flutter 위젯 테스트에서 열리는 앞표지와 닫히는 앞뒤 표지를 렌더링했다.
+  작업 폴더의 `artifacts/cover-opening-spine.png`,
+  `artifacts/cover-closing-spine.png`, `artifacts/back-cover-closing-spine.png`에 보관했다.
+- 배포 웹에서 직접 조작하는 검증은 하지 않았다.
+- [GitHub Actions 43009158211](https://github.com/namsoon00/writing-human/actions/runs/43009158211)에서
+  `a240562da795a0df365a818687af7942559e4785`의 검사·빌드·게시가 완료됐다.
+  공개 앱 JS와 번들 서체·브랜드 이미지가 검증한 로컬 산출물과 일치했다.
+  앱 JS SHA-256은 `02d810c98cd46f540402b11b6aac49ff845bb858bd59958d8453184de267b054`다.
+
 ## 2026-11-11 · 책 이름 변경과 작성 화면 제목
 
 - Dart 포맷과 분석을 확인했고 Flutter 테스트 94개가 통과했다.

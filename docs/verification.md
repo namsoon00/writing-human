@@ -1,5 +1,20 @@
 # 검증 기록
 
+## 2026-11-11 · 밑글씨를 보며 따라 쓰기
+
+- Dart 포맷·분석을 확인했고 로컬 작업 폴더와 웹 배포 작업본의 Flutter 테스트 86개가 각각 통과했다.
+- 원문 가져오기부터 따라 쓰기까지 위젯 테스트를 실행했다. 한글 조합 값, 입력한 부분의
+  남은 밑글씨, 자유 입력과 줄바꿈, 수동 문단 이동, 원문 보기에서 돌아올 때의 이어 쓰기를
+  검사했다. 앱에 저장한 본문과 원문을 각각 비교했고 기존 호스트 SQLite 재열기 검사도 통과했다.
+- `flutter test --no-pub tool/capture_source_intake_test.dart`가 합성 원문으로 Flutter 화면을
+  렌더링했다. `artifacts/source-intake-guide.png`와 `artifacts/source-intake-guide-writing.png`에서
+  옅은 원문과 진한 본문이 이어지는 줄, 옆줄로 이어지는 원문을 확인했다.
+- [GitHub Actions 42931409566](https://github.com/namsoon00/writing-human/actions/runs/42931409566)의
+  `2ea0aef4a1a5522e48ced33e82a4c7487cbf4861`에서 웹 검사·빌드·게시를 완료했다.
+  공개 주소의 HTML, main.dart.js, 쓰는 인간체 TTF가 검증한 로컬 빌드와 일치했다.
+  main.dart.js SHA-256은 `f4d6eaf38c36a381ede0d3576085f38440135136389ae3eed7bc0ccfcbaa41ea`다.
+- 실제 휴대폰에서의 입력과 배포 웹의 직접 조작은 미검증이다.
+
 ## 2026-11-11 · 한 문단씩 읽고 옮겨 쓰기
 
 - Dart 포맷과 분석을 확인했다. 작업 폴더의 Flutter 테스트 85개와 GitHub Pages용

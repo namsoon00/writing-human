@@ -113,10 +113,7 @@ class LibraryController extends ChangeNotifier {
       records: library.records
           .map(
             (r) => r.id == recordId
-                ? WritingRecord(
-                    id: r.id,
-                    bookId: r.bookId,
-                    title: r.title,
+                ? r.copy(
                     source: source,
                     sourceParagraph: r.source == source ? r.sourceParagraph : 0,
                   )
@@ -138,16 +135,44 @@ class LibraryController extends ChangeNotifier {
       library.copy(
         records: [
           for (final r in library.records)
-            if (r.id == recordId)
-              WritingRecord(
-                id: r.id,
-                title: r.title,
-                bookId: r.bookId,
-                source: r.source,
-                sourceParagraph: index,
-              )
-            else
-              r,
+            if (r.id == recordId) r.copy(sourceParagraph: index) else r,
+        ],
+      ),
+    );
+  }
+
+  void registerOriginal({
+    String? bookId,
+    WritingPage? page,
+    required String text,
+    required String citation,
+  }) {
+    final original = RegisteredOriginal(_id(), text, citation: citation);
+    if (bookId != null) {
+      _publish(
+        library.copy(
+          books: [
+            for (final book in library.books)
+              book.id == bookId
+                  ? book.copy(originals: [...book.originals, original])
+                  : book,
+          ],
+        ),
+      );
+      return;
+    }
+    if (page == null) return;
+    if (!library.records.any((record) => record.id == page.recordId)) {
+      saveDraft(page, originals: [original], keepBlank: true);
+      return;
+    }
+    _publish(
+      library.copy(
+        records: [
+          for (final record in library.records)
+            record.id == page.recordId
+                ? record.copy(originals: [...record.originals, original])
+                : record,
         ],
       ),
     );
@@ -253,6 +278,7 @@ class LibraryController extends ChangeNotifier {
   void saveDraft(
     WritingPage page, {
     String source = '',
+    List<RegisteredOriginal> originals = const [],
     String? bookId,
     bool keepBlank = false,
   }) {
@@ -265,6 +291,7 @@ class LibraryController extends ChangeNotifier {
       id: page.recordId,
       title: '필사 ${library.records.length + 1}',
       source: source,
+      originals: originals,
       bookId: bookId,
     );
     _publish(
@@ -339,47 +366,6 @@ class LibraryController extends ChangeNotifier {
     );
   }
 
-  void savePagePassage(
-    WritingPage page,
-    PagePassage passage, {
-    String lineBreak = '',
-    String? draftBookId,
-  }) {
-    final stored = library.pages
-        .where((entry) => entry.id == page.id)
-        .firstOrNull;
-    final old = stored ?? page;
-    if (old.text != page.text) return;
-    final next = lineBreak.isNotEmpty
-        ? old.edited(
-            text: old.text + lineBreak,
-            base: old.text.length + lineBreak.length,
-            extent: old.text.length + lineBreak.length,
-            scroll: old.scroll,
-          )
-        : old;
-    final passages = [
-      for (final entry in next.passages)
-        if (entry.id != passage.id) entry,
-      passage,
-    ];
-    final updated = next.withDetails(passages: passages);
-    if (stored == null) {
-      saveDraft(updated, bookId: draftBookId, keepBlank: true);
-      return;
-    }
-    if (lineBreak.isNotEmpty) editorEpoch++;
-    _publish(
-      library.copy(
-        pages: [
-          for (final entry in library.pages)
-            entry.id == updated.id ? updated : entry,
-        ],
-      ),
-      positionChanged: lineBreak.isNotEmpty,
-    );
-  }
-
   void showShelf() =>
       _publish(library.copy(writing: false), positionChanged: true);
   void openPage(String id) => _publish(
@@ -403,15 +389,12 @@ class LibraryController extends ChangeNotifier {
     );
   }
 
-  void addPage({PagePassage? continuation}) {
+  void addPage() {
     final record = library.activeRecord!;
     final page = WritingPage(
       id: _id(),
       recordId: record.id,
       writtenOn: _today(),
-      passages: continuation == null
-          ? const []
-          : [continuation.copy(start: 0, continued: true)],
       number:
           library.pages
               .where((p) => p.recordId == record.id)
@@ -428,17 +411,7 @@ class LibraryController extends ChangeNotifier {
     _publish(
       library.copy(
         records: library.records
-            .map(
-              (r) => r.id == recordId
-                  ? WritingRecord(
-                      id: r.id,
-                      title: r.title,
-                      bookId: bookId,
-                      source: r.source,
-                      sourceParagraph: r.sourceParagraph,
-                    )
-                  : r,
-            )
+            .map((r) => r.id == recordId ? r.copy(bookId: bookId) : r)
             .toList(),
       ),
     );

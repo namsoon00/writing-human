@@ -18,13 +18,14 @@ class CollectionSheet extends StatefulWidget {
     required this.onNewBook,
     this.onPassage,
     this.onArchiveBook,
+    this.onBookOriginals,
   });
   final LibraryController controller;
   final ValueChanged<WritingRecord> onRecord;
   final ValueChanged<String?> onNewSheet;
   final VoidCallback onNewBook;
   final ValueChanged<Passage>? onPassage;
-  final ValueChanged<Book>? onArchiveBook;
+  final ValueChanged<Book>? onArchiveBook, onBookOriginals;
   @override
   State<CollectionSheet> createState() => _CollectionSheetState();
 }
@@ -378,6 +379,16 @@ class _CollectionSheetState extends State<CollectionSheet> {
                                 Wrap(
                                   spacing: 12,
                                   children: [
+                                    if (widget.onBookOriginals != null)
+                                      TextButton.icon(
+                                        onPressed: () =>
+                                            widget.onBookOriginals!(book),
+                                        icon: const Icon(
+                                          CupertinoIcons.quote_bubble,
+                                          size: 16,
+                                        ),
+                                        label: const Text('원문'),
+                                      ),
                                     TextButton.icon(
                                       onPressed: () => _cover(book),
                                       icon: const Icon(

@@ -127,9 +127,22 @@ void main() {
       LibraryController? c;
       try {
         final migrated = await store.load();
-        expect(await store.db.getVersion(), 8);
+        expect(await store.db.getVersion(), 9);
         expect(migrated.encode(), original.encode());
-        c = LibraryController(store, migrated);
+        expect(migrated.pages.single.passages, isEmpty);
+        const passage = PagePassage(
+          id: 'passage',
+          start: 0,
+          source: '원문',
+          citation: '필사집 · 12쪽',
+        );
+        final withPassage = migrated.copy(
+          pages: [
+            migrated.pages.single.withDetails(passages: [passage]),
+          ],
+        );
+        await store.save(withPassage);
+        c = LibraryController(store, withPassage);
         c.setBookIndexLabel('b', '다시 읽기');
         c.setBookOwner('b', '새 필명');
         c.setBookMaterials('b', coverIndex: 2);
@@ -154,14 +167,12 @@ void main() {
             pageSound: true,
           ),
         );
-        expect(migrated.pages.single.passages, isEmpty);
-        const passage = PagePassage(
-          id: 'passage',
-          start: 0,
-          source: '원문',
-          citation: '필사집 · 12쪽',
+        c.registerOriginal(bookId: 'b', text: '책의 원문', citation: '12쪽');
+        c.registerOriginal(
+          page: migrated.pages.single,
+          text: '기록의 원문',
+          citation: '24쪽',
         );
-        c.savePagePassage(migrated.pages.single, passage);
         await c.settled;
         expect(c.saveError, isNull);
         final expected = c.library.encode();
@@ -172,6 +183,9 @@ void main() {
         );
         final restored = await store.load();
         expect(restored.encode(), expected);
+        expect(restored.books.single.originals.single.text, '책의 원문');
+        expect(restored.books.single.originals.single.citation, '12쪽');
+        expect(restored.records.single.originals.single.text, '기록의 원문');
         expect(restored.books.single.indexLabel, '다시 읽기');
         expect(restored.books.single.coverIndex, 2);
         expect(restored.books.single.paperIndex, 3);
@@ -184,7 +198,7 @@ void main() {
           passage.toJson(),
         );
         expect(
-          restored.records.single.toJson(),
+          restored.records.single.toJson()..remove('originals'),
           original.records.single.toJson(),
         );
       } finally {

@@ -7,8 +7,17 @@ String _hash(Object value) =>
     sha256.convert(utf8.encode(jsonEncode(value))).toString().substring(0, 32);
 T _field<T>(T? base, T local, T remote) =>
     sameData(local, base) ? remote : local;
-Json? _recordContent(WritingRecord? record) =>
-    record?.toJson()?..remove('sourceParagraph');
+Json? _recordContent(WritingRecord? record) => record?.toJson()
+  ?..remove('sourceParagraph')
+  ..remove('originals');
+
+List<RegisteredOriginal> _mergeOriginals(
+  List<RegisteredOriginal> local,
+  List<RegisteredOriginal> remote,
+) => {
+  for (final original in remote) original.id: original,
+  for (final original in local) original.id: original,
+}.values.toList();
 
 List<PencilMark> _mergeMarks(
   WritingPage? base,
@@ -83,11 +92,14 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         indexLabel: _field(old.indexLabel, b.indexLabel, r.indexLabel),
         coverIndex: _field(old.coverIndex, b.coverIndex, r.coverIndex),
         paperIndex: _field(old.paperIndex, b.paperIndex, r.paperIndex),
+        originals: _mergeOriginals(b.originals, r.originals),
       );
     } else if (r == null ||
         old == null ||
         !sameData(b.toJson(), old.toJson())) {
-      books[b.id] = b;
+      books[b.id] = r == null
+          ? b
+          : b.copy(originals: _mergeOriginals(b.originals, r.originals));
     }
   }
   final records = <String, WritingRecord>{
@@ -130,6 +142,7 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
       title: '${r.title} · 충돌 보관$suffix',
       source: r.source,
       sourceParagraph: r.sourceParagraph,
+      originals: r.originals,
     );
     for (var i = 0; i < sourcePages.length; i++) {
       final p = sourcePages[i];
@@ -168,6 +181,7 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
       bookId: winner.bookId,
       title: winner.title,
       source: winner.source,
+      originals: _mergeOriginals(l.originals, r.originals),
       sourceParagraph: l.source == r.source
           ? _field(
               b?.source == winner.source ? b?.sourceParagraph : null,

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,7 +7,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/main.dart';
 import 'package:writing_human/source/source_intake.dart';
+import 'package:writing_human/ui/collection_sheet.dart';
 import 'package:writing_human/ui/source_import_sheet.dart';
+import 'package:writing_human/ui/source_reading.dart';
 import 'package:writing_human/ui/transcription_guide.dart';
 
 import 'widget_test.dart' show MemoryStore;
@@ -16,7 +17,19 @@ import 'widget_test.dart' show MemoryStore;
 final sourceField = find.byKey(const ValueKey('source-text'));
 final bodyField = find.byKey(const ValueKey('page-text'));
 final confirm = find.byKey(const ValueKey('source-confirm'));
-final place = find.byKey(const ValueKey('place-source'));
+final place = find.byKey(const ValueKey('writing-originals'));
+final reading = find.byType(SourceReading);
+final readingText = find.byKey(const ValueKey('source-reading-text'));
+
+Finder closeIn(Finder parent) =>
+    find.descendant(of: parent, matching: find.byTooltip('닫기'));
+
+Future<void> registerFromPanel(WidgetTester tester) async {
+  await tester.tap(place);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('원문 등록'));
+  await tester.pumpAndSettle();
+}
 
 class FakeIntake extends SourceIntake {
   final events = StreamController<void>.broadcast();
@@ -119,216 +132,146 @@ Future<void> takePhoto(WidgetTester tester, {bool settle = true}) async {
 }
 
 void main() {
-  testWidgets('Trace a passage with real input and turn it by choice', (
+  testWidgets('Book originals register once and match in another record', (
     tester,
   ) async {
-    const source = '새로운 문장을 읽습니다.\n\n내 글로 남깁니다.';
-    final store = MemoryStore();
+    const title = '함께 읽는 책';
+    const first = '서두를 건너뛰어도 됩니다. 햇빛이 책장에 천천히 내려앉았다.';
+    const second = '햇빛이 책장까지 번졌다.';
+    final store = MemoryStore()
+      ..data = const Library(
+        books: [
+          Book(id: 'b', title: title),
+          Book(
+            id: 'other',
+            title: '다른 책',
+            originals: [
+              RegisteredOriginal('other-original', '햇빛이 책장에 다른 이야기가 남았다.'),
+            ],
+          ),
+        ],
+        records: [
+          WritingRecord(id: 'r', bookId: 'b', title: '첫 필사'),
+          WritingRecord(id: 'r2', bookId: 'b', title: '둘째 필사'),
+        ],
+        pages: [
+          WritingPage(id: 'p', recordId: 'r', number: 1),
+          WritingPage(id: 'p2', recordId: 'r2', number: 1, text: '먼저 쓰던 기록'),
+        ],
+        activePageId: 'p',
+        writing: true,
+      );
     await open(tester, store, FakeIntake());
-    expect(find.text('따라 쓰기'), findsOneWidget);
-    await tester.tap(place);
+    expect(find.byTooltip('여기에 필사 추가'), findsNothing);
+    expect(find.text('다음 쪽'), findsNothing);
+    await tester.tap(find.text('보관함'));
     await tester.pumpAndSettle();
-    await tester.enterText(sourceField, source);
+    await tester.tap(find.text('책'));
     await tester.pumpAndSettle();
-    await tester.tap(confirm);
+    await tester.tap(find.text(title).last);
     await tester.pumpAndSettle();
-
-    final field = tester.widget<TextField>(bodyField);
-    final overlay = find.byKey(const ValueKey('transcription-guide'));
-    final toggle = find.byKey(const ValueKey('toggle-transcription-guide'));
-    String remaining() =>
-        (tester.widget<CustomPaint>(overlay).painter!
-                as TranscriptionGuidePainter)
-            .guide
-            .remaining(field.controller!.value);
-    expect(remaining(), source);
-    expect(store.data.records.single.source, source);
-    expect(store.data.activePage!.text, isEmpty);
-    expect(field.focusNode!.hasFocus, isTrue);
-
-    const composing = TextEditingValue(
-      text: '새ㄹ',
-      selection: TextSelection.collapsed(offset: 2),
-      composing: TextRange(start: 1, end: 2),
+    final collection = find.byType(CollectionSheet);
+    final bookOriginals = find.descendant(
+      of: collection,
+      matching: find.text('원문'),
     );
-    tester.testTextInput.updateEditingValue(composing);
-    await tester.pump();
-    expect(field.controller!.value, composing);
-    expect(remaining(), '운 문장을 읽습니다.\n\n내 글로 남깁니다.');
-
-    await tester.enterText(bodyField, '새로운 문장');
+    await tester.ensureVisible(bookOriginals);
+    await tester.tap(bookOriginals);
     await tester.pumpAndSettle();
-    expect(remaining(), '을 읽습니다.\n\n내 글로 남깁니다.');
-    await tester.enterText(bodyField, '새로운 문장을 읽습니다.\n내 글');
-    await tester.pumpAndSettle();
-    expect(remaining(), '로 남깁니다.');
-    expect(store.data.records.single.sourceParagraph, 0);
-    await tester.enterText(bodyField, '새로운 문장을\n내 방식으로');
-    await tester.pumpAndSettle();
-    expect(remaining(), isEmpty);
-    final body = field.controller!.value;
-    expect(store.data.activePage!.text, body.text);
-
-    await tester.tap(toggle);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('다음 문단'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('따라 쓰기'));
-    await tester.pumpAndSettle();
-    expect(remaining(), '내 글로 남깁니다.');
-    expect(field.controller!.value, body);
-    await tester.enterText(bodyField, '${body.text}\n내 글');
-    await tester.pumpAndSettle();
-    expect(remaining(), '로 남깁니다.');
-    await tester.tap(toggle);
-    await tester.pumpAndSettle();
-    expect(overlay, findsNothing);
-    expect(find.text('내 글로 남깁니다.'), findsOneWidget);
-    await tester.tap(find.text('닫기'));
-    await tester.pumpAndSettle();
-    expect(
-      tester.widget<TextField>(bodyField).controller,
-      same(field.controller),
-    );
-    expect(store.data.activePage!.text, '${body.text}\n내 글');
-    expect(store.data.records.single.source, source);
-    expect(remaining(), '로 남깁니다.');
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('Blank lines start separate passages on the same paper', (
-    tester,
-  ) async {
-    final store = MemoryStore();
-    await open(tester, store, FakeIntake());
-    final add = find.byTooltip('여기에 필사 추가');
-    final original = find.byKey(const ValueKey('passage-source'));
-    final citation = find.byKey(const ValueKey('passage-citation'));
-    Future<void> start(String source, String label) async {
-      await tester.tap(add);
+    for (final (source, citation) in [(first, '12쪽'), (second, '45쪽')]) {
+      await tester.tap(find.text('원문 등록'));
       await tester.pumpAndSettle();
-      await tester.enterText(original, source);
-      await tester.enterText(citation, label);
-      await tester.tap(find.text('이 줄에서 시작'));
+      await tester.enterText(sourceField, source);
+      await tester.enterText(
+        find.byKey(const ValueKey('original-citation')),
+        citation,
+      );
+      await tester.tap(confirm);
       await tester.pumpAndSettle();
     }
+    expect(store.data.books.first.originals.map((entry) => entry.text), [
+      first,
+      second,
+    ]);
+    expect(store.data.books.last.originals.single.id, 'other-original');
+    expect(store.data.pages.map((page) => page.text), ['', '먼저 쓰던 기록']);
+    await tester.tap(closeIn(reading));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('먼저 쓰던 기록'));
+    await tester.pumpAndSettle();
+    expect(store.data.activePageId, 'p2');
 
-    await tester.tapAt(tester.getTopLeft(bodyField) + const Offset(100, 80));
+    final overlay = find.byKey(const ValueKey('transcription-guide'));
+    final body = tester.widget<TextField>(bodyField).controller!;
+    String remainder() =>
+        (tester.widget<CustomPaint>(overlay).painter!
+                as TranscriptionGuidePainter)
+            .remainderFor(body.value);
+    expect(remainder(), isEmpty);
+    await tester.enterText(bodyField, '햇빛이 책장');
     await tester.pumpAndSettle();
-    await start('첫 문장', '첫째 책 · 10쪽');
-    await tester.enterText(bodyField, '첫 문장');
+    expect(remainder(), isEmpty);
+    await tester.enterText(bodyField, '햇빛이 책장에');
     await tester.pumpAndSettle();
-    final pageId = store.data.activePageId;
+    expect(remainder(), ' 천천히 내려앉았다.');
+    await tester.enterText(bodyField, '햇빛이 책장에 다르게');
+    await tester.pumpAndSettle();
+    expect(remainder(), isEmpty);
+    await tester.enterText(bodyField, '내 글을 쓰고\n\n햇빛이 책장에');
+    await tester.pumpAndSettle();
+    expect(remainder(), ' 천천히 내려앉았다.');
+    final before = body.value;
 
-    await tester.tapAt(tester.getTopLeft(bodyField) + const Offset(100, 170));
+    await tester.tap(place);
     await tester.pumpAndSettle();
-    await start('둘째 문장', '둘째 책 · 20쪽');
-    final page = store.data.activePage!;
-    expect(page.id, pageId);
-    expect(store.data.records, hasLength(1));
-    expect(store.data.pages, hasLength(1));
-    expect(page.text, '첫 문장\n\n');
-    expect(find.text('다음 쪽'), findsNothing);
-    expect(page.passages.map((entry) => entry.start), [0, page.text.length]);
-    expect(find.text('첫째 책 · 10쪽'), findsOneWidget);
-    expect(find.text('둘째 책 · 20쪽'), findsOneWidget);
-
-    final controller = tester.widget<TextField>(bodyField).controller!;
-    await tester.tap(find.text('원문 보기'));
+    expect(find.text('12쪽'), findsOneWidget);
+    expect(tester.widget<Text>(readingText).textSpan!.toPlainText(), first);
+    expect(tester.getTopLeft(reading).dy, greaterThan(250));
+    await tester.tap(closeIn(reading));
     await tester.pumpAndSettle();
-    expect(find.text('둘째 문장'), findsOneWidget);
-    await tester.tap(find.text('닫기'));
-    await tester.pumpAndSettle();
-    expect(tester.widget<TextField>(bodyField).controller, same(controller));
-    expect(controller.selection.extentOffset, page.text.length);
-    controller.selection = const TextSelection.collapsed(offset: 1);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('원문 보기'));
-    await tester.pumpAndSettle();
-    expect(find.text('첫 문장'), findsOneWidget);
-    await tester.tap(find.text('닫기'));
-    await tester.pumpAndSettle();
-    expect(controller.selection.extentOffset, 1);
+    expect(tester.widget<TextField>(bodyField).controller, same(body));
+    expect(body.value, before);
+    expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isTrue);
+    expect(store.data.activePage!.text, before.text);
+    expect(store.data.activePage!.passages, isEmpty);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Next paper carries the unwritten part of the last passage', (
+  testWidgets('Older sources and citation-only passages stay visible', (
     tester,
   ) async {
-    final written = List.generate(22, (index) => '줄 ${index + 1}').join('\n');
-    const remainder = ' 이어 쓸 부분';
     final store = MemoryStore()
       ..data = existing().copy(
-        pages: [
+        records: const [
+          WritingRecord(id: 'r', title: '필사', source: '기록에 있던 원문'),
+        ],
+        pages: const [
           WritingPage(
             id: 'p',
             recordId: 'r',
             number: 1,
-            text: written,
-            base: written.length,
-            extent: written.length,
             passages: [
-              PagePassage(id: 'entry', start: 0, source: '$written$remainder'),
+              PagePassage(
+                id: 'a',
+                start: 0,
+                source: '줄에 붙인 원문',
+                citation: '책 · 24쪽',
+              ),
+              PagePassage(id: 'b', start: 0, citation: '출처만 · 30쪽'),
             ],
           ),
         ],
       );
     await open(tester, store, FakeIntake());
-    await tester.tap(find.text('다음 쪽'));
+    await tester.tap(place);
     await tester.pumpAndSettle();
-    expect(store.data.pages, hasLength(2));
-    expect(store.data.pages.first.text, written);
-    final page = store.data.activePage!;
-    expect(page.number, 2);
-    expect(page.text, isEmpty);
-    expect(page.passages.single.id, 'entry');
-    expect(page.passages.single.continued, isTrue);
-    expect(page.passages.single.sourceOffset, written.length);
-    final overlay = find.byKey(const ValueKey('transcription-guide'));
-    final painter =
-        tester.widget<CustomPaint>(overlay).painter!
-            as TranscriptionGuidePainter;
-    expect(
-      painter.guide.remaining(TextEditingValue.empty),
-      remainder.trimLeft(),
-    );
-  });
-
-  testWidgets('Long guide scrolls on the same page without saving guide text', (
-    tester,
-  ) async {
-    final source = List.generate(
-      24,
-      (index) => '문단 ${index + 1}을 이어 씁니다.',
-    ).join('\n\n');
-    final store = MemoryStore()
-      ..data = existing().copy(
-        records: [WritingRecord(id: 'r', title: '긴 원문', source: source)],
-        pages: const [WritingPage(id: 'p', recordId: 'r', number: 1)],
-      );
-    await open(tester, store, FakeIntake());
-    final field = tester.widget<TextField>(bodyField);
-    final scroll = field.scrollController!;
-    expect(scroll.position.maxScrollExtent, greaterThan(600));
-    await tester.timedDragFrom(
-      tester.getCenter(bodyField),
-      const Offset(0, -360),
-      const Duration(milliseconds: 500),
-    );
+    expect(find.text('기록에 있던 원문'), findsOneWidget);
+    expect(find.text('줄에 붙인 원문'), findsOneWidget);
+    expect(find.text('책 · 24쪽'), findsOneWidget);
+    await tester.tap(find.text('출처만 · 30쪽'));
     await tester.pumpAndSettle();
-    expect(scroll.offset, greaterThan(0));
-    expect(field.controller!.text, isEmpty);
-    expect(store.data.pages.single.id, 'p');
-    expect(store.data.pages.single.text, isEmpty);
-    expect(store.data.pages.single.scroll, 0);
-    final readingOffset = scroll.offset;
-    await tester.tap(find.text('원문 보기'));
-    await tester.pumpAndSettle();
-    expect(find.text('문단 1을 이어 씁니다.'), findsOneWidget);
-    await tester.tap(find.text('닫기'));
-    await tester.pumpAndSettle();
-    expect(scroll.offset, readingOffset);
-    expect(tester.takeException(), isNull);
+    expect(find.text('출처를 남긴 기록입니다.'), findsOneWidget);
+    expect(store.data.activePage!.passages, hasLength(2));
   });
 
   testWidgets(
@@ -354,8 +297,7 @@ void main() {
       await open(tester, store, intake);
       final body = tester.widget<TextField>(bodyField).controller!;
       final original = body.value;
-      await tester.tap(place);
-      await tester.pumpAndSettle();
+      await registerFromPanel(tester);
       expect(reads, 0);
       await tester.tap(find.byKey(const ValueKey('source-paste')));
       await tester.pumpAndSettle();
@@ -367,14 +309,20 @@ void main() {
       expect(store.data.records.single.source, isEmpty);
       await tester.tap(confirm);
       await tester.pumpAndSettle();
-      expect(store.data.records.single.source, '첫 줄\n\n둘째 줄');
+      expect(store.data.records.single.originals.single.text, '첫 줄\n\n둘째 줄');
+      await tester.tap(closeIn(reading));
+      await tester.pumpAndSettle();
       expect(tester.widget<TextField>(bodyField).controller, same(body));
       expect(body.value, original);
       expect(store.data.activePageId, 'p');
-      await tester.tap(find.text('원문 보기'));
+      await tester.tap(place);
       await tester.pumpAndSettle();
-      expect(find.text('첫 줄'), findsOneWidget);
-      expect(find.text('둘째 줄'), findsNothing);
+      await tester.tap(find.text('첫 줄\n\n둘째 줄'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<Text>(readingText).textSpan!.toPlainText(),
+        '첫 줄\n\n둘째 줄',
+      );
       expect(tester.takeException(), isNull);
     },
   );
@@ -386,8 +334,7 @@ void main() {
       final intake = FakeIntake();
       await open(tester, store, intake);
       final body = tester.widget<TextField>(bodyField).controller!;
-      await tester.tap(place);
-      await tester.pumpAndSettle();
+      await registerFromPanel(tester);
       await takePhoto(tester);
       expect(intake.photos, 1);
       expect(find.text('문단 고르기'), findsOneWidget);
@@ -404,32 +351,28 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(confirm);
       await tester.pumpAndSettle();
-      expect(store.data.records.single.source, '둘째 문단입니다.');
+      expect(store.data.records.single.originals.single.text, '둘째 문단입니다.');
+      await tester.tap(closeIn(reading));
+      await tester.pumpAndSettle();
       expect(store.data.activePage!.text, isEmpty);
       expect(tester.widget<TextField>(bodyField).controller, same(body));
-      expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isTrue);
+      expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isFalse);
       expect(find.byKey(const ValueKey('transcription-guide')), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
 
-  testWidgets('Turn source paragraphs without changing the writing field', (
+  testWidgets('Original panel preserves composition, selection, and scroll', (
     tester,
   ) async {
-    final first = List.filled(12, '한 줄씩 읽고 종이에 옮깁니다.').join('\n');
-    const second = '두 번째 문단은 내 글 아래에 이어서 씁니다.';
-    final source = '$first\n \n$second';
+    final source =
+        '${List.filled(18, '앞쪽에 있는 문장을 옮깁니다.').join('\n')}'
+        '\n햇빛이 책장에 천천히 내려앉았다.';
     final store = MemoryStore()
       ..data = existing().copy(
         records: [WritingRecord(id: 'r', title: '기존 필사', source: source)],
       );
     await open(tester, store, FakeIntake());
-    final paragraph = find.byKey(const ValueKey('source-reading-paragraph'));
-    final next = find.byWidgetPredicate(
-      (widget) => widget is IconButton && widget.tooltip == '다음 문단',
-    );
-    final previous = find.byTooltip('이전 문단');
-    final openOriginal = find.text('원문 보기');
     final field = tester.widget<TextField>(bodyField);
     await tester.showKeyboard(bodyField);
     tester.view.physicalSize = const Size(320, 640);
@@ -439,55 +382,40 @@ void main() {
     await tester.pumpAndSettle();
 
     const composing = TextEditingValue(
-      text: '한글 조하',
-      selection: TextSelection.collapsed(offset: 5),
-      composing: TextRange(start: 3, end: 5),
+      text: '햇빛이 책장에 처',
+      selection: TextSelection.collapsed(offset: 9),
+      composing: TextRange(start: 8, end: 9),
     );
     tester.testTextInput.updateEditingValue(composing);
     await tester.pump();
-    expect(
-      tester
-          .widget<TextButton>(
-            find.ancestor(of: openOriginal, matching: find.byType(TextButton)),
-          )
-          .onPressed,
-      isNull,
-    );
+    expect(tester.widget<TextButton>(place).onPressed, isNull);
     expect(field.controller!.value, composing);
+    final overlay = find.byKey(const ValueKey('transcription-guide'));
+    final painter =
+        tester.widget<CustomPaint>(overlay).painter!
+            as TranscriptionGuidePainter;
+    expect(painter.remainderFor(composing), '천히 내려앉았다.');
 
-    final committed = composing.copyWith(
-      text: '한글 조합',
-      composing: TextRange.empty,
+    const committed = TextEditingValue(
+      text: '햇빛이 책장에',
+      selection: TextSelection.collapsed(offset: 7),
     );
     tester.testTextInput.updateEditingValue(committed);
     await tester.pumpAndSettle();
+    final before = store.data.activePage!;
     final writingArea = tester.getRect(bodyField);
-    await tester.tap(openOriginal);
+    await tester.tap(place);
     await tester.pumpAndSettle();
-    expect(tester.widget<Text>(paragraph).data, first);
     final scrollView = find.ancestor(
-      of: paragraph,
+      of: readingText,
       matching: find.byType(SingleChildScrollView),
     );
-    final scrollable = find.descendant(
-      of: scrollView,
-      matching: find.byType(Scrollable),
-    );
-    expect(
-      tester.state<ScrollableState>(scrollable).position.maxScrollExtent,
-      greaterThan(0),
-    );
-    final writes = store.writes;
-    await tester.tap(next, kind: PointerDeviceKind.mouse);
-    await tester.pumpAndSettle();
-    expect(tester.widget<Text>(paragraph).data, second);
-    expect(tester.widget<IconButton>(next).onPressed, isNull);
-    await tester.tap(previous);
-    await tester.pumpAndSettle();
-    expect(tester.widget<Text>(paragraph).data, first);
-    await tester.tap(next);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('닫기'));
+    final sourceScroll = tester
+        .widget<SingleChildScrollView>(scrollView)
+        .controller!;
+    expect(sourceScroll.offset, greaterThan(0));
+    expect(tester.widget<Text>(readingText).textSpan!.toPlainText(), source);
+    await tester.tap(closeIn(reading));
     await tester.pumpAndSettle();
     expect(
       tester.widget<TextField>(bodyField).controller,
@@ -496,9 +424,14 @@ void main() {
     expect(field.controller!.value, committed);
     expect(field.focusNode!.hasFocus, isTrue);
     expect(tester.getRect(bodyField), writingArea);
-    expect(store.writes, writes + 1);
+    final after = store.data.activePage!;
+    expect(
+      (after.text, after.base, after.extent),
+      (before.text, before.base, before.extent),
+    );
+    expect(after.scroll, closeTo(before.scroll, 1));
     expect(store.data.records.single.source, source);
-    expect(store.data.records.single.sourceParagraph, 1);
+    expect(store.data.records.single.sourceParagraph, 0);
     expect(tester.takeException(), isNull);
   });
 
@@ -508,8 +441,7 @@ void main() {
       final store = MemoryStore();
       final intake = FakeIntake()..cancelPicker = true;
       await open(tester, store, intake);
-      await tester.tap(place);
-      await tester.pumpAndSettle();
+      await registerFromPanel(tester);
       await tester.enterText(sourceField, '직접 입력한 원문');
       await takePhoto(tester);
       expect(
@@ -527,7 +459,7 @@ void main() {
       intake.reading = Completer<List<String>>();
       await takePhoto(tester, settle: false);
       expect(find.text('사진 속 글자를 읽고 있어요'), findsOneWidget);
-      await tester.tap(find.byTooltip('닫기'));
+      await tester.tap(closeIn(find.byType(SourceImportSheet)));
       await tester.pumpAndSettle();
       expect(intake.cancellations, 1);
       intake.reading!.complete(['늦게 온 결과']);
@@ -618,8 +550,7 @@ void main() {
       await open(tester, store, FakeIntake());
       tester.view.physicalSize = const Size(320, 640);
       await tester.pumpAndSettle();
-      await tester.tap(place);
-      await tester.pumpAndSettle();
+      await registerFromPanel(tester);
       await tester.tap(sourceField);
       tester.view.viewInsets = const FakeViewPadding(bottom: 270);
       const composing = TextEditingValue(
@@ -644,7 +575,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(confirm);
       await tester.pumpAndSettle();
-      expect(store.data.records.single.source, '한');
+      expect(store.data.records.single.originals.single.text, '한');
       expect(tester.takeException(), isNull);
     },
   );

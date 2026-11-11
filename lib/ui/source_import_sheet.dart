@@ -9,7 +9,7 @@ import '../source/source_intake.dart';
 import 'book_details.dart';
 import 'paper.dart';
 
-typedef SourceImportResult = ({String source, bool follow});
+typedef SourceImportResult = ({String source, String citation});
 
 class SourceImportSheet extends StatefulWidget {
   const SourceImportSheet({
@@ -19,13 +19,14 @@ class SourceImportSheet extends StatefulWidget {
     required this.choice,
     this.initialPhoto,
     this.shared = false,
+    this.registration = false,
   });
 
   final SourceIntake intake;
   final String initialText;
   final BookDetailChoice choice;
   final SourcePhoto? initialPhoto;
-  final bool shared;
+  final bool shared, registration;
 
   @override
   State<SourceImportSheet> createState() => _SourceImportSheetState();
@@ -34,6 +35,7 @@ class SourceImportSheet extends StatefulWidget {
 class _SourceImportSheetState extends State<SourceImportSheet> {
   late final _text = TextEditingController(text: widget.initialText);
   final _focus = FocusNode();
+  final _citation = TextEditingController();
   List<String>? _paragraphs;
   SourcePhoto? _photo;
   Set<int> _selected = {};
@@ -41,14 +43,17 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   bool _busy = false;
   bool _readingPhoto = false;
 
-  bool get _composing =>
-      _text.value.composing.isValid && !_text.value.composing.isCollapsed;
+  bool get _composing => [
+    _text.value,
+    _citation.value,
+  ].any((value) => value.isComposingRangeValid && !value.composing.isCollapsed);
   bool get _editable => !_busy && !_composing;
 
   @override
   void initState() {
     super.initState();
     _text.addListener(_changed);
+    _citation.addListener(_changed);
     if (widget.initialPhoto case final photo?) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _read(photo);
@@ -64,6 +69,8 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     _text.removeListener(_changed);
     _text.dispose();
     _focus.dispose();
+    _citation.removeListener(_changed);
+    _citation.dispose();
     super.dispose();
   }
 
@@ -183,14 +190,15 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
 
   void _submit() {
     final text = normalizeSource(_text.text);
-    if (_editable && text.isNotEmpty && text.length <= sourceLengthLimit) {
-      Navigator.pop<SourceImportResult>(context, (source: text, follow: true));
-    }
-  }
-
-  void _clearSource() {
-    if (_editable) {
-      Navigator.pop<SourceImportResult>(context, (source: '', follow: false));
+    final citation = _citation.text.trim();
+    if (_editable &&
+        text.isNotEmpty &&
+        text.length <= sourceLengthLimit &&
+        citation.length <= 500) {
+      Navigator.pop<SourceImportResult>(context, (
+        source: text,
+        citation: citation,
+      ));
     }
   }
 
@@ -224,7 +232,10 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     final blocks = _paragraphs;
     final text = normalizeSource(_text.text);
     final canSubmit =
-        _editable && text.isNotEmpty && text.length <= sourceLengthLimit;
+        _editable &&
+        text.isNotEmpty &&
+        text.length <= sourceLengthLimit &&
+        _citation.text.trim().length <= 500;
     return Padding(
       padding: EdgeInsets.only(bottom: inset),
       child: SafeArea(
@@ -245,7 +256,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                                 ? '문단 고르기'
                                 : widget.shared
                                 ? '공유한 원문'
-                                : '원문 놓기',
+                                : '원문 등록',
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
@@ -371,14 +382,15 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                     ],
                     if (text.length > sourceLengthLimit)
                       const Text('원문이 너무 길어요. 옮겨 쓸 구절만 남겨 주세요.'),
-                    if (!widget.shared &&
-                        widget.initialText.isNotEmpty &&
-                        blocks == null)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton(
-                          onPressed: _editable ? _clearSource : null,
-                          child: const Text('원문 지우기'),
+                    if (widget.registration && blocks == null)
+                      TextField(
+                        key: const ValueKey('original-citation'),
+                        controller: _citation,
+                        decoration: InputDecoration(
+                          labelText: '출처 (선택)',
+                          errorText: _citation.text.trim().length > 500
+                              ? '출처를 조금 줄여 주세요.'
+                              : null,
                         ),
                       ),
                   ],
@@ -397,7 +409,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                         : canSubmit
                         ? _submit
                         : null,
-                    child: Text(blocks == null ? '따라 쓰기' : '선택한 문단 확인'),
+                    child: Text(blocks == null ? '저장' : '선택한 문단 확인'),
                   ),
                 ),
               ),

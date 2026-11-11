@@ -94,6 +94,45 @@ void main() {
     },
   );
 
+  test('Originals registered on separate devices are both retained', () {
+    const base = Library(
+      books: [Book(id: 'b', title: '책')],
+      records: [WritingRecord(id: 'r', title: '필사')],
+    );
+    final local = base.copy(
+      books: [
+        base.books.single.copy(
+          originals: const [RegisteredOriginal('a', '첫 구절')],
+        ),
+      ],
+      records: [
+        base.records.single.copy(
+          originals: const [RegisteredOriginal('r-a', '내 구절')],
+        ),
+      ],
+    );
+    final remote = base.copy(
+      books: [
+        base.books.single.copy(
+          originals: const [RegisteredOriginal('b', '둘째 구절')],
+        ),
+      ],
+      records: [
+        base.records.single.copy(
+          originals: const [RegisteredOriginal('r-b', '다른 구절')],
+        ),
+      ],
+    );
+    final merged = mergeLibraries(base, local, remote);
+    final decoded = Library.decode(merged.library.encode());
+    expect(merged.conflictCopies, 0);
+    expect(decoded.books.single.originals.map((o) => o.id).toSet(), {'a', 'b'});
+    expect(decoded.records.single.originals.map((o) => o.id).toSet(), {
+      'r-a',
+      'r-b',
+    });
+  });
+
   test(
     'Font fallback index and development flag remain one choice when merging',
     () {

@@ -18,7 +18,7 @@ class SqliteLibraryStore implements LibraryStore {
     final db = await (factory ?? databaseFactory).openDatabase(
       file,
       options: OpenDatabaseOptions(
-        version: 8,
+        version: 9,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
         onUpgrade: (db, oldVersion, newVersion) async {
           if (oldVersion < 2) {
@@ -66,13 +66,20 @@ class SqliteLibraryStore implements LibraryStore {
               "ALTER TABLE pages ADD COLUMN passages TEXT NOT NULL DEFAULT '[]'",
             );
           }
+          if (oldVersion < 9) {
+            for (final table in ['books', 'records']) {
+              await db.execute(
+                "ALTER TABLE $table ADD COLUMN originals TEXT NOT NULL DEFAULT '[]'",
+              );
+            }
+          }
         },
         onCreate: (db, version) async {
           await db.execute(
-            "CREATE TABLE books (id TEXT PRIMARY KEY, title TEXT NOT NULL, author TEXT NOT NULL, owner TEXT NOT NULL DEFAULT '', index_label TEXT NOT NULL DEFAULT '', cover_index INTEGER CHECK(cover_index BETWEEN 0 AND 2), paper_index INTEGER CHECK(paper_index BETWEEN 0 AND 3))",
+            "CREATE TABLE books (id TEXT PRIMARY KEY, title TEXT NOT NULL, author TEXT NOT NULL, owner TEXT NOT NULL DEFAULT '', index_label TEXT NOT NULL DEFAULT '', cover_index INTEGER CHECK(cover_index BETWEEN 0 AND 2), paper_index INTEGER CHECK(paper_index BETWEEN 0 AND 3), originals TEXT NOT NULL DEFAULT '[]')",
           );
           await db.execute(
-            "CREATE TABLE records (id TEXT PRIMARY KEY, book_id TEXT REFERENCES books(id), title TEXT NOT NULL, source TEXT NOT NULL DEFAULT '', source_paragraph INTEGER NOT NULL DEFAULT 0)",
+            "CREATE TABLE records (id TEXT PRIMARY KEY, book_id TEXT REFERENCES books(id), title TEXT NOT NULL, source TEXT NOT NULL DEFAULT '', source_paragraph INTEGER NOT NULL DEFAULT 0, originals TEXT NOT NULL DEFAULT '[]')",
           );
           await db.execute(
             "CREATE TABLE pages (id TEXT PRIMARY KEY, record_id TEXT NOT NULL REFERENCES records(id), number INTEGER NOT NULL, text TEXT NOT NULL, selection_base INTEGER NOT NULL, selection_extent INTEGER NOT NULL, scroll REAL NOT NULL, written_on TEXT, pencil_marks TEXT NOT NULL DEFAULT '[]', passages TEXT NOT NULL DEFAULT '[]', UNIQUE(record_id, number))",
@@ -104,6 +111,9 @@ class SqliteLibraryStore implements LibraryStore {
               indexLabel: j['index_label'] as String,
               coverIndex: j['cover_index'] as int?,
               paperIndex: j['paper_index'] as int?,
+              originals: RegisteredOriginal.read(
+                jsonDecode(j['originals'] as String),
+              ),
             ),
           )
           .toList(),
@@ -115,6 +125,9 @@ class SqliteLibraryStore implements LibraryStore {
               title: j['title'] as String,
               source: j['source'] as String,
               sourceParagraph: j['source_paragraph'] as int,
+              originals: RegisteredOriginal.read(
+                jsonDecode(j['originals'] as String),
+              ),
             ),
           )
           .toList(),
@@ -175,6 +188,7 @@ class SqliteLibraryStore implements LibraryStore {
           'index_label': b.indexLabel,
           'cover_index': b.coverIndex,
           'paper_index': b.paperIndex,
+          'originals': jsonEncode(b.originals.map((o) => o.toJson()).toList()),
         });
       }
       for (final r in library.records) {
@@ -184,6 +198,7 @@ class SqliteLibraryStore implements LibraryStore {
           'title': r.title,
           'source': r.source,
           'source_paragraph': r.sourceParagraph,
+          'originals': jsonEncode(r.originals.map((o) => o.toJson()).toList()),
         });
       }
       // Free positive page numbers atomically before deterministic offline merges

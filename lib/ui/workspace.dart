@@ -9,10 +9,10 @@ import '../data/library_search.dart';
 import '../data/model.dart';
 import '../sync/coordinator.dart';
 import '../source/source_intake.dart';
+import '../source/originals.dart';
 import '../source/source_platform.dart';
 import 'source_import_sheet.dart';
 import 'source_reading.dart';
-import 'transcription_guide.dart';
 import 'collection_sheet.dart';
 import 'editor.dart';
 import 'new_book_dialog.dart';
@@ -53,7 +53,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   late WritingPage draft = _blank();
   late bool fresh = c.library.pages.isEmpty;
   bool userFresh = false;
-  String draftSource = '';
   String? draftBookId;
   bool _pageNavigationBusy = false;
   bool _editorComposing = false;
@@ -67,15 +66,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   bool _readingSource = false;
   bool _sourceBusy = false, _pollingSources = false, _pollAgain = false;
   bool _checkedPhotoRecovery = false;
-  ({
-    String pageId,
-    String? entryId,
-    String source,
-    int paragraphIndex,
-    TranscriptionGuide passage,
-    bool visible,
-  })?
-  _guide;
   Future<void>? _sheetClosed;
   LibraryController? _sheetOwner;
   bool get _accountLocked =>
@@ -235,20 +225,12 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       // Explicitly adding a page is intent to keep blank pages as well.
       fresh = false;
       userFresh = false;
-      c.saveDraft(
-        draft,
-        source: draftSource,
-        bookId: draftBookId,
-        keepBlank: true,
-      );
+      c.saveDraft(draft, bookId: draftBookId, keepBlank: true);
       await c.settled;
       if (!mounted || c.saveError != null) return;
     }
     _coverAnchor = null;
-    final recordPages =
-        c.library.pages.where((item) => item.recordId == page.recordId).toList()
-          ..sort((a, b) => a.number.compareTo(b.number));
-    c.addPage(continuation: _continuation(recordPages.lastOrNull ?? page));
+    c.addPage();
   });
   WritingPage _blank() => WritingPage(
     id: const Uuid().v4(),
@@ -300,9 +282,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       fresh = c.library.pages.isEmpty;
       userFresh = false;
       draft = _blank();
-      draftSource = '';
       draftBookId = null;
-      _guide = null;
     }
   }
 
@@ -312,9 +292,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       if (fresh && !userFresh && c.library.activePage != null) fresh = false;
       if (_accountLocked || !_showCover) _coverAnchor = null;
       if (_accountLocked || _reveal?.pageId != page.id) _reveal = null;
-      if (_accountLocked || _guide?.pageId != page.id) {
-        _guide = null;
-      }
     });
     if ((widget.sync?.accountMismatch ?? false) ||
         (widget.sync?.signInRequired ?? false)) {
@@ -344,7 +321,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
 
   void _edit(String id, String text, int base, int extent, double scroll) {
     if (!c.library.pages.any((p) => p.id == id)) {
-      if (text.isEmpty && draftSource.isEmpty) return;
+      if (text.isEmpty) return;
       final next = draft.edited(
         text: text,
         base: base,
@@ -353,7 +330,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       );
       // Same page ID/key on both sides of this first save: keep the live IME.
       fresh = false;
-      c.saveDraft(next, source: draftSource, bookId: draftBookId);
+      c.saveDraft(next, bookId: draftBookId);
     } else {
       if (c.library.activePageId != id || !c.library.writing) c.openPage(id);
       c.editPage(id, text, base, extent, scroll);
@@ -364,7 +341,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     setState(() {
       _coverAnchor = null;
       draft = _blank();
-      draftSource = '';
       draftBookId = bookId;
       fresh = true;
       userFresh = true;
@@ -416,6 +392,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         onNewBook: () {
           _afterSheet(_createBook);
         },
+        onBookOriginals: (book) => _showOriginals(bookDetails: book),
         onPassage: (passage) => _afterSheet(() => _openPassage(passage)),
         onArchiveBook: (book) =>
             _afterSheet(() => _archive(selectedBook: book)),
@@ -556,6 +533,73 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     });
   }
 
+  Future<SourceImportResult?> _reviewOriginal({
+    IncomingSource? shared,
+    SourcePhoto? initialPhoto,
+  }) async {
+    final route = ModalBottomSheetRoute<SourceImportResult>(
+      isScrollControlled: true,
+      showDragHandle: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      constraints: const BoxConstraints(maxWidth: 600),
+      builder: (_) => SourceImportSheet(
+        intake: _intake,
+        initialText: shared?.text ?? '',
+        initialPhoto: initialPhoto,
+        choice: c.library.style.bookDetails.sourceSlip,
+        shared: shared != null,
+        registration: shared == null,
+      ),
+    );
+    final result = await Navigator.of(context).push(route);
+    await route.completed;
+    return result;
+  }
+
+  Future<void> _registerOriginal({
+    String? bookId,
+    WritingPage? selectedPage,
+    SourcePhoto? initialPhoto,
+  }) async {
+    if (_sourceBusy || _accountLocked || !_canLeaveInput()) return;
+    final owner = c;
+    _sourceBusy = true;
+    try {
+      await owner.settled;
+      if (!mounted || c != owner || _accountLocked || owner.saveError != null) {
+        return;
+      }
+      final result = await _reviewOriginal(initialPhoto: initialPhoto);
+      if (result == null ||
+          !mounted ||
+          c != owner ||
+          _accountLocked ||
+          owner.saveError != null ||
+          owner.composing ||
+          (selectedPage != null && page.id != selectedPage.id) ||
+          (bookId != null &&
+              !owner.library.books.any((book) => book.id == bookId))) {
+        return;
+      }
+      if (bookId == null && selectedPage != null && fresh) {
+        fresh = false;
+        userFresh = false;
+      }
+      owner.registerOriginal(
+        bookId: bookId,
+        page: selectedPage,
+        text: result.source,
+        citation: result.citation,
+      );
+      await owner.settled;
+      if (mounted && c == owner && !_accountLocked && owner.saveError != null) {
+        _sourceNotice('원문을 저장하지 못했어요. 다시 저장해 주세요.');
+      }
+    } finally {
+      _sourceBusy = false;
+    }
+  }
+
   Future<void> _source({
     IncomingSource? shared,
     SourcePhoto? initialPhoto,
@@ -566,305 +610,115 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         !_canLeaveInput()) {
       return;
     }
-    final owner = c, selectedPage = page, selectedRecord = record;
-    final initial = shared?.text ?? selectedRecord?.source ?? draftSource;
-    final choice = c.library.style.bookDetails.sourceSlip;
+    final owner = c, selectedPage = page;
     _blur();
+    if (shared == null) {
+      await _registerOriginal(
+        bookId: book?.id,
+        selectedPage: selectedPage,
+        initialPhoto: initialPhoto,
+      );
+      return;
+    }
     _sourceBusy = true;
     try {
       await owner.settled;
       if (!mounted ||
           c != owner ||
-          page.id != selectedPage.id ||
           _accountLocked ||
           owner.saveError != null ||
+          page.id != selectedPage.id ||
           owner.composing ||
           editorFocus.hasFocus) {
         return;
       }
-      if (shared != null &&
-          owner.library.records.any((r) => r.id == _sharedRecordId(shared))) {
+      final id = _sharedRecordId(shared);
+      if (owner.library.records.any((record) => record.id == id)) {
         await _pollSources();
         return;
       }
-      final route = ModalBottomSheetRoute<SourceImportResult>(
-        isScrollControlled: true,
-        showDragHandle: true,
-        barrierLabel: MaterialLocalizations.of(
-          context,
-        ).modalBarrierDismissLabel,
-        constraints: const BoxConstraints(maxWidth: 600),
-        builder: (_) => SourceImportSheet(
-          intake: _intake,
-          initialText: initial,
-          initialPhoto: initialPhoto,
-          choice: choice,
-          shared: shared != null,
-        ),
-      );
-      final result = await Navigator.of(context).push(route);
-      await route.completed;
-      if (result == null || !mounted || c != owner || _accountLocked) return;
-      final source = result.source;
-      if (page.id != selectedPage.id || owner.composing) {
-        _sourceNotice('작성 중인 쪽이 바뀌었어요. 원문을 다시 확인해 주세요.');
-        return;
-      }
-      if (owner.saveError != null) return;
-      final destination = shared == null
-          ? selectedPage.id
-          : '${_sharedRecordId(shared)}-page';
-      if (shared != null) {
-        final id = _sharedRecordId(shared);
-        fresh = false;
-        userFresh = false;
-        owner.saveDraft(
-          WritingPage(id: '$id-page', recordId: id, number: 1),
-          source: source,
-        );
-      } else if (selectedRecord != null) {
-        owner.setSource(selectedRecord.id, source);
-      } else if (source.isNotEmpty) {
-        fresh = false;
-        userFresh = false;
-        owner.saveDraft(selectedPage, source: source, bookId: draftBookId);
-      }
-      await owner.settled;
-      if (!mounted || c != owner || _accountLocked || owner.saveError != null) {
-        return;
-      }
-      if (shared != null) unawaited(_pollSources(openAutomatically: false));
-      if (result.follow &&
-          page.id == destination &&
-          record?.source == source &&
-          !owner.composing) {
-        final index = record?.sourceParagraph ?? 0;
-        setState(() {
-          _guide = (
-            pageId: destination,
-            entryId: null,
-            source: source,
-            paragraphIndex: index,
-            passage: TranscriptionGuide(
-              paragraph: sourceFromParagraph(source, index),
-              initialText: page.text,
-            ),
-            visible: true,
-          );
-        });
-        editorFocus.requestFocus();
-      }
-    } finally {
-      _sourceBusy = false;
-    }
-  }
-
-  String _passageSource(String source, int paragraph, PagePassage? entry) {
-    final text = sourceFromParagraph(source, paragraph).trimLeft();
-    return text.substring((entry?.sourceOffset ?? 0).clamp(0, text.length));
-  }
-
-  TranscriptionGuide _resumeGuide(
-    WritingPage page,
-    String source,
-    PagePassage? entry,
-  ) {
-    if (entry == null) {
-      return TranscriptionGuide.resume(paragraph: source, text: page.text);
-    }
-    return TranscriptionGuide(
-      paragraph: source,
-      initialText: page.text.substring(0, entry.start),
-    );
-  }
-
-  PagePassage? _continuation(WritingPage current) {
-    final entry = current.passageAt(current.text.length);
-    final source = entry?.source ?? record?.source ?? '';
-    if (entry == null && source.isEmpty) return null;
-    final paragraph = entry?.paragraph ?? record?.sourceParagraph ?? 0;
-    final remainingSource = _passageSource(source, paragraph, entry);
-    final active = _guide;
-    final guide =
-        active?.pageId == current.id &&
-            active?.entryId == entry?.id &&
-            active?.passage.paragraph.trimLeft() == remainingSource
-        ? active!.passage
-        : _resumeGuide(current, remainingSource, entry);
-    final consumed = guide.consumed(current.text) ?? 0;
-    return (entry ??
-            PagePassage(
-              id: const Uuid().v4(),
-              start: 0,
-              source: source,
-              paragraph: paragraph,
-            ))
-        .copy(
-          sourceOffset: ((entry?.sourceOffset ?? 0) + consumed).clamp(
-            0,
-            source.length,
-          ),
-        );
-  }
-
-  Future<void> _editPassage([PagePassage? entry]) async {
-    if (_sourceBusy || _accountLocked || !_canLeaveInput()) return;
-    final owner = c;
-    final current = page;
-    _sourceBusy = true;
-    _blur();
-    try {
-      await owner.settled;
-      if (!mounted ||
-          c != owner ||
-          _accountLocked ||
-          owner.saveError != null ||
-          page.id != current.id ||
-          page.text != current.text ||
-          owner.composing) {
-        return;
-      }
-      final result =
-          await showModalBottomSheet<({String source, String citation})>(
-            context: context,
-            isScrollControlled: true,
-            useSafeArea: true,
-            showDragHandle: true,
-            constraints: const BoxConstraints(maxWidth: 600),
-            builder: (_) => PagePassageSheet(passage: entry),
-          );
+      final result = await _reviewOriginal(shared: shared);
       if (result == null ||
           !mounted ||
           c != owner ||
           _accountLocked ||
           owner.saveError != null ||
-          owner.composing ||
-          page.id != current.id ||
-          page.text != current.text ||
-          (entry != null && !page.passages.any((latest) => latest == entry))) {
+          page.id != selectedPage.id ||
+          owner.composing) {
         return;
       }
-      final changesSource = entry?.source != result.source;
-      var lineBreak = '';
-      if (entry == null && current.text.isNotEmpty) {
-        if (!current.text.endsWith('\n')) lineBreak = '\n';
-        if (result.citation.isNotEmpty && !current.text.endsWith('\n\n')) {
-          lineBreak += '\n';
-        }
-      }
-      final next =
-          (entry ??
-                  PagePassage(
-                    id: const Uuid().v4(),
-                    start: current.text.length + lineBreak.length,
-                  ))
-              .copy(
-                source: result.source,
-                citation: result.citation,
-                paragraph: changesSource ? 0 : null,
-                sourceOffset: changesSource ? 0 : null,
-              );
       fresh = false;
       userFresh = false;
-      owner.savePagePassage(
-        current,
-        next,
-        lineBreak: lineBreak,
-        draftBookId: draftBookId,
+      owner.saveDraft(
+        WritingPage(id: '$id-page', recordId: id, number: 1),
+        source: result.source,
       );
       await owner.settled;
-      if (mounted &&
-          c == owner &&
-          !_accountLocked &&
-          page.id == current.id &&
-          owner.saveError == null) {
-        editorFocus.requestFocus();
+      if (mounted && c == owner && !_accountLocked && owner.saveError == null) {
+        unawaited(_pollSources(openAutomatically: false));
       }
     } finally {
       _sourceBusy = false;
     }
   }
 
-  Future<void> _showSource() async {
+  Future<void> _showOriginals({Book? bookDetails}) async {
     if (_readingSource || _sourceBusy || _accountLocked || !_canLeaveInput()) {
       return;
     }
-    final owner = c, current = page;
-    final entry = current.passageAt(current.extent);
-    final source = entry?.source ?? record?.source ?? '';
-    if (source.isEmpty) return;
-    final paragraph = entry?.paragraph ?? record?.sourceParagraph ?? 0;
-    final oldGuide = _guide;
+    final owner = c;
+    final selectedPage = page;
+    final bookId = (bookDetails ?? book)?.id;
+    final manage = bookDetails != null || bookId == null;
     final wasFocused = editorFocus.hasFocus;
-    final currentBook = book;
-    final style = _paperStyle(currentBook);
     _blur();
     _readingSource = true;
-    final route = MaterialPageRoute<SourceReadingResult>(
-      builder: (_) => SourceReading(
-        title: currentBook?.title ?? record?.title ?? '쓰는 인간',
-        source: source,
-        paragraphIndex: paragraph,
-        style: style,
-        coverIndex: currentBook == null ? null : _coverVariant,
+    final initial = bookDetails == null
+        ? matchOriginal(
+            originalsFor(
+              owner.library,
+              bookId: bookId,
+              recordId: selectedPage.recordId,
+            ),
+            selectedPage.text,
+            selectedPage.extent,
+          )
+        : null;
+    final route = ModalBottomSheetRoute<void>(
+      isScrollControlled: true,
+      showDragHandle: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      constraints: const BoxConstraints(maxWidth: 600),
+      builder: (_) => ListenableBuilder(
+        listenable: owner,
+        builder: (context, _) => SourceReading(
+          originals: originalsFor(
+            owner.library,
+            bookId: bookId,
+            recordId: selectedPage.recordId,
+          ),
+          match: initial,
+          onRegister: manage && owner.saveError == null
+              ? () => _registerOriginal(
+                  bookId: bookId,
+                  selectedPage: bookDetails == null ? selectedPage : null,
+                )
+              : null,
+          onRetry: owner.saveError == null ? null : _retrySave,
+          bookDetailsRegistration: !manage,
+        ),
       ),
     );
     try {
-      final result = await Navigator.of(context).push(route);
+      await Navigator.of(context).push(route);
       await route.completed;
-      if (!mounted ||
-          c != owner ||
-          _accountLocked ||
-          page.id != current.id ||
-          page.text != current.text ||
-          owner.composing) {
-        return;
+      if (wasFocused &&
+          mounted &&
+          c == owner &&
+          !_accountLocked &&
+          selectedPage.id == page.id) {
+        editorFocus.requestFocus();
       }
-      final latest = page.passageAt(current.extent);
-      if (latest?.id != entry?.id ||
-          (latest?.source ?? record?.source) != source) {
-        return;
-      }
-      if (result?.edit == true) {
-        if (entry == null) {
-          await _source();
-        } else {
-          await _editPassage(latest);
-        }
-        return;
-      }
-      final index = result?.paragraph ?? paragraph;
-      final next = latest?.copy(
-        paragraph: index,
-        sourceOffset: index == paragraph ? null : 0,
-      );
-      if (index != paragraph) {
-        if (next != null) {
-          owner.savePagePassage(page, next);
-        } else {
-          owner.setSourceParagraph(current.recordId, source, index);
-        }
-      }
-      final follow = result?.follow == true;
-      final remaining = _passageSource(source, index, next);
-      setState(() {
-        _guide = (
-          pageId: current.id,
-          entryId: entry?.id,
-          source: source,
-          paragraphIndex: index,
-          passage: follow
-              ? (index == paragraph
-                    ? _resumeGuide(current, remaining, next)
-                    : TranscriptionGuide(
-                        paragraph: remaining,
-                        initialText: current.text,
-                      ))
-              : oldGuide?.passage ?? _resumeGuide(current, remaining, next),
-          visible: follow || oldGuide?.visible == true,
-        );
-      });
-      if (follow || wasFocused) editorFocus.requestFocus();
     } finally {
       _readingSource = false;
     }
@@ -970,11 +824,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                ListTile(
-                  leading: const Icon(CupertinoIcons.quote_bubble, size: 20),
-                  title: const Text('원문 메모'),
-                  onTap: () => _afterSheet(() => _source()),
-                ),
                 ListTile(
                   leading: const Icon(CupertinoIcons.book, size: 20),
                   title: const Text('책으로 묶기'),
@@ -1187,39 +1036,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     final record = c.library.records
         .where((r) => r.id == currentPage.recordId)
         .firstOrNull;
-    final entry = currentPage.passageAt(currentPage.extent);
-    final source =
-        entry?.source ??
-        record?.source ??
-        (fresh && currentPage.recordId == draft.recordId ? draftSource : '');
-    final hasSource = source.trim().isNotEmpty;
-    final paragraphIndex = entry?.paragraph ?? record?.sourceParagraph ?? 0;
-    if (hasSource &&
-        !preview &&
-        (_guide?.pageId != currentPage.id ||
-            _guide?.entryId != entry?.id ||
-            _guide?.source != source ||
-            _guide?.paragraphIndex != paragraphIndex)) {
-      _guide = (
-        pageId: currentPage.id,
-        entryId: entry?.id,
-        source: source,
-        paragraphIndex: paragraphIndex,
-        passage: _resumeGuide(
-          currentPage,
-          _passageSource(source, paragraphIndex, entry),
-          entry,
-        ),
-        visible: true,
-      );
-    }
-    final guide =
-        !preview &&
-            hasSource &&
-            _guide?.visible == true &&
-            currentPage.passageAt(currentPage.text.length)?.id == entry?.id
-        ? _guide?.passage
-        : null;
     final bookId = record?.bookId ?? (fresh ? draftBookId : null);
     final book = c.library.books.where((b) => b.id == bookId).firstOrNull;
     final style = _paperStyle(book);
@@ -1299,20 +1115,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                     ),
                   ],
                 ),
-              if (!preview && currentPage.passages.isEmpty)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    key: ValueKey(
-                      hasSource ? 'toggle-transcription-guide' : 'place-source',
-                    ),
-                    onPressed: navigationEnabled
-                        ? (hasSource ? _showSource : () => _source())
-                        : null,
-                    icon: const Icon(CupertinoIcons.quote_bubble, size: 15),
-                    label: Text(hasSource ? '원문 보기' : '따라 쓰기'),
-                  ),
-                ),
               Expanded(
                 key: const ValueKey('writing-surface'),
                 child: preview
@@ -1321,62 +1123,37 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         page: currentPage,
                         style: style,
                       )
-                    : Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          PageEditor(
-                            key: ValueKey('${currentPage.id}:${c.editorEpoch}'),
-                            page: currentPage,
-                            style: style,
-                            focusNode: editorFocus,
-                            guide: guide,
-                            reveal: _reveal?.pageId == currentPage.id
-                                ? (
-                                    offset: _reveal!.offset,
-                                    request: _reveal!.request,
-                                  )
-                                : null,
-                            onChanged: _edit,
-                            onAddPassage: navigationEnabled
-                                ? () => _editPassage()
-                                : null,
-                            onNextSheet: navigationEnabled
-                                ? (index + 1 < count &&
-                                          _volumePages[index + 1].recordId ==
-                                              currentPage.recordId
-                                      ? () => _stepPage(1)
-                                      : _appendPage)
-                                : null,
-                            onPencilMark: c.togglePencilMark,
-                            onEditingState: (focused, composing) {
-                              _editorComposing = composing;
-                              c.setEditorState(
-                                focused: focused,
-                                isComposing: composing,
-                              );
-                            },
-                          ),
-                          if (hasSource && currentPage.passages.isNotEmpty)
-                            Positioned(
-                              left: 0,
-                              bottom: 0,
-                              child: TextButton.icon(
-                                onPressed: navigationEnabled
-                                    ? _showSource
-                                    : null,
-                                icon: const Icon(
-                                  CupertinoIcons.quote_bubble,
-                                  size: 15,
-                                ),
-                                label: const Text('원문 보기'),
-                              ),
-                            ),
-                        ],
+                    : PageEditor(
+                        key: ValueKey('${currentPage.id}:${c.editorEpoch}'),
+                        page: currentPage,
+                        style: style,
+                        focusNode: editorFocus,
+                        originals: originalsFor(
+                          c.library,
+                          bookId: bookId,
+                          recordId: currentPage.recordId,
+                        ),
+                        reveal: _reveal?.pageId == currentPage.id
+                            ? (
+                                offset: _reveal!.offset,
+                                request: _reveal!.request,
+                              )
+                            : null,
+                        onChanged: _edit,
+                        onPencilMark: c.togglePencilMark,
+                        onEditingState: (focused, composing) {
+                          _editorComposing = composing;
+                          c.setEditorState(
+                            focused: focused,
+                            isComposing: composing,
+                          );
+                        },
                       ),
               ),
               WritingFooter(
                 ornament: c.library.style.bookDetails.ornament,
                 onTools: _tools,
+                onSource: navigationEnabled ? _showOriginals : null,
                 onMore: _more,
                 onDone: _blur,
                 focused: !preview && editorFocus.hasFocus,

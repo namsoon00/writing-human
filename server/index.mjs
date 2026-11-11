@@ -7,6 +7,11 @@ const id = v => typeof v === 'string' && v.length > 0 && v.length <= 250;
 const text = (v, max = MAX_BYTES) => typeof v === 'string' && v.length <= max;
 const integer = v => Number.isSafeInteger(v);
 
+const originals = values => Array.isArray(values) &&
+  new Set(values.map(value => value?.id)).size === values.length &&
+  values.every(value => object(value) && id(value.id) && text(value.text, 50000) &&
+    value.text.trim().length > 0 && text(value.citation, 500));
+
 export function validLibrary(l) {
   if (!object(l) || l.version !== 1 || 'sync' in l || !Array.isArray(l.books) || !Array.isArray(l.records) || !Array.isArray(l.pages) || l.books.length > 10000 || l.records.length > 20000 || l.pages.length > 30000 || typeof l.writing !== 'boolean') return false;
   const books = new Set(), records = new Set(), pages = new Set(), numbers = new Set();
@@ -16,11 +21,13 @@ export function validLibrary(l) {
     if ('indexLabel' in b && !text(b.indexLabel, 80)) return false;
     if ('coverIndex' in b && (!integer(b.coverIndex) || b.coverIndex < 0 || b.coverIndex > 2)) return false;
     if ('paperIndex' in b && (!integer(b.paperIndex) || b.paperIndex < 0 || b.paperIndex > 3)) return false;
+    if ('originals' in b && !originals(b.originals)) return false;
     books.add(b.id);
   }
   for (const r of l.records) {
     if (!object(r) || !id(r.id) || records.has(r.id) || (r.bookId !== null && !books.has(r.bookId)) || !text(r.title, 500) || !text(r.source)) return false;
     if ('sourceParagraph' in r && (!integer(r.sourceParagraph) || r.sourceParagraph < 0)) return false;
+    if ('originals' in r && !originals(r.originals)) return false;
     records.add(r.id);
   }
   for (const p of l.pages) {

@@ -5,6 +5,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:writing_human/data/library_controller.dart';
 import 'package:writing_human/data/sqlite_store.dart';
 import 'package:writing_human/ui/workspace.dart';
+import 'package:writing_human/ui/collection_sheet.dart';
+import 'package:writing_human/ui/source_reading.dart';
 import 'package:writing_human/ui/paper_swipe.dart';
 
 void main() {
@@ -72,7 +74,19 @@ void main() {
     await tester.enterText(find.byType(TextFormField).first, '실제 파일 검수');
     await tester.tap(find.text('책 만들고 쓰기'));
     await saved();
-    await tester.tap(find.byKey(const ValueKey('place-source')));
+    final initialBookId = controller.library.books.single.id;
+    await tester.tap(find.text('보관함'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('책'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(ValueKey('book-index-$initialBookId')));
+    await tester.pumpAndSettle();
+    final collection = find.byType(CollectionSheet);
+    await tester.tap(
+      find.descendant(of: collection, matching: find.text('원문')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('원문 등록'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('source-text')),
@@ -82,7 +96,21 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('source-confirm')));
     await tester.pumpAndSettle();
     await saved();
-    expect(controller.library.records.single.source, '먼저 골라 둔 실제 파일 원문');
+    expect(
+      controller.library.books.single.originals.single.text,
+      '먼저 골라 둔 실제 파일 원문',
+    );
+    await tester.tap(
+      find.descendant(
+        of: find.byType(SourceReading),
+        matching: find.byTooltip('닫기'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(of: collection, matching: find.byTooltip('닫기')),
+    );
+    await tester.pumpAndSettle();
     final text = tester.widget<TextField>(field).controller!;
     expect(
       tester.widget<TextField>(field).style!.fontFamily,
@@ -177,7 +205,10 @@ void main() {
     expect(controller.library.books.single.title, '새 이름으로 남긴 책');
     expect(controller.library.books.single.id, bookId);
     expect(tester.widget<Text>(heading).data, '새 이름으로 남긴 책');
-    expect(controller.library.records.single.source, '먼저 골라 둔 실제 파일 원문');
+    expect(
+      controller.library.books.single.originals.single.text,
+      '먼저 골라 둔 실제 파일 원문',
+    );
     expect(
       controller.library.records.single.bookId,
       controller.library.books.single.id,

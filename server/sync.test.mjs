@@ -28,6 +28,24 @@ test('Source paragraph is optional and accepts a nonnegative integer', () => {
   }
 });
 
+test('Registered originals round-trip in book and record snapshots', () => {
+  const library = empty();
+  const original = {id: 'o', text: '옮겨 적는 원문', citation: '책 · 12쪽'};
+  const book = {id: 'b', title: '책', author: '', originals: [original]};
+  const record = {id: 'r', bookId: null, title: '필사', source: '', originals: [original]};
+  library.books = [book];
+  library.records = [record];
+  assert.equal(validLibrary(JSON.parse(JSON.stringify(library))), true);
+  for (const bad of [null, [original, original], [{...original, text: ' '}], [{...original, citation: '가'.repeat(501)}]]) {
+    book.originals = bad;
+    assert.equal(validLibrary(library), false);
+    book.originals = [original];
+    record.originals = bad;
+    assert.equal(validLibrary(library), false);
+    record.originals = [original];
+  }
+});
+
 test('Bookplate, date and pencil marks remain optional and reject malformed values', () => {
   const library = empty();
   library.books = [{id:'b',title:'책',author:'',owner:'필명'}];

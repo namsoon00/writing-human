@@ -305,58 +305,49 @@ void main() {
     expect(controller.text, '쓰고 나서 책으로 묶는 문장');
   });
 
-  testWidgets(
-    'Reopen a saved passage with the guide and only the unwritten suffix',
-    (tester) async {
-      final store = MemoryStore();
-      const source = '먼저 골라 둔 원문\n\n다음에 골라 둔 원문';
-      const written = '먼저 골라 둔 원문\n다음에 골라';
-      await tester.pumpWidget(WritingHumanApp(store: store));
-      await tester.pumpAndSettle();
-      final editor = find.byKey(const ValueKey('page-text'));
-      final controller = tester.widget<TextField>(editor).controller!;
-      await tester.tap(find.byTooltip('더 보기'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('원문 메모'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const ValueKey('source-text')), source);
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('source-confirm')));
-      await tester.pumpAndSettle();
-      expect(store.data.records.single.source, source);
-      expect(store.data.activePage!.text, '');
-      expect(tester.widget<TextField>(editor).controller, same(controller));
-      await tester.tap(find.text('원문 보기'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('다음 문단'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('따라 쓰기'));
-      await tester.pumpAndSettle();
-      await tester.enterText(editor, written);
-      await tester.pumpAndSettle();
-      expect(store.data.records.single.sourceParagraph, 1);
-      await tester.pumpWidget(const SizedBox());
-      await tester.pumpAndSettle();
-      await tester.pumpWidget(WritingHumanApp(store: store));
-      await tester.pumpAndSettle();
-      final overlay = find.byKey(const ValueKey('transcription-guide'));
-      final field = tester.widget<TextField>(editor);
-      final painter =
-          tester.widget<CustomPaint>(overlay).painter
-              as TranscriptionGuidePainter;
-      expect(field.controller!.text, written);
-      expect(field.focusNode!.hasFocus, isFalse);
-      expect(painter.guide.remaining(field.controller!.value), ' 둔 원문');
-      expect(
-        find.byKey(const ValueKey('source-reading-paragraph')),
-        findsNothing,
+  testWidgets('Saved book originals guide a reopened editor after input', (
+    tester,
+  ) async {
+    const source = '먼저 골라 둔 원문\n\n다음에 골라 둔 원문';
+    const written = '먼저 골라 둔 원문\n다음에 골라';
+    final store = MemoryStore()
+      ..data = const Library(
+        books: [
+          Book(
+            id: 'b',
+            title: '책',
+            originals: [RegisteredOriginal('o', source)],
+          ),
+        ],
+        records: [WritingRecord(id: 'r', bookId: 'b', title: '필사')],
+        pages: [WritingPage(id: 'p', recordId: 'r', number: 1)],
+        activePageId: 'p',
+        writing: true,
       );
-      await tester.tap(find.text('원문 보기'));
-      await tester.pumpAndSettle();
-      expect(find.text('다음에 골라 둔 원문'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
+    await tester.pumpWidget(WritingHumanApp(store: store));
+    await tester.pumpAndSettle();
+    final editor = find.byKey(const ValueKey('page-text'));
+    await tester.enterText(editor, written);
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(WritingHumanApp(store: store));
+    await tester.pumpAndSettle();
+    final field = tester.widget<TextField>(editor);
+    final overlay = find.byKey(const ValueKey('transcription-guide'));
+    final painter =
+        tester.widget<CustomPaint>(overlay).painter!
+            as TranscriptionGuidePainter;
+    expect(field.controller!.text, written);
+    expect(field.focusNode!.hasFocus, isFalse);
+    expect(painter.remainderFor(field.controller!.value), ' 둔 원문');
+    expect(store.data.books.single.originals.single.text, source);
+    await tester.tap(find.byKey(const ValueKey('writing-originals')));
+    await tester.pumpAndSettle();
+    final original = find.byKey(const ValueKey('source-reading-text'));
+    expect(tester.widget<Text>(original).textSpan!.toPlainText(), source);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('Unreadable data shows recovery screen without saving', (
     tester,

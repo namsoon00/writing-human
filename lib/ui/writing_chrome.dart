@@ -100,6 +100,7 @@ class WritingFooter extends StatelessWidget {
     this.pageLabel,
     this.pageCount = 1,
     this.onPages,
+    this.onSource,
     this.onPrevious,
     this.onNext,
     this.onTurnStart,
@@ -111,7 +112,7 @@ class WritingFooter extends StatelessWidget {
   });
   final String status;
   final VoidCallback onTools, onMore, onDone;
-  final VoidCallback? onPages, onPrevious, onNext;
+  final VoidCallback? onPages, onPrevious, onNext, onSource;
   final String? pageLabel;
   final int pageCount;
   final VoidCallback? onTurnStart, onTurnCancel;
@@ -153,6 +154,20 @@ class WritingFooter extends StatelessWidget {
                   ),
                 ),
               ),
+            ),
+          ),
+        ),
+        SizedBox(
+          width: 60,
+          child: TextFieldTapRegion(
+            child: TextButton(
+              key: const ValueKey('writing-originals'),
+              onPressed: onSource,
+              style: TextButton.styleFrom(
+                foregroundColor: brandInk,
+                padding: EdgeInsets.zero,
+              ),
+              child: const Text('원문', style: TextStyle(fontSize: 12)),
             ),
           ),
         ),

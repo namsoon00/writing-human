@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/main.dart';
 import 'package:writing_human/source/source_intake.dart';
+import 'package:writing_human/ui/source_reading.dart';
 
 import '../test/source_intake_test.dart' show FakeIntake;
 import '../test/widget_test.dart' show MemoryStore;
@@ -120,7 +121,15 @@ void main() {
     }
 
     await capture('paper');
-    await tester.tap(find.byKey(const ValueKey('place-source')));
+    final originals = find.byKey(const ValueKey('writing-originals'));
+    final reading = find.byType(SourceReading);
+    final closeReading = find.descendant(
+      of: reading,
+      matching: find.byTooltip('닫기'),
+    );
+    await tester.tap(originals);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('원문 등록'));
     await tester.pumpAndSettle();
     await capture('choose');
     await tester.tap(find.byKey(const ValueKey('source-photo')));
@@ -134,7 +143,12 @@ void main() {
     await capture('review');
     await tester.tap(confirm);
     await tester.pumpAndSettle();
-    expect(store.data.records.single.source, paragraphs.join('\n\n'));
+    expect(
+      store.data.records.single.originals.single.text,
+      paragraphs.join('\n\n'),
+    );
+    await tester.tap(closeReading);
+    await tester.pumpAndSettle();
     expect(store.data.activePage!.text, isEmpty);
     expect(find.byKey(const ValueKey('transcription-guide')), findsOneWidget);
     await capture('guide');
@@ -158,18 +172,28 @@ void main() {
     await capture('ink-writing');
     await tester.pumpAndSettle();
     await capture('guide-writing');
-    await tester.tap(find.text('원문 보기'));
+    await tester.tap(originals);
     await tester.pumpAndSettle();
     await capture('reading');
+    await tester.tap(closeReading);
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('page-text')),
       '책장을 넘기면 새로운 문장이 보입니다.',
     );
     await tester.pumpAndSettle();
     await capture('writing');
-    await tester.tap(find.byTooltip('다음 문단'));
+    await tester.enterText(
+      find.byKey(const ValueKey('page-text')),
+      '책장을 넘기면 새로운 문장이 보입니다.\n\n종이의 결을 따라',
+    );
     await tester.pumpAndSettle();
-    expect(find.text(paragraphs.last), findsOneWidget);
+    await tester.tap(originals);
+    await tester.pumpAndSettle();
+    final text = tester.widget<Text>(
+      find.byKey(const ValueKey('source-reading-text')),
+    );
+    expect(text.textSpan!.toPlainText(), paragraphs.join('\n\n'));
     await capture('next-passage');
   });
 }

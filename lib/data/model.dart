@@ -4,6 +4,36 @@ export 'book_detail_style.dart';
 
 typedef Json = Map<String, dynamic>;
 
+class RegisteredOriginal {
+  const RegisteredOriginal(this.id, this.text, {this.citation = ''});
+
+  final String id, text, citation;
+
+  Json toJson() => {'id': id, 'text': text, 'citation': citation};
+
+  factory RegisteredOriginal.fromJson(Json j) => RegisteredOriginal(
+    j['id'] as String,
+    j['text'] as String,
+    citation: j['citation'] as String,
+  );
+
+  static List<RegisteredOriginal> read(Object? value) => [
+    for (final item in (value as List?) ?? const [])
+      RegisteredOriginal.fromJson(item as Json),
+  ];
+
+  static bool validList(List<RegisteredOriginal> values) =>
+      values.map((value) => value.id).toSet().length == values.length &&
+      values.every(
+        (value) =>
+            value.id.isNotEmpty &&
+            value.id.length <= 250 &&
+            value.text.trim().isNotEmpty &&
+            value.text.length <= 50000 &&
+            value.citation.length <= 500,
+      );
+}
+
 class Book {
   const Book({
     required this.id,
@@ -13,9 +43,11 @@ class Book {
     this.indexLabel = '',
     this.coverIndex,
     this.paperIndex,
+    this.originals = const [],
   });
   final String id, title, author, owner, indexLabel;
   final int? coverIndex, paperIndex;
+  final List<RegisteredOriginal> originals;
   Book copy({
     String? title,
     String? owner,
@@ -23,6 +55,7 @@ class Book {
     int? coverIndex,
     int? paperIndex,
     bool useDefaultPaper = false,
+    List<RegisteredOriginal>? originals,
   }) => Book(
     id: id,
     title: title ?? this.title,
@@ -31,6 +64,7 @@ class Book {
     indexLabel: indexLabel ?? this.indexLabel,
     coverIndex: coverIndex ?? this.coverIndex,
     paperIndex: useDefaultPaper ? null : paperIndex ?? this.paperIndex,
+    originals: originals ?? this.originals,
   );
   Json toJson() => {
     'id': id,
@@ -40,6 +74,8 @@ class Book {
     'indexLabel': indexLabel,
     if (coverIndex != null) 'coverIndex': coverIndex,
     if (paperIndex != null) 'paperIndex': paperIndex,
+    if (originals.isNotEmpty)
+      'originals': originals.map((o) => o.toJson()).toList(),
   };
   factory Book.fromJson(Json j) {
     if (j.containsKey('indexLabel') && j['indexLabel'] is! String) {
@@ -59,6 +95,7 @@ class Book {
       indexLabel: j['indexLabel'] as String? ?? '',
       coverIndex: cover,
       paperIndex: paper,
+      originals: RegisteredOriginal.read(j['originals']),
     );
   }
 }
@@ -146,16 +183,34 @@ class WritingRecord {
     required this.title,
     this.source = '',
     this.sourceParagraph = 0,
+    this.originals = const [],
   });
   final String id, title, source;
   final String? bookId;
   final int sourceParagraph;
+  final List<RegisteredOriginal> originals;
+
+  WritingRecord copy({
+    String? bookId,
+    String? source,
+    int? sourceParagraph,
+    List<RegisteredOriginal>? originals,
+  }) => WritingRecord(
+    id: id,
+    bookId: bookId ?? this.bookId,
+    title: title,
+    source: source ?? this.source,
+    sourceParagraph: sourceParagraph ?? this.sourceParagraph,
+    originals: originals ?? this.originals,
+  );
   Json toJson() => {
     'id': id,
     'bookId': bookId,
     'title': title,
     'source': source,
     if (sourceParagraph != 0) 'sourceParagraph': sourceParagraph,
+    if (originals.isNotEmpty)
+      'originals': originals.map((o) => o.toJson()).toList(),
   };
   factory WritingRecord.fromJson(Json j) => WritingRecord(
     id: j['id'] as String,
@@ -163,6 +218,7 @@ class WritingRecord {
     title: j['title'] as String,
     source: j['source'] as String? ?? '',
     sourceParagraph: j['sourceParagraph'] as int? ?? 0,
+    originals: RegisteredOriginal.read(j['originals']),
   );
 }
 
@@ -579,10 +635,16 @@ class Library {
         recordIds.length != records.length ||
         pageIds.length != pages.length ||
         numbers.length != pages.length ||
-        books.any((b) => b.owner.length > 80 || b.indexLabel.length > 80) ||
+        books.any(
+          (b) =>
+              b.owner.length > 80 ||
+              b.indexLabel.length > 80 ||
+              !RegisteredOriginal.validList(b.originals),
+        ) ||
         records.any(
           (r) =>
               r.sourceParagraph < 0 ||
+              !RegisteredOriginal.validList(r.originals) ||
               (r.bookId != null && !bookIds.contains(r.bookId)),
         ) ||
         pages.any(

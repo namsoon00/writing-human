@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
+import 'editable_geometry.dart';
 
 class TranscriptionGuide {
   const TranscriptionGuide({
@@ -59,7 +59,7 @@ class TranscriptionGuidePainter extends CustomPainter {
     final remainder = guide.remaining(value);
     if (remainder.isEmpty) return;
     final field = fieldKey.currentContext?.findRenderObject();
-    final editable = _findEditable(field);
+    final editable = findEditable(field);
     if (field == null || editable == null || !editable.hasSize) return;
 
     final caret = editable
@@ -111,13 +111,6 @@ class TranscriptionGuidePainter extends CustomPainter {
     painter.paint(canvas, Offset(0, lineTop));
     canvas.restore();
     painter.dispose();
-  }
-
-  RenderEditable? _findEditable(RenderObject? root) {
-    if (root is RenderEditable) return root;
-    RenderEditable? found;
-    root?.visitChildren((child) => found ??= _findEditable(child));
-    return found;
   }
 
   @override

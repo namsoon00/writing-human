@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import 'model.dart';
 import 'store.dart';
+import 'library_backup.dart';
 
 class LibraryController extends ChangeNotifier {
   LibraryController(this.store, this.library);
@@ -87,12 +88,25 @@ class LibraryController extends ChangeNotifier {
             before?.scroll != after?.scroll)) {
       editorEpoch++;
     }
-    _publish(next, fromSync: true);
+    _publish(next.copy(lastBackupAt: library.lastBackupAt), fromSync: true);
     await settled;
     return saveError == null;
   }
 
-  void importLocal(Library next) => _publish(next, positionChanged: true);
+  void importLocal(Library next) => _publish(
+    next.copy(lastBackupAt: library.lastBackupAt),
+    positionChanged: true,
+  );
+
+  void recordBackupExport(DateTime createdAt) =>
+      _publish(library.copy(lastBackupAt: createdAt.toUtc()), fromSync: true);
+
+  Future<bool> restoreBackup(Library backup) async {
+    final next = mergeBackup(library, backup);
+    _publish(next, positionChanged: next.activePageId != library.activePageId);
+    await settled;
+    return saveError == null;
+  }
 
   void setSource(String recordId, String source) => _publish(
     library.copy(
@@ -104,12 +118,40 @@ class LibraryController extends ChangeNotifier {
                     bookId: r.bookId,
                     title: r.title,
                     source: source,
+                    sourceParagraph: r.source == source ? r.sourceParagraph : 0,
                   )
                 : r,
           )
           .toList(),
     ),
   );
+
+  void setSourceParagraph(String recordId, String source, int index) {
+    final record = library.records.where((r) => r.id == recordId).firstOrNull;
+    if (record == null ||
+        record.source != source ||
+        index < 0 ||
+        record.sourceParagraph == index) {
+      return;
+    }
+    _publish(
+      library.copy(
+        records: [
+          for (final r in library.records)
+            if (r.id == recordId)
+              WritingRecord(
+                id: r.id,
+                title: r.title,
+                bookId: r.bookId,
+                source: r.source,
+                sourceParagraph: index,
+              )
+            else
+              r,
+        ],
+      ),
+    );
+  }
 
   void setStyle(WritingStyle style) => _publish(library.copy(style: style));
   int coverIndexFor(Book? book) {
@@ -335,6 +377,7 @@ class LibraryController extends ChangeNotifier {
                       title: r.title,
                       bookId: bookId,
                       source: r.source,
+                      sourceParagraph: r.sourceParagraph,
                     )
                   : r,
             )

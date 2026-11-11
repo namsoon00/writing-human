@@ -336,8 +336,9 @@ void main() {
     expect(field.controller!.value, committed);
     expect(field.focusNode!.hasFocus, isTrue);
     expect(tester.getRect(bodyField), writingArea);
-    expect(store.writes, writes);
+    expect(store.writes, writes + 1);
     expect(store.data.records.single.source, source);
+    expect(store.data.records.single.sourceParagraph, 1);
     await tester.tap(previous);
     await tester.pumpAndSettle();
     expect(tester.widget<Text>(paragraph).data, first);

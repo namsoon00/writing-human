@@ -60,6 +60,41 @@ class DeviceRemote implements CloudRemote {
 
 void main() {
   test(
+    'Source position merges independently without making conflict copies',
+    () {
+      const source = '첫 문단\n\n둘째 문단';
+      const base = Library(
+        records: [WritingRecord(id: 'r', title: '필사', source: source)],
+      );
+      final local = base.copy(
+        records: const [
+          WritingRecord(
+            id: 'r',
+            title: '필사',
+            source: source,
+            sourceParagraph: 1,
+          ),
+        ],
+      );
+      final remote = base.copy(
+        records: const [WritingRecord(id: 'r', title: '바뀐 제목', source: source)],
+      );
+      final result = mergeLibraries(base, local, remote);
+      expect(result.conflictCopies, 0);
+      expect(result.library.records.single.title, '바뀐 제목');
+      expect(result.library.records.single.sourceParagraph, 1);
+
+      final editedSource = remote.copy(
+        records: const [WritingRecord(id: 'r', title: '바뀐 제목', source: '새 원문')],
+      );
+      final edited = mergeLibraries(base, local, editedSource);
+      expect(edited.conflictCopies, 0);
+      expect(edited.library.records.single.source, '새 원문');
+      expect(edited.library.records.single.sourceParagraph, 0);
+    },
+  );
+
+  test(
     'Font fallback index and development flag remain one choice when merging',
     () {
       const base = Library();

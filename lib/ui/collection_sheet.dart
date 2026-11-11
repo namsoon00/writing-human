@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../data/library_controller.dart';
+import '../data/library_search.dart';
 import '../data/model.dart';
 import 'paper.dart';
 import 'book_details.dart';
@@ -15,11 +16,15 @@ class CollectionSheet extends StatefulWidget {
     required this.onRecord,
     required this.onNewSheet,
     required this.onNewBook,
+    this.onPassage,
+    this.onArchiveBook,
   });
   final LibraryController controller;
   final ValueChanged<WritingRecord> onRecord;
   final ValueChanged<String?> onNewSheet;
   final VoidCallback onNewBook;
+  final ValueChanged<Passage>? onPassage;
+  final ValueChanged<Book>? onArchiveBook;
   @override
   State<CollectionSheet> createState() => _CollectionSheetState();
 }
@@ -28,7 +33,20 @@ class _CollectionSheetState extends State<CollectionSheet> {
   bool books = false;
   String? bookId;
   String query = '';
+  final searchField = TextEditingController();
   LibraryController get c => widget.controller;
+
+  void _clearSearch() {
+    searchField.clear();
+    query = '';
+  }
+
+  @override
+  void dispose() {
+    searchField.dispose();
+    super.dispose();
+  }
+
   Future<void> _owner(Book book) async {
     final controller = c;
     final name = await showDialog<String>(
@@ -141,7 +159,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
           onTap: () => setState(() {
             books = false;
             bookId = book.id;
-            query = '';
+            _clearSearch();
           }),
         );
       },
@@ -163,16 +181,21 @@ class _CollectionSheetState extends State<CollectionSheet> {
     builder: (context, _) {
       final book = c.library.books.where((b) => b.id == bookId).firstOrNull;
       final records = c.library.records.reversed
-          .where(
-            (r) =>
-                (bookId == null || r.bookId == bookId) &&
-                '${_excerpt(r)} ${r.title} ${c.library.books.where((b) => b.id == r.bookId).firstOrNull?.title ?? ''}'
-                    .toLowerCase()
-                    .contains(query.toLowerCase()),
-          )
+          .where((r) => bookId == null || r.bookId == bookId)
           .toList();
-      return SizedBox(
-        height: MediaQuery.sizeOf(context).height * .88,
+      final passages = LibraryPassages(c.library);
+      final searching = !books && query.trim().isNotEmpty;
+      final revisit =
+          !books && !searching && bookId == null && widget.onPassage != null
+          ? passages.revisit(DateTime.now())
+          : null;
+      final media = MediaQuery.of(context);
+      final keyboard = media.viewInsets.bottom;
+      final sheet = SizedBox(
+        height: math.max(
+          0,
+          math.min(media.size.height * .88, media.size.height - keyboard - 44),
+        ),
         child: SafeArea(
           top: false,
           child: Column(
@@ -187,6 +210,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                         onPressed: () => setState(() {
                           bookId = null;
                           books = true;
+                          _clearSearch();
                         }),
                         icon: const Icon(CupertinoIcons.chevron_left, size: 18),
                       ),
@@ -211,7 +235,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                   ],
                 ),
               ),
-              if (bookId == null)
+              if (bookId == null && keyboard == 0)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Row(
@@ -222,7 +246,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                           child: TextButton(
                             onPressed: () => setState(() {
                               books = item.$1;
-                              query = '';
+                              _clearSearch();
                             }),
                             style: TextButton.styleFrom(
                               foregroundColor: books == item.$1 ? ink : muted,
@@ -242,16 +266,19 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     ],
                   ),
                 ),
-              if ((books || bookId != null) &&
+              if (keyboard == 0 &&
+                  (books || bookId != null) &&
                   c.library.books.isNotEmpty &&
                   c.library.style.bookDetails.indexTab.enabled)
                 _indexTabs(),
-              if (!books && c.library.records.length > 5)
+              if (!books && records.isNotEmpty && widget.onPassage != null)
                 Padding(
+                  key: const ValueKey('collection-search'),
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
                   child: TextField(
+                    controller: searchField,
                     decoration: const InputDecoration(
-                      hintText: '문장 찾기',
+                      hintText: '문장, 책, 날짜 찾기',
                       prefixIcon: Icon(CupertinoIcons.search, size: 17),
                       isDense: true,
                     ),
@@ -259,8 +286,11 @@ class _CollectionSheetState extends State<CollectionSheet> {
                   ),
                 ),
               Expanded(
+                key: const ValueKey('collection-results'),
                 child: books && bookId == null
                     ? _books()
+                    : searching
+                    ? _results(passages.search(query, bookId: bookId).toList())
                     : records.isEmpty && book == null
                     ? Center(
                         child: Column(
@@ -289,7 +319,9 @@ class _CollectionSheetState extends State<CollectionSheet> {
                           horizontal: 24,
                           vertical: 8,
                         ),
-                        itemCount: records.length + (book == null ? 0 : 1),
+                        itemCount:
+                            records.length +
+                            (book == null && revisit == null ? 0 : 1),
                         separatorBuilder: (_, i) => book != null
                             ? i == 0
                                   ? const SizedBox(height: 12)
@@ -302,6 +334,9 @@ class _CollectionSheetState extends State<CollectionSheet> {
                                     )
                             : const Divider(color: line, height: 1),
                         itemBuilder: (context, i) {
+                          if (revisit != null && i == 0) {
+                            return _passageTile(revisit, revisit: true);
+                          }
                           if (book != null && i == 0) {
                             final ids = c.library.records
                                 .where((r) => r.bookId == book.id)
@@ -342,6 +377,16 @@ class _CollectionSheetState extends State<CollectionSheet> {
                                       ),
                                       label: const Text('내지 고르기'),
                                     ),
+                                    if (widget.onArchiveBook != null)
+                                      TextButton.icon(
+                                        onPressed: () =>
+                                            widget.onArchiveBook!(book),
+                                        icon: const Icon(
+                                          CupertinoIcons.arrow_down_doc,
+                                          size: 16,
+                                        ),
+                                        label: const Text('책 PDF 내보내기'),
+                                      ),
                                   ],
                                 ),
                                 Tooltip(
@@ -366,7 +411,9 @@ class _CollectionSheetState extends State<CollectionSheet> {
                               ],
                             );
                           }
-                          final r = records[i - (book == null ? 0 : 1)];
+                          final r =
+                              records[i -
+                                  (book == null && revisit == null ? 0 : 1)];
                           final b = c.library.books
                               .where((b) => b.id == r.bookId)
                               .firstOrNull;
@@ -442,41 +489,76 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     style: TextStyle(color: burgundy),
                   ),
                 ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
-                child: Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  spacing: 16,
-                  runSpacing: 8,
-                  children: [
-                    TextButton(
-                      onPressed: widget.onNewBook,
-                      child: const Text(
-                        '새 책 만들기',
-                        style: TextStyle(fontSize: 13),
-                      ),
-                    ),
-                    FilledButton.icon(
-                      onPressed: () => widget.onNewSheet(bookId),
-                      icon: const Icon(CupertinoIcons.plus, size: 16),
-                      label: const Text('새 종이'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: burgundy,
-                        foregroundColor: paper,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 14,
+              if (keyboard == 0)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
+                  child: Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    spacing: 16,
+                    runSpacing: 8,
+                    children: [
+                      TextButton(
+                        onPressed: widget.onNewBook,
+                        child: const Text(
+                          '새 책 만들기',
+                          style: TextStyle(fontSize: 13),
                         ),
                       ),
-                    ),
-                  ],
+                      FilledButton.icon(
+                        onPressed: () => widget.onNewSheet(bookId),
+                        icon: const Icon(CupertinoIcons.plus, size: 16),
+                        label: const Text('새 종이'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: burgundy,
+                          foregroundColor: paper,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
         ),
       );
+      return Padding(
+        padding: EdgeInsets.only(bottom: keyboard),
+        child: sheet,
+      );
     },
+  );
+
+  Widget _results(List<Passage> results) => results.isEmpty
+      ? const Center(child: Text('일치하는 기록이 없어요.'))
+      : ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          itemCount: results.length,
+          separatorBuilder: (_, _) => const Divider(color: line, height: 1),
+          itemBuilder: (_, index) => _passageTile(results[index]),
+        );
+
+  Widget _passageTile(Passage passage, {bool revisit = false}) => ListTile(
+    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+    leading: revisit ? const Icon(CupertinoIcons.bookmark, size: 18) : null,
+    title: Text(
+      revisit ? '다시 만난 문장' : passage.excerpt,
+      maxLines: 3,
+      overflow: TextOverflow.ellipsis,
+    ),
+    subtitle: Text(
+      [
+        if (revisit) passage.excerpt,
+        '${passage.label} · ${passage.page.number}쪽',
+        ?passage.page.writtenOn,
+      ].join('\n'),
+      maxLines: 4,
+      overflow: TextOverflow.ellipsis,
+    ),
+    trailing: const Icon(CupertinoIcons.chevron_right, size: 13, color: muted),
+    onTap: () => widget.onPassage!(passage),
   );
 
   Widget _books() {

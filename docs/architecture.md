@@ -1,5 +1,21 @@
 # 구현 구조
 
+## 백업, 내보내기, 검색
+
+`LibraryBackup`은 형식 식별자, 버전, 생성 시각과 라이브러리를 JSON에 담는다.
+동기화 계정·기준 스냅샷과 기기별 마지막 내보내기 시각은 파일에 넣지 않는다.
+가져올 때 구조와 참조를 확인한 뒤 현재 라이브러리에 추가한다. 내용이 일치하는
+기존 항목을 재사용하고, 다른 내용이 같은 ID를 쓰면 책·기록·쪽의 참조를 새 ID로
+연결한다. 같은 사본을 다시 가져오면 재사용한다. 새 스냅샷은 기존 순차 저장 큐로
+저장하고 실패 시 다시 저장할 수 있다. SQLite는 한 트랜잭션으로 처리한다.
+마지막 백업 내보내기 시각은 기기에만 저장한다. 웹에서는 브라우저에 다운로드를
+요청한 시각이다. 파일 선택과 저장은 `file_picker`를 사용한다.
+
+`writing_export.dart`는 필사 본문을 쪽 순서의 UTF-8 텍스트로, 책을 번들 한글
+서체를 사용하는 A4 PDF로 만든다. `LibraryPassages`는 페이지 전체에서 문자열을
+찾고 편집기와 같은 UTF-16 위치를 돌려준다. 결과 이동은 편집기의 스크롤만 조정한다.
+
+
 ## 쓰기 위치와 새 잉크의 표현
 
 `WritingPen`은 입력·선택·스크롤을 읽고 작은 잉크 점을 그린다.
@@ -13,9 +29,11 @@
 
 `lib/source/`는 이미지 선택·문자 인식·수신함을 플랫폼별로 연결한다.
 `SourceImportSheet`는 원문 편집을 별도 입력기에 두고, 사용자 확인 후 기존
-`TranscriptionRecord.source`에 저장한다. 책·기록·쪽 구조나 저장 버전은 그대로다.
+`WritingRecord.source`에 저장한다.
 `SourceReading`은 기록의 원문을 빈 줄에서 나누고 본문 편집기 위에 읽기 전용으로
-그린다. 문단 선택은 기록별 화면 상태이며 저장 큐를 사용하지 않는다. 문단을 넘길 때
+그린다. SQLite v7의 `records.source_paragraph`와 JSON의 `sourceParagraph`에
+문단 번호를 저장한다. 원문 변경 시 첫 문단으로 돌아가며, 원문이 같은 기록의
+동기화에서는 문단 위치를 별도로 병합한다. 문단을 넘길 때
 읽기 영역의 높이와 편집기 키를 유지하고, 한글 조합 중에는 문단 화살표를 비활성화한다.
 따라 쓰기에서는 현재 문단과 시작 시점의 본문을 화면 상태에 두고,
 `TranscriptionGuidePainter`가 실제 편집기의 끝 위치와 스크롤을 읽어
@@ -103,7 +121,7 @@ collection_sheet.dart는 필요할 때 여는 글/책 보관함이다. tools_scr
 
 - lib/data/model.dart: Book, WritingRecord(bookId nullable), WritingPage(recordId, number, text, selection, scroll), Library(activePageId, writing). 버전 1 JSON 및 참조 구조 검증.
 - lib/data/library_controller.dart: 사용자 동작, 변경 스냅샷의 순차 저장, 저장 상태와 재시도. 저장 순서가 역전되지 않도록 Future 체인을 사용한다.
-- lib/data/sqlite_store.dart: 네 개의 관계형 테이블, 외래 키, 현재 버전 5. 이전 버전 1·2·3·4의 파일을 자동 이전한다. 부모를 REPLACE로 삭제하지 않고 갱신한다. 각 스냅샷은 트랜잭션으로 저장한다.
+- lib/data/sqlite_store.dart: 네 개의 관계형 테이블, 외래 키, 현재 버전 7. 이전 버전 1~6의 파일을 자동 이전한다. 부모를 REPLACE로 삭제하지 않고 갱신한다. 각 스냅샷은 트랜잭션으로 저장한다.
 - lib/data/web_store.dart: 버전 1 단일 키 writing-human.library.v1. 동기·원자적인 setItem을 호출하며 할당량/접근 오류는 UI까지 전달한다. 모바일의 SQLite와 저장 구현은 다르다.
 - lib/main.dart: 저장소를 연 뒤 기존 기록을 읽는다. 실패하면 복구 화면을 표시하며 빈 라이브러리로 대체하지 않는다.
 - lib/ui/workspace.dart: 책장, 책 생성, 편집. 본문 controller는 페이지마다 한 번 생성하고 입력 중 되쓰지 않는다. TextEditingValue를 관찰해서 조합 중 텍스트도 보관하되 IME composing 영역은 재실행 시 복원하지 않는다. 선택 영역은 UTF-16 offset이며 복원 시 범위를 제한한다.
@@ -143,7 +161,7 @@ WritingHumanDevelopment + NanumMyeongjo/NanumGothic 대체 체인을 사용한�
 
 본문, 선택 영역, 본문의 스크롤 변경마다 저장 요청을 큐에 넣는다. 마지막 열린 페이지와 책장/편집 화면 여부도 저장한다. 스크롤은 초기 레이아웃 후 유효 범위로 복원한다. 마지막 위치는 자동 스크롤이나 포커스로 덮어쓰지 않는다. 페이지에 키보드를 자동 표시하지 않아 복원 직후 글을 읽을 수 있다.
 
-모바일 경로: getDatabasesPath()/writing-human-v1.db. 웹 캐시는 origin·계정별로 분리된다. localhost와 배포 URL은 서버와 캐시를 공유하지 않는다. 배포 웹의 기록은 로그인한 같은 계정의 D1 스냅샷과 동기화하며 상세 정책은 docs/sync.md를 따른다. 웹 동시 수정은 서버 버전 확인과 충돌 보관 필사로 처리한다. 백업 파일의 내보내기·복원은 후속 범위다.
+모바일 경로: getDatabasesPath()/writing-human-v1.db. 웹 캐시는 origin·계정별로 분리된다. localhost와 배포 URL은 서버와 캐시를 공유하지 않는다. 배포 웹의 기록은 로그인한 같은 계정의 D1 스냅샷과 동기화하며 상세 정책은 docs/sync.md를 따른다. 웹 동시 수정은 서버 버전 확인과 충돌 보관 필사로 처리한다. 파일 백업은 기록 보관 메뉴에서 제공한다.
 
 매 변경 시 전체 라이브러리 스냅샷을 저장하는 구현이므로 장편·대량 기록 성능은 아직 검증하지 않았다. 다음 저장 최적화에서는 변경된 페이지의 갱신으로 전환하되 저장 순서, 실패 표시, 페이지/커서 복원 보장을 유지해야 한다. 종료 직전 OS의 강제 프로세스 종료까지 저장을 보장한다고 주장하지 않는다. 저장 완료 표시 후 종료하는 흐름을 검증한다.
 

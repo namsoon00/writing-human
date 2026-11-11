@@ -144,20 +144,24 @@ class WritingRecord {
     this.bookId,
     required this.title,
     this.source = '',
+    this.sourceParagraph = 0,
   });
   final String id, title, source;
   final String? bookId;
+  final int sourceParagraph;
   Json toJson() => {
     'id': id,
     'bookId': bookId,
     'title': title,
     'source': source,
+    if (sourceParagraph != 0) 'sourceParagraph': sourceParagraph,
   };
   factory WritingRecord.fromJson(Json j) => WritingRecord(
     id: j['id'] as String,
     bookId: j['bookId'] as String?,
     title: j['title'] as String,
     source: j['source'] as String? ?? '',
+    sourceParagraph: j['sourceParagraph'] as int? ?? 0,
   );
 }
 
@@ -312,7 +316,7 @@ class WritingStyle {
       penMotion: j['penMotion'] as bool? ?? true,
       pageMotion: j['pageMotion'] as bool? ?? true,
       pageSound: j['pageSound'] as bool? ?? false,
-      favoriteBookIds: (j['favoriteBookIds'] as List? ?? []).cast<String>(),
+      favoriteBookIds: List<String>.from(j['favoriteBookIds'] as List? ?? []),
       bookDetails: BookDetailsStyle.fromJson(j['bookDetails'] as Json? ?? {}),
     );
     if (style.paperIndex < 0 ||
@@ -381,6 +385,7 @@ class Library {
     this.writing = false,
     this.style = const WritingStyle(),
     this.sync = const SyncMetadata(),
+    this.lastBackupAt,
   });
   final List<Book> books;
   final List<WritingRecord> records;
@@ -389,6 +394,7 @@ class Library {
   final bool writing;
   final WritingStyle style;
   final SyncMetadata sync;
+  final DateTime? lastBackupAt;
   WritingPage? get activePage =>
       pages.where((p) => p.id == activePageId).firstOrNull;
   WritingRecord? get activeRecord =>
@@ -403,6 +409,7 @@ class Library {
     bool? writing,
     WritingStyle? style,
     SyncMetadata? sync,
+    DateTime? lastBackupAt,
     bool clearActive = false,
   }) => Library(
     books: books ?? this.books,
@@ -412,10 +419,12 @@ class Library {
     writing: writing ?? this.writing,
     style: style ?? this.style,
     sync: sync ?? this.sync,
+    lastBackupAt: lastBackupAt ?? this.lastBackupAt,
   );
   Json toJson() => {
     'version': 1,
     'sync': sync.toJson(),
+    if (lastBackupAt != null) 'lastBackupAt': lastBackupAt!.toIso8601String(),
     'style': style.toJson(),
     'books': books.map((b) => b.toJson()).toList(),
     'records': records.map((r) => r.toJson()).toList(),
@@ -423,7 +432,9 @@ class Library {
     'activePageId': activePageId,
     'writing': writing,
   };
-  Json toCloudJson() => toJson()..remove('sync');
+  Json toCloudJson() => toJson()
+    ..remove('sync')
+    ..remove('lastBackupAt');
   String encode() => jsonEncode(toJson());
   factory Library.decode(String raw) {
     final j = jsonDecode(raw) as Json;
@@ -442,6 +453,7 @@ class Library {
       writing: j['writing'] as bool,
       style: WritingStyle.fromJson(j['style'] as Json? ?? {}),
       sync: SyncMetadata.fromJson(j['sync'] as Json? ?? {}),
+      lastBackupAt: DateTime.tryParse(j['lastBackupAt'] as String? ?? ''),
     );
     result.validate();
     return result;
@@ -457,7 +469,11 @@ class Library {
         pageIds.length != pages.length ||
         numbers.length != pages.length ||
         books.any((b) => b.owner.length > 80 || b.indexLabel.length > 80) ||
-        records.any((r) => r.bookId != null && !bookIds.contains(r.bookId)) ||
+        records.any(
+          (r) =>
+              r.sourceParagraph < 0 ||
+              (r.bookId != null && !bookIds.contains(r.bookId)),
+        ) ||
         pages.any(
           (p) =>
               !recordIds.contains(p.recordId) ||

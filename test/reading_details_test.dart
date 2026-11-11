@@ -127,7 +127,7 @@ void main() {
       LibraryController? c;
       try {
         final migrated = await store.load();
-        expect(await store.db.getVersion(), 6);
+        expect(await store.db.getVersion(), 7);
         expect(migrated.encode(), original.encode());
         c = LibraryController(store, migrated);
         c.setBookIndexLabel('b', '다시 읽기');

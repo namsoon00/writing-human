@@ -4,6 +4,7 @@ import 'paper.dart';
 import 'writing_pen.dart';
 import 'pencil_marks.dart';
 import 'transcription_guide.dart';
+import 'editable_geometry.dart';
 
 class PageEditor extends StatefulWidget {
   const PageEditor({
@@ -15,6 +16,7 @@ class PageEditor extends StatefulWidget {
     this.onEditingState,
     this.onPencilMark,
     this.guide,
+    this.reveal,
   });
   final FocusNode? focusNode;
   final void Function(bool focused, bool composing)? onEditingState;
@@ -23,6 +25,7 @@ class PageEditor extends StatefulWidget {
   final void Function(String, String, int, int, double) onChanged;
   final void Function(String, int, int)? onPencilMark;
   final TranscriptionGuide? guide;
+  final ({int offset, int request})? reveal;
   @override
   State<PageEditor> createState() => _PageEditorState();
 }
@@ -60,6 +63,7 @@ class _PageEditorState extends State<PageEditor> {
       if (scroll.hasClients) {
         scroll.jumpTo(p.scroll.clamp(0, scroll.position.maxScrollExtent));
       }
+      _reveal();
       restoring = false;
       _emitEditingState();
     });
@@ -71,6 +75,29 @@ class _PageEditorState extends State<PageEditor> {
     text.annotatedText = widget.page.text;
     text.marks = widget.page.pencilMarks;
     text.choice = widget.style.bookDetails.pencil;
+    if (widget.reveal != null && widget.reveal != oldWidget.reveal) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _reveal();
+      });
+    }
+  }
+
+  void _reveal() {
+    final reveal = widget.reveal;
+    if (reveal == null || !scroll.hasClients || focus.hasFocus) return;
+    final editable = findEditable(
+      fieldRenderKey.currentContext?.findRenderObject(),
+    );
+    if (editable == null || !editable.hasSize) return;
+    final caret = editable.getLocalRectForCaret(
+      TextPosition(offset: reveal.offset.clamp(0, text.text.length)),
+    );
+    final target = (scroll.offset + caret.top - 16).clamp(
+      0.0,
+      scroll.position.maxScrollExtent,
+    );
+    // Scroll to the result without changing selection, focus, or composition.
+    scroll.jumpTo(target);
   }
 
   void _emitEditingState() {

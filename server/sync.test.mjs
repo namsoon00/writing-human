@@ -15,6 +15,19 @@ const origin = 'https://writing-human.test';
 const empty = () => ({version: 1, books: [], records: [], pages: [], activePageId: null, writing: false, style: {paperIndex: 0, penIndex: 0, fontIndex: 1, guides: false, favoriteBookIds: []}});
 const request = (user, method='GET', data, path='/api/sync/library', originHeader=origin) => new Request(origin+path, {method, headers: {...(user ? {'oai-authenticated-user-id': user} : {}), origin: originHeader, 'content-type': 'application/json', 'x-writing-human-sync': '1', 'x-writing-human-account': user ?? ''}, ...(data ? {body: JSON.stringify(data)} : {})});
 
+test('Source paragraph is optional and accepts a nonnegative integer', () => {
+  const library = empty();
+  const record = {id: 'r', bookId: null, title: '필사', source: '첫째\n\n둘째'};
+  library.records = [record];
+  assert.equal(validLibrary(library), true);
+  record.sourceParagraph = 1;
+  assert.equal(validLibrary(library), true);
+  for (const value of [-1, 1.5, '1', null]) {
+    record.sourceParagraph = value;
+    assert.equal(validLibrary(library), false);
+  }
+});
+
 test('Bookplate, date and pencil marks remain optional and reject malformed values', () => {
   const library = empty();
   library.books = [{id:'b',title:'책',author:'',owner:'필명'}];

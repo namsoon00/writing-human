@@ -7,6 +7,8 @@ String _hash(Object value) =>
     sha256.convert(utf8.encode(jsonEncode(value))).toString().substring(0, 32);
 T _field<T>(T? base, T local, T remote) =>
     sameData(local, base) ? remote : local;
+Json? _recordContent(WritingRecord? record) =>
+    record?.toJson()?..remove('sourceParagraph');
 
 List<PencilMark> _mergeMarks(
   WritingPage? base,
@@ -78,7 +80,7 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
     String suffix,
   ) {
     final signature = _hash([
-      r.toJson(),
+      _recordContent(r),
       sourcePages
           .map(
             (p) => {
@@ -100,6 +102,7 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
       bookId: r.bookId,
       title: '${r.title} · 충돌 보관$suffix',
       source: r.source,
+      sourceParagraph: r.sourceParagraph,
     );
     for (var i = 0; i < sourcePages.length; i++) {
       final p = sourcePages[i];
@@ -121,16 +124,30 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
 
   for (final l in local.records) {
     final r = records[l.id], b = baseRecords[l.id];
-    if (r != null &&
-        !sameData(l.toJson(), r.toJson()) &&
-        (b == null ||
-            (!sameData(l.toJson(), b.toJson()) &&
-                !sameData(r.toJson(), b.toJson())))) {
+    if (r == null) {
+      records[l.id] = l;
+      continue;
+    }
+    final localChanged = !sameData(_recordContent(l), _recordContent(b));
+    if (!sameData(_recordContent(l), _recordContent(r)) &&
+        localChanged &&
+        !sameData(_recordContent(r), _recordContent(b))) {
       keepRemote(r, remote.pages.where((p) => p.recordId == r.id).toList(), '');
     }
-    if (r == null || b == null || !sameData(l.toJson(), b.toJson())) {
-      records[l.id] = l;
-    }
+    final winner = localChanged ? l : r;
+    records[l.id] = WritingRecord(
+      id: winner.id,
+      bookId: winner.bookId,
+      title: winner.title,
+      source: winner.source,
+      sourceParagraph: l.source == r.source
+          ? _field(
+              b?.source == winner.source ? b?.sourceParagraph : null,
+              l.sourceParagraph,
+              r.sourceParagraph,
+            )
+          : winner.sourceParagraph,
+    );
   }
 
   for (final l in local.pages) {
@@ -290,6 +307,7 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         active != null && _field(base.writing, local.writing, remote.writing),
     style: style,
     sync: local.sync,
+    lastBackupAt: local.lastBackupAt,
   );
   result.validate();
   return MergeResult(result, copies);

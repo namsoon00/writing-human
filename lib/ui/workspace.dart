@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../data/library_controller.dart';
+import '../data/library_search.dart';
 import '../data/model.dart';
 import '../sync/coordinator.dart';
 import '../source/source_intake.dart';
@@ -25,6 +25,7 @@ import 'pages_sheet.dart';
 import 'book_details.dart';
 import 'book_front_cover.dart';
 import 'page_read_preview.dart';
+import 'archive_sheet.dart';
 
 class Workspace extends StatefulWidget {
   const Workspace({
@@ -56,6 +57,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   String? draftBookId;
   bool _pageNavigationBusy = false;
   bool _editorComposing = false;
+  ({String pageId, int offset, int request})? _reveal;
+  int _revealRequest = 0;
   late final SourceIntake _intake = widget.sourceIntake ?? createSourceIntake();
   StreamSubscription<void>? _incomingEvents;
   IncomingSource? _incoming;
@@ -63,7 +66,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   final _shownShares = <String>{};
   bool _sourceBusy = false, _pollingSources = false, _pollAgain = false;
   bool _checkedPhotoRecovery = false;
-  final _sourcePositions = <String, ({String source, int index})>{};
   ({String pageId, String source, TranscriptionGuide passage, bool visible})?
   _guide;
   Future<void>? _sheetClosed;
@@ -163,6 +165,22 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     fresh = false;
     userFresh = false;
     c.openPage(id);
+  });
+
+  Future<void> _openPassage(Passage passage) => _navigatePage(() async {
+    final id = passage.page.id;
+    final target = c.library.pages.where((p) => p.id == id).firstOrNull;
+    if (target == null) return;
+    final offset = passage.offset;
+    setState(() {
+      _coverAnchor = null;
+      fresh = false;
+      userFresh = false;
+      _reveal = offset != null && target.text == passage.page.text
+          ? (pageId: id, offset: offset, request: ++_revealRequest)
+          : null;
+    });
+    if (c.library.activePageId != id) c.openPage(id);
   });
 
   Future<void> _openCover({bool back = false}) => _navigatePage(() async {
@@ -267,12 +285,12 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       widget.sync?.addListener(_changed);
       editorFocus.unfocus();
       _coverAnchor = null;
+      _reveal = null;
       fresh = c.library.pages.isEmpty;
       userFresh = false;
       draft = _blank();
       draftSource = '';
       draftBookId = null;
-      _sourcePositions.clear();
       _guide = null;
     }
   }
@@ -282,6 +300,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     setState(() {
       if (fresh && !userFresh && c.library.activePage != null) fresh = false;
       if (_accountLocked || !_showCover) _coverAnchor = null;
+      if (_accountLocked || _reveal?.pageId != page.id) _reveal = null;
       if (_accountLocked ||
           _guide?.pageId != page.id ||
           _guide?.source != record?.source) {
@@ -343,10 +362,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     });
   }, paperTurn: false);
 
-  Future<void> _sheet(Widget child) {
+  Future<void> _sheet(Widget child, {bool enableDrag = true}) {
     final route = ModalBottomSheetRoute<void>(
       isScrollControlled: true,
-      showDragHandle: true,
+      showDragHandle: enableDrag,
+      enableDrag: enableDrag,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       constraints: const BoxConstraints(maxWidth: 600),
       builder: (_) => child,
@@ -387,6 +407,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         onNewBook: () {
           _afterSheet(_createBook);
         },
+        onPassage: (passage) => _afterSheet(() => _openPassage(passage)),
+        onArchiveBook: (book) =>
+            _afterSheet(() => _archive(selectedBook: book)),
       ),
     );
   }
@@ -582,9 +605,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       final destination = shared == null
           ? selectedPage.id
           : '${_sharedRecordId(shared)}-page';
-      if (shared == null && source != initial) {
-        _sourcePositions.remove(selectedPage.recordId);
-      }
       if (shared != null) {
         final id = _sharedRecordId(shared);
         fresh = false;
@@ -610,8 +630,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           record?.source == source &&
           !owner.composing) {
         final paragraphs = splitSourceParagraphs(source);
-        final position = _sourcePositions[page.recordId];
-        final index = position?.source == source ? position!.index : 0;
+        final index = record?.sourceParagraph ?? 0;
         setState(() {
           _guide = (
             pageId: destination,
@@ -780,12 +799,14 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                     ),
                   ),
                 ListTile(
+                  leading: const Icon(CupertinoIcons.archivebox, size: 20),
+                  title: const Text('기록 보관'),
+                  onTap: () => _afterSheet(_archive),
+                ),
+                ListTile(
                   leading: const Icon(CupertinoIcons.cloud, size: 20),
                   title: const Text('기기 동기화'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _syncInfo();
-                  },
+                  onTap: () => _afterSheet(() async => _syncInfo()),
                 ),
               ],
             ),
@@ -958,7 +979,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       _ => null,
     };
     final guide = activeGuide?.visible == true ? activeGuide?.passage : null;
-    final sourcePosition = _sourcePositions[currentPage.recordId];
     final media = MediaQuery.of(context);
     final availableHeight =
         media.size.height - media.viewInsets.bottom - media.padding.vertical;
@@ -1059,9 +1079,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 SourceReading(
                   choice: style.bookDetails.sourceSlip,
                   source: source,
-                  paragraphIndex: sourcePosition?.source == source
-                      ? sourcePosition!.index
-                      : 0,
+                  paragraphIndex: record?.sourceParagraph ?? 0,
                   maxTextHeight: maxSourceTextHeight,
                   compact: compact,
                   guiding: guide != null,
@@ -1070,23 +1088,26 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                       editorFocus.hasFocus &&
                       currentPage.text.isNotEmpty,
                   onParagraphChanged: navigationEnabled
-                      ? (index, paragraph) => setState(() {
-                          _sourcePositions[currentPage.recordId] = (
-                            source: source,
-                            index: index,
-                          );
-                          _guide = guide == null
-                              ? null
-                              : (
-                                  pageId: currentPage.id,
-                                  source: source,
-                                  passage: TranscriptionGuide(
-                                    paragraph: paragraph,
-                                    initialText: currentPage.text,
+                      ? (index, paragraph) {
+                          setState(
+                            () => _guide = guide == null
+                                ? null
+                                : (
+                                    pageId: currentPage.id,
+                                    source: source,
+                                    passage: TranscriptionGuide(
+                                      paragraph: paragraph,
+                                      initialText: currentPage.text,
+                                    ),
+                                    visible: true,
                                   ),
-                                  visible: true,
-                                );
-                        })
+                          );
+                          c.setSourceParagraph(
+                            currentPage.recordId,
+                            source,
+                            index,
+                          );
+                        }
                       : null,
                   onToggleGuide: navigationEnabled
                       ? (paragraph) {
@@ -1122,6 +1143,12 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         style: style,
                         focusNode: editorFocus,
                         guide: guide,
+                        reveal: _reveal?.pageId == currentPage.id
+                            ? (
+                                offset: _reveal!.offset,
+                                request: _reveal!.request,
+                              )
+                            : null,
                         onChanged: _edit,
                         onPencilMark: c.togglePencilMark,
                         onEditingState: (focused, composing) {
@@ -1166,7 +1193,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
 
   void _syncInfo() {
     if (widget.sync == null || !widget.sync!.available) {
-      _storageInfo();
+      _archive();
       return;
     }
     editorFocus.unfocus();
@@ -1291,31 +1318,18 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     );
   }
 
-  void _storageInfo() => showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: appPaper,
-    showDragHandle: true,
-    builder: (context) => const Padding(
-      padding: EdgeInsets.fromLTRB(30, 10, 30, 40),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '나의 문장은 이곳에',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-          ),
-          SizedBox(height: 20),
-          Text(
-            kIsWeb
-                ? '쓰는 동안 이 브라우저에 자동으로 보관합니다.\n브라우저 데이터를 지우면 기록도 지워집니다.'
-                : '쓰는 동안 이 기기에 자동으로 보관합니다.\n앱을 삭제하면 기록도 지워질 수 있습니다.',
-            style: TextStyle(fontSize: 14, height: 1.9),
-          ),
-          SizedBox(height: 18),
-          Text('백업·복원은 준비 중입니다.', style: TextStyle(color: muted, fontSize: 12)),
-        ],
+  Future<void> _archive({Book? selectedBook}) async {
+    if (_accountLocked || !_canLeaveInput()) return;
+    _blur();
+    final owner = c;
+    await _sheet(
+      ArchiveSheet(
+        controller: owner,
+        canAccess: () => mounted && c == owner && !_accountLocked,
+        record: selectedBook == null ? record : null,
+        book: selectedBook ?? book,
       ),
-    ),
-  );
+      enableDrag: false,
+    );
+  }
 }

@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'editable_geometry.dart';
 
 /// Read-only feedback beside the native editable. Never writes input state.
 class WritingPen extends StatefulWidget {
@@ -146,17 +147,10 @@ class _WritingPenState extends State<WritingPen>
     WidgetsBinding.instance.ensureVisualUpdate();
   }
 
-  RenderEditable? _findEditable(RenderObject? root) {
-    if (root is RenderEditable) return root;
-    RenderEditable? found;
-    root?.visitChildren((child) => found ??= _findEditable(child));
-    return found;
-  }
-
   void _readGeometry() {
     final value = widget.controller.value;
     Offset? next;
-    final editable = _findEditable(
+    final editable = findEditable(
       widget.fieldKey.currentContext?.findRenderObject(),
     );
     final overlay = context.findRenderObject();

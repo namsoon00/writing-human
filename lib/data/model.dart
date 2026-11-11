@@ -17,6 +17,7 @@ class Book {
   final String id, title, author, owner, indexLabel;
   final int? coverIndex, paperIndex;
   Book copy({
+    String? title,
     String? owner,
     String? indexLabel,
     int? coverIndex,
@@ -24,7 +25,7 @@ class Book {
     bool useDefaultPaper = false,
   }) => Book(
     id: id,
-    title: title,
+    title: title ?? this.title,
     author: author,
     owner: owner ?? this.owner,
     indexLabel: indexLabel ?? this.indexLabel,

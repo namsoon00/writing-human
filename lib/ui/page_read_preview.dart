@@ -25,7 +25,6 @@ class _PageReadPreviewState extends State<PageReadPreview> {
     builder: (context, constraints) {
       final padding = writingPagePadding(constraints.biggest);
       final style = widget.style;
-      final empty = widget.page.text.isEmpty;
       return ClipRect(
         child: Stack(
           children: [
@@ -50,18 +49,15 @@ class _PageReadPreviewState extends State<PageReadPreview> {
               child: SizedBox(
                 width: double.infinity,
                 child: Text.rich(
-                  empty
-                      ? const TextSpan(text: '마음에 남은 문장을\n천천히 옮겨 적어보세요.')
-                      : pencilTextSpan(
-                          value: TextEditingValue(text: widget.page.text),
-                          marks: widget.page.pencilMarks,
-                          choice: style.bookDetails.pencil,
-                        ),
+                  pencilTextSpan(
+                    value: TextEditingValue(text: widget.page.text),
+                    marks: widget.page.pencilMarks,
+                    choice: style.bookDetails.pencil,
+                  ),
                   key: ValueKey('page-preview-text:${widget.page.id}'),
                   style: writingTextStyle(
                     style.fontIndex,
-                    size: empty ? 21 : 23,
-                    color: empty ? muted : penColors[style.penIndex],
+                    color: penColors[style.penIndex],
                     useDevelopmentTypeface: style.useDevelopmentTypeface,
                   ),
                 ),

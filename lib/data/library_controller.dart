@@ -181,6 +181,20 @@ class LibraryController extends ChangeNotifier {
     ),
   );
 
+  void setBookTitle(String id, String title) {
+    final name = title.trim();
+    final book = library.books.where((book) => book.id == id).firstOrNull;
+    if (book == null || name.isEmpty || book.title == name) return;
+    _publish(
+      library.copy(
+        books: [
+          for (final entry in library.books)
+            if (entry.id == id) entry.copy(title: name) else entry,
+        ],
+      ),
+    );
+  }
+
   void setBookOwner(String id, String owner) => _publish(
     library.copy(
       books: library.books

@@ -47,6 +47,17 @@ class _CollectionSheetState extends State<CollectionSheet> {
     super.dispose();
   }
 
+  Future<void> _rename(Book book) async {
+    final controller = c;
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => BookTitleDialog(title: book.title),
+    );
+    if (name != null && mounted && controller == c) {
+      c.setBookTitle(book.id, name);
+    }
+  }
+
   Future<void> _owner(Book book) async {
     final controller = c;
     final name = await showDialog<String>(
@@ -227,6 +238,12 @@ class _CollectionSheetState extends State<CollectionSheet> {
                         ),
                       ),
                     ),
+                    if (book != null)
+                      IconButton(
+                        tooltip: '책 이름 변경',
+                        onPressed: () => _rename(book),
+                        icon: const Icon(CupertinoIcons.pencil, size: 18),
+                      ),
                     IconButton(
                       tooltip: '닫기',
                       onPressed: () => Navigator.pop(context),

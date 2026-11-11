@@ -274,13 +274,6 @@ class _PageEditorState extends State<PageEditor> {
                 cursorColor: brandInk,
                 cursorWidth: 1.2,
                 decoration: InputDecoration(
-                  hintText: guide == null ? '마음에 남은 문장을\n천천히 옮겨 적어보세요.' : null,
-                  hintStyle: writingTextStyle(
-                    style.fontIndex,
-                    size: 21,
-                    color: muted,
-                    useDevelopmentTypeface: style.useDevelopmentTypeface,
-                  ),
                   contentPadding: padding,
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,

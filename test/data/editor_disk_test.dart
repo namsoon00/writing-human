@@ -61,6 +61,10 @@ void main() {
 
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
+    final heading = find.byKey(const ValueKey('writing-title'));
+    final field = find.byKey(const ValueKey('page-text'));
+    expect(tester.widget<Text>(heading).data, '쓰는 인간');
+    expect(tester.widget<TextField>(field).decoration!.hintText, isNull);
     await tester.tap(find.text('보관함'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('새 책 만들기'));
@@ -79,7 +83,6 @@ void main() {
     await tester.pumpAndSettle();
     await saved();
     expect(controller.library.records.single.source, '먼저 골라 둔 실제 파일 원문');
-    final field = find.byKey(const ValueKey('page-text'));
     final text = tester.widget<TextField>(field).controller!;
     expect(
       tester.widget<TextField>(field).style!.fontFamily,
@@ -115,6 +118,33 @@ void main() {
     );
     tester.testTextInput.updateEditingValue(committed);
     await saved();
+    expect(tester.widget<Text>(heading).data, '실제 파일 검수');
+    final bookId = controller.library.books.single.id;
+    await tester.tap(find.text('보관함'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('책'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(ValueKey('book-index-$bookId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('책 이름 변경'));
+    await tester.pumpAndSettle();
+    final titleInput = find.byKey(const ValueKey('book-title-input'));
+    expect(
+      tester.widget<TextFormField>(titleInput).controller!.text,
+      '실제 파일 검수',
+    );
+    await tester.enterText(titleInput, '   ');
+    await tester.tap(find.text('저장'));
+    await tester.pumpAndSettle();
+    expect(find.text('책 이름을 입력해 주세요.'), findsOneWidget);
+    await tester.enterText(titleInput, '  새 이름으로 남긴 책  ');
+    await tester.tap(find.text('저장'));
+    await saved();
+    await tester.tap(find.byTooltip('닫기'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(heading).data, '새 이름으로 남긴 책');
+    expect(tester.widget<TextField>(field).controller, same(text));
+    expect(text.value, committed);
     tester.widget<TextField>(field).scrollController!.jumpTo(710);
     await saved();
     final pageId = controller.library.activePageId;
@@ -144,7 +174,9 @@ void main() {
     expect(restored.style!.fontFamilyFallback, contains('NanumMyeongjo'));
     expect(controller.library.style.useDevelopmentTypeface, isTrue);
     expect(controller.library.activePageId, pageId);
-    expect(controller.library.books.single.title, '실제 파일 검수');
+    expect(controller.library.books.single.title, '새 이름으로 남긴 책');
+    expect(controller.library.books.single.id, bookId);
+    expect(tester.widget<Text>(heading).data, '새 이름으로 남긴 책');
     expect(controller.library.records.single.source, '먼저 골라 둔 실제 파일 원문');
     expect(
       controller.library.records.single.bookId,

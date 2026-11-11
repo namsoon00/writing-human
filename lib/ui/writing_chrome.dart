@@ -46,7 +46,8 @@ class WritingHeader extends StatelessWidget {
               const InkMark(size: 22),
               const SizedBox(height: 3),
               Text(
-                '쓰는 인간',
+                bookTitle ?? '쓰는 인간',
+                key: const ValueKey('writing-title'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -58,15 +59,6 @@ class WritingHeader extends StatelessWidget {
                   letterSpacing: .4,
                 ),
               ),
-              if (bookTitle != null && !compact) ...[
-                const SizedBox(height: 5),
-                Text(
-                  bookTitle!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 10, color: muted),
-                ),
-              ],
             ],
           ),
         ),

@@ -207,7 +207,7 @@ void main() {
         );
       }
 
-      expectTypeface('쓰는 인간');
+      expectTypeface('내 책');
       expectTypeface('보관함');
       await tester.tap(find.text('보관함'));
       await tester.pumpAndSettle();
@@ -242,14 +242,14 @@ void main() {
         const TextSelection(baseOffset: 2, extentOffset: 5),
       );
       expect(tester.widget<TextField>(field).style!.fontFamily, 'NanumGothic');
-      expectTypeface('쓰는 인간');
+      expectTypeface('내 책');
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();
       await tester.pumpWidget(WritingHumanApp(store: store));
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(field).style!.fontFamily, 'NanumGothic');
       expect(tester.widget<TextField>(field).controller!.text, '남겨 둔 문장');
-      expectTypeface('쓰는 인간');
+      expectTypeface('내 책');
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();

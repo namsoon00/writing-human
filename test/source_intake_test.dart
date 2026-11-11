@@ -291,6 +291,95 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'A pencil reflection saves with its original and returns to writing',
+    (tester) async {
+      const source = '아침이다. 햇빛이 책장에 천천히 내려앉았다.';
+      final store = MemoryStore()
+        ..data = const Library(
+          books: [
+            Book(
+              id: 'b',
+              title: '책',
+              originals: [RegisteredOriginal('o', source)],
+            ),
+          ],
+          records: [WritingRecord(id: 'r', bookId: 'b', title: '필사')],
+          pages: [WritingPage(id: 'p', recordId: 'r', number: 1)],
+          activePageId: 'p',
+          writing: true,
+        );
+      await open(tester, store, FakeIntake());
+      await tester.enterText(bodyField, '책장에');
+      await tester.pumpAndSettle();
+      final body = tester.widget<TextField>(bodyField).controller!;
+      final before = body.value;
+      await tester.tap(place);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('느낀 점 남기기'));
+      await tester.pumpAndSettle();
+
+      final noteField = find.byKey(const ValueKey('original-reflection-input'));
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 265);
+      await tester.pumpAndSettle();
+      const composing = TextEditingValue(
+        text: '하ㄴ',
+        selection: TextSelection.collapsed(offset: 2),
+        composing: TextRange(start: 0, end: 2),
+      );
+      tester.testTextInput.updateEditingValue(composing);
+      await tester.pumpAndSettle();
+      final save = find.widgetWithText(FilledButton, '저장');
+      expect(tester.widget<FilledButton>(save).onPressed, isNull);
+      expect(tester.widget<TextField>(noteField).controller!.value, composing);
+      const note = '오늘은 나도 천천히 걷고 싶다.';
+      await tester.enterText(noteField, note);
+      await tester.pumpAndSettle();
+      store.fail = true;
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(find.text('느낀 점을 저장하지 못했어요. 다시 저장해 주세요.'), findsOneWidget);
+      expect(tester.widget<TextField>(noteField).controller!.text, note);
+      expect(store.data.books.single.originals.single.reflection, isNull);
+      store.fail = false;
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+
+      tester.view.resetViewInsets();
+      tester.view.physicalSize = const Size(390, 844);
+      await tester.pumpAndSettle();
+      expect(reading, findsNothing);
+      expect(tester.widget<TextField>(bodyField).controller, same(body));
+      expect(body.value, before);
+      expect(tester.testTextInput.isVisible, isTrue);
+      expect(store.data.activePage!.text, '책장에');
+      final original = store.data.books.single.originals.single;
+      expect(original.reflection!.text, note);
+      final mark = original.reflection!.mark!;
+      expect(original.text.substring(mark.start, mark.end), '책장에');
+      await tester.tap(place);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<Text>(find.text(note)).style!.fontFamily,
+        'NanumPenScript',
+      );
+      await tester.tap(find.text('느낀 점 고치기'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(noteField).controller!.text, note);
+      await tester.enterText(noteField, '내일도 한 줄씩.');
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(
+        store.data.books.single.originals.single.reflection!.text,
+        '내일도 한 줄씩.',
+      );
+      expect(store.data.books.single.originals, hasLength(1));
+      expect(store.data.activePage!.text, '책장에');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('Older sources and citation-only passages stay visible', (
     tester,
   ) async {
@@ -325,6 +414,24 @@ void main() {
     await tester.tap(find.text('출처만 · 30쪽'));
     await tester.pumpAndSettle();
     expect(find.text('출처를 남긴 기록입니다.'), findsOneWidget);
+    expect(store.data.activePage!.passages, hasLength(2));
+    await tester.tap(find.byTooltip('원문 목록'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('줄에 붙인 원문'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('느낀 점 남기기'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('original-reflection-input')),
+      '다시 볼 구절.',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '저장'));
+    await tester.pumpAndSettle();
+    final promoted = store.data.records.single.originals.single;
+    expect(promoted.reflection!.text, '다시 볼 구절.');
+    expect(promoted.citation, '책 · 24쪽');
+    expect(store.data.activePage!.passages.first.source, '줄에 붙인 원문');
     expect(store.data.activePage!.passages, hasLength(2));
   });
 

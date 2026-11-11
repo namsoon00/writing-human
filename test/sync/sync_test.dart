@@ -134,6 +134,44 @@ void main() {
   });
 
   test(
+    'An original reflection survives sync and retains concurrent changes',
+    () {
+      const source = RegisteredOriginal('o', '햇빛이 내려앉았다.');
+      const base = Library(
+        books: [
+          Book(id: 'b', title: '책', originals: [source]),
+        ],
+      );
+      Library write(String text) => base.copy(
+        books: [
+          base.books.single.copy(
+            originals: [
+              source.withReflection(
+                OriginalReflection(text, mark: const PencilMark(0, 3)),
+              ),
+            ],
+          ),
+        ],
+      );
+      final local = write('첫 메모.');
+      final remote = write('다른 메모.');
+      OriginalReflection? note(Library library) =>
+          library.books.single.originals.single.reflection;
+      expect(note(mergeLibraries(base, base, remote).library)!.text, '다른 메모.');
+      final merged = mergeLibraries(base, local, remote).library;
+      expect(note(merged)!.text.split('\n\n').toSet(), {'첫 메모.', '다른 메모.'});
+      expect(
+        note(mergeLibraries(base, remote, local).library)!.text,
+        note(merged)!.text,
+      );
+      expect(
+        note(mergeLibraries(base, merged, local).library)!.text,
+        note(merged)!.text,
+      );
+    },
+  );
+
+  test(
     'Font fallback index and development flag remain one choice when merging',
     () {
       const base = Library();

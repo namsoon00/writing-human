@@ -12,12 +12,55 @@ Json? _recordContent(WritingRecord? record) => record?.toJson()
   ..remove('originals');
 
 List<RegisteredOriginal> _mergeOriginals(
+  List<RegisteredOriginal> base,
   List<RegisteredOriginal> local,
   List<RegisteredOriginal> remote,
-) => {
-  for (final original in remote) original.id: original,
-  for (final original in local) original.id: original,
-}.values.toList();
+) {
+  final before = {for (final entry in base) entry.id: entry};
+  final merged = {for (final entry in remote) entry.id: entry};
+  for (final entry in local) {
+    final incoming = merged[entry.id];
+    if (incoming == null ||
+        incoming.text != entry.text ||
+        incoming.citation != entry.citation) {
+      merged[entry.id] = entry;
+      continue;
+    }
+    final left = entry.reflection;
+    final right = incoming.reflection;
+    final old = before[entry.id]?.reflection;
+    final reflection = switch ((left, right)) {
+      (null, _) => right,
+      (_, null) => left,
+      (final a?, _) when sameData(a.toJson(), old?.toJson()) => right,
+      (_, final b?) when sameData(b.toJson(), old?.toJson()) => left,
+      (final a?, final b?) when a.text == b.text => OriginalReflection(
+        a.text,
+        mark: a.mark ?? b.mark,
+      ),
+      (final a?, final b?) => _mergeReflections(a, b),
+    };
+    merged[entry.id] = entry.withReflection(reflection);
+  }
+  return merged.values.toList();
+}
+
+OriginalReflection _mergeReflections(
+  OriginalReflection left,
+  OriginalReflection right,
+) {
+  bool contains(String whole, String part) =>
+      '\n\n$whole\n\n'.contains('\n\n$part\n\n');
+  if (contains(left.text, right.text)) return left;
+  if (contains(right.text, left.text)) return right;
+  final (first, second) = left.text.compareTo(right.text) <= 0
+      ? (left, right)
+      : (right, left);
+  return OriginalReflection(
+    '${first.text}\n\n${second.text}',
+    mark: first.mark ?? second.mark,
+  );
+}
 
 List<PencilMark> _mergeMarks(
   WritingPage? base,
@@ -92,14 +135,20 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         indexLabel: _field(old.indexLabel, b.indexLabel, r.indexLabel),
         coverIndex: _field(old.coverIndex, b.coverIndex, r.coverIndex),
         paperIndex: _field(old.paperIndex, b.paperIndex, r.paperIndex),
-        originals: _mergeOriginals(b.originals, r.originals),
+        originals: _mergeOriginals(old.originals, b.originals, r.originals),
       );
     } else if (r == null ||
         old == null ||
         !sameData(b.toJson(), old.toJson())) {
       books[b.id] = r == null
           ? b
-          : b.copy(originals: _mergeOriginals(b.originals, r.originals));
+          : b.copy(
+              originals: _mergeOriginals(
+                old?.originals ?? const [],
+                b.originals,
+                r.originals,
+              ),
+            );
     }
   }
   final records = <String, WritingRecord>{
@@ -181,7 +230,11 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
       bookId: winner.bookId,
       title: winner.title,
       source: winner.source,
-      originals: _mergeOriginals(l.originals, r.originals),
+      originals: _mergeOriginals(
+        b?.originals ?? const [],
+        l.originals,
+        r.originals,
+      ),
       sourceParagraph: l.source == r.source
           ? _field(
               b?.source == winner.source ? b?.sourceParagraph : null,

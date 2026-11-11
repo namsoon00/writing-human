@@ -30,12 +30,13 @@ test('Source paragraph is optional and accepts a nonnegative integer', () => {
 
 test('Registered originals round-trip in book and record snapshots', () => {
   const library = empty();
-  const original = {id: 'o', text: '옮겨 적는 원문', citation: '책 · 12쪽'};
+  const original = {id: 'o', text: '옮겨 적는 원문', citation: '책 · 12쪽', reflection: {text: '연필 메모', mark: {start: 0, end: 2}}};
   const book = {id: 'b', title: '책', author: '', originals: [original]};
   const record = {id: 'r', bookId: null, title: '필사', source: '', originals: [original]};
   library.books = [book];
   library.records = [record];
   assert.equal(validLibrary(JSON.parse(JSON.stringify(library))), true);
+  assert.equal(validLibrary({...library, books: [{...book, originals: [{...original, reflection: {text: '연필 메모', mark: {start: 0, end: 100}}}]}]}), false);
   for (const bad of [null, [original, original], [{...original, text: ' '}], [{...original, citation: '가'.repeat(501)}]]) {
     book.originals = bad;
     assert.equal(validLibrary(library), false);

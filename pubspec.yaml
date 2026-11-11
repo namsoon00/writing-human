@@ -107,6 +107,7 @@ flutter:
     - assets/images/
     - assets/audio/page-turn.mp3
     - assets/fonts/WritingHumanDevelopment-info.json
+    - assets/fonts/NanumPenScript-OFL.txt
 
   fonts:
     - family: WritingHumanDevelopment
@@ -120,6 +121,9 @@ flutter:
     - family: NanumGothic
       fonts:
         - asset: assets/fonts/NanumGothic-Regular.ttf
+    - family: NanumPenScript
+      fonts:
+        - asset: assets/fonts/NanumPenScript-Regular.ttf
 
 # FFI is used only by disk-persistence tests. Use the OS SQLite instead of
 # downloading test-only native binaries into mobile application builds.

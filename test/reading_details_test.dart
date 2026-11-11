@@ -173,6 +173,19 @@ void main() {
           text: '기록의 원문',
           citation: '24쪽',
         );
+        const reflection = OriginalReflection(
+          '연필로 남긴 생각',
+          mark: PencilMark(0, 1),
+        );
+        expect(
+          await c.saveOriginalReflection(
+            bookId: 'b',
+            recordId: migrated.records.single.id,
+            original: c.library.books.single.originals.single,
+            reflection: reflection,
+          ),
+          isTrue,
+        );
         await c.settled;
         expect(c.saveError, isNull);
         final expected = c.library.encode();
@@ -185,6 +198,10 @@ void main() {
         expect(restored.encode(), expected);
         expect(restored.books.single.originals.single.text, '책의 원문');
         expect(restored.books.single.originals.single.citation, '12쪽');
+        expect(
+          restored.books.single.originals.single.reflection!.toJson(),
+          reflection.toJson(),
+        );
         expect(restored.records.single.originals.single.text, '기록의 원문');
         expect(restored.books.single.indexLabel, '다시 읽기');
         expect(restored.books.single.coverIndex, 2);

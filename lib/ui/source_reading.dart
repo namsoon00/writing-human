@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../data/model.dart';
 import '../source/originals.dart';
@@ -12,102 +13,225 @@ class SourceReading extends StatefulWidget {
     this.match,
     this.onRegister,
     this.onRetry,
+    this.onSaveReflection,
   });
 
   final List<RegisteredOriginal> originals;
   final OriginalMatch? match;
   final VoidCallback? onRegister;
   final VoidCallback? onRetry;
+  final Future<bool> Function(RegisteredOriginal, OriginalReflection)?
+  onSaveReflection;
 
   @override
   State<SourceReading> createState() => _SourceReadingState();
 }
 
 class _SourceReadingState extends State<SourceReading> {
-  late RegisteredOriginal? selected = widget.match?.original;
+  late String? selectedId = widget.match?.original.id;
+  final reflectionField = TextEditingController();
+  bool editing = false, saving = false, failed = false;
+  PencilMark? draftMark;
+
+  @override
+  void dispose() {
+    reflectionField.dispose();
+    super.dispose();
+  }
+
+  void _editReflection(RegisteredOriginal original, OriginalMatch? match) {
+    reflectionField.text = original.reflection?.text ?? '';
+    final opening = original.text.trimLeft();
+    final firstLine = opening.split('\n').first;
+    final openingLength = firstLine.characters
+        .take(18)
+        .toString()
+        .trimRight()
+        .length;
+    final openingStart = original.text.length - opening.length;
+    setState(() {
+      draftMark =
+          original.reflection?.mark ??
+          (match == null
+              ? PencilMark(openingStart, openingStart + openingLength)
+              : PencilMark(match.start, match.end));
+      editing = true;
+      failed = false;
+    });
+  }
+
+  bool _canSave(TextEditingValue value) =>
+      !saving &&
+      value.text.trim().isNotEmpty &&
+      (!value.isComposingRangeValid || value.composing.isCollapsed);
+
+  Future<void> _save(RegisteredOriginal original) async {
+    final draft = reflectionField.value;
+    if (!_canSave(draft)) return;
+    setState(() {
+      saving = true;
+      failed = false;
+    });
+    final success = await widget.onSaveReflection!(
+      original,
+      OriginalReflection(draft.text.trim(), mark: draftMark),
+    );
+    if (!mounted) return;
+    if (success &&
+        reflectionField.text == draft.text &&
+        reflectionField.value.composing == draft.composing &&
+        ModalRoute.of(context)?.isCurrent == true) {
+      Navigator.pop(context);
+      return;
+    }
+    setState(() {
+      saving = false;
+      failed = !success;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final original = selected;
-    final match = original == widget.match?.original ? widget.match : null;
-    return SafeArea(
-      top: false,
-      child: FractionallySizedBox(
-        heightFactor: .54,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  if (original != null)
-                    IconButton(
-                      tooltip: '원문 목록',
-                      onPressed: () => setState(() => selected = null),
-                      icon: const Icon(CupertinoIcons.chevron_left, size: 19),
-                    ),
-                  Expanded(
-                    child: Text(
-                      original?.citation.trim().isNotEmpty == true
-                          ? original!.citation
-                          : '원문',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  if (widget.onRegister != null)
-                    TextButton(
-                      onPressed: widget.onRegister,
-                      child: const Text('원문 등록'),
-                    ),
-                  IconButton(
-                    tooltip: '닫기',
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(CupertinoIcons.xmark, size: 18),
-                  ),
-                ],
-              ),
-              const Divider(),
-              if (widget.onRetry != null)
-                TextButton(
-                  onPressed: widget.onRetry,
-                  child: const Text('저장 실패 · 다시 저장'),
-                ),
-              Expanded(
-                child: original != null
-                    ? _OriginalText(
-                        key: ObjectKey(original),
-                        original: original,
-                        match: match,
-                      )
-                    : widget.originals.isEmpty
-                    ? const Center(child: Text('등록한 원문이 없습니다.'))
-                    : ListView.separated(
-                        itemCount: widget.originals.length,
-                        separatorBuilder: (_, _) => const Divider(height: 1),
-                        itemBuilder: (context, index) {
-                          final item = widget.originals[index];
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              item.text.isEmpty ? item.citation : item.text,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            subtitle: item.citation.isEmpty || item.text.isEmpty
-                                ? null
-                                : Text(
-                                    item.citation,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                            onTap: () => setState(() => selected = item),
-                          );
-                        },
+    final original = widget.originals
+        .where((item) => item.id == selectedId)
+        .firstOrNull;
+    final match = selectedId == widget.match?.original.id ? widget.match : null;
+    final reflection = original?.reflection;
+    final mark = editing ? draftMark : reflection?.mark;
+    final note = editing || reflection != null
+        ? _ReflectionNote(
+            controller: editing ? reflectionField : null,
+            text: reflection?.text,
+          )
+        : null;
+    final keyboard = editing ? MediaQuery.viewInsetsOf(context).bottom : 0.0;
+    return Padding(
+      padding: EdgeInsets.only(bottom: keyboard),
+      child: SafeArea(
+        top: false,
+        child: FractionallySizedBox(
+          heightFactor: keyboard > 0 ? .92 : .54,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    if (original != null && !editing)
+                      IconButton(
+                        tooltip: '원문 목록',
+                        onPressed: () => setState(() => selectedId = null),
+                        icon: const Icon(CupertinoIcons.chevron_left, size: 19),
                       ),
-              ),
-            ],
+                    Expanded(
+                      child: Text(
+                        original?.citation.trim().isNotEmpty == true
+                            ? original!.citation
+                            : '원문',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    if (widget.onRegister != null && !editing)
+                      TextButton(
+                        onPressed: widget.onRegister,
+                        child: const Text('원문 등록'),
+                      ),
+                    IconButton(
+                      tooltip: '닫기',
+                      onPressed: saving ? null : () => Navigator.pop(context),
+                      icon: const Icon(CupertinoIcons.xmark, size: 18),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                if (widget.onRetry != null && !editing)
+                  TextButton(
+                    onPressed: widget.onRetry,
+                    child: const Text('저장 실패 · 다시 저장'),
+                  ),
+                Expanded(
+                  child: original != null
+                      ? _OriginalText(
+                          key: ValueKey((original.id, editing)),
+                          original: original,
+                          match: match,
+                          mark: mark,
+                          note: note,
+                          editing: editing,
+                        )
+                      : widget.originals.isEmpty
+                      ? const Center(child: Text('등록한 원문이 없습니다.'))
+                      : ListView.separated(
+                          itemCount: widget.originals.length,
+                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final item = widget.originals[index];
+                            return ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(
+                                item.text.isEmpty ? item.citation : item.text,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle:
+                                  item.citation.isEmpty || item.text.isEmpty
+                                  ? null
+                                  : Text(
+                                      item.citation,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                              onTap: () => setState(() => selectedId = item.id),
+                            );
+                          },
+                        ),
+                ),
+                if (failed && editing)
+                  Semantics(
+                    liveRegion: true,
+                    child: const Text('느낀 점을 저장하지 못했어요. 다시 저장해 주세요.'),
+                  ),
+                if (original != null &&
+                    original.text.trim().isNotEmpty &&
+                    widget.onSaveReflection != null)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: editing
+                        ? ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: reflectionField,
+                            builder: (context, value, _) => Wrap(
+                              spacing: 8,
+                              children: [
+                                TextButton(
+                                  onPressed: saving
+                                      ? null
+                                      : () => setState(() {
+                                          editing = false;
+                                          failed = false;
+                                        }),
+                                  child: const Text('취소'),
+                                ),
+                                FilledButton(
+                                  onPressed: _canSave(value)
+                                      ? () => _save(original)
+                                      : null,
+                                  child: Text(saving ? '저장 중' : '저장'),
+                                ),
+                              ],
+                            ),
+                          )
+                        : TextButton.icon(
+                            icon: const Icon(CupertinoIcons.pencil, size: 16),
+                            onPressed: () => _editReflection(original, match),
+                            label: Text(
+                              reflection == null ? '느낀 점 남기기' : '느낀 점 고치기',
+                            ),
+                          ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -116,17 +240,32 @@ class _SourceReadingState extends State<SourceReading> {
 }
 
 class _OriginalText extends StatefulWidget {
-  const _OriginalText({super.key, required this.original, this.match});
+  const _OriginalText({
+    super.key,
+    required this.original,
+    this.match,
+    this.mark,
+    this.note,
+    required this.editing,
+  });
 
   final RegisteredOriginal original;
   final OriginalMatch? match;
+  final PencilMark? mark;
+  final Widget? note;
+  final bool editing;
 
   @override
   State<_OriginalText> createState() => _OriginalTextState();
 }
 
+final _sentenceEnd = RegExp(r'[.!?。！？]+|\n');
+const _graphite = Color(0xff485358);
+
 class _OriginalTextState extends State<_OriginalText> {
   final scroll = ScrollController();
+  final beforeNote = GlobalKey();
+  final afterNote = GlobalKey();
   bool positioned = false;
 
   @override
@@ -135,55 +274,252 @@ class _OriginalTextState extends State<_OriginalText> {
     super.dispose();
   }
 
+  TextSpan _span(int from, int to) {
+    final text = widget.original.text;
+    final mark = widget.mark;
+    final current = widget.match;
+    final match =
+        current != null &&
+            (mark == null ||
+                current.end <= mark.start ||
+                current.start >= mark.end)
+        ? current
+        : null;
+    final boundaries = {
+      from,
+      to,
+      if (mark != null) ...[
+        mark.start.clamp(from, to),
+        mark.end.clamp(from, to),
+      ],
+      if (match != null) ...[
+        match.start.clamp(from, to),
+        match.end.clamp(from, to),
+      ],
+    }.toList()..sort();
+    return TextSpan(
+      style: writingTextStyle(0, size: 20, color: brandInk),
+      children: [
+        for (var i = 0; i + 1 < boundaries.length; i++)
+          TextSpan(
+            text: text.substring(boundaries[i], boundaries[i + 1]),
+            style:
+                mark != null &&
+                    boundaries[i] >= mark.start &&
+                    boundaries[i] < mark.end
+                ? const TextStyle(
+                    decoration: TextDecoration.underline,
+                    decorationColor: _graphite,
+                    decorationThickness: 1.2,
+                  )
+                : match != null &&
+                      boundaries[i] >= match.start &&
+                      boundaries[i] < match.end
+                ? const TextStyle(backgroundColor: Color(0x30a78356))
+                : null,
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = widget.original.text;
-    if (text.isEmpty) return const Center(child: Text('출처를 남긴 기록입니다.'));
-    final match = widget.match;
-    final style = writingTextStyle(0, size: 20, color: brandInk);
-    final span = TextSpan(
-      style: style,
-      children: match == null
-          ? [TextSpan(text: text)]
-          : [
-              TextSpan(text: text.substring(0, match.start)),
-              TextSpan(
-                text: text.substring(match.start, match.end),
-                style: const TextStyle(backgroundColor: Color(0x30a78356)),
-              ),
-              TextSpan(text: text.substring(match.end)),
-            ],
-    );
+    if (text.trim().isEmpty) return const Center(child: Text('출처를 남긴 기록입니다.'));
+    final mark = widget.mark;
+    final noteStart = mark?.end ?? 0;
+    final sentenceEnd = widget.note == null
+        ? null
+        : _sentenceEnd.firstMatch(text.substring(noteStart));
+    final split = sentenceEnd == null
+        ? text.length
+        : noteStart + sentenceEnd.end;
+    final from = widget.editing && mark != null
+        ? _sentenceEnd
+                  .allMatches(text.substring(0, mark.start))
+                  .lastOrNull
+                  ?.end ??
+              0
+        : 0;
+    final before = _span(from, split);
+    final after = _span(split, text.length);
     return LayoutBuilder(
       builder: (context, box) {
-        if (!positioned && match != null) {
+        final focus = widget.editing
+            ? null
+            : widget.match?.start ?? mark?.start;
+        if (!positioned && focus != null) {
           positioned = true;
+          final inAfter = focus >= split;
           final painter = TextPainter(
-            text: span,
+            text: inAfter ? after : before,
             textDirection: Directionality.of(context),
             textScaler: MediaQuery.textScalerOf(context),
           )..layout(maxWidth: box.maxWidth);
           final offset = painter
-              .getOffsetForCaret(TextPosition(offset: match.start), Rect.zero)
+              .getOffsetForCaret(
+                TextPosition(offset: focus - (inAfter ? split : from)),
+                Rect.zero,
+              )
               .dy;
           painter.dispose();
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && scroll.hasClients) {
-              scroll.jumpTo(
-                (offset - box.maxHeight * .22).clamp(
-                  0,
-                  scroll.position.maxScrollExtent,
-                ),
-              );
-            }
+            if (!mounted || !scroll.hasClients) return;
+            final target = (inAfter ? afterNote : beforeNote).currentContext
+                ?.findRenderObject();
+            final start = target == null
+                ? 0.0
+                : RenderAbstractViewport.of(
+                    target,
+                  ).getOffsetToReveal(target, 0).offset;
+            scroll.jumpTo(
+              (start + offset - box.maxHeight * .22).clamp(
+                0,
+                scroll.position.maxScrollExtent,
+              ),
+            );
           });
         }
         return SingleChildScrollView(
           controller: scroll,
           padding: const EdgeInsets.only(bottom: 12),
-          child: Text.rich(span, key: const ValueKey('source-reading-text')),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              KeyedSubtree(
+                key: beforeNote,
+                child: Text.rich(
+                  before,
+                  key: const ValueKey('source-reading-text'),
+                ),
+              ),
+              ?widget.note,
+              if (!widget.editing && split < text.length)
+                Padding(
+                  key: afterNote,
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Text.rich(after),
+                ),
+            ],
+          ),
         );
       },
     );
   }
+}
+
+class _ReflectionNote extends StatelessWidget {
+  const _ReflectionNote({this.controller, this.text});
+
+  final TextEditingController? controller;
+  final String? text;
+
+  @override
+  Widget build(BuildContext context) {
+    const handwriting = TextStyle(
+      fontFamily: 'NanumPenScript',
+      fontFamilyFallback: [appFontFamily, ...appFontFallback],
+      fontSize: 27,
+      height: 1.24,
+      color: _graphite,
+    );
+    final field = controller;
+    final lineHeight = MediaQuery.textScalerOf(context).scale(27) * 1.24;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 10, 4, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const CustomPaint(size: Size(24, 22), painter: _MarginArrow()),
+              const Icon(CupertinoIcons.pencil, color: _graphite, size: 15),
+              const SizedBox(width: 5),
+              Text('느낀 점', style: handwriting.copyWith(fontSize: 21)),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 26),
+            child: CustomPaint(
+              painter: _NotebookLines(lineHeight),
+              child: field == null
+                  ? Transform.rotate(
+                      angle: -.014,
+                      alignment: Alignment.topLeft,
+                      child: Text(text ?? '', style: handwriting),
+                    )
+                  : Semantics(
+                      label: '느낀 점 입력',
+                      child: TextField(
+                        key: const ValueKey('original-reflection-input'),
+                        controller: field,
+                        autofocus: true,
+                        minLines: 2,
+                        maxLines: 5,
+                        keyboardType: TextInputType.multiline,
+                        style: handwriting,
+                        decoration: InputDecoration(
+                          isCollapsed: true,
+                          contentPadding: EdgeInsets.zero,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          hintText: '이 문장이 남긴 생각',
+                          hintStyle: handwriting.copyWith(
+                            color: _graphite.withValues(alpha: .62),
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MarginArrow extends CustomPainter {
+  const _MarginArrow();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final pencil = Paint()
+      ..color = _graphite.withValues(alpha: .78)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.15
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(
+      Path()
+        ..moveTo(1, 1)
+        ..quadraticBezierTo(5, 19, 21, 15)
+        ..moveTo(15, 11)
+        ..lineTo(21, 15)
+        ..lineTo(17, 19),
+      pencil,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_MarginArrow oldDelegate) => false;
+}
+
+class _NotebookLines extends CustomPainter {
+  const _NotebookLines(this.lineHeight);
+  final double lineHeight;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rule = Paint()
+      ..color = const Color(0x287a593c)
+      ..strokeWidth = .75;
+    for (var y = lineHeight - 1; y < size.height; y += lineHeight) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), rule);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_NotebookLines oldDelegate) =>
+      oldDelegate.lineHeight != lineHeight;
 }

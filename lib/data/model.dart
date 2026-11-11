@@ -4,17 +4,59 @@ export 'book_detail_style.dart';
 
 typedef Json = Map<String, dynamic>;
 
+class OriginalReflection {
+  const OriginalReflection(this.text, {this.mark});
+
+  final String text;
+  final PencilMark? mark;
+
+  Json toJson() => {'text': text, if (mark != null) 'mark': mark!.toJson()};
+
+  factory OriginalReflection.fromJson(Json json) => OriginalReflection(
+    json['text'] as String,
+    mark: json['mark'] == null
+        ? null
+        : PencilMark.fromJson(json['mark'] as Json),
+  );
+
+  bool isValidFor(String original) {
+    final range = mark;
+    return text.trim().isNotEmpty &&
+        (range == null ||
+            (range.start >= 0 &&
+                range.end > range.start &&
+                range.end <= original.length));
+  }
+}
+
 class RegisteredOriginal {
-  const RegisteredOriginal(this.id, this.text, {this.citation = ''});
+  const RegisteredOriginal(
+    this.id,
+    this.text, {
+    this.citation = '',
+    this.reflection,
+  });
 
   final String id, text, citation;
+  final OriginalReflection? reflection;
 
-  Json toJson() => {'id': id, 'text': text, 'citation': citation};
+  RegisteredOriginal withReflection(OriginalReflection? value) =>
+      RegisteredOriginal(id, text, citation: citation, reflection: value);
+
+  Json toJson() => {
+    'id': id,
+    'text': text,
+    'citation': citation,
+    if (reflection != null) 'reflection': reflection!.toJson(),
+  };
 
   factory RegisteredOriginal.fromJson(Json j) => RegisteredOriginal(
     j['id'] as String,
     j['text'] as String,
     citation: j['citation'] as String,
+    reflection: j['reflection'] == null
+        ? null
+        : OriginalReflection.fromJson(j['reflection'] as Json),
   );
 
   static List<RegisteredOriginal> read(Object? value) => [
@@ -30,7 +72,8 @@ class RegisteredOriginal {
             value.id.length <= 250 &&
             value.text.trim().isNotEmpty &&
             value.text.length <= 50000 &&
-            value.citation.length <= 500,
+            value.citation.length <= 500 &&
+            (value.reflection?.isValidFor(value.text) ?? true),
       );
 }
 

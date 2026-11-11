@@ -178,6 +178,61 @@ class LibraryController extends ChangeNotifier {
     );
   }
 
+  Future<bool> saveOriginalReflection({
+    required String? bookId,
+    required String recordId,
+    required RegisteredOriginal original,
+    required OriginalReflection reflection,
+  }) async {
+    final updated = original.withReflection(reflection);
+    if (!RegisteredOriginal.validList([updated])) return false;
+    final book = library.books.where((book) => book.id == bookId).firstOrNull;
+    final records = library.records.where(
+      (record) =>
+          bookId == null ? record.id == recordId : record.bookId == bookId,
+    );
+    final record = records
+        .where(
+          (record) => record.originals.any((item) => item.id == original.id),
+        )
+        .firstOrNull;
+
+    List<RegisteredOriginal> replace(List<RegisteredOriginal> values) => {
+      for (final item in values) item.id: item,
+      updated.id: updated,
+    }.values.toList();
+
+    if (book != null &&
+        (record == null ||
+            book.originals.any((item) => item.id == original.id))) {
+      _publish(
+        library.copy(
+          books: [
+            for (final item in library.books)
+              item.id == book.id
+                  ? book.copy(originals: replace(book.originals))
+                  : item,
+          ],
+        ),
+      );
+    } else {
+      final target = record ?? records.firstOrNull;
+      if (target == null) return false;
+      _publish(
+        library.copy(
+          records: [
+            for (final item in library.records)
+              item.id == target.id
+                  ? target.copy(originals: replace(target.originals))
+                  : item,
+          ],
+        ),
+      );
+    }
+    await settled;
+    return saveError == null;
+  }
+
   void setStyle(WritingStyle style) => _publish(library.copy(style: style));
   int coverIndexFor(Book? book) {
     if (book == null) return 0;

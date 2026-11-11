@@ -33,6 +33,17 @@ SQLite v9에서 두 테이블에 기본값이 빈 목록인 `originals` 컬럼�
 라이브러리 JSON은 선택 필드를 사용하며 백업에서 복원한다. 동기화는 원문 ID를
 기준으로 추가 항목을 합친다. 책에 묶은 기록의 원문은 책 범위에서 조회한다.
 
+원문 메모는 `RegisteredOriginal.reflection`에 본문과 선택 밑줄(UTF-16 범위)을
+저장한다. 기존 SQLite v9의 원문 JSON 컬럼에 선택 필드를 추가하며, 웹 저장·백업도
+같은 JSON을 쓴다. 기존 기록이나 쪽에서 가져온 원문에 메모를 쓸 때는 원래
+메타데이터를 보존하고 같은 범위의 원문 목록에 결정적인 ID로 저장한다. 같은 메모를
+동시에 다르게 수정하면 동기화에서 두 내용을 문단으로 보존한다.
+
+원문 패널 안에서 별도의 Flutter 편집기로 입력한다. 조합 중에는 저장 버튼을
+비활성화하고, 저장 실패 시 입력을 유지한다. 쓰기 화면에서 들어온 경우 저장 후
+원래 입력기와 커서로 돌아간다. 메모 서체는 Google Fonts의 Nanum Pen Script를
+SIL OFL 문서와 함께 번들에 둔다. [원본 서체와 라이선스](https://github.com/google/fonts/tree/main/ofl/nanumpenscript)
+
 기존 `WritingRecord.source`, `sourceParagraph`, `WritingPage.passages`를 보존한다.
 조회할 때 기존 기록 원문과 쪽의 원문·출처를 새 목록과 함께 표시하고, 같은 본문과
 출처의 사본은 하나로 보여 준다. 이전 쪽의 UTF-16 구절 위치는 기존 편집 규칙을 따른다.

@@ -7,10 +7,17 @@ const id = v => typeof v === 'string' && v.length > 0 && v.length <= 250;
 const text = (v, max = MAX_BYTES) => typeof v === 'string' && v.length <= max;
 const integer = v => Number.isSafeInteger(v);
 
+const reflection = (value, original) => object(value) && text(value.text) &&
+  value.text.trim().length > 0 &&
+  (!('mark' in value) || (object(value.mark) && integer(value.mark.start) &&
+    integer(value.mark.end) && value.mark.start >= 0 &&
+    value.mark.end > value.mark.start && value.mark.end <= original.length));
+
 const originals = values => Array.isArray(values) &&
   new Set(values.map(value => value?.id)).size === values.length &&
   values.every(value => object(value) && id(value.id) && text(value.text, 50000) &&
-    value.text.trim().length > 0 && text(value.citation, 500));
+    value.text.trim().length > 0 && text(value.citation, 500) &&
+    (!('reflection' in value) || reflection(value.reflection, value.text)));
 
 export function validLibrary(l) {
   if (!object(l) || l.version !== 1 || 'sync' in l || !Array.isArray(l.books) || !Array.isArray(l.records) || !Array.isArray(l.pages) || l.books.length > 10000 || l.records.length > 20000 || l.pages.length > 30000 || typeof l.writing !== 'boolean') return false;

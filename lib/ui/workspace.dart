@@ -710,6 +710,28 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               match: initial,
               onRegister: owner.saveError == null ? register : null,
               onRetry: owner.saveError == null ? null : _retrySave,
+              onSaveReflection: (original, reflection) async {
+                if (!mounted ||
+                    c != owner ||
+                    _accountLocked ||
+                    owner.composing) {
+                  return false;
+                }
+                final latest = originals()
+                    .where((item) => item.id == original.id)
+                    .firstOrNull;
+                if (latest == null ||
+                    latest.text != original.text ||
+                    latest.citation != original.citation) {
+                  return false;
+                }
+                return owner.saveOriginalReflection(
+                  bookId: bookId,
+                  recordId: selectedPage.recordId,
+                  original: latest,
+                  reflection: reflection,
+                );
+              },
             ),
           ),
         );

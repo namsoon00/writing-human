@@ -1,4 +1,13 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
+
 import '../data/model.dart';
+
+RegisteredOriginal _legacyOriginal(String text, [String citation = '']) {
+  final digest = sha256.convert(utf8.encode(jsonEncode([text, citation])));
+  return RegisteredOriginal('legacy-$digest', text, citation: citation);
+}
 
 List<RegisteredOriginal> originalsFor(
   Library library, {
@@ -27,19 +36,13 @@ List<RegisteredOriginal> originalsFor(
     for (final original in record.originals) {
       add(original);
     }
-    add(RegisteredOriginal('record-${record.id}', record.source));
+    if (record.source.trim().isNotEmpty) add(_legacyOriginal(record.source));
   }
   for (final page in library.pages.where(
     (page) => ids.contains(page.recordId),
   )) {
     for (final passage in page.passages) {
-      add(
-        RegisteredOriginal(
-          'passage-${page.id}-${passage.id}',
-          passage.source,
-          citation: passage.citation,
-        ),
-      );
+      add(_legacyOriginal(passage.source, passage.citation));
     }
   }
   return originals.values.toList();

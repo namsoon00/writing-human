@@ -10,6 +10,7 @@ import '../sync/coordinator.dart';
 import '../source/source_intake.dart';
 import '../source/source_platform.dart';
 import 'source_import_sheet.dart';
+import 'source_reading.dart';
 import 'collection_sheet.dart';
 import 'editor.dart';
 import 'new_book_dialog.dart';
@@ -57,6 +58,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   final _shownShares = <String>{};
   bool _sourceBusy = false, _pollingSources = false, _pollAgain = false;
   bool _checkedPhotoRecovery = false;
+  final _sourcePositions = <String, ({String source, int index})>{};
   Future<void>? _sheetClosed;
   LibraryController? _sheetOwner;
   bool get _accountLocked =>
@@ -215,6 +217,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       draft = _blank();
       draftSource = '';
       draftBookId = null;
+      _sourcePositions.clear();
     }
   }
 
@@ -351,7 +354,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
 
   String _sharedRecordId(IncomingSource share) => 'shared-source-${share.id}';
 
-  Future<void> _pollSources() async {
+  Future<void> _pollSources({bool openAutomatically = true}) async {
     if (!mounted || _accountLocked) return;
     if (_pollingSources) {
       _pollAgain = true;
@@ -385,7 +388,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         }
       }
       if (_incoming?.id != pending?.id) setState(() => _incoming = pending);
-      if (!_sourceBusy &&
+      if (openAutomatically &&
+          !_sourceBusy &&
           !_pageNavigationBusy &&
           !editorFocus.hasFocus &&
           !_editorComposing &&
@@ -505,6 +509,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         return;
       }
       if (owner.saveError != null) return;
+      if (shared == null && source != initial) {
+        _sourcePositions.remove(selectedPage.recordId);
+      }
       if (shared != null) {
         final id = _sharedRecordId(shared);
         fresh = false;
@@ -520,17 +527,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         userFresh = false;
         owner.saveDraft(selectedPage, source: source, bookId: draftBookId);
       }
-      final destination = page.id;
       await owner.settled;
       if (!mounted || c != owner || _accountLocked || owner.saveError != null) {
         return;
       }
-      if (shared != null) unawaited(_pollSources());
-      if (source.isNotEmpty &&
-          page.id == destination &&
-          (shared != null || selectedPage.text.isEmpty)) {
-        editorFocus.requestFocus();
-      }
+      if (shared != null) unawaited(_pollSources(openAutomatically: false));
     } finally {
       _sourceBusy = false;
     }
@@ -850,6 +851,15 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     final source =
         record?.source ??
         (fresh && currentPage.recordId == draft.recordId ? draftSource : '');
+    final hasSource = source.trim().isNotEmpty;
+    final sourcePosition = _sourcePositions[currentPage.recordId];
+    final media = MediaQuery.of(context);
+    final availableHeight =
+        media.size.height - media.viewInsets.bottom - media.padding.vertical;
+    final maxSourceTextHeight = (availableHeight * (compact ? .15 : .21)).clamp(
+      24.0,
+      compact ? 76.0 : 168.0,
+    );
     final bookId = record?.bookId ?? (fresh ? draftBookId : null);
     final book = c.library.books.where((b) => b.id == bookId).firstOrNull;
     return PaperBackdrop(
@@ -924,7 +934,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                     ),
                   ],
                 ),
-              if (source.isEmpty)
+              if (!hasSource)
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
@@ -934,38 +944,28 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                     label: const Text('원문 놓기'),
                   ),
                 ),
-              if (source.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 4,
-                  ),
-                  child: SourceSlip(
-                    choice: c.library.style.bookDetails.sourceSlip,
-                    compact: true,
-                    child: TextButton.icon(
-                      onPressed: () => _source(),
-                      icon: const Icon(
-                        CupertinoIcons.quote_bubble,
-                        size: 14,
-                        color: muted,
-                      ),
-                      label: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          source.replaceAll('\n', ' '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontFamily: appFontFamily,
-                            fontFamilyFallback: appFontFallback,
-                            fontSize: 13,
-                            color: muted,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+              if (hasSource)
+                SourceReading(
+                  choice: c.library.style.bookDetails.sourceSlip,
+                  source: source,
+                  paragraphIndex: sourcePosition?.source == source
+                      ? sourcePosition!.index
+                      : 0,
+                  maxTextHeight: maxSourceTextHeight,
+                  compact: compact,
+                  writing:
+                      !preview &&
+                      editorFocus.hasFocus &&
+                      currentPage.text.isNotEmpty,
+                  onParagraphChanged: navigationEnabled
+                      ? (index) => setState(() {
+                          _sourcePositions[currentPage.recordId] = (
+                            source: source,
+                            index: index,
+                          );
+                        })
+                      : null,
+                  onEdit: preview ? null : () => _source(),
                 ),
               Expanded(
                 key: const ValueKey('writing-surface'),

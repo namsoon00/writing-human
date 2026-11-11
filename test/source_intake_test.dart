@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -157,6 +158,8 @@ void main() {
       expect(tester.widget<TextField>(bodyField).controller, same(body));
       expect(body.value, original);
       expect(store.data.activePageId, 'p');
+      expect(find.text('첫 줄'), findsOneWidget);
+      expect(find.text('둘째 줄'), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
@@ -189,10 +192,85 @@ void main() {
       expect(store.data.records.single.source, '둘째 문단입니다.');
       expect(store.data.activePage!.text, isEmpty);
       expect(tester.widget<TextField>(bodyField).controller, same(body));
-      expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isTrue);
+      expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isFalse);
+      expect(find.text('둘째 문단입니다.'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('Turn source paragraphs without changing the writing field', (
+    tester,
+  ) async {
+    final first = List.filled(12, '한 줄씩 읽고 종이에 옮깁니다.').join('\n');
+    const second = '두 번째 문단은 내 글 아래에 이어서 씁니다.';
+    final source = '$first\n \n$second';
+    final store = MemoryStore()
+      ..data = existing().copy(
+        records: [WritingRecord(id: 'r', title: '기존 필사', source: source)],
+      );
+    await open(tester, store, FakeIntake());
+    final paragraph = find.byKey(const ValueKey('source-reading-paragraph'));
+    final next = find.byWidgetPredicate(
+      (widget) => widget is IconButton && widget.tooltip == '다음 문단',
+    );
+    final previous = find.byTooltip('이전 문단');
+    expect(tester.widget<Text>(paragraph).data, first);
+    final field = tester.widget<TextField>(bodyField);
+    await tester.showKeyboard(bodyField);
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.4;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpAndSettle();
+
+    const composing = TextEditingValue(
+      text: '한글 조하',
+      selection: TextSelection.collapsed(offset: 5),
+      composing: TextRange(start: 3, end: 5),
+    );
+    tester.testTextInput.updateEditingValue(composing);
+    await tester.pump();
+    expect(tester.widget<IconButton>(next).onPressed, isNull);
+    expect(field.controller!.value, composing);
+
+    final committed = composing.copyWith(
+      text: '한글 조합',
+      composing: TextRange.empty,
+    );
+    tester.testTextInput.updateEditingValue(committed);
+    await tester.pumpAndSettle();
+    final scrollView = find.ancestor(
+      of: paragraph,
+      matching: find.byType(SingleChildScrollView),
+    );
+    final scrollable = find.descendant(
+      of: scrollView,
+      matching: find.byType(Scrollable),
+    );
+    expect(
+      tester.state<ScrollableState>(scrollable).position.maxScrollExtent,
+      greaterThan(0),
+    );
+    final writes = store.writes;
+    final writingArea = tester.getRect(bodyField);
+    await tester.tap(next, kind: PointerDeviceKind.mouse);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(paragraph).data, second);
+    expect(tester.widget<IconButton>(next).onPressed, isNull);
+    expect(
+      tester.widget<TextField>(bodyField).controller,
+      same(field.controller),
+    );
+    expect(field.controller!.value, committed);
+    expect(field.focusNode!.hasFocus, isTrue);
+    expect(tester.getRect(bodyField), writingArea);
+    expect(store.writes, writes);
+    expect(store.data.records.single.source, source);
+    await tester.tap(previous);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(paragraph).data, first);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'Photo cancel, empty result and closing active OCR leave the source alone',

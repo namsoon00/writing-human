@@ -129,20 +129,24 @@ void main() {
     await tester.pumpAndSettle();
     await capture('paragraphs');
     final confirm = find.byKey(const ValueKey('source-confirm'));
-    await tester.tap(find.byKey(const ValueKey('source-paragraph-1')));
-    await tester.pumpAndSettle();
     await tester.tap(confirm);
     await tester.pumpAndSettle();
     await capture('review');
     await tester.tap(confirm);
     await tester.pumpAndSettle();
-    expect(store.data.records.single.source, paragraphs.first);
+    expect(store.data.records.single.source, paragraphs.join('\n\n'));
     expect(store.data.activePage!.text, isEmpty);
+    expect(find.text(paragraphs.first), findsOneWidget);
+    await capture('reading');
     await tester.enterText(
       find.byKey(const ValueKey('page-text')),
       '책장을 넘기면 새로운 문장이 보입니다.',
     );
     await tester.pumpAndSettle();
     await capture('writing');
+    await tester.tap(find.byTooltip('다음 문단'));
+    await tester.pumpAndSettle();
+    expect(find.text(paragraphs.last), findsOneWidget);
+    await capture('next-passage');
   });
 }

@@ -2,6 +2,21 @@ import 'package:flutter/material.dart';
 import '../data/model.dart';
 import 'book_detail_design.dart';
 
+TextStyle pencilUnderlineStyle(BookDetailChoice choice) => TextStyle(
+  decoration: TextDecoration.underline,
+  decorationColor: BookDetailDesign.color(BookDetailKind.pencil, choice),
+  decorationStyle: switch (choice.variant) {
+    1 => TextDecorationStyle.double,
+    2 => TextDecorationStyle.dotted,
+    _ => TextDecorationStyle.solid,
+  },
+  decorationThickness: switch (choice.variant) {
+    1 => .6,
+    2 => 1.0,
+    _ => .85,
+  },
+);
+
 /// Keeps Flutter's composing underline and the user's annotations in a single
 /// span tree. It only reads TextEditingValue; no listener rewrites IME state.
 TextSpan pencilTextSpan({
@@ -41,23 +56,7 @@ TextSpan pencilTextSpan({
                           m.start <= boundaries[i] &&
                           m.end >= boundaries[i + 1],
                     )
-              ? TextStyle(
-                  decoration: TextDecoration.underline,
-                  decorationColor: BookDetailDesign.color(
-                    BookDetailKind.pencil,
-                    choice,
-                  ),
-                  decorationStyle: switch (choice.variant) {
-                    1 => TextDecorationStyle.double,
-                    2 => TextDecorationStyle.dotted,
-                    _ => TextDecorationStyle.solid,
-                  },
-                  decorationThickness: switch (choice.variant) {
-                    1 => .6,
-                    2 => 1.0,
-                    _ => .85,
-                  },
-                )
+              ? pencilUnderlineStyle(choice)
               : null,
         ),
     ],

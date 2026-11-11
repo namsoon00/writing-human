@@ -105,3 +105,25 @@ OriginalMatch? matchOriginal(
   }
   return match;
 }
+
+OriginalMatch? reflectionForWriting(
+  List<RegisteredOriginal> originals,
+  String text,
+  int caret,
+) {
+  final current = matchOriginal(originals, text, caret);
+  if (current != null ||
+      caret <= 0 ||
+      caret > text.length ||
+      !originals.any((item) => item.reflection != null)) {
+    return current;
+  }
+  final previousLine = text.lastIndexOf('\n', caret - 1);
+  if (previousLine < 0) return null;
+  final previous = matchOriginal(
+    originals,
+    text,
+    text.substring(0, previousLine).trimRight().length,
+  );
+  return previous?.original.reflection == null ? null : previous;
+}

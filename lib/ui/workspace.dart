@@ -665,13 +665,17 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _showOriginals({Book? bookDetails}) async {
+  Future<void> _showOriginals({
+    Book? bookDetails,
+    OriginalMatch? reflectionMatch,
+  }) async {
     if (_readingSource || _sourceBusy || _accountLocked || !_canLeaveInput()) {
       return;
     }
     final owner = c;
     final selectedPage = page;
-    final bookId = (bookDetails ?? book)?.id;
+    final selectedBook = bookDetails ?? book;
+    final bookId = selectedBook?.id;
     // Web accessibility can move focus to the button before its handler.
     final wasEditing =
         bookDetails == null &&
@@ -694,11 +698,17 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         await register();
       } else {
         final initial = bookDetails == null
-            ? matchOriginal(available, selectedPage.text, selectedPage.extent)
+            ? reflectionMatch ??
+                  matchOriginal(
+                    available,
+                    selectedPage.text,
+                    selectedPage.extent,
+                  )
             : null;
         final route = ModalBottomSheetRoute<void>(
           isScrollControlled: true,
           showDragHandle: true,
+          backgroundColor: paperColors[_paperStyle(selectedBook).paperIndex],
           barrierLabel: MaterialLocalizations.of(
             context,
           ).modalBarrierDismissLabel,
@@ -708,6 +718,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             builder: (context, _) => SourceReading(
               originals: originals(),
               match: initial,
+              style: _paperStyle(selectedBook),
+              coverIndex: selectedBook == null
+                  ? null
+                  : owner.coverIndexFor(selectedBook),
+              startEditing: reflectionMatch != null,
               onRegister: owner.saveError == null ? register : null,
               onRetry: owner.saveError == null ? null : _retrySave,
               onSaveReflection: (original, reflection) async {
@@ -1071,6 +1086,16 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     final bookId = record?.bookId ?? (fresh ? draftBookId : null);
     final book = c.library.books.where((b) => b.id == bookId).firstOrNull;
     final style = _paperStyle(book);
+    final originals = preview
+        ? const <RegisteredOriginal>[]
+        : originalsFor(
+            c.library,
+            bookId: bookId,
+            recordId: currentPage.recordId,
+          );
+    final reflection = currentPage.base == currentPage.extent
+        ? reflectionForWriting(originals, currentPage.text, currentPage.extent)
+        : null;
     return PaperBackdrop(
       binding: style.bookDetails.binding,
       color: paperColors[style.paperIndex],
@@ -1155,32 +1180,56 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         page: currentPage,
                         style: style,
                       )
-                    : PageEditor(
-                        key: ValueKey('${currentPage.id}:${c.editorEpoch}'),
-                        page: currentPage,
-                        style: style,
-                        focusNode: editorFocus,
-                        originals: originalsFor(
-                          c.library,
-                          bookId: bookId,
-                          recordId: currentPage.recordId,
-                        ),
-                        reveal: _reveal?.pageId == currentPage.id
-                            ? (
-                                offset: _reveal!.offset,
-                                request: _reveal!.request,
-                              )
-                            : null,
-                        onChanged: _edit,
-                        onPencilMark: c.togglePencilMark,
-                        onEditingState: (focused, composing) {
-                          if (focused) _editingPageId = currentPage.id;
-                          _editorComposing = composing;
-                          c.setEditorState(
-                            focused: focused,
-                            isComposing: composing,
-                          );
-                        },
+                    : Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          PageEditor(
+                            key: ValueKey('${currentPage.id}:${c.editorEpoch}'),
+                            page: currentPage,
+                            style: style,
+                            focusNode: editorFocus,
+                            originals: originals,
+                            reveal: _reveal?.pageId == currentPage.id
+                                ? (
+                                    offset: _reveal!.offset,
+                                    request: _reveal!.request,
+                                  )
+                                : null,
+                            onChanged: _edit,
+                            onPencilMark: c.togglePencilMark,
+                            onEditingState: (focused, composing) {
+                              if (focused) _editingPageId = currentPage.id;
+                              _editorComposing = composing;
+                              c.setEditorState(
+                                focused: focused,
+                                isComposing: composing,
+                              );
+                            },
+                          ),
+                          if (reflection != null)
+                            Positioned(
+                              left: 24,
+                              right: 14,
+                              bottom: 0,
+                              height: 44,
+                              child: Align(
+                                alignment: Alignment.centerRight,
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 280,
+                                  ),
+                                  child: _WritingReflection(
+                                    note: reflection.original.reflection?.text,
+                                    onPressed: navigationEnabled
+                                        ? () => _showOriginals(
+                                            reflectionMatch: reflection,
+                                          )
+                                        : null,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
               ),
               WritingFooter(
@@ -1354,6 +1403,45 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         book: selectedBook ?? book,
       ),
       enableDrag: false,
+    );
+  }
+}
+
+class _WritingReflection extends StatelessWidget {
+  const _WritingReflection({required this.note, required this.onPressed});
+
+  final String? note;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasNote = note != null;
+    return TextFieldTapRegion(
+      child: Tooltip(
+        message: hasNote ? '느낀 점 고치기' : '느낀 점 남기기',
+        child: TextButton.icon(
+          key: const ValueKey('writing-reflection'),
+          onPressed: onPressed,
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            minimumSize: const Size(48, 44),
+            alignment: Alignment.centerRight,
+          ),
+          icon: const Icon(CupertinoIcons.pencil, size: 15),
+          label: Text(
+            note ?? '느낀 점',
+            maxLines:
+                hasNote && MediaQuery.textScalerOf(context).scale(18) <= 22
+                ? 2
+                : 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.start,
+            style: hasNote
+                ? reflectionHandwriting.copyWith(fontSize: 18, height: 1)
+                : const TextStyle(fontSize: 12),
+          ),
+        ),
+      ),
     );
   }
 }

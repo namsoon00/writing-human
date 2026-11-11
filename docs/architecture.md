@@ -44,6 +44,12 @@ SQLite v9에서 두 테이블에 기본값이 빈 목록인 `originals` 컬럼�
 원래 입력기와 커서로 돌아간다. 메모 서체는 Google Fonts의 Nanum Pen Script를
 SIL OFL 문서와 함께 번들에 둔다. [원본 서체와 라이선스](https://github.com/google/fonts/tree/main/ofl/nanumpenscript)
 
+원문 읽기 패널은 `PaperBackdrop`, `SourceSlip`, `RecordDivider`와 필사
+밑줄 스타일을 재사용한다. 책의 내지와 글꼴·펜·책의 디테일 설정을 전달한다.
+쓰기 화면의 메모 버튼은 편집기의 아래쪽 여백에 겹쳐 배치한다. 현재 원문 일치
+또는 바로 앞 줄의 저장된 메모를 사용하며, 편집기의 크기와 입력값을 바꾸지 않는다.
+두 진입점은 같은 원문 메모 편집기와 저장 경로를 사용한다.
+
 기존 `WritingRecord.source`, `sourceParagraph`, `WritingPage.passages`를 보존한다.
 조회할 때 기존 기록 원문과 쪽의 원문·출처를 새 목록과 함께 표시하고, 같은 본문과
 출처의 사본은 하나로 보여 준다. 이전 쪽의 UTF-16 구절 위치는 기존 편집 규칙을 따른다.

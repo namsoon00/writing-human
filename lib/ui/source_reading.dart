@@ -4,13 +4,19 @@ import 'package:flutter/rendering.dart';
 
 import '../data/model.dart';
 import '../source/originals.dart';
+import 'book_details.dart';
 import 'paper.dart';
+import 'pencil_marks.dart';
+import 'reading_details.dart';
 
 class SourceReading extends StatefulWidget {
   const SourceReading({
     super.key,
     required this.originals,
     this.match,
+    this.style = const WritingStyle(),
+    this.coverIndex,
+    this.startEditing = false,
     this.onRegister,
     this.onRetry,
     this.onSaveReflection,
@@ -18,6 +24,9 @@ class SourceReading extends StatefulWidget {
 
   final List<RegisteredOriginal> originals;
   final OriginalMatch? match;
+  final WritingStyle style;
+  final int? coverIndex;
+  final bool startEditing;
   final VoidCallback? onRegister;
   final VoidCallback? onRetry;
   final Future<bool> Function(RegisteredOriginal, OriginalReflection)?
@@ -34,12 +43,27 @@ class _SourceReadingState extends State<SourceReading> {
   PencilMark? draftMark;
 
   @override
+  void initState() {
+    super.initState();
+    final match = widget.match;
+    if (widget.startEditing && match != null) {
+      final original = widget.originals
+          .where((item) => item.id == match.original.id)
+          .firstOrNull;
+      if (original != null) {
+        _loadReflection(original, match);
+        editing = true;
+      }
+    }
+  }
+
+  @override
   void dispose() {
     reflectionField.dispose();
     super.dispose();
   }
 
-  void _editReflection(RegisteredOriginal original, OriginalMatch? match) {
+  void _loadReflection(RegisteredOriginal original, OriginalMatch? match) {
     reflectionField.text = original.reflection?.text ?? '';
     final opening = original.text.trimLeft();
     final firstLine = opening.split('\n').first;
@@ -49,13 +73,28 @@ class _SourceReadingState extends State<SourceReading> {
         .trimRight()
         .length;
     final openingStart = original.text.length - opening.length;
+    draftMark =
+        original.reflection?.mark ??
+        (match == null
+            ? PencilMark(openingStart, openingStart + openingLength)
+            : PencilMark(match.start, match.end));
+  }
+
+  void _editReflection(RegisteredOriginal original, OriginalMatch? match) {
+    _loadReflection(original, match);
     setState(() {
-      draftMark =
-          original.reflection?.mark ??
-          (match == null
-              ? PencilMark(openingStart, openingStart + openingLength)
-              : PencilMark(match.start, match.end));
       editing = true;
+      failed = false;
+    });
+  }
+
+  void _cancelEdit() {
+    if (widget.startEditing) {
+      Navigator.pop(context);
+      return;
+    }
+    setState(() {
+      editing = false;
       failed = false;
     });
   }
@@ -105,132 +144,165 @@ class _SourceReadingState extends State<SourceReading> {
           )
         : null;
     final keyboard = editing ? MediaQuery.viewInsetsOf(context).bottom : 0.0;
+    final style = widget.style;
+    final details = style.bookDetails;
     return Padding(
       padding: EdgeInsets.only(bottom: keyboard),
       child: SafeArea(
         top: false,
         child: FractionallySizedBox(
           heightFactor: keyboard > 0 ? .92 : .54,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    if (original != null && !editing)
+          child: PaperBackdrop(
+            key: const ValueKey('source-paper'),
+            binding: details.binding,
+            color: paperColors[style.paperIndex],
+            grainOpacity: paperGrainOpacity[style.paperIndex],
+            coverIndex: widget.coverIndex,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      if (original != null && !editing)
+                        IconButton(
+                          tooltip: '원문 목록',
+                          onPressed: () => setState(() => selectedId = null),
+                          icon: const Icon(
+                            CupertinoIcons.chevron_left,
+                            size: 19,
+                          ),
+                        ),
+                      Expanded(
+                        child: Text(
+                          original?.citation.trim().isNotEmpty == true
+                              ? original!.citation
+                              : '원문',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ),
+                      if (widget.onRegister != null && !editing)
+                        TextButton(
+                          onPressed: widget.onRegister,
+                          child: const Text('원문 등록'),
+                        ),
                       IconButton(
-                        tooltip: '원문 목록',
-                        onPressed: () => setState(() => selectedId = null),
-                        icon: const Icon(CupertinoIcons.chevron_left, size: 19),
+                        tooltip: '닫기',
+                        onPressed: saving ? null : () => Navigator.pop(context),
+                        icon: const Icon(CupertinoIcons.xmark, size: 18),
                       ),
-                    Expanded(
-                      child: Text(
-                        original?.citation.trim().isNotEmpty == true
-                            ? original!.citation
-                            : '원문',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ),
-                    if (widget.onRegister != null && !editing)
-                      TextButton(
-                        onPressed: widget.onRegister,
-                        child: const Text('원문 등록'),
-                      ),
-                    IconButton(
-                      tooltip: '닫기',
-                      onPressed: saving ? null : () => Navigator.pop(context),
-                      icon: const Icon(CupertinoIcons.xmark, size: 18),
-                    ),
-                  ],
-                ),
-                const Divider(),
-                if (widget.onRetry != null && !editing)
-                  TextButton(
-                    onPressed: widget.onRetry,
-                    child: const Text('저장 실패 · 다시 저장'),
+                    ],
                   ),
-                Expanded(
-                  child: original != null
-                      ? _OriginalText(
-                          key: ValueKey((original.id, editing)),
-                          original: original,
-                          match: match,
-                          mark: mark,
-                          note: note,
-                          editing: editing,
-                        )
-                      : widget.originals.isEmpty
-                      ? const Center(child: Text('등록한 원문이 없습니다.'))
-                      : ListView.separated(
-                          itemCount: widget.originals.length,
-                          separatorBuilder: (_, _) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final item = widget.originals[index];
-                            return ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(
-                                item.text.isEmpty ? item.citation : item.text,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              subtitle:
-                                  item.citation.isEmpty || item.text.isEmpty
-                                  ? null
-                                  : Text(
-                                      item.citation,
+                  const Divider(),
+                  if (widget.onRetry != null && !editing)
+                    TextButton(
+                      onPressed: widget.onRetry,
+                      child: const Text('저장 실패 · 다시 저장'),
+                    ),
+                  Expanded(
+                    child: original != null
+                        ? _OriginalText(
+                            key: ValueKey((original.id, editing)),
+                            original: original,
+                            style: style,
+                            match: match,
+                            mark: mark,
+                            note: note,
+                            editing: editing,
+                          )
+                        : widget.originals.isEmpty
+                        ? const Center(child: Text('등록한 원문이 없습니다.'))
+                        : ListView.separated(
+                            itemCount: widget.originals.length,
+                            separatorBuilder: (_, _) =>
+                                details.recordDivider.enabled
+                                ? RecordDivider(choice: details.recordDivider)
+                                : const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              final item = widget.originals[index];
+                              return InkWell(
+                                onTap: () =>
+                                    setState(() => selectedId = item.id),
+                                child: SourceSlip(
+                                  compact: true,
+                                  choice: details.sourceSlip,
+                                  child: ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    title: Text(
+                                      item.text.isEmpty
+                                          ? item.citation
+                                          : item.text
+                                                .replaceAll(
+                                                  _previewWhitespace,
+                                                  ' ',
+                                                )
+                                                .trim(),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
+                                      style: writingTextStyle(
+                                        style.fontIndex,
+                                        size: 17,
+                                        useDevelopmentTypeface:
+                                            style.useDevelopmentTypeface,
+                                        color: penColors[style.penIndex],
+                                      ),
                                     ),
-                              onTap: () => setState(() => selectedId = item.id),
-                            );
-                          },
-                        ),
-                ),
-                if (failed && editing)
-                  Semantics(
-                    liveRegion: true,
-                    child: const Text('느낀 점을 저장하지 못했어요. 다시 저장해 주세요.'),
-                  ),
-                if (original != null &&
-                    original.text.trim().isNotEmpty &&
-                    widget.onSaveReflection != null)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: editing
-                        ? ValueListenableBuilder<TextEditingValue>(
-                            valueListenable: reflectionField,
-                            builder: (context, value, _) => Wrap(
-                              spacing: 8,
-                              children: [
-                                TextButton(
-                                  onPressed: saving
-                                      ? null
-                                      : () => setState(() {
-                                          editing = false;
-                                          failed = false;
-                                        }),
-                                  child: const Text('취소'),
+                                    subtitle:
+                                        item.citation.isEmpty ||
+                                            item.text.isEmpty
+                                        ? null
+                                        : Text(
+                                            item.citation,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                  ),
                                 ),
-                                FilledButton(
-                                  onPressed: _canSave(value)
-                                      ? () => _save(original)
-                                      : null,
-                                  child: Text(saving ? '저장 중' : '저장'),
-                                ),
-                              ],
-                            ),
-                          )
-                        : TextButton.icon(
-                            icon: const Icon(CupertinoIcons.pencil, size: 16),
-                            onPressed: () => _editReflection(original, match),
-                            label: Text(
-                              reflection == null ? '느낀 점 남기기' : '느낀 점 고치기',
-                            ),
+                              );
+                            },
                           ),
                   ),
-              ],
+                  if (failed && editing)
+                    Semantics(
+                      liveRegion: true,
+                      child: const Text('느낀 점을 저장하지 못했어요. 다시 저장해 주세요.'),
+                    ),
+                  if (original != null &&
+                      original.text.trim().isNotEmpty &&
+                      widget.onSaveReflection != null)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: editing
+                          ? ValueListenableBuilder<TextEditingValue>(
+                              valueListenable: reflectionField,
+                              builder: (context, value, _) => Wrap(
+                                spacing: 8,
+                                children: [
+                                  TextButton(
+                                    onPressed: saving ? null : _cancelEdit,
+                                    child: const Text('취소'),
+                                  ),
+                                  FilledButton(
+                                    onPressed: _canSave(value)
+                                        ? () => _save(original)
+                                        : null,
+                                    child: Text(saving ? '저장 중' : '저장'),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : TextButton.icon(
+                              icon: const Icon(CupertinoIcons.pencil, size: 16),
+                              onPressed: () => _editReflection(original, match),
+                              label: Text(
+                                reflection == null ? '느낀 점 남기기' : '느낀 점 고치기',
+                              ),
+                            ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -243,6 +315,7 @@ class _OriginalText extends StatefulWidget {
   const _OriginalText({
     super.key,
     required this.original,
+    required this.style,
     this.match,
     this.mark,
     this.note,
@@ -250,6 +323,7 @@ class _OriginalText extends StatefulWidget {
   });
 
   final RegisteredOriginal original;
+  final WritingStyle style;
   final OriginalMatch? match;
   final PencilMark? mark;
   final Widget? note;
@@ -260,7 +334,15 @@ class _OriginalText extends StatefulWidget {
 }
 
 final _sentenceEnd = RegExp(r'[.!?。！？]+|\n');
+final _previewWhitespace = RegExp(r'\s+');
 const _graphite = Color(0xff485358);
+const reflectionHandwriting = TextStyle(
+  fontFamily: 'NanumPenScript',
+  fontFamilyFallback: [appFontFamily, ...appFontFallback],
+  fontSize: 27,
+  height: 1.24,
+  color: _graphite,
+);
 
 class _OriginalTextState extends State<_OriginalText> {
   final scroll = ScrollController();
@@ -276,7 +358,9 @@ class _OriginalTextState extends State<_OriginalText> {
 
   TextSpan _span(int from, int to) {
     final text = widget.original.text;
-    final mark = widget.mark;
+    final style = widget.style;
+    final pencil = style.bookDetails.pencil;
+    final mark = pencil.enabled ? widget.mark : null;
     final current = widget.match;
     final match =
         current != null &&
@@ -298,7 +382,12 @@ class _OriginalTextState extends State<_OriginalText> {
       ],
     }.toList()..sort();
     return TextSpan(
-      style: writingTextStyle(0, size: 20, color: brandInk),
+      style: writingTextStyle(
+        style.fontIndex,
+        size: 20,
+        color: penColors[style.penIndex],
+        useDevelopmentTypeface: style.useDevelopmentTypeface,
+      ),
       children: [
         for (var i = 0; i + 1 < boundaries.length; i++)
           TextSpan(
@@ -307,11 +396,7 @@ class _OriginalTextState extends State<_OriginalText> {
                 mark != null &&
                     boundaries[i] >= mark.start &&
                     boundaries[i] < mark.end
-                ? const TextStyle(
-                    decoration: TextDecoration.underline,
-                    decorationColor: _graphite,
-                    decorationThickness: 1.2,
-                  )
+                ? pencilUnderlineStyle(pencil)
                 : match != null &&
                       boundaries[i] >= match.start &&
                       boundaries[i] < match.end
@@ -416,13 +501,6 @@ class _ReflectionNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const handwriting = TextStyle(
-      fontFamily: 'NanumPenScript',
-      fontFamilyFallback: [appFontFamily, ...appFontFallback],
-      fontSize: 27,
-      height: 1.24,
-      color: _graphite,
-    );
     final field = controller;
     final lineHeight = MediaQuery.textScalerOf(context).scale(27) * 1.24;
     return Padding(
@@ -435,7 +513,7 @@ class _ReflectionNote extends StatelessWidget {
               const CustomPaint(size: Size(24, 22), painter: _MarginArrow()),
               const Icon(CupertinoIcons.pencil, color: _graphite, size: 15),
               const SizedBox(width: 5),
-              Text('느낀 점', style: handwriting.copyWith(fontSize: 21)),
+              Text('느낀 점', style: reflectionHandwriting.copyWith(fontSize: 21)),
             ],
           ),
           Padding(
@@ -446,7 +524,7 @@ class _ReflectionNote extends StatelessWidget {
                   ? Transform.rotate(
                       angle: -.014,
                       alignment: Alignment.topLeft,
-                      child: Text(text ?? '', style: handwriting),
+                      child: Text(text ?? '', style: reflectionHandwriting),
                     )
                   : Semantics(
                       label: '느낀 점 입력',
@@ -457,7 +535,7 @@ class _ReflectionNote extends StatelessWidget {
                         minLines: 2,
                         maxLines: 5,
                         keyboardType: TextInputType.multiline,
-                        style: handwriting,
+                        style: reflectionHandwriting,
                         decoration: InputDecoration(
                           isCollapsed: true,
                           contentPadding: EdgeInsets.zero,
@@ -465,7 +543,7 @@ class _ReflectionNote extends StatelessWidget {
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
                           hintText: '이 문장이 남긴 생각',
-                          hintStyle: handwriting.copyWith(
+                          hintStyle: reflectionHandwriting.copyWith(
                             color: _graphite.withValues(alpha: .62),
                           ),
                         ),

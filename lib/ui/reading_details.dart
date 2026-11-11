@@ -152,7 +152,7 @@ class _Tab extends CustomPainter {
       variant != old.variant || color != old.color || selected != old.selected;
 }
 
-/// Only separates record rows. It never inserts content into a writing page.
+/// A paper ornament that separates adjacent entries in a list.
 class RecordDivider extends StatelessWidget {
   const RecordDivider({super.key, this.choice = const BookDetailChoice()});
   final BookDetailChoice choice;

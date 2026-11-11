@@ -9,6 +9,10 @@ import 'package:writing_human/main.dart';
 import 'package:writing_human/source/source_intake.dart';
 import 'package:writing_human/source/originals.dart';
 import 'package:writing_human/ui/collection_sheet.dart';
+import 'package:writing_human/ui/book_details.dart';
+import 'package:writing_human/ui/book_detail_design.dart';
+import 'package:writing_human/ui/paper.dart';
+import 'package:writing_human/ui/reading_details.dart';
 import 'package:writing_human/ui/source_import_sheet.dart';
 import 'package:writing_human/ui/source_reading.dart';
 import 'package:writing_human/ui/transcription_guide.dart';
@@ -314,9 +318,13 @@ void main() {
       await tester.pumpAndSettle();
       final body = tester.widget<TextField>(bodyField).controller!;
       final before = body.value;
-      await tester.tap(place);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('느낀 점 남기기'));
+      final margin = find.byKey(const ValueKey('writing-reflection'));
+      expect(
+        find.descendant(of: margin, matching: find.text('느낀 점')),
+        findsOneWidget,
+      );
+      final paperSize = tester.getSize(bodyField);
+      await tester.tap(margin);
       await tester.pumpAndSettle();
 
       final noteField = find.byKey(const ValueKey('original-reflection-input'));
@@ -354,6 +362,11 @@ void main() {
       expect(body.value, before);
       expect(tester.testTextInput.isVisible, isTrue);
       expect(store.data.activePage!.text, '책장에');
+      expect(tester.getSize(bodyField), paperSize);
+      expect(
+        find.descendant(of: margin, matching: find.text(note)),
+        findsOneWidget,
+      );
       final original = store.data.books.single.originals.single;
       expect(original.reflection!.text, note);
       final mark = original.reflection!.mark!;
@@ -361,7 +374,12 @@ void main() {
       await tester.tap(place);
       await tester.pumpAndSettle();
       expect(
-        tester.widget<Text>(find.text(note)).style!.fontFamily,
+        tester
+            .widget<Text>(
+              find.descendant(of: reading, matching: find.text(note)),
+            )
+            .style!
+            .fontFamily,
         'NanumPenScript',
       );
       await tester.tap(find.text('느낀 점 고치기'));
@@ -375,8 +393,104 @@ void main() {
         '내일도 한 줄씩.',
       );
       expect(store.data.books.single.originals, hasLength(1));
+      expect(
+        find.descendant(of: margin, matching: find.text('내일도 한 줄씩.')),
+        findsOneWidget,
+      );
       expect(store.data.activePage!.text, '책장에');
+      await tester.enterText(bodyField, '책장에\n\n새 문장');
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: margin, matching: find.text('내일도 한 줄씩.')),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Originals use the book paper, note slips and in-between divider',
+    (tester) async {
+      const slip = BookDetailChoice(variant: 2, tone: 2);
+      const divider = BookDetailChoice(variant: 1, tone: 3);
+      const pencil = BookDetailChoice(variant: 1, tone: 2);
+      const first = '햇빛이 책장에 내려앉았다.';
+      final style = const WritingStyle().copy(
+        fontIndex: 2,
+        useDevelopmentTypeface: false,
+        bookDetails: const BookDetailsStyle()
+            .withChoice(BookDetailKind.sourceSlip, slip)
+            .withChoice(BookDetailKind.recordDivider, divider)
+            .withChoice(BookDetailKind.pencil, pencil),
+      );
+      final store = MemoryStore()
+        ..data = Library(
+          books: const [
+            Book(
+              id: 'b',
+              title: '책',
+              coverIndex: 2,
+              paperIndex: 3,
+              originals: [
+                RegisteredOriginal(
+                  'a',
+                  first,
+                  citation: '12쪽',
+                  reflection: OriginalReflection(
+                    '내일도 읽고 싶다.',
+                    mark: PencilMark(0, 3),
+                  ),
+                ),
+                RegisteredOriginal('b', '저녁이 창가에 내려왔다.', citation: '25쪽'),
+              ],
+            ),
+          ],
+          records: const [WritingRecord(id: 'r', bookId: 'b', title: '필사')],
+          pages: const [WritingPage(id: 'p', recordId: 'r', number: 1)],
+          activePageId: 'p',
+          writing: true,
+          style: style,
+        );
+      await open(tester, store, FakeIntake());
+      await tester.tap(place);
+      await tester.pumpAndSettle();
+      final paper = tester.widget<PaperBackdrop>(
+        find.byKey(const ValueKey('source-paper')),
+      );
+      expect(paper.color, paperColors[3]);
+      expect(paper.grainOpacity, paperGrainOpacity[3]);
+      expect(paper.coverIndex, 2);
+      expect(paper.binding.toJson(), style.bookDetails.binding.toJson());
+      final slips = find.descendant(
+        of: reading,
+        matching: find.byType(SourceSlip),
+      );
+      expect(
+        tester
+            .widgetList<SourceSlip>(slips)
+            .map((item) => item.choice.toJson()),
+        [slip.toJson(), slip.toJson()],
+      );
+      final separators = find.descendant(
+        of: reading,
+        matching: find.byType(RecordDivider),
+      );
+      expect(
+        tester.widget<RecordDivider>(separators).choice.toJson(),
+        divider.toJson(),
+      );
+      await tester.tap(find.text(first));
+      await tester.pumpAndSettle();
+      final span = tester.widget<Text>(readingText).textSpan! as TextSpan;
+      expect(span.style!.fontFamily, 'NanumGothic');
+      final underlined = span.children!.whereType<TextSpan>().first;
+      expect(underlined.text, '햇빛이');
+      expect(underlined.style!.decorationStyle, TextDecorationStyle.double);
+      expect(
+        underlined.style!.decorationColor,
+        BookDetailDesign.color(BookDetailKind.pencil, pencil),
+      );
+      expect(find.text('내일도 읽고 싶다.'), findsOneWidget);
     },
   );
 
@@ -477,7 +591,7 @@ void main() {
       expect(store.data.activePageId, 'p');
       await tester.tap(place);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('첫 줄\n\n둘째 줄'));
+      await tester.tap(find.text('첫 줄 둘째 줄'));
       await tester.pumpAndSettle();
       expect(
         tester.widget<Text>(readingText).textSpan!.toPlainText(),

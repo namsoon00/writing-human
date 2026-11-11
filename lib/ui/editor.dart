@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/model.dart';
+import '../source/originals.dart';
+import 'notebook_reflection.dart';
 import 'paper.dart';
 import 'writing_pen.dart';
 import 'pencil_marks.dart';
@@ -15,6 +17,7 @@ class PageEditor extends StatefulWidget {
     this.focusNode,
     this.onEditingState,
     this.onPencilMark,
+    this.onReflection,
     this.originals = const [],
     this.reveal,
   });
@@ -25,6 +28,7 @@ class PageEditor extends StatefulWidget {
   final void Function(String, String, int, int, double) onChanged;
   final void Function(String, int, int)? onPencilMark;
   final List<RegisteredOriginal> originals;
+  final ValueChanged<OriginalMatch>? onReflection;
   final ({int offset, int request})? reveal;
   @override
   State<PageEditor> createState() => _PageEditorState();
@@ -264,6 +268,17 @@ class _PageEditorState extends State<PageEditor> {
                       ),
                     ),
                   ),
+                ),
+              ),
+            if (widget.originals.isNotEmpty)
+              Positioned.fill(
+                child: NotebookReflection(
+                  originals: widget.originals,
+                  controller: text,
+                  scroll: scroll,
+                  fieldKey: fieldRenderKey,
+                  padding: padding,
+                  onEdit: widget.onReflection,
                 ),
               ),
             Positioned.fill(

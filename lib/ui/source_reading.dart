@@ -8,6 +8,7 @@ import 'book_details.dart';
 import 'paper.dart';
 import 'pencil_marks.dart';
 import 'reading_details.dart';
+import 'reflection_ink.dart';
 
 class SourceReading extends StatefulWidget {
   const SourceReading({
@@ -335,14 +336,6 @@ class _OriginalText extends StatefulWidget {
 
 final _sentenceEnd = RegExp(r'[.!?。！？]+|\n');
 final _previewWhitespace = RegExp(r'\s+');
-const _graphite = Color(0xff485358);
-const reflectionHandwriting = TextStyle(
-  fontFamily: 'NanumPenScript',
-  fontFamilyFallback: [appFontFamily, ...appFontFallback],
-  fontSize: 27,
-  height: 1.24,
-  color: _graphite,
-);
 
 class _OriginalTextState extends State<_OriginalText> {
   final scroll = ScrollController();
@@ -510,8 +503,12 @@ class _ReflectionNote extends StatelessWidget {
         children: [
           Row(
             children: [
-              const CustomPaint(size: Size(24, 22), painter: _MarginArrow()),
-              const Icon(CupertinoIcons.pencil, color: _graphite, size: 15),
+              const CustomPaint(size: Size(24, 22), painter: ReflectionArrow()),
+              const Icon(
+                CupertinoIcons.pencil,
+                color: reflectionGraphite,
+                size: 15,
+              ),
               const SizedBox(width: 5),
               Text('느낀 점', style: reflectionHandwriting.copyWith(fontSize: 21)),
             ],
@@ -544,7 +541,7 @@ class _ReflectionNote extends StatelessWidget {
                           focusedBorder: InputBorder.none,
                           hintText: '이 문장이 남긴 생각',
                           hintStyle: reflectionHandwriting.copyWith(
-                            color: _graphite.withValues(alpha: .62),
+                            color: reflectionGraphite.withValues(alpha: .62),
                           ),
                         ),
                       ),
@@ -555,32 +552,6 @@ class _ReflectionNote extends StatelessWidget {
       ),
     );
   }
-}
-
-class _MarginArrow extends CustomPainter {
-  const _MarginArrow();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final pencil = Paint()
-      ..color = _graphite.withValues(alpha: .78)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.15
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    canvas.drawPath(
-      Path()
-        ..moveTo(1, 1)
-        ..quadraticBezierTo(5, 19, 21, 15)
-        ..moveTo(15, 11)
-        ..lineTo(21, 15)
-        ..lineTo(17, 19),
-      pencil,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_MarginArrow oldDelegate) => false;
 }
 
 class _NotebookLines extends CustomPainter {

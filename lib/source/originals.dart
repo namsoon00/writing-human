@@ -106,24 +106,33 @@ OriginalMatch? matchOriginal(
   return match;
 }
 
-OriginalMatch? reflectionForWriting(
+typedef NotebookReflectionMatch = ({OriginalMatch match, int offset});
+
+NotebookReflectionMatch? reflectionForWriting(
   List<RegisteredOriginal> originals,
   String text,
   int caret,
 ) {
   final current = matchOriginal(originals, text, caret);
-  if (current != null ||
-      caret <= 0 ||
+  if (current != null) return _notebookAnchor(current, caret);
+  if (caret <= 0 ||
       caret > text.length ||
       !originals.any((item) => item.reflection != null)) {
-    return current;
+    return null;
   }
   final previousLine = text.lastIndexOf('\n', caret - 1);
   if (previousLine < 0) return null;
-  final previous = matchOriginal(
-    originals,
-    text,
-    text.substring(0, previousLine).trimRight().length,
-  );
-  return previous?.original.reflection == null ? null : previous;
+  final offset = text.substring(0, previousLine).trimRight().length;
+  final previous = matchOriginal(originals, text, offset);
+  if (previous == null || previous.original.reflection == null) return null;
+  return _notebookAnchor(previous, offset);
+}
+
+NotebookReflectionMatch _notebookAnchor(OriginalMatch match, int writtenEnd) {
+  final mark = match.original.reflection?.mark;
+  if (mark == null || mark.end <= match.start || mark.start >= match.end) {
+    return (match: match, offset: writtenEnd);
+  }
+  final sourceEnd = mark.end.clamp(match.start, match.end);
+  return (match: match, offset: writtenEnd - (match.end - sourceEnd));
 }

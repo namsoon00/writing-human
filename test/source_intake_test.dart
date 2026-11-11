@@ -161,6 +161,25 @@ void main() {
     expect(findMatch([original], '햇빛이 문'), isNull);
   });
 
+  test(
+    'A saved reflection follows the marked words while the line continues',
+    () {
+      const original = RegisteredOriginal(
+        'saved',
+        '책장에 천천히 내려앉았다.',
+        reflection: OriginalReflection('천천히 쓰자.', mark: PencilMark(0, 3)),
+      );
+      const written = '책장에 천천히';
+      final attachment = reflectionForWriting(
+        [original],
+        written,
+        written.length,
+      )!;
+      expect(attachment.match.original, original);
+      expect(attachment.offset, 3);
+    },
+  );
+
   testWidgets('Book originals register once and match in another record', (
     tester,
   ) async {
@@ -323,6 +342,25 @@ void main() {
         find.descendant(of: margin, matching: find.text('느낀 점')),
         findsOneWidget,
       );
+      final editable = tester
+          .state<EditableTextState>(
+            find.descendant(of: bodyField, matching: find.byType(EditableText)),
+          )
+          .renderEditable;
+      double lineBottom(int offset) => editable
+          .localToGlobal(
+            editable
+                .getEndpointsForSelection(
+                  TextSelection.collapsed(
+                    offset: offset,
+                    affinity: TextAffinity.upstream,
+                  ),
+                )
+                .single
+                .point,
+          )
+          .dy;
+      expect(tester.getTopLeft(margin).dy, closeTo(lineBottom(3) + 5, 1));
       final paperSize = tester.getSize(bodyField);
       await tester.tap(margin);
       await tester.pumpAndSettle();
@@ -404,6 +442,37 @@ void main() {
         find.descendant(of: margin, matching: find.text('내일도 한 줄씩.')),
         findsOneWidget,
       );
+      expect(tester.getTopLeft(margin).dy, closeTo(lineBottom(3) + 5, 1));
+      expect(tester.getBottomLeft(margin).dy, lessThan(lineBottom(7)));
+
+      await tester.enterText(bodyField, '책장에\n새 문장');
+      await tester.pumpAndSettle();
+      expect(margin, findsOneWidget);
+      expect(
+        find.descendant(of: margin, matching: find.text('내일도 한 줄씩.')),
+        findsNothing,
+      );
+      expect(
+        tester.getTopRight(margin).dx,
+        lessThan(editable.localToGlobal(Offset.zero).dx),
+      );
+
+      final longPage = '책장에\n\n${List.filled(30, '다른 문장을 적는다.').join('\n')}';
+      await tester.enterText(bodyField, longPage);
+      body.selection = const TextSelection.collapsed(offset: 3);
+      await tester.pumpAndSettle();
+      final scroll = tester.widget<TextField>(bodyField).scrollController!;
+      scroll.jumpTo(0);
+      await tester.pumpAndSettle();
+      final originalY = tester.getTopLeft(margin).dy;
+      scroll.jumpTo(16);
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(margin).dy, closeTo(originalY - 16, 1));
+      scroll.jumpTo(120);
+      await tester.pumpAndSettle();
+      expect(margin, findsNothing);
+      expect(body.text, longPage);
+      expect(body.selection, const TextSelection.collapsed(offset: 3));
       expect(tester.takeException(), isNull);
     },
   );

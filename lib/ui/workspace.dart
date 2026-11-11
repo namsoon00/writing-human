@@ -1093,9 +1093,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             bookId: bookId,
             recordId: currentPage.recordId,
           );
-    final reflection = currentPage.base == currentPage.extent
-        ? reflectionForWriting(originals, currentPage.text, currentPage.extent)
-        : null;
     return PaperBackdrop(
       binding: style.bookDetails.binding,
       color: paperColors[style.paperIndex],
@@ -1180,56 +1177,31 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         page: currentPage,
                         style: style,
                       )
-                    : Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          PageEditor(
-                            key: ValueKey('${currentPage.id}:${c.editorEpoch}'),
-                            page: currentPage,
-                            style: style,
-                            focusNode: editorFocus,
-                            originals: originals,
-                            reveal: _reveal?.pageId == currentPage.id
-                                ? (
-                                    offset: _reveal!.offset,
-                                    request: _reveal!.request,
-                                  )
-                                : null,
-                            onChanged: _edit,
-                            onPencilMark: c.togglePencilMark,
-                            onEditingState: (focused, composing) {
-                              if (focused) _editingPageId = currentPage.id;
-                              _editorComposing = composing;
-                              c.setEditorState(
-                                focused: focused,
-                                isComposing: composing,
-                              );
-                            },
-                          ),
-                          if (reflection != null)
-                            Positioned(
-                              left: 24,
-                              right: 14,
-                              bottom: 0,
-                              height: 44,
-                              child: Align(
-                                alignment: Alignment.centerRight,
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 280,
-                                  ),
-                                  child: _WritingReflection(
-                                    note: reflection.original.reflection?.text,
-                                    onPressed: navigationEnabled
-                                        ? () => _showOriginals(
-                                            reflectionMatch: reflection,
-                                          )
-                                        : null,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
+                    : PageEditor(
+                        key: ValueKey('${currentPage.id}:${c.editorEpoch}'),
+                        page: currentPage,
+                        style: style,
+                        focusNode: editorFocus,
+                        originals: originals,
+                        onReflection: navigationEnabled
+                            ? (match) => _showOriginals(reflectionMatch: match)
+                            : null,
+                        reveal: _reveal?.pageId == currentPage.id
+                            ? (
+                                offset: _reveal!.offset,
+                                request: _reveal!.request,
+                              )
+                            : null,
+                        onChanged: _edit,
+                        onPencilMark: c.togglePencilMark,
+                        onEditingState: (focused, composing) {
+                          if (focused) _editingPageId = currentPage.id;
+                          _editorComposing = composing;
+                          c.setEditorState(
+                            focused: focused,
+                            isComposing: composing,
+                          );
+                        },
                       ),
               ),
               WritingFooter(
@@ -1403,45 +1375,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         book: selectedBook ?? book,
       ),
       enableDrag: false,
-    );
-  }
-}
-
-class _WritingReflection extends StatelessWidget {
-  const _WritingReflection({required this.note, required this.onPressed});
-
-  final String? note;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasNote = note != null;
-    return TextFieldTapRegion(
-      child: Tooltip(
-        message: hasNote ? '느낀 점 고치기' : '느낀 점 남기기',
-        child: TextButton.icon(
-          key: const ValueKey('writing-reflection'),
-          onPressed: onPressed,
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            minimumSize: const Size(48, 44),
-            alignment: Alignment.centerRight,
-          ),
-          icon: const Icon(CupertinoIcons.pencil, size: 15),
-          label: Text(
-            note ?? '느낀 점',
-            maxLines:
-                hasNote && MediaQuery.textScalerOf(context).scale(18) <= 22
-                ? 2
-                : 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.start,
-            style: hasNote
-                ? reflectionHandwriting.copyWith(fontSize: 18, height: 1)
-                : const TextStyle(fontSize: 12),
-          ),
-        ),
-      ),
     );
   }
 }

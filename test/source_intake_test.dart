@@ -9,6 +9,7 @@ import 'package:writing_human/data/model.dart';
 import 'package:writing_human/main.dart';
 import 'package:writing_human/source/source_intake.dart';
 import 'package:writing_human/ui/source_import_sheet.dart';
+import 'package:writing_human/ui/transcription_guide.dart';
 
 import 'widget_test.dart' show MemoryStore;
 
@@ -118,6 +119,75 @@ Future<void> takePhoto(WidgetTester tester, {bool settle = true}) async {
 }
 
 void main() {
+  testWidgets('Trace a passage with real input and turn it by choice', (
+    tester,
+  ) async {
+    const source = '새로운 문장을 읽습니다.\n\n내 글로 남깁니다.';
+    final store = MemoryStore();
+    await open(tester, store, FakeIntake());
+    await tester.tap(place);
+    await tester.pumpAndSettle();
+    await tester.enterText(sourceField, source);
+    await tester.pumpAndSettle();
+    await tester.tap(confirm);
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<TextField>(bodyField);
+    final overlay = find.byKey(const ValueKey('transcription-guide'));
+    final toggle = find.byKey(const ValueKey('toggle-transcription-guide'));
+    String remaining() =>
+        (tester.widget<CustomPaint>(overlay).painter!
+                as TranscriptionGuidePainter)
+            .guide
+            .remaining(field.controller!.value);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(remaining(), '새로운 문장을 읽습니다.');
+    expect(store.data.activePage!.text, isEmpty);
+    expect(field.focusNode!.hasFocus, isTrue);
+
+    const composing = TextEditingValue(
+      text: '새ㄹ',
+      selection: TextSelection.collapsed(offset: 2),
+      composing: TextRange(start: 1, end: 2),
+    );
+    tester.testTextInput.updateEditingValue(composing);
+    await tester.pump();
+    expect(field.controller!.value, composing);
+    expect(remaining(), '운 문장을 읽습니다.');
+
+    await tester.enterText(bodyField, '새로운 문장');
+    await tester.pumpAndSettle();
+    expect(remaining(), '을 읽습니다.');
+    await tester.enterText(bodyField, '새로운 문장을\n내 방식으로');
+    await tester.pumpAndSettle();
+    expect(remaining(), isEmpty);
+    final body = field.controller!.value;
+    expect(store.data.activePage!.text, body.text);
+
+    await tester.tap(find.byTooltip('다음 문단'));
+    await tester.pumpAndSettle();
+    expect(remaining(), '내 글로 남깁니다.');
+    expect(field.controller!.value, body);
+    await tester.enterText(bodyField, '${body.text}\n내 글');
+    await tester.pumpAndSettle();
+    expect(remaining(), '로 남깁니다.');
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(overlay, findsNothing);
+    expect(find.text('내 글로 남깁니다.'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(bodyField).controller,
+      same(field.controller),
+    );
+    expect(store.data.activePage!.text, '${body.text}\n내 글');
+    expect(store.data.records.single.source, source);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(remaining(), '로 남깁니다.');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'Clipboard is read only on Paste; confirm saves a separate original',
     (tester) async {

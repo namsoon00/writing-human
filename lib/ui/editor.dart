@@ -3,6 +3,7 @@ import '../data/model.dart';
 import 'paper.dart';
 import 'writing_pen.dart';
 import 'pencil_marks.dart';
+import 'transcription_guide.dart';
 
 class PageEditor extends StatefulWidget {
   const PageEditor({
@@ -13,6 +14,7 @@ class PageEditor extends StatefulWidget {
     this.focusNode,
     this.onEditingState,
     this.onPencilMark,
+    this.guide,
   });
   final FocusNode? focusNode;
   final void Function(bool focused, bool composing)? onEditingState;
@@ -20,6 +22,7 @@ class PageEditor extends StatefulWidget {
   final WritingStyle style;
   final void Function(String, String, int, int, double) onChanged;
   final void Function(String, int, int)? onPencilMark;
+  final TranscriptionGuide? guide;
   @override
   State<PageEditor> createState() => _PageEditorState();
 }
@@ -121,6 +124,7 @@ class _PageEditorState extends State<PageEditor> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final padding = writingPagePadding(constraints.biggest);
+        final guide = widget.guide;
         return Stack(
           children: [
             if (style.guides)
@@ -201,7 +205,7 @@ class _PageEditorState extends State<PageEditor> {
                 cursorColor: brandInk,
                 cursorWidth: 1.2,
                 decoration: InputDecoration(
-                  hintText: '마음에 남은 문장을\n천천히 옮겨 적어보세요.',
+                  hintText: guide == null ? '마음에 남은 문장을\n천천히 옮겨 적어보세요.' : null,
                   hintStyle: writingTextStyle(
                     style.fontIndex,
                     size: 21,
@@ -216,6 +220,26 @@ class _PageEditorState extends State<PageEditor> {
                 ),
               ),
             ),
+            if (guide != null)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    key: const ValueKey('transcription-guide'),
+                    painter: TranscriptionGuidePainter(
+                      guide: guide,
+                      controller: text,
+                      scroll: scroll,
+                      fieldKey: fieldRenderKey,
+                      bottomPadding: padding.bottom,
+                      style: writingTextStyle(
+                        style.fontIndex,
+                        color: const Color(0xff8b8273).withValues(alpha: .58),
+                        useDevelopmentTypeface: style.useDevelopmentTypeface,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             Positioned.fill(
               child: WritingPen(
                 controller: text,

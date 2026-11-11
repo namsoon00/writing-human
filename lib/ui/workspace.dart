@@ -12,6 +12,7 @@ import '../source/source_intake.dart';
 import '../source/source_platform.dart';
 import 'source_import_sheet.dart';
 import 'source_reading.dart';
+import 'transcription_guide.dart';
 import 'collection_sheet.dart';
 import 'editor.dart';
 import 'new_book_dialog.dart';
@@ -61,6 +62,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   bool _sourceBusy = false, _pollingSources = false, _pollAgain = false;
   bool _checkedPhotoRecovery = false;
   final _sourcePositions = <String, ({String source, int index})>{};
+  ({String pageId, String source, TranscriptionGuide passage, bool visible})?
+  _guide;
   Future<void>? _sheetClosed;
   LibraryController? _sheetOwner;
   bool get _accountLocked =>
@@ -258,6 +261,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       draftSource = '';
       draftBookId = null;
       _sourcePositions.clear();
+      _guide = null;
     }
   }
 
@@ -266,6 +270,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     setState(() {
       if (fresh && !userFresh && c.library.activePage != null) fresh = false;
       if (_accountLocked || !_showCover) _coverAnchor = null;
+      if (_accountLocked ||
+          _guide?.pageId != page.id ||
+          _guide?.source != record?.source) {
+        _guide = null;
+      }
     });
     if ((widget.sync?.accountMismatch ?? false) ||
         (widget.sync?.signInRequired ?? false)) {
@@ -900,6 +909,15 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         record?.source ??
         (fresh && currentPage.recordId == draft.recordId ? draftSource : '');
     final hasSource = source.trim().isNotEmpty;
+    final activeGuide = switch (_guide) {
+      final guide?
+          when !preview &&
+              guide.pageId == currentPage.id &&
+              guide.source == source =>
+        guide,
+      _ => null,
+    };
+    final guide = activeGuide?.visible == true ? activeGuide?.passage : null;
     final sourcePosition = _sourcePositions[currentPage.recordId];
     final media = MediaQuery.of(context);
     final availableHeight =
@@ -1006,17 +1024,47 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                       : 0,
                   maxTextHeight: maxSourceTextHeight,
                   compact: compact,
+                  guiding: guide != null,
                   writing:
                       !preview &&
                       editorFocus.hasFocus &&
                       currentPage.text.isNotEmpty,
                   onParagraphChanged: navigationEnabled
-                      ? (index) => setState(() {
+                      ? (index, paragraph) => setState(() {
                           _sourcePositions[currentPage.recordId] = (
                             source: source,
                             index: index,
                           );
+                          _guide = guide == null
+                              ? null
+                              : (
+                                  pageId: currentPage.id,
+                                  source: source,
+                                  passage: TranscriptionGuide(
+                                    paragraph: paragraph,
+                                    initialText: currentPage.text,
+                                  ),
+                                  visible: true,
+                                );
                         })
+                      : null,
+                  onToggleGuide: navigationEnabled
+                      ? (paragraph) {
+                          setState(() {
+                            _guide = (
+                              pageId: currentPage.id,
+                              source: source,
+                              passage:
+                                  activeGuide?.passage ??
+                                  TranscriptionGuide(
+                                    paragraph: paragraph,
+                                    initialText: currentPage.text,
+                                  ),
+                              visible: guide == null,
+                            );
+                          });
+                          if (guide == null) editorFocus.requestFocus();
+                        }
                       : null,
                   onEdit: preview ? null : () => _source(),
                 ),
@@ -1033,6 +1081,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         page: currentPage,
                         style: style,
                         focusNode: editorFocus,
+                        guide: guide,
                         onChanged: _edit,
                         onPencilMark: c.togglePencilMark,
                         onEditingState: (focused, composing) {

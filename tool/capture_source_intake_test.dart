@@ -138,6 +138,14 @@ void main() {
     expect(store.data.activePage!.text, isEmpty);
     expect(find.text(paragraphs.first), findsOneWidget);
     await capture('reading');
+    await tester.tap(find.text('따라 쓰기'));
+    await tester.pumpAndSettle();
+    await capture('guide');
+    await tester.enterText(find.byKey(const ValueKey('page-text')), '책장을 넘기면 ');
+    await tester.pumpAndSettle();
+    await capture('guide-writing');
+    await tester.tap(find.text('원문 보기'));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('page-text')),
       '책장을 넘기면 새로운 문장이 보입니다.',

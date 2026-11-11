@@ -59,7 +59,7 @@ class BookFrontCover extends StatelessWidget {
       key: ValueKey(back ? 'book-back-cover' : 'book-front-cover'),
       fit: StackFit.expand,
       children: [
-        motion?.transformArtwork(artwork) ?? artwork,
+        motion?.transformArtwork(artwork, back: back) ?? artwork,
         IgnorePointer(
           ignoring: visibility < 1,
           child: Opacity(

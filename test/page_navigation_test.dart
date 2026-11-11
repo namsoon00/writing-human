@@ -52,6 +52,29 @@ Future<void> previousSheet(WidgetTester tester) => tester.fling(
   800,
 );
 
+void expectBoard(
+  WidgetTester tester,
+  Finder face, {
+  required bool back,
+  required double edgeX,
+}) {
+  final material = find.descendant(
+    of: face,
+    matching: find.byKey(const ValueKey('full-cover-material')),
+  );
+  final box = tester.renderObject<RenderBox>(material);
+  final spineX = back ? box.size.width : 0.0;
+  final outerX = back ? 0.0 : box.size.width;
+  final spine = box.localToGlobal(Offset(spineX, box.size.height / 2));
+  final edge = box.localToGlobal(Offset(outerX, box.size.height / 2));
+  expect(spine.dx, closeTo(spineX, .01));
+  expect(edge.dx, closeTo(edgeX, .01));
+  // The free edge lifts toward the reader, so it projects taller.
+  final spineTop = box.localToGlobal(Offset(spineX, 0));
+  final edgeTop = box.localToGlobal(Offset(outerX, 0));
+  expect(edgeTop.dy, lessThan(spineTop.dy));
+}
+
 void main() {
   testWidgets(
     'Mouse selection stays native while the page number accepts mouse swipes',
@@ -229,6 +252,7 @@ void main() {
     await gesture.moveBy(const Offset(165, 0));
     await tester.pump();
     expect(find.descendant(of: reveal, matching: cover), findsOneWidget);
+    expectBoard(tester, cover, back: false, edgeX: 165);
     expect(store.writes, writes);
     await gesture.up();
     await tester.pumpAndSettle();
@@ -242,6 +266,7 @@ void main() {
     await reopen.moveBy(const Offset(-170, 0));
     await tester.pump();
     expect(find.byKey(const ValueKey('page-preview-text:one')), findsOneWidget);
+    expectBoard(tester, cover, back: false, edgeX: 220);
     await reopen.up();
     await tester.pumpAndSettle();
     expect(cover, findsNothing);
@@ -301,6 +326,7 @@ void main() {
       await held.moveBy(const Offset(-100, 0));
       await tester.pump();
       expect(find.descendant(of: reveal, matching: back), findsOneWidget);
+      expectBoard(tester, back, back: true, edgeX: 290);
       final hinge = tester.widget<CoverHinge>(
         find.byWidgetPredicate((w) => w is CoverHinge && w.enabled),
       );
@@ -323,6 +349,12 @@ void main() {
       await tester.fling(back, const Offset(-140, 0), 800);
       await tester.pumpAndSettle();
       expect(back, findsOneWidget);
+      final opening = await tester.startGesture(tester.getCenter(back));
+      await opening.moveBy(const Offset(100, 0));
+      await tester.pump();
+      expectBoard(tester, back, back: true, edgeX: 100);
+      await opening.cancel();
+      await tester.pumpAndSettle();
       await tester.tap(find.text('마지막 장 펼치기'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
@@ -411,9 +443,16 @@ void main() {
 
     await nextSheet(tester);
     await tester.pumpAndSettle();
+    final back = find.byKey(const ValueKey('book-back-cover'));
+    final closing = await tester.startGesture(tester.getCenter(field));
+    await closing.moveBy(const Offset(-130, 0));
+    await tester.pump();
+    expectBoard(tester, back, back: true, edgeX: viewport.width - 130);
+    await closing.cancel();
+    await tester.pumpAndSettle();
     await nextSheet(tester);
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('book-back-cover')), findsOneWidget);
+    expect(back, findsOneWidget);
     expect(tester.getRect(material), Offset.zero & viewport);
     expect(store.data.pages.length, 2);
   });

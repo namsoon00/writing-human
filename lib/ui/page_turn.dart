@@ -63,6 +63,7 @@ class _PageTurnViewState extends State<PageTurnView>
   int _gestureVersion = 0;
   Widget? _preview;
   Size _surfaceSize = Size.zero;
+  double _coverWidth = 0;
   Offset? _dragOrigin;
   final surface = GlobalKey();
   ui.Image? outgoing;
@@ -135,9 +136,13 @@ class _PageTurnViewState extends State<PageTurnView>
         : _dragForward
         ? widget.next
         : widget.previous;
+    final turnsCover =
+        widget.isCover ||
+        (_dragForward ? widget.nextIsCover : widget.previousIsCover);
+    final width = turnsCover ? _coverWidth : _surfaceSize.width;
     dragProgress.value = _preview == null
         ? 0
-        : (distance.abs() / _surfaceSize.width).clamp(0.0, 1.0);
+        : (distance.abs() / width).clamp(0.0, 1.0);
   }
 
   bool get _fromCorner {
@@ -381,6 +386,7 @@ class _PageTurnViewState extends State<PageTurnView>
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
+      _coverWidth = constraints.maxWidth;
       _surfaceSize = Size(
         widget.isCover
             ? constraints.maxWidth
@@ -503,43 +509,57 @@ class CoverHinge extends InheritedWidget {
       old.forward != forward ||
       old.enabled != enabled;
 
-  Widget transformArtwork(Widget child) {
-    final left = incoming ? !forward : forward;
-    final angle = fraction * math.pi / 2 * (left ? -1 : 1);
-    return Transform(
-      key: const ValueKey('cover-hinge-transform'),
-      alignment: left ? Alignment.centerLeft : Alignment.centerRight,
-      transform: Matrix4.identity()
-        ..setEntry(3, 2, .0012)
-        ..rotateY(angle),
-      child: Container(
-        foregroundDecoration: enabled
-            ? BoxDecoration(
-                gradient: LinearGradient(
-                  begin: left ? Alignment.centerLeft : Alignment.centerRight,
-                  end: left ? Alignment.centerRight : Alignment.centerLeft,
-                  colors: [
-                    const Color(0xff34261d).withValues(alpha: fraction * .20),
-                    Colors.transparent,
-                  ],
-                ),
-              )
-            : null,
-        decoration: BoxDecoration(
-          boxShadow: enabled
-              ? [
-                  BoxShadow(
-                    color: const Color(
-                      0xff443325,
-                    ).withValues(alpha: .24 * math.sin(fraction * math.pi)),
-                    blurRadius: 22,
-                    offset: Offset(left ? 12 : -12, 5),
-                  ),
-                ]
-              : null,
-        ),
-        child: child,
-      ),
+  Widget transformArtwork(Widget child, {required bool back}) {
+    final left = !back;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final depth = .18;
+        final width = math.max(1.0, constraints.maxWidth);
+        final angle = math.acos((1 - fraction).clamp(0.0, 1.0));
+        // Compensate for the larger projection of the lifted edge so its
+        // horizontal position matches the drag while the spine stays fixed.
+        final projection = 1 / (1 + depth * math.sin(angle));
+        return Transform(
+          key: const ValueKey('cover-hinge-transform'),
+          alignment: left ? Alignment.centerLeft : Alignment.centerRight,
+          transform: Matrix4.identity()
+            ..setEntry(3, 2, depth / width)
+            ..rotateY(left ? angle : -angle)
+            ..scaleByDouble(projection, 1, 1, 1),
+          child: Container(
+            foregroundDecoration: enabled
+                ? BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: left
+                          ? Alignment.centerLeft
+                          : Alignment.centerRight,
+                      end: left ? Alignment.centerRight : Alignment.centerLeft,
+                      colors: [
+                        const Color(
+                          0xff34261d,
+                        ).withValues(alpha: fraction * .20),
+                        Colors.transparent,
+                      ],
+                    ),
+                  )
+                : null,
+            decoration: BoxDecoration(
+              boxShadow: enabled
+                  ? [
+                      BoxShadow(
+                        color: const Color(
+                          0xff443325,
+                        ).withValues(alpha: .24 * math.sin(fraction * math.pi)),
+                        blurRadius: 22,
+                        offset: Offset(left ? 12 : -12, 5),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: child,
+          ),
+        );
+      },
     );
   }
 }

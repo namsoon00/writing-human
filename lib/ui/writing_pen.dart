@@ -314,7 +314,9 @@ class FreshInkPainter extends CustomPainter {
     canvas.clipPath(clip);
     canvas.saveLayer(
       clip.getBounds(),
-      Paint()..color = Colors.white.withValues(alpha: opacity),
+      Paint()
+        ..color = Colors.white.withValues(alpha: opacity)
+        ..colorFilter = const ColorFilter.mode(Colors.black, BlendMode.srcIn),
     );
     text.paint(canvas, origin);
     canvas.restore();

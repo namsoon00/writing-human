@@ -5,7 +5,12 @@ import 'paper.dart';
 import 'book_details.dart';
 import 'pencil_marks.dart';
 
-typedef PageChoice = ({String? pageId, bool append, bool cover});
+typedef PageChoice = ({
+  String? pageId,
+  bool append,
+  bool cover,
+  bool backCover,
+});
 
 class PagesSheet extends StatelessWidget {
   const PagesSheet({
@@ -59,15 +64,17 @@ class PagesSheet extends StatelessWidget {
                 mainAxisSpacing: 18,
                 crossAxisSpacing: 16,
               ),
-              itemCount: pages.length + 2,
+              itemCount: pages.length + 3,
               itemBuilder: (context, index) {
-                if (index == 0) {
+                if (index == 0 || index == pages.length + 1) {
+                  final back = index != 0;
                   return InkWell(
                     borderRadius: BorderRadius.circular(12),
                     onTap: () => Navigator.pop(context, (
                       pageId: null,
                       append: false,
                       cover: true,
+                      backCover: back,
                     )),
                     child: LayoutBuilder(
                       builder: (context, box) => Column(
@@ -81,23 +88,28 @@ class PagesSheet extends StatelessWidget {
                                 variant: coverVariant,
                                 pageCount: pages.length,
                                 details: style.bookDetails,
+                                back: back,
                               ),
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text('표지', style: TextStyle(fontSize: 13)),
+                          Text(
+                            back ? '뒷표지' : '표지',
+                            style: const TextStyle(fontSize: 13),
+                          ),
                         ],
                       ),
                     ),
                   );
                 }
-                if (index == pages.length + 1) {
+                if (index == pages.length + 2) {
                   return InkWell(
                     borderRadius: BorderRadius.circular(12),
                     onTap: () => Navigator.pop(context, (
                       pageId: null,
                       append: true,
                       cover: false,
+                      backCover: false,
                     )),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
@@ -130,6 +142,7 @@ class PagesSheet extends StatelessWidget {
                       pageId: page.id,
                       append: false,
                       cover: false,
+                      backCover: false,
                     )),
                     child: ExcludeSemantics(
                       child: DecoratedBox(

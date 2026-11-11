@@ -153,6 +153,16 @@ void main() {
     expect(find.text('저장됨'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await turn(-160);
+    expect(find.byKey(const ValueKey('book-back-cover')), findsOneWidget);
+    await tester.runAsync(() async {
+      final stored = await store.load();
+      expect(stored.pages.length, 1);
+      expect(stored.activePageId, pageId);
+      expect(stored.activePage!.text, body);
+      expect(stored.activePage!.scroll, 710);
+    });
+    await tester.tap(find.text('한 쪽 더'));
+    await saved();
     expect(find.text('2'), findsOneWidget);
     const next = TextEditingValue(
       text: '두 번째 쪽도 실제 파일에 남깁니다.',

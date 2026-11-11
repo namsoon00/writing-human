@@ -1,6 +1,7 @@
 import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:writing_human/ui/paper_swipe.dart';
+import 'package:writing_human/ui/page_turn.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/main.dart';
 import 'package:writing_human/data/model.dart';
@@ -287,6 +288,103 @@ void main() {
     expect(store.data.records.length, 3);
   });
 
+  testWidgets(
+    'The back cover closes on its spine and reopens the same editor',
+    (tester) async {
+      final store = MemoryStore()..data = twoPages().copy(activePageId: 'two');
+      await open(tester, store);
+      final back = find.byKey(const ValueKey('book-back-cover'));
+      final live = tester.widget<TextField>(field).controller!;
+      final value = live.value;
+      final writes = store.writes;
+      final held = await tester.startGesture(tester.getCenter(field));
+      await held.moveBy(const Offset(-100, 0));
+      await tester.pump();
+      expect(find.descendant(of: reveal, matching: back), findsOneWidget);
+      final hinge = tester.widget<CoverHinge>(
+        find.byWidgetPredicate((w) => w is CoverHinge && w.enabled),
+      );
+      expect(hinge.incoming, isTrue);
+      expect(hinge.forward, isTrue);
+      expect(find.byKey(const ValueKey('page-turn-fold')), findsNothing);
+      expect(live.value, value);
+      await held.cancel();
+      await tester.pumpAndSettle();
+      expect(back, findsNothing);
+      expect(store.writes, writes);
+      expect(tester.widget<TextField>(field).controller, same(live));
+
+      await nextSheet(tester);
+      await tester.pumpAndSettle();
+      expect(back, findsOneWidget);
+      expect(store.data.activePageId, 'two');
+      expect(store.data.pages.length, 2);
+      expect(store.writes, writes);
+      await tester.fling(back, const Offset(-140, 0), 800);
+      await tester.pumpAndSettle();
+      expect(back, findsOneWidget);
+      await tester.tap(find.text('마지막 장 펼치기'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is CoverHinge && w.enabled && !w.incoming,
+        ),
+        findsOneWidget,
+      );
+      await tester.pumpAndSettle();
+      expect(back, findsNothing);
+      expect(tester.widget<TextField>(field).controller, same(live));
+      expect(live.value, value);
+      expect(store.writes, writes);
+    },
+  );
+
+  testWidgets(
+    'A front cover button turns the board with reduced motion support',
+    (tester) async {
+      final store = MemoryStore()..data = twoPages();
+      await open(tester, store);
+      await previousSheet(tester);
+      await tester.pumpAndSettle();
+      expect(cover, findsOneWidget);
+      await tester.tap(find.text('책 펼치기'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is CoverHinge && w.enabled && !w.incoming,
+        ),
+        findsOneWidget,
+      );
+      await tester.pumpAndSettle();
+      expect(store.data.activePageId, 'one');
+      expect(store.data.pages.length, 2);
+
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          FakeAccessibilityFeatures(disableAnimations: true);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('1'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('뒷표지'));
+      await tester.tap(find.text('뒷표지'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('book-back-cover')), findsOneWidget);
+      expect(
+        find.byWidgetPredicate((w) => w is CoverHinge && w.enabled),
+        findsNothing,
+      );
+      await tester.tap(find.text('한 쪽 더'));
+      await tester.pumpAndSettle();
+      expect(store.data.pages.length, 3);
+      expect(store.data.activePage!.text, isEmpty);
+      expect(field, findsOneWidget);
+    },
+  );
+
   testWidgets('Paper swipes turn pages; editing gestures stay in the text', (
     tester,
   ) async {
@@ -359,6 +457,10 @@ void main() {
         const Offset(-130, 0),
         const Duration(seconds: 1),
       );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('book-back-cover')), findsOneWidget);
+      expect(store.data.pages.length, 2);
+      await tester.tap(find.text('한 쪽 더'));
       await tester.pumpAndSettle();
       expect(store.data.pages.length, 3);
       expect(store.data.activePage!.text, isEmpty);
@@ -441,6 +543,14 @@ void main() {
     expect(store.data.activePageId, 'one');
     await tester.tap(find.text('1'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('한 쪽 더'),
+      160,
+      scrollable: find.descendant(
+        of: find.byType(PagesSheet),
+        matching: find.byType(Scrollable),
+      ),
+    );
     await tester.tap(find.text('한 쪽 더'));
     await tester.pumpAndSettle();
     expect(store.data.pages.length, 3);

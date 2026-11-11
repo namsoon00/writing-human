@@ -46,7 +46,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   final _pageTurn = PageTurnController();
   AudioPlayer? _pageAudio;
   String? _coverAnchor;
+  bool _coverAtBack = false;
   bool get _showCover => _coverAnchor == page.id;
+  int get _coverSide => _showCover ? (_coverAtBack ? 1 : -1) : 0;
   late WritingPage draft = _blank();
   late bool fresh = c.library.pages.isEmpty;
   bool userFresh = false;
@@ -102,7 +104,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   }) async {
     if (_pageNavigationBusy || _accountLocked || !_canLeaveInput()) return;
     final owner = c, origin = page.id;
-    final wasCover = _showCover;
+    final wasCover = _coverSide;
     _blur();
     setState(() => _pageNavigationBusy = true);
     try {
@@ -124,7 +126,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           !_accountLocked &&
           owner.saveError == null &&
           c.library.style.pageSound &&
-          (page.id != origin || wasCover != _showCover)) {
+          (page.id != origin || wasCover != _coverSide)) {
         unawaited(_playPageSound());
       }
     } finally {
@@ -163,15 +165,20 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     c.openPage(id);
   });
 
-  Future<void> _openCover() => _navigatePage(() async {
-    final first = _volumePages.first;
-    if (first.id != page.id) c.openPage(first.id);
-    setState(() => _coverAnchor = first.id);
+  Future<void> _openCover({bool back = false}) => _navigatePage(() async {
+    final target = back ? _volumePages.last : _volumePages.first;
+    if (target.id != page.id) c.openPage(target.id);
+    setState(() {
+      _coverAnchor = target.id;
+      _coverAtBack = back;
+    });
   });
 
   Future<void> _stepPage(int step) async {
     if (_showCover) {
-      if (step > 0) await _openPage(page.id);
+      if ((_coverAtBack && step < 0) || (!_coverAtBack && step > 0)) {
+        await _openPage(page.id);
+      }
       return;
     }
     final pages = _volumePages;
@@ -181,16 +188,20 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     if (target < 0) {
       await _openCover();
     } else if (target >= pages.length) {
-      await _appendPage();
+      if (fresh) {
+        await _appendPage();
+      } else {
+        await _openCover(back: true);
+      }
     } else {
       await _openPage(pages[target].id);
     }
   }
 
   Future<bool> _commitTurn(bool forward) async {
-    final owner = c, id = page.id, wasCover = _showCover;
+    final owner = c, id = page.id, wasCover = _coverSide;
     await _stepPage(forward ? 1 : -1);
-    return mounted && c == owner && (page.id != id || wasCover != _showCover);
+    return mounted && c == owner && (page.id != id || wasCover != _coverSide);
   }
 
   Future<void> _appendPage() => _navigatePage(() async {
@@ -207,6 +218,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       await c.settled;
       if (!mounted || c.saveError != null) return;
     }
+    _coverAnchor = null;
     c.addPage();
   });
   WritingPage _blank() => WritingPage(
@@ -701,7 +713,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     if (choice.append) {
       await _appendPage();
     } else if (choice.cover) {
-      await _openCover();
+      await _openCover(back: choice.backCover);
     } else if (choice.pageId != null) {
       await _openPage(choice.pageId!);
     }
@@ -850,13 +862,15 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           preview: preview,
           navigationEnabled: !preview && navigationEnabled,
         );
-    final cover = BookFrontCover(
+    Widget cover({bool back = false}) => BookFrontCover(
       title: book?.title ?? record?.title ?? '나의 필사',
       author: book?.author ?? '',
       variant: _coverVariant,
       style: c.library.style,
       pageCount: pages.length,
-      onOpen: () => _stepPage(1),
+      back: back,
+      onOpen: () => _stepPage(back ? -1 : 1),
+      onAppend: back ? _appendPage : null,
       onCollection: _collection,
     );
     final nextPage = index + 1 < pages.length
@@ -878,25 +892,33 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             page: current,
             style: _paperStyle(book),
             scopeId: book?.id ?? current.recordId,
-            position: showingCover ? -1 : index,
+            position: showingCover ? (_coverAtBack ? pages.length : -1) : index,
+            isCover: showingCover,
+            coverSurface: showingCover ? cover(back: _coverAtBack) : null,
+            previousIsCover: !showingCover && index == 0,
+            nextIsCover: !showingCover && !fresh && index == pages.length - 1,
             editing: c.editorFocused,
             composing: _editorComposing || c.composing,
             onTurn: _commitTurn,
             previous: showingCover
-                ? null
+                ? (_coverAtBack ? paper(current, index) : null)
                 : index == 0
-                ? cover
+                ? cover()
                 : paper(pages[index - 1], index - 1),
             next: showingCover
-                ? paper(current, index)
+                ? (_coverAtBack ? null : paper(current, index))
+                : !fresh && index == pages.length - 1
+                ? cover(back: true)
                 : paper(nextPage, index + 1),
             child: PaperSwipe(
               key: const ValueKey('paper-swipe'),
               touchOnly: !showingCover,
-              onPrevious: canSwipe && !showingCover
+              onPrevious: canSwipe && (!showingCover || _coverAtBack)
                   ? () => _stepPage(-1)
                   : null,
-              onNext: canSwipe ? () => _stepPage(1) : null,
+              onNext: canSwipe && (!showingCover || !_coverAtBack)
+                  ? () => _stepPage(1)
+                  : null,
               onTurnOrigin: (origin) => _pageTurn.start(origin: origin),
               onTurnUpdate: _pageTurn.update,
               onTurnEnd: _pageTurn.end,
@@ -908,7 +930,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                     offstage: showingCover,
                     child: paper(current, index, preview: false),
                   ),
-                  if (showingCover) cover,
+                  if (showingCover) cover(back: _coverAtBack),
                 ],
               ),
             ),

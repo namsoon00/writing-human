@@ -180,26 +180,30 @@ class BookCover extends StatelessWidget {
     this.variant = 0,
     this.bookmarked = false,
     this.pageCount = 0,
+    this.back = false,
     this.details = const BookDetailsStyle(),
   });
   final String title;
   final double width;
   final int variant, pageCount;
-  final bool bookmarked;
+  final bool bookmarked, back;
   final BookDetailsStyle details;
 
   static double totalWidthFactor(BookDetailsStyle details) =>
       details.indexTab.enabled ? 1.04 : 1;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: width * totalWidthFactor(details),
-    height: width * 1.36,
-    child: LayoutBuilder(
-      builder: (context, box) {
-        final imageWidth = box.maxWidth / totalWidthFactor(details);
-        return _buildCover(imageWidth, box.maxHeight);
-      },
+  Widget build(BuildContext context) => Transform.flip(
+    flipX: back,
+    child: SizedBox(
+      width: width * totalWidthFactor(details),
+      height: width * 1.36,
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final imageWidth = box.maxWidth / totalWidthFactor(details);
+          return _buildCover(imageWidth, box.maxHeight);
+        },
+      ),
     ),
   );
 
@@ -273,7 +277,7 @@ class BookCover extends StatelessWidget {
         rect: face.deflate(width * .018),
         child: BookBinding(choice: details.binding, cover: true),
       ),
-      if (bookmarked)
+      if (bookmarked && !back)
         Positioned(
           right: width * .14,
           top: 0,
@@ -283,7 +287,7 @@ class BookCover extends StatelessWidget {
             choice: details.ribbon,
           ),
         ),
-      if (details.pressedFlower.enabled)
+      if (details.pressedFlower.enabled && !back)
         Positioned(
           left: width * .12,
           right: width * .09,
@@ -296,27 +300,28 @@ class BookCover extends StatelessWidget {
             ),
           ),
         ),
-      Positioned(
-        left: width * .12,
-        right: width * .09,
-        top: width * .34,
-        child: Text(
-          title,
-          textScaler: width < 80 ? TextScaler.noScaling : null,
-          maxLines: 3,
-          textAlign: TextAlign.center,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontFamily: appFontFamily,
-            fontFamilyFallback: appFontFallback,
-            fontWeight: FontWeight.w700,
-            color: light ? ink : const Color(0xffdbc79a),
-            fontSize: width * .125,
-            height: 1.65,
-            letterSpacing: width * .008,
+      if (!back)
+        Positioned(
+          left: width * .12,
+          right: width * .09,
+          top: width * .34,
+          child: Text(
+            title,
+            textScaler: width < 80 ? TextScaler.noScaling : null,
+            maxLines: 3,
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: appFontFamily,
+              fontFamilyFallback: appFontFallback,
+              fontWeight: FontWeight.w700,
+              color: light ? ink : const Color(0xffdbc79a),
+              fontSize: width * .125,
+              height: 1.65,
+              letterSpacing: width * .008,
+            ),
           ),
         ),
-      ),
     ],
   );
 }

@@ -32,6 +32,10 @@ class PageTurnView extends StatefulWidget {
     required this.onTurn,
     this.previous,
     this.next,
+    this.isCover = false,
+    this.previousIsCover = false,
+    this.nextIsCover = false,
+    this.coverSurface,
   });
   final WritingPage page;
   final WritingStyle style;
@@ -42,6 +46,8 @@ class PageTurnView extends StatefulWidget {
   // -1 is the front cover. This is deliberately not a saved page number.
   final int position;
   final Widget? previous, next;
+  final bool isCover, previousIsCover, nextIsCover;
+  final Widget? coverSurface;
   final Future<bool> Function(bool forward) onTurn;
   @override
   State<PageTurnView> createState() => _PageTurnViewState();
@@ -60,7 +66,10 @@ class _PageTurnViewState extends State<PageTurnView>
   Offset? _dragOrigin;
   final surface = GlobalKey();
   ui.Image? outgoing;
+  Widget? _departingCover;
+  bool get _hasOutgoing => outgoing != null || _departingCover != null;
   WritingStyle? outgoingStyle;
+  bool outgoingCover = false, incomingCover = false;
   bool forward = true, reduced = false;
   Size? viewport;
   EdgeInsets? insets;
@@ -88,6 +97,7 @@ class _PageTurnViewState extends State<PageTurnView>
     turn.stop();
     outgoing?.dispose();
     outgoing = null;
+    _departingCover = null;
   }
 
   void _resetDrag() {
@@ -229,7 +239,8 @@ class _PageTurnViewState extends State<PageTurnView>
     }
     final moved =
         oldWidget.page.id != widget.page.id ||
-        (oldWidget.position < 0) != (widget.position < 0);
+        oldWidget.position != widget.position ||
+        oldWidget.isCover != widget.isCover;
     if (oldWidget.scopeId != widget.scopeId ||
         widget.composing ||
         (widget.editing && !oldWidget.editing)) {
@@ -259,6 +270,18 @@ class _PageTurnViewState extends State<PageTurnView>
         oldWidget.page.text.length > 20000) {
       return;
     }
+    outgoingStyle = oldWidget.style;
+    outgoingCover = oldWidget.isCover;
+    incomingCover = widget.isCover;
+    forward = widget.position >= oldWidget.position;
+    turn.duration = Duration(
+      milliseconds: outgoingCover || incomingCover ? 440 : 360,
+    );
+    if (oldWidget.isCover && oldWidget.coverSurface != null) {
+      _departingCover = oldWidget.coverSurface;
+      turn.forward(from: 0);
+      return;
+    }
     final boundary = surface.currentContext?.findRenderObject();
     if (boundary is! _PaperSurfaceBoundary ||
         !boundary.hasSize ||
@@ -272,8 +295,6 @@ class _PageTurnViewState extends State<PageTurnView>
       debugPrint('Page turn preview unavailable: $error');
       return;
     }
-    outgoingStyle = oldWidget.style;
-    forward = widget.position >= oldWidget.position;
     turn.forward(from: 0);
   }
 
@@ -289,6 +310,60 @@ class _PageTurnViewState extends State<PageTurnView>
     super.dispose();
   }
 
+  Widget _imageTurn() {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: ExcludeSemantics(
+          child: AnimatedBuilder(
+            animation: turn,
+            child: RepaintBoundary(
+              child:
+                  _departingCover ??
+                  RawImage(
+                    image: outgoing,
+                    fit: BoxFit.fill,
+                    filterQuality: FilterQuality.medium,
+                  ),
+            ),
+            builder: (context, child) {
+              final progress = Curves.easeInOutCubic.transform(turn.value);
+              if (outgoingCover || incomingCover) {
+                return Stack(
+                  key: const ValueKey('page-turn-overlay'),
+                  fit: StackFit.expand,
+                  children: [
+                    if (outgoingCover)
+                      CoverHinge(
+                        progress: progress,
+                        incoming: false,
+                        forward: forward,
+                        enabled: true,
+                        child: child!,
+                      )
+                    else
+                      child!,
+                  ],
+                );
+              }
+              return CustomPaint(
+                key: const ValueKey('page-turn-overlay'),
+                foregroundPainter: _Fold(
+                  progress,
+                  forward,
+                  paperColors[outgoingStyle!.paperIndex],
+                ),
+                child: ClipPath(
+                  clipper: _Peel(progress, forward),
+                  child: child,
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
@@ -299,14 +374,18 @@ class _PageTurnViewState extends State<PageTurnView>
           !reduced &&
           widget.style.pageMotion;
       final progress = dragProgress.value;
-      final corner = revealing && _fromCorner;
+      final targetCover = _dragForward
+          ? widget.nextIsCover
+          : widget.previousIsCover;
+      final coverTurn = revealing && (widget.isCover || targetCover);
+      final corner = revealing && !coverTurn && _fromCorner;
       final color = paperColors[widget.style.paperIndex];
       Widget clipped(Widget child, {required bool incoming}) {
         final key = ValueKey(incoming ? 'page-turn-reveal' : 'page-turn-live');
         // Keep one stable wrapper type and key around the actual editor.
         return ClipRect(
           key: key,
-          clipper: revealing && !corner
+          clipper: revealing && !corner && !coverTurn
               ? PageRevealClipper(progress, _dragForward, incoming: incoming)
               : null,
           child: ClipPath(
@@ -314,31 +393,48 @@ class _PageTurnViewState extends State<PageTurnView>
                 ? _CornerPeel(progress, _dragForward, incoming)
                 : null,
             clipBehavior: corner ? Clip.antiAlias : Clip.none,
-            child: child,
+            child: AnimatedBuilder(
+              animation: turn,
+              child: child,
+              builder: (context, child) {
+                final arriving = !incoming && _hasOutgoing && incomingCover;
+                return CoverHinge(
+                  progress: arriving
+                      ? Curves.easeInOutCubic.transform(turn.value)
+                      : progress,
+                  incoming: arriving || incoming,
+                  forward: arriving ? forward : _dragForward,
+                  enabled:
+                      arriving ||
+                      (coverTurn && (incoming ? targetCover : widget.isCover)),
+                  child: child!,
+                );
+              },
+            ),
           ),
         );
       }
 
+      final neighbour = Positioned.fill(
+        key: const ValueKey('page-turn-neighbour'),
+        child: ExcludeSemantics(
+          child: IgnorePointer(
+            child: clipped(RepaintBoundary(child: _preview), incoming: true),
+          ),
+        ),
+      );
       return Stack(
         clipBehavior: Clip.hardEdge,
         fit: StackFit.expand,
         children: [
-          if (revealing)
-            Positioned.fill(
-              child: ExcludeSemantics(
-                child: IgnorePointer(
-                  child: clipped(
-                    RepaintBoundary(child: _preview),
-                    incoming: true,
-                  ),
-                ),
-              ),
-            ),
+          if (_hasOutgoing && incomingCover) _imageTurn(),
+          if (revealing && !targetCover) neighbour,
           clipped(
             _PaperSurface(key: surface, child: widget.child),
             incoming: false,
           ),
-          if (revealing)
+          if (revealing && targetCover) neighbour,
+          if (revealing && !coverTurn)
             Positioned.fill(
               child: IgnorePointer(
                 child: CustomPaint(
@@ -349,44 +445,76 @@ class _PageTurnViewState extends State<PageTurnView>
                 ),
               ),
             ),
-          if (outgoing != null)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: ExcludeSemantics(
-                  child: AnimatedBuilder(
-                    animation: turn,
-                    child: RepaintBoundary(
-                      child: RawImage(
-                        image: outgoing,
-                        fit: BoxFit.fill,
-                        filterQuality: FilterQuality.medium,
-                      ),
-                    ),
-                    builder: (context, child) {
-                      final progress = Curves.easeInOutCubic.transform(
-                        turn.value,
-                      );
-                      return CustomPaint(
-                        key: const ValueKey('page-turn-overlay'),
-                        foregroundPainter: _Fold(
-                          progress,
-                          forward,
-                          paperColors[outgoingStyle!.paperIndex],
-                        ),
-                        child: ClipPath(
-                          clipper: _Peel(progress, forward),
-                          child: child,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
+          if (_hasOutgoing && !incomingCover) _imageTurn(),
         ],
       );
     },
   );
+}
+
+/// A cover stays flat while turning around its spine.
+class CoverHinge extends InheritedWidget {
+  const CoverHinge({
+    super.key,
+    required this.progress,
+    required this.incoming,
+    required this.forward,
+    required this.enabled,
+    required super.child,
+  });
+  final double progress;
+  final bool incoming, forward, enabled;
+  static CoverHinge? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<CoverHinge>();
+
+  double get fraction => enabled ? (incoming ? 1 - progress : progress) : 0;
+
+  @override
+  bool updateShouldNotify(CoverHinge old) =>
+      old.progress != progress ||
+      old.incoming != incoming ||
+      old.forward != forward ||
+      old.enabled != enabled;
+
+  Widget transformArtwork(Widget child) {
+    final left = incoming ? !forward : forward;
+    final angle = fraction * math.pi / 2 * (left ? -1 : 1);
+    return Transform(
+      key: const ValueKey('cover-hinge-transform'),
+      alignment: left ? Alignment.centerLeft : Alignment.centerRight,
+      transform: Matrix4.identity()
+        ..setEntry(3, 2, .0012)
+        ..rotateY(angle),
+      child: Container(
+        foregroundDecoration: enabled
+            ? BoxDecoration(
+                gradient: LinearGradient(
+                  begin: left ? Alignment.centerLeft : Alignment.centerRight,
+                  end: left ? Alignment.centerRight : Alignment.centerLeft,
+                  colors: [
+                    const Color(0xff34261d).withValues(alpha: fraction * .20),
+                    Colors.transparent,
+                  ],
+                ),
+              )
+            : null,
+        decoration: BoxDecoration(
+          boxShadow: enabled
+              ? [
+                  BoxShadow(
+                    color: const Color(
+                      0xff443325,
+                    ).withValues(alpha: .24 * math.sin(fraction * math.pi)),
+                    blurRadius: 22,
+                    offset: Offset(left ? 12 : -12, 5),
+                  ),
+                ]
+              : null,
+        ),
+        child: child,
+      ),
+    );
+  }
 }
 
 /// The exposed width is exactly the drag distance, in either direction.

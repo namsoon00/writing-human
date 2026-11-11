@@ -141,7 +141,7 @@ void main() {
                 as TranscriptionGuidePainter)
             .guide
             .remaining(field.controller!.value);
-    expect(remaining(), '새로운 문장을 읽습니다.');
+    expect(remaining(), source);
     expect(store.data.records.single.source, source);
     expect(store.data.activePage!.text, isEmpty);
     expect(field.focusNode!.hasFocus, isTrue);
@@ -154,11 +154,15 @@ void main() {
     tester.testTextInput.updateEditingValue(composing);
     await tester.pump();
     expect(field.controller!.value, composing);
-    expect(remaining(), '운 문장을 읽습니다.');
+    expect(remaining(), '운 문장을 읽습니다.\n\n내 글로 남깁니다.');
 
     await tester.enterText(bodyField, '새로운 문장');
     await tester.pumpAndSettle();
-    expect(remaining(), '을 읽습니다.');
+    expect(remaining(), '을 읽습니다.\n\n내 글로 남깁니다.');
+    await tester.enterText(bodyField, '새로운 문장을 읽습니다.\n내 글');
+    await tester.pumpAndSettle();
+    expect(remaining(), '로 남깁니다.');
+    expect(store.data.records.single.sourceParagraph, 0);
     await tester.enterText(bodyField, '새로운 문장을\n내 방식으로');
     await tester.pumpAndSettle();
     expect(remaining(), isEmpty);
@@ -185,6 +189,39 @@ void main() {
     await tester.tap(toggle);
     await tester.pumpAndSettle();
     expect(remaining(), '로 남깁니다.');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Long guide scrolls on the same page without saving guide text', (
+    tester,
+  ) async {
+    final source = List.generate(
+      24,
+      (index) => '문단 ${index + 1}을 이어 씁니다.',
+    ).join('\n\n');
+    final store = MemoryStore()
+      ..data = existing().copy(
+        records: [WritingRecord(id: 'r', title: '긴 원문', source: source)],
+        pages: const [WritingPage(id: 'p', recordId: 'r', number: 1)],
+      );
+    await open(tester, store, FakeIntake());
+    final field = tester.widget<TextField>(bodyField);
+    final scroll = field.scrollController!;
+    expect(scroll.position.maxScrollExtent, greaterThan(600));
+    await tester.timedDragFrom(
+      tester.getCenter(bodyField),
+      const Offset(0, -360),
+      const Duration(milliseconds: 500),
+    );
+    await tester.pumpAndSettle();
+    expect(scroll.offset, greaterThan(0));
+    expect(field.controller!.text, isEmpty);
+    expect(store.data.pages.single.id, 'p');
+    expect(store.data.pages.single.text, isEmpty);
+    expect(store.data.pages.single.scroll, 0);
+    await tester.tap(find.text('원문 보기'));
+    await tester.pumpAndSettle();
+    expect(scroll.position.maxScrollExtent, 0);
     expect(tester.takeException(), isNull);
   });
 

@@ -13,6 +13,11 @@ final _paragraphBreak = RegExp(r'\n[^\S\n]*\n(?:[^\S\n]*\n)*');
 List<String> splitSourceParagraphs(String text) =>
     normalizeSource(text).split(_paragraphBreak);
 
+String sourceFromParagraph(String text, int index) {
+  final paragraphs = splitSourceParagraphs(text);
+  return paragraphs.skip(index.clamp(0, paragraphs.length - 1)).join('\n\n');
+}
+
 class SourcePhoto {
   const SourcePhoto(this.path, this.bytes);
   final String path;

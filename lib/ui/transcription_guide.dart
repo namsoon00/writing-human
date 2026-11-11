@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'editable_geometry.dart';
 
@@ -12,7 +13,7 @@ class TranscriptionGuide {
     required String text,
   }) {
     final source = paragraph.trimLeft();
-    if (!source.startsWith(text.trimLeft())) {
+    if (_matchedLength(source, text.trimLeft()) == null) {
       // A saved page can contain earlier paragraphs. Only resume a matching
       // suffix that starts at a line boundary.
       final paragraphBreak = text.lastIndexOf('\n\n');
@@ -22,7 +23,7 @@ class TranscriptionGuide {
         if (lineBreak >= 0) lineBreak + 1,
       }) {
         final written = text.substring(start).trimLeft();
-        if (written.isNotEmpty && source.startsWith(written)) {
+        if (written.isNotEmpty && _matchedLength(source, written) != null) {
           return TranscriptionGuide(
             paragraph: paragraph,
             initialText: text.substring(0, start),
@@ -34,6 +35,30 @@ class TranscriptionGuide {
   }
 
   final String paragraph, initialText;
+
+  // A single return or a blank line both separate paragraphs on the page.
+  static int? _matchedLength(String source, String written) {
+    var original = 0;
+    var typed = 0;
+    while (typed < written.length) {
+      if (original == source.length ||
+          source.codeUnitAt(original) != written.codeUnitAt(typed)) {
+        return null;
+      }
+      final newline = written.codeUnitAt(typed) == 10;
+      original++;
+      typed++;
+      if (newline) {
+        while (original < source.length && source.codeUnitAt(original) == 10) {
+          original++;
+        }
+        while (typed < written.length && written.codeUnitAt(typed) == 10) {
+          typed++;
+        }
+      }
+    }
+    return original;
+  }
 
   String remaining(TextEditingValue value) {
     final text = value.text;
@@ -49,14 +74,15 @@ class TranscriptionGuide {
         .substring(initialText.length, inComposition ? composing.start : null)
         .trimLeft();
     final source = paragraph.trimLeft();
-    if (!source.startsWith(committed)) return '';
+    final matched = _matchedLength(source, committed);
+    if (matched == null) return '';
 
     // Leave room for the real composing glyphs on the same line.
-    final suffix = source.substring(committed.length).characters;
-    final composingLength = inComposition
-        ? composing.textInside(text).characters.length
-        : 0;
-    return suffix.skip(composingLength).take(1024).toString();
+    final suffix = source.substring(matched);
+    if (!inComposition) return suffix;
+    return suffix.characters
+        .skip(composing.textInside(text).characters.length)
+        .toString();
   }
 }
 
@@ -70,6 +96,8 @@ class TranscriptionGuidePainter extends CustomPainter {
     required this.fieldKey,
     required this.style,
     required this.bottomPadding,
+    required this.layout,
+    required this.onExtent,
   }) : super(repaint: Listenable.merge([controller, scroll]));
 
   final TranscriptionGuide guide;
@@ -78,12 +106,17 @@ class TranscriptionGuidePainter extends CustomPainter {
   final GlobalKey fieldKey;
   final TextStyle style;
   final double bottomPadding;
+  final TextPainter layout;
+  final ValueChanged<double> onExtent;
 
   @override
   void paint(Canvas canvas, Size size) {
     final value = controller.value;
     final remainder = guide.remaining(value);
-    if (remainder.isEmpty) return;
+    if (remainder.isEmpty) {
+      onExtent(0);
+      return;
+    }
     final field = fieldKey.currentContext?.findRenderObject();
     final editable = findEditable(field);
     if (field == null || editable == null || !editable.hasSize) return;
@@ -100,7 +133,7 @@ class TranscriptionGuidePainter extends CustomPainter {
     // The field may only lay out as many lines as the user has entered. The
     // guide can continue through the blank paper below those lines.
     final visibleHeight = size.height - origin.dy - bottomPadding;
-    if (visibleHeight <= 0 || lineTop >= visibleHeight) return;
+    if (visibleHeight <= 0) return;
     final width = editable.size.width - editable.cursorWidth - 1;
     if (width <= 0) return;
     final occupied =
@@ -108,35 +141,40 @@ class TranscriptionGuidePainter extends CustomPainter {
                 ? caret.dx
                 : width - caret.dx)
             .clamp(0.0, width);
-    final painter = TextPainter(
-      text: TextSpan(
+    layout
+      ..text = TextSpan(
         style: style,
         children: [
           if (occupied > 0) const WidgetSpan(child: SizedBox.shrink()),
           TextSpan(text: remainder),
         ],
+      )
+      ..textDirection = editable.textDirection
+      ..textScaler = editable.textScaler
+      ..locale = editable.locale
+      ..strutStyle = editable.strutStyle
+      ..textHeightBehavior = editable.textHeightBehavior
+      ..setPlaceholderDimensions([
+        if (occupied > 0)
+          PlaceholderDimensions(
+            size: Size(occupied, 0),
+            alignment: PlaceholderAlignment.bottom,
+          ),
+      ])
+      ..layout(maxWidth: width);
+    final scrollOffset = scroll.hasClients ? scroll.offset : 0.0;
+    onExtent(
+      math.max(
+        0.0,
+        (lineTop + scrollOffset + layout.height - visibleHeight).ceilToDouble(),
       ),
-      textDirection: editable.textDirection,
-      textScaler: editable.textScaler,
-      locale: editable.locale,
-      strutStyle: editable.strutStyle,
-      textHeightBehavior: editable.textHeightBehavior,
     );
-    if (occupied > 0) {
-      painter.setPlaceholderDimensions([
-        PlaceholderDimensions(
-          size: Size(occupied, 0),
-          alignment: PlaceholderAlignment.bottom,
-        ),
-      ]);
-    }
-    painter.layout(maxWidth: width);
+    if (lineTop >= visibleHeight) return;
     canvas.save();
     canvas.transform(transform.storage);
     canvas.clipRect(Rect.fromLTWH(0, 0, editable.size.width, visibleHeight));
-    painter.paint(canvas, Offset(0, lineTop));
+    layout.paint(canvas, Offset(0, lineTop));
     canvas.restore();
-    painter.dispose();
   }
 
   @override

@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../data/model.dart';
 import 'paper.dart';
@@ -5,6 +6,7 @@ import 'writing_pen.dart';
 import 'pencil_marks.dart';
 import 'transcription_guide.dart';
 import 'editable_geometry.dart';
+import 'guide_scroll.dart';
 
 class PageEditor extends StatefulWidget {
   const PageEditor({
@@ -32,7 +34,11 @@ class PageEditor extends StatefulWidget {
 
 class _PageEditorState extends State<PageEditor> {
   late final PencilTextController text;
-  late final ScrollController scroll;
+  late final GuideScrollController scroll;
+  final _guideLayout = TextPainter();
+  double _pendingGuideExtent = 0;
+  bool _extentQueued = false;
+  Drag? _guideDrag;
   late final focus = widget.focusNode ?? FocusNode();
   bool restoring = true;
   final fieldRenderKey = GlobalKey();
@@ -53,7 +59,7 @@ class _PageEditorState extends State<PageEditor> {
         ),
       ),
     );
-    scroll = ScrollController(initialScrollOffset: p.scroll);
+    scroll = GuideScrollController(initialScrollOffset: p.scroll);
     text.addListener(_save);
     scroll.addListener(_save);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -75,11 +81,45 @@ class _PageEditorState extends State<PageEditor> {
     text.annotatedText = widget.page.text;
     text.marks = widget.page.pencilMarks;
     text.choice = widget.style.bookDetails.pencil;
+    if (oldWidget.guide != null && widget.guide == null) _updateGuideExtent(0);
     if (widget.reveal != null && widget.reveal != oldWidget.reveal) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _reveal();
       });
     }
+  }
+
+  void _updateGuideExtent(double extent) {
+    _pendingGuideExtent = extent;
+    if (_extentQueued) return;
+    _extentQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _extentQueued = false;
+      if (!mounted ||
+          !scroll.setGuideExtent(
+            widget.guide == null ? 0 : _pendingGuideExtent,
+          )) {
+        return;
+      }
+      // Scrollable updates its gesture recognizers during editable layout.
+      findEditable(
+        fieldRenderKey.currentContext?.findRenderObject(),
+      )?.markNeedsLayout();
+    });
+  }
+
+  void _scrollGuide(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent || !scroll.hasClients) return;
+    final position = scroll.position;
+    final delta = event.scrollDelta.dy;
+    if (delta == 0 ||
+        (delta > 0 && position.pixels >= position.maxScrollExtent) ||
+        (delta < 0 && position.pixels <= position.minScrollExtent)) {
+      return;
+    }
+    GestureBinding.instance.pointerSignalResolver.register(event, (_) {
+      if (mounted && scroll.hasClients) scroll.position.pointerScroll(delta);
+    });
   }
 
   void _reveal() {
@@ -128,7 +168,7 @@ class _PageEditorState extends State<PageEditor> {
       value.text,
       value.selection.baseOffset,
       value.selection.extentOffset,
-      scroll.hasClients ? scroll.offset.clamp(0, double.infinity) : 0,
+      scroll.hasClients ? scroll.offset.clamp(0.0, scroll.textExtent) : 0,
     );
   }
 
@@ -137,7 +177,9 @@ class _PageEditorState extends State<PageEditor> {
     text.removeListener(_save);
     scroll.removeListener(_save);
     text.dispose();
+    _guideDrag?.cancel();
     scroll.dispose();
+    _guideLayout.dispose();
     focus.removeListener(_focusChanged);
     if (widget.focusNode == null) {
       focus.dispose();
@@ -152,7 +194,7 @@ class _PageEditorState extends State<PageEditor> {
       builder: (context, constraints) {
         final padding = writingPagePadding(constraints.biggest);
         final guide = widget.guide;
-        return Stack(
+        final paper = Stack(
           children: [
             if (style.guides)
               Positioned.fill(
@@ -258,6 +300,8 @@ class _PageEditorState extends State<PageEditor> {
                       scroll: scroll,
                       fieldKey: fieldRenderKey,
                       bottomPadding: padding.bottom,
+                      layout: _guideLayout,
+                      onExtent: _updateGuideExtent,
                       style: writingTextStyle(
                         style.fontIndex,
                         color: const Color(0xff8b8273).withValues(alpha: .58),
@@ -278,6 +322,38 @@ class _PageEditorState extends State<PageEditor> {
               ),
             ),
           ],
+        );
+        return Listener(
+          onPointerSignal: guide == null ? null : _scrollGuide,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            supportedDevices: const {
+              PointerDeviceKind.touch,
+              PointerDeviceKind.stylus,
+              PointerDeviceKind.invertedStylus,
+              PointerDeviceKind.trackpad,
+            },
+            onVerticalDragStart: guide == null
+                ? null
+                : (details) {
+                    if (scroll.hasClients) {
+                      _guideDrag = scroll.position.drag(
+                        details,
+                        () => _guideDrag = null,
+                      );
+                    }
+                  },
+            onVerticalDragUpdate: guide == null
+                ? null
+                : (details) => _guideDrag?.update(details),
+            onVerticalDragEnd: guide == null
+                ? null
+                : (details) => _guideDrag?.end(details),
+            onVerticalDragCancel: guide == null
+                ? null
+                : () => _guideDrag?.cancel(),
+            child: paper,
+          ),
         );
       },
     );

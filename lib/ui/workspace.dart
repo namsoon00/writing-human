@@ -636,7 +636,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           page.id == destination &&
           record?.source == source &&
           !owner.composing) {
-        final paragraphs = splitSourceParagraphs(source);
         final index = record?.sourceParagraph ?? 0;
         setState(() {
           _guide = (
@@ -644,7 +643,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             source: source,
             paragraphIndex: index,
             passage: TranscriptionGuide(
-              paragraph: paragraphs[index.clamp(0, paragraphs.length - 1)],
+              paragraph: sourceFromParagraph(source, index),
               initialText: page.text,
             ),
             visible: true,
@@ -984,13 +983,12 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         (_guide?.pageId != currentPage.id ||
             _guide?.source != source ||
             _guide?.paragraphIndex != paragraphIndex)) {
-      final paragraphs = splitSourceParagraphs(source);
       _guide = (
         pageId: currentPage.id,
         source: source,
         paragraphIndex: paragraphIndex,
         passage: TranscriptionGuide.resume(
-          paragraph: paragraphs[paragraphIndex.clamp(0, paragraphs.length - 1)],
+          paragraph: sourceFromParagraph(source, paragraphIndex),
           text: currentPage.text,
         ),
         visible: true,
@@ -1107,14 +1105,14 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                       editorFocus.hasFocus &&
                       currentPage.text.isNotEmpty,
                   onParagraphChanged: navigationEnabled
-                      ? (index, paragraph) {
+                      ? (index, _) {
                           setState(() {
                             _guide = (
                               pageId: currentPage.id,
                               source: source,
                               paragraphIndex: index,
                               passage: TranscriptionGuide(
-                                paragraph: paragraph,
+                                paragraph: sourceFromParagraph(source, index),
                                 initialText: currentPage.text,
                               ),
                               visible: guide != null,
@@ -1128,7 +1126,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         }
                       : null,
                   onToggleGuide: navigationEnabled
-                      ? (paragraph) {
+                      ? (_) {
                           setState(() {
                             _guide = (
                               pageId: currentPage.id,
@@ -1137,7 +1135,10 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                               passage:
                                   activeGuide?.passage ??
                                   TranscriptionGuide(
-                                    paragraph: paragraph,
+                                    paragraph: sourceFromParagraph(
+                                      source,
+                                      paragraphIndex,
+                                    ),
                                     initialText: currentPage.text,
                                   ),
                               visible: guide == null,

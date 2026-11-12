@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'editable_geometry.dart';
+import 'paper_palette.dart';
 
 /// Read-only feedback beside the native editable. Never writes input state.
 class WritingPen extends StatefulWidget {
@@ -11,19 +12,21 @@ class WritingPen extends StatefulWidget {
     required this.scroll,
     required this.focus,
     required this.fieldKey,
-    required this.enabled,
+    required this.animateInk,
     this.color = const Color(0xff302c27),
   });
   final TextEditingController controller;
   final ScrollController scroll;
   final FocusNode focus;
   final GlobalKey fieldKey;
-  final bool enabled;
+  final bool animateInk;
   final Color color;
 
   @override
   State<WritingPen> createState() => _WritingPenState();
 }
+
+const _inkPointDiameter = 6.0;
 
 class _WritingPenState extends State<WritingPen>
     with SingleTickerProviderStateMixin {
@@ -40,6 +43,8 @@ class _WritingPenState extends State<WritingPen>
   TextPainter? freshText;
   Path? freshClip;
   Offset freshOrigin = Offset.zero;
+
+  bool get animateInk => widget.animateInk && !reduced;
 
   bool get composing =>
       widget.controller.value.isComposingRangeValid &&
@@ -87,7 +92,7 @@ class _WritingPenState extends State<WritingPen>
       _settle();
     }
     if (oldWidget.color != widget.color ||
-        oldWidget.enabled != widget.enabled) {
+        oldWidget.animateInk != widget.animateInk) {
       _settle();
     }
     _schedule();
@@ -117,7 +122,8 @@ class _WritingPenState extends State<WritingPen>
     final committed = wasComposing && caret > before.composing.start;
     if (next == before) return;
     _settle();
-    if (!composing &&
+    if (animateInk &&
+        !composing &&
         next.selection.isValid &&
         next.selection.isCollapsed &&
         caret > 0 &&
@@ -154,9 +160,7 @@ class _WritingPenState extends State<WritingPen>
       widget.fieldKey.currentContext?.findRenderObject(),
     );
     final overlay = context.findRenderObject();
-    if (widget.enabled &&
-        !reduced &&
-        widget.focus.hasFocus &&
+    if (widget.focus.hasFocus &&
         value.selection.isValid &&
         value.selection.isCollapsed &&
         editable != null &&
@@ -167,18 +171,20 @@ class _WritingPenState extends State<WritingPen>
       final caret = editable.getLocalRectForCaret(value.selection.extent);
       if (caret.overlaps(Offset.zero & editable.size)) {
         final point = overlay.globalToLocal(
-          editable.localToGlobal(caret.bottomRight + const Offset(2, -3)),
+          editable.localToGlobal(caret.bottomCenter + const Offset(0, -1)),
         );
         if ((Offset.zero & overlay.size).contains(point)) next = point;
       }
-      if (newStroke &&
+      if (animateInk &&
+          newStroke &&
           next != null &&
           !composing &&
           value.text.length <= 20000) {
         _prepareInk(editable, overlay);
       }
     }
-    final animate = newStroke && freshText != null && next != null;
+    final animate =
+        animateInk && newStroke && freshText != null && next != null;
     newStroke = false;
     if (target != next || animate) {
       setState(() => target = next);
@@ -243,7 +249,7 @@ class _WritingPenState extends State<WritingPen>
             return AnimatedBuilder(
               animation: drying,
               builder: (context, _) {
-                final at = widget.enabled && !reduced ? target : null;
+                final at = widget.focus.hasFocus ? target : null;
                 final wet = (1 - drying.value * 3).clamp(0.0, 1.0);
                 return Stack(
                   clipBehavior: Clip.hardEdge,
@@ -262,20 +268,16 @@ class _WritingPenState extends State<WritingPen>
                       ),
                     if (at != null)
                       Positioned(
-                        left: at.dx - 1.2,
-                        top: at.dy - 1.2,
-                        child: Opacity(
-                          opacity: .2 + (1 - drying.value) * .45,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: widget.color,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                            child: const SizedBox(
-                              key: ValueKey('writing-ink-point'),
-                              width: 2.4,
-                              height: 2.4,
-                            ),
+                        left: at.dx - _inkPointDiameter / 2,
+                        top: at.dy - _inkPointDiameter / 2,
+                        child: DecoratedBox(
+                          key: const ValueKey('writing-ink-point'),
+                          decoration: BoxDecoration(
+                            color: Color.lerp(widget.color, ink, .24),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const SizedBox.square(
+                            dimension: _inkPointDiameter,
                           ),
                         ),
                       ),

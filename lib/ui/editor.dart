@@ -287,7 +287,7 @@ class _PageEditorState extends State<PageEditor> {
                 scroll: scroll,
                 focus: focus,
                 fieldKey: fieldRenderKey,
-                enabled: style.penMotion,
+                animateInk: style.penMotion,
                 color: penColors[style.penIndex],
               ),
             ),

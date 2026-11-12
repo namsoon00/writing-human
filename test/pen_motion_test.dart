@@ -67,8 +67,8 @@ void expectNibAtCaret(WidgetTester tester) {
   expect(editable.showCursor.value, isFalse);
   final value = tester.widget<TextField>(_field).controller!.value;
   final expected = editable.localToGlobal(
-    editable.getLocalRectForCaret(value.selection.extent).bottomRight +
-        const Offset(2, -3),
+    editable.getLocalRectForCaret(value.selection.extent).bottomCenter +
+        const Offset(0, -1),
   );
   expect((nibPoint(tester) - expected).distance, lessThan(.2));
 }
@@ -128,6 +128,10 @@ void main() {
       final beforeIdle = controller.value;
       await tester.pump(const Duration(milliseconds: 650));
       expectNibAtCaret(tester);
+      final dot = tester.widget<DecoratedBox>(_pen).decoration as BoxDecoration;
+      expect(tester.getSize(_pen), const Size.square(6));
+      expect(dot.color!.a, 1);
+      expect(dot.shape, BoxShape.circle);
       expect(controller.value, beforeIdle);
       // The ink overlay must not intercept a tap in the writing field.
       await tester.tapAt(tester.getCenter(_field));
@@ -219,7 +223,8 @@ void main() {
       final value = field.controller!.value;
       key.currentState!.change(() => key.currentState!.enabled = false);
       await tester.pumpAndSettle();
-      expect(_pen, findsNothing);
+      expectNibAtCaret(tester);
+      expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
       expect(
         tester.widget<TextField>(_field).controller,
         same(field.controller),
@@ -229,8 +234,23 @@ void main() {
         key.currentState!.reduced = true;
       });
       await tester.pumpAndSettle();
-      expect(_pen, findsNothing);
+      expectNibAtCaret(tester);
+      expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
       expect(field.controller!.value, value);
+      final typed = value.copyWith(
+        text: '${value.text.substring(0, 1)}글${value.text.substring(1)}',
+        selection: const TextSelection.collapsed(offset: 2),
+      );
+      tester.testTextInput.updateEditingValue(typed);
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 40));
+      expectNibAtCaret(tester);
+      expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
+      expect(field.controller!.value, typed);
+      field.focusNode!.unfocus();
+      await tester.pumpAndSettle();
+      expect(_pen, findsNothing);
       expect(tester.takeException(), isNull);
     },
   );

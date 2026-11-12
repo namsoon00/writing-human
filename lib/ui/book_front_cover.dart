@@ -32,7 +32,7 @@ class BookFrontCover extends StatelessWidget {
     final visibility = Curves.easeInCubic.transform(
       1.0 - (motion?.fraction ?? 0.0),
     );
-    final light = variant % coverNames.length == 1;
+    final light = back || variant % coverNames.length == 1;
     final lettering = light ? const Color(0xff402e22) : const Color(0xffffe9ba);
     final artwork = Stack(
       fit: StackFit.expand,
@@ -40,10 +40,21 @@ class BookFrontCover extends StatelessWidget {
         BookCoverMaterial(
           key: const ValueKey('full-cover-material'),
           variant: variant,
-          back: back,
+          back: false,
           binding: style.bookDetails.binding,
         ),
-        _lettering(lettering),
+        if (back)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(15, 10, 10, 10),
+            child: PaperBackdrop(
+              color: paperColors[style.paperIndex],
+              grainOpacity: paperGrainOpacity[style.paperIndex],
+              binding: style.bookDetails.binding,
+              child: _lettering(lettering),
+            ),
+          )
+        else
+          _lettering(lettering),
         if (!back && style.bookDetails.pressedFlower.enabled)
           Padding(
             padding: const EdgeInsets.fromLTRB(32, 0, 32, 144),
@@ -59,7 +70,10 @@ class BookFrontCover extends StatelessWidget {
       key: ValueKey(back ? 'book-back-cover' : 'book-front-cover'),
       fit: StackFit.expand,
       children: [
-        motion?.transformArtwork(artwork, back: back) ?? artwork,
+        if (back)
+          artwork
+        else
+          motion?.transformArtwork(artwork, back: false) ?? artwork,
         IgnorePointer(
           ignoring: visibility < 1,
           child: Opacity(

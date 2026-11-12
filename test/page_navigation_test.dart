@@ -314,7 +314,7 @@ void main() {
   });
 
   testWidgets(
-    'The back cover closes on its spine and reopens the same editor',
+    'The last leaf reveals the stationary rear endpaper and returns to the same editor',
     (tester) async {
       final store = MemoryStore()..data = twoPages().copy(activePageId: 'two');
       await open(tester, store);
@@ -326,13 +326,16 @@ void main() {
       await held.moveBy(const Offset(-100, 0));
       await tester.pump();
       expect(find.descendant(of: reveal, matching: back), findsOneWidget);
-      expectBoard(tester, back, back: true, edgeX: 290);
-      final hinge = tester.widget<CoverHinge>(
+      final material = find.byKey(const ValueKey('full-cover-material'));
+      expect(tester.getRect(material), const Rect.fromLTWH(0, 0, 390, 844));
+      final liveClip = find.byKey(const ValueKey('page-turn-live'));
+      final leaf = tester.widget<ClipRect>(liveClip).clipper!;
+      expect(leaf.getClip(tester.getSize(liveClip)).right, closeTo(290, .01));
+      expect(
         find.byWidgetPredicate((w) => w is CoverHinge && w.enabled),
+        findsNothing,
       );
-      expect(hinge.incoming, isTrue);
-      expect(hinge.forward, isTrue);
-      expect(find.byKey(const ValueKey('page-turn-fold')), findsNothing);
+      expect(find.byKey(const ValueKey('page-turn-fold')), findsOneWidget);
       expect(live.value, value);
       await held.cancel();
       await tester.pumpAndSettle();
@@ -352,16 +355,30 @@ void main() {
       final opening = await tester.startGesture(tester.getCenter(back));
       await opening.moveBy(const Offset(100, 0));
       await tester.pump();
-      expectBoard(tester, back, back: true, edgeX: 100);
+      expect(tester.getRect(material), const Rect.fromLTWH(0, 0, 390, 844));
+      final returningLeaf = tester.widget<ClipRect>(reveal).clipper!;
+      expect(
+        returningLeaf.getClip(tester.getSize(reveal)).width,
+        closeTo(100, .01),
+      );
       await opening.cancel();
       await tester.pumpAndSettle();
       await tester.tap(find.text('마지막 장 펼치기'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
+      expect(overlay, findsOneWidget);
       expect(
-        find.byWidgetPredicate(
-          (w) => w is CoverHinge && w.enabled && !w.incoming,
-        ),
+        find.byWidgetPredicate((w) => w is CoverHinge && w.enabled),
+        findsNothing,
+      );
+      expect(
+        find.byWidgetPredicate((w) {
+          if (w is! ClipRect) return false;
+          final clipper = w.clipper;
+          return clipper is PageRevealClipper &&
+              clipper.incoming &&
+              !clipper.forward;
+        }),
         findsOneWidget,
       );
       await tester.pumpAndSettle();
@@ -417,7 +434,7 @@ void main() {
     },
   );
 
-  testWidgets('The covers fill a wide viewport around the centered editor', (
+  testWidgets('The rear endpaper follows the centered editor on wide screens', (
     tester,
   ) async {
     final store = MemoryStore()..data = twoPages();
@@ -447,13 +464,22 @@ void main() {
     final closing = await tester.startGesture(tester.getCenter(field));
     await closing.moveBy(const Offset(-130, 0));
     await tester.pump();
-    expectBoard(tester, back, back: true, edgeX: viewport.width - 130);
+    final endpaperRect = Rect.fromLTWH(
+      (viewport.width - 760) / 2,
+      0,
+      760,
+      viewport.height,
+    );
+    expect(tester.getRect(material), endpaperRect);
+    final liveClip = find.byKey(const ValueKey('page-turn-live'));
+    final leaf = tester.widget<ClipRect>(liveClip).clipper!;
+    expect(leaf.getClip(tester.getSize(liveClip)).right, closeTo(630, .01));
     await closing.cancel();
     await tester.pumpAndSettle();
     await nextSheet(tester);
     await tester.pumpAndSettle();
     expect(back, findsOneWidget);
-    expect(tester.getRect(material), Offset.zero & viewport);
+    expect(tester.getRect(material), endpaperRect);
     expect(store.data.pages.length, 2);
   });
 

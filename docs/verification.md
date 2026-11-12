@@ -10,6 +10,10 @@
   렌더링했다. 작업 폴더의 `artifacts/back-endpaper-turn.png`,
   `artifacts/back-endpaper-rest.png`, `artifacts/back-endpaper-return.png`에 보관했다.
 - 배포 웹에서 직접 스와이프하거나 모바일 실기기에서 조작하는 검증은 하지 않았다.
+- [GitHub Actions 43325687143](https://github.com/namsoon00/writing-human/actions/runs/43325687143)에서
+  `7933a6ef977b73e2d83929b650881a00eb903ba4`의 검사·빌드·게시가 완료됐다.
+  공개 앱 JS와 번들 서체·브랜드 이미지가 로컬 빌드와 일치했다.
+  앱 JS SHA-256은 `b14f081e94579ddd66e521b81b7b17ca11f549b437b8d1fb8948e620d4750c35`다.
 
 ## 2026-11-11 · 앞뒤 표지의 책등과 손가락 움직임
 

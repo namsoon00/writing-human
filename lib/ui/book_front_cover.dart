@@ -32,7 +32,7 @@ class BookFrontCover extends StatelessWidget {
     final visibility = Curves.easeInCubic.transform(
       1.0 - (motion?.fraction ?? 0.0),
     );
-    final light = back || variant % coverNames.length == 1;
+    final light = variant % coverNames.length == 1;
     final lettering = light ? const Color(0xff402e22) : const Color(0xffffe9ba);
     final artwork = Stack(
       fit: StackFit.expand,
@@ -40,21 +40,10 @@ class BookFrontCover extends StatelessWidget {
         BookCoverMaterial(
           key: const ValueKey('full-cover-material'),
           variant: variant,
-          back: false,
+          back: back,
           binding: style.bookDetails.binding,
         ),
-        if (back)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(15, 10, 10, 10),
-            child: PaperBackdrop(
-              color: paperColors[style.paperIndex],
-              grainOpacity: paperGrainOpacity[style.paperIndex],
-              binding: style.bookDetails.binding,
-              child: _lettering(lettering),
-            ),
-          )
-        else
-          _lettering(lettering),
+        if (!back) _lettering(lettering),
         if (!back && style.bookDetails.pressedFlower.enabled)
           Padding(
             padding: const EdgeInsets.fromLTRB(32, 0, 32, 144),
@@ -70,20 +59,21 @@ class BookFrontCover extends StatelessWidget {
       key: ValueKey(back ? 'book-back-cover' : 'book-front-cover'),
       fit: StackFit.expand,
       children: [
-        if (back)
-          artwork
-        else
-          motion?.transformArtwork(artwork, back: false) ?? artwork,
-        IgnorePointer(
-          ignoring: visibility < 1,
-          child: Opacity(
-            opacity: visibility,
-            child: SafeArea(
-              minimum: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: _controls(lettering, light),
+        motion?.transformArtwork(artwork, back: back) ?? artwork,
+        if (!back || motion?.enabled != true)
+          IgnorePointer(
+            ignoring: visibility < 1,
+            child: Opacity(
+              opacity: visibility,
+              child: SafeArea(
+                minimum: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                child: _controls(lettering, light),
+              ),
             ),
           ),
-        ),
       ],
     );
   }
@@ -114,13 +104,13 @@ class BookFrontCover extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: color,
-                          fontSize: back ? titleSize * .65 : titleSize,
+                          fontSize: titleSize,
                           fontWeight: FontWeight.w700,
                           height: 1.35,
                         ),
                       ),
                     ),
-                    if (author.isNotEmpty && !back)
+                    if (author.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 12),
                         child: Text(

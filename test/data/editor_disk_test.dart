@@ -69,7 +69,7 @@ void main() {
     expect(tester.widget<TextField>(field).decoration!.hintText, isNull);
     await tester.tap(find.text('보관함'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('새 책 만들기'));
+    await tester.tap(find.text('새 노트'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, '실제 파일 검수');
     await tester.tap(find.text('책 만들고 쓰기'));
@@ -77,9 +77,7 @@ void main() {
     final initialBookId = controller.library.books.single.id;
     await tester.tap(find.text('보관함'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('책'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(ValueKey('book-index-$initialBookId')));
+    await tester.tap(find.byKey(ValueKey('shelf-details-$initialBookId')));
     await tester.pumpAndSettle();
     final collection = find.byType(CollectionSheet);
     await tester.tap(
@@ -150,9 +148,7 @@ void main() {
     final bookId = controller.library.books.single.id;
     await tester.tap(find.text('보관함'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('책'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(ValueKey('book-index-$bookId')));
+    await tester.tap(find.byKey(ValueKey('shelf-details-$bookId')));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('책 이름 변경'));
     await tester.pumpAndSettle();

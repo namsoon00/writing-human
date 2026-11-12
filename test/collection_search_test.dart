@@ -42,6 +42,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('보관함'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('내 글'));
+      await tester.pumpAndSettle();
       expect(find.text('다시 만난 문장'), findsOneWidget);
       final search = find.widgetWithText(TextField, '문장, 책, 날짜 찾기');
       await tester.showKeyboard(search);

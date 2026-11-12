@@ -5,9 +5,13 @@ import 'store.dart';
 import 'library_backup.dart';
 
 class LibraryController extends ChangeNotifier {
-  LibraryController(this.store, this.library);
+  LibraryController(this.store, this.library) {
+    _rememberBookPosition(library);
+  }
+
   final LibraryStore store;
   Library library;
+  final _bookPositions = <String, String>{};
   String? saveError;
   bool saving = false;
   bool _disposed = false;
@@ -32,6 +36,10 @@ class LibraryController extends ChangeNotifier {
     if (positionChanged) {
       positionGeneration++;
       next = next.copy(sync: next.sync.copy(positionDirty: true));
+    }
+    if (next.activePageId != library.activePageId ||
+        !identical(next.records, library.records)) {
+      _rememberBookPosition(next);
     }
     library = next;
     final revision = ++_revision;
@@ -456,21 +464,42 @@ class LibraryController extends ChangeNotifier {
     library.copy(activePageId: id, writing: true),
     positionChanged: true,
   );
-  void openBook(String id) {
+  void _rememberBookPosition(Library snapshot) {
+    final id = snapshot.activeRecord?.bookId;
+    final pageId = snapshot.activePageId;
+    if (id != null && pageId != null) _bookPositions[id] = pageId;
+  }
+
+  WritingPage? resumePageForBook(String id) {
     final recordIds = library.records
-        .where((r) => r.bookId == id)
-        .map((r) => r.id)
+        .where((record) => record.bookId == id)
+        .map((record) => record.id)
         .toSet();
-    final pages = library.pages.where((p) => recordIds.contains(p.recordId));
-    if (pages.isEmpty) {
-      createRecord(id);
-      return;
+    final savedId = _bookPositions[id];
+    final lastPages = <String, WritingPage>{};
+    for (final page in library.pages) {
+      if (!recordIds.contains(page.recordId)) continue;
+      if (page.id == savedId) return page;
+      final last = lastPages[page.recordId];
+      if (last == null || page.number > last.number) {
+        lastPages[page.recordId] = page;
+      }
     }
-    openPage(
-      pages.any((p) => p.id == library.activePageId)
-          ? library.activePageId!
-          : pages.last.id,
-    );
+    return recordIds
+        .toList()
+        .reversed
+        .map((id) => lastPages[id])
+        .nonNulls
+        .firstOrNull;
+  }
+
+  void openBook(String id) {
+    final page = resumePageForBook(id);
+    if (page == null) {
+      createRecord(id);
+    } else {
+      openPage(page.id);
+    }
   }
 
   void addPage() {

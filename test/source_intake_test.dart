@@ -244,9 +244,7 @@ void main() {
     expect(store.data.records.first.originals, isEmpty);
     await tester.tap(find.text('보관함'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('책'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(title).last);
+    await tester.tap(find.byKey(const ValueKey('shelf-details-b')));
     await tester.pumpAndSettle();
     final collection = find.byType(CollectionSheet);
     final bookOriginals = find.descendant(

@@ -211,9 +211,9 @@ void main() {
       expectTypeface('보관함');
       await tester.tap(find.text('보관함'));
       await tester.pumpAndSettle();
-      expectTypeface('내 책 · 2쪽');
-      expectTypeface('새 책 만들기');
-      await tester.tap(find.text('새 책 만들기'));
+      expectTypeface('책장');
+      expectTypeface('새 노트');
+      await tester.tap(find.text('새 노트'));
       await tester.pumpAndSettle();
       expectTypeface('책 만들고 쓰기');
       final input = tester.widget<EditableText>(

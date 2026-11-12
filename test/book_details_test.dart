@@ -377,10 +377,12 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('보관함'));
       await tester.pumpAndSettle();
-      expect(find.byType(DateStamp), findsOneWidget);
-      await tester.tap(find.text('책'));
+      await tester.tap(find.text('내 글'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('오래 곁에 둘 문장들').last);
+      expect(find.byType(DateStamp), findsOneWidget);
+      await tester.tap(find.text('책장'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('오래 곁에 둘 문장들 상세'));
       await tester.pumpAndSettle();
       expect(find.byType(Bookplate), findsOneWidget);
       await tester.tap(find.byTooltip('장서표 이름 남기기'));

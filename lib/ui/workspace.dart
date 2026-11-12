@@ -378,6 +378,15 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     _sheet(
       CollectionSheet(
         controller: c,
+        onBook: (book) => _afterSheet(() async {
+          if (!c.library.books.any((entry) => entry.id == book.id)) return;
+          final target = c.resumePageForBook(book.id);
+          if (target == null) {
+            await _newSheet(book.id);
+          } else {
+            await _openPage(target.id);
+          }
+        }),
         onRecord: (r) {
           final pages = c.library.pages.where((p) => p.recordId == r.id);
           if (pages.isEmpty) return;

@@ -33,7 +33,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('보관함'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('새 책 만들기'));
+      await tester.tap(find.text('새 노트'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField).first, '오래 곁에 둘 문장들');
       await tester.tap(find.text('책 만들고 쓰기'));

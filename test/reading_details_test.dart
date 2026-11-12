@@ -317,6 +317,7 @@ void main() {
             body: CollectionSheet(
               controller: c,
               onRecord: (_) {},
+              onBook: (_) {},
               onNewSheet: (_) {},
               onNewBook: () {},
             ),
@@ -324,7 +325,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('책'));
+      await tester.tap(find.byKey(const ValueKey('shelf-details-b')));
       await tester.pumpAndSettle();
       expect(find.byType(BookIndexTab), findsNWidgets(2));
       final tab = find.byKey(const ValueKey('book-index-b'));

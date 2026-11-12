@@ -6,6 +6,7 @@ import '../data/library_search.dart';
 import '../data/model.dart';
 import 'paper.dart';
 import 'book_details.dart';
+import 'bookshelf.dart';
 import 'reading_details.dart';
 import 'new_book_dialog.dart';
 
@@ -14,6 +15,7 @@ class CollectionSheet extends StatefulWidget {
     super.key,
     required this.controller,
     required this.onRecord,
+    required this.onBook,
     required this.onNewSheet,
     required this.onNewBook,
     this.onPassage,
@@ -22,6 +24,7 @@ class CollectionSheet extends StatefulWidget {
   });
   final LibraryController controller;
   final ValueChanged<WritingRecord> onRecord;
+  final ValueChanged<Book> onBook;
   final ValueChanged<String?> onNewSheet;
   final VoidCallback onNewBook;
   final ValueChanged<Passage>? onPassage;
@@ -31,7 +34,8 @@ class CollectionSheet extends StatefulWidget {
 }
 
 class _CollectionSheetState extends State<CollectionSheet> {
-  bool books = false;
+  bool books = true;
+  bool showTitleSearch = false;
   String? bookId;
   String query = '';
   final searchField = TextEditingController();
@@ -40,6 +44,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
   void _clearSearch() {
     searchField.clear();
     query = '';
+    showTitleSearch = false;
   }
 
   @override
@@ -196,7 +201,8 @@ class _CollectionSheetState extends State<CollectionSheet> {
           .where((r) => bookId == null || r.bookId == bookId)
           .toList();
       final passages = LibraryPassages(c.library);
-      final searching = !books && query.trim().isNotEmpty;
+      final shelf = books && bookId == null;
+      final searching = !shelf && query.trim().isNotEmpty;
       final revisit =
           !books && !searching && bookId == null && widget.onPassage != null
           ? passages.revisit(DateTime.now())
@@ -205,7 +211,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
       final keyboard = media.viewInsets.bottom;
       final sheet = SizedBox(
         height: math.max(
-          0,
+          0.0,
           math.min(media.size.height * .88, media.size.height - keyboard - 44),
         ),
         child: SafeArea(
@@ -227,18 +233,46 @@ class _CollectionSheetState extends State<CollectionSheet> {
                         icon: const Icon(CupertinoIcons.chevron_left, size: 18),
                       ),
                     Expanded(
-                      child: Text(
-                        book?.title ?? '보관함',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontFamily: appFontFamily,
-                          fontFamilyFallback: appFontFallback,
-                          fontSize: 21,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      child: Row(
+                        children: [
+                          if (shelf) ...[
+                            const InkMark(size: 20),
+                            const SizedBox(width: 8),
+                          ],
+                          Flexible(
+                            child: Text(
+                              book?.title ?? (shelf ? '책장' : '내 글'),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontFamily: appFontFamily,
+                                fontFamilyFallback: appFontFallback,
+                                fontSize: 21,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                    if (shelf)
+                      IconButton(
+                        tooltip: showTitleSearch ? '노트 검색 닫기' : '노트 검색',
+                        onPressed: () => setState(() {
+                          if (showTitleSearch) {
+                            _clearSearch();
+                            FocusScope.of(context).unfocus();
+                          } else {
+                            showTitleSearch = true;
+                          }
+                        }),
+                        icon: Icon(
+                          showTitleSearch
+                              ? CupertinoIcons.xmark_circle
+                              : CupertinoIcons.search,
+                          size: 19,
+                        ),
+                      ),
                     if (book != null)
                       IconButton(
                         tooltip: '책 이름 변경',
@@ -255,37 +289,43 @@ class _CollectionSheetState extends State<CollectionSheet> {
               ),
               if (bookId == null && keyboard == 0)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      for (final item in [(false, '내 글'), (true, '책')])
-                        Padding(
-                          padding: const EdgeInsets.only(right: 22),
-                          child: TextButton(
-                            onPressed: () => setState(() {
-                              books = item.$1;
-                              _clearSearch();
-                            }),
-                            style: TextButton.styleFrom(
-                              foregroundColor: books == item.$1 ? ink : muted,
-                              padding: EdgeInsets.zero,
-                            ),
-                            child: Text(
-                              item.$2,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: books == item.$1
-                                    ? FontWeight.w700
-                                    : FontWeight.w400,
-                              ),
-                            ),
-                          ),
+                      TextButton(
+                        onPressed: () => setState(() {
+                          books = !books;
+                          _clearSearch();
+                        }),
+                        child: Text(shelf ? '내 글' : '책장'),
+                      ),
+                      if (shelf)
+                        TextButton.icon(
+                          onPressed: widget.onNewBook,
+                          icon: const Icon(CupertinoIcons.plus, size: 15),
+                          label: const Text('새 노트'),
                         ),
                     ],
                   ),
                 ),
+              if (shelf && showTitleSearch)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+                  child: TextField(
+                    key: const ValueKey('shelf-title-search'),
+                    controller: searchField,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      hintText: '노트 제목 찾기',
+                      prefixIcon: Icon(CupertinoIcons.search, size: 17),
+                      isDense: true,
+                    ),
+                    onChanged: (value) => setState(() => query = value),
+                  ),
+                ),
               if (keyboard == 0 &&
-                  (books || bookId != null) &&
+                  bookId != null &&
                   c.library.books.isNotEmpty &&
                   c.library.style.bookDetails.indexTab.enabled)
                 _indexTabs(),
@@ -305,8 +345,19 @@ class _CollectionSheetState extends State<CollectionSheet> {
                 ),
               Expanded(
                 key: const ValueKey('collection-results'),
-                child: books && bookId == null
-                    ? _books()
+                child: shelf
+                    ? Bookshelf(
+                        key: ValueKey(query.trim().toLowerCase()),
+                        controller: c,
+                        query: query,
+                        onOpen: widget.onBook,
+                        onWrite: () => widget.onNewSheet(null),
+                        onDetails: (book) => setState(() {
+                          books = false;
+                          bookId = book.id;
+                          _clearSearch();
+                        }),
+                      )
                     : searching
                     ? _results(passages.search(query, bookId: bookId).toList())
                     : records.isEmpty && book == null
@@ -404,6 +455,18 @@ class _CollectionSheetState extends State<CollectionSheet> {
                                         size: 16,
                                       ),
                                       label: const Text('내지 고르기'),
+                                    ),
+                                    TextButton.icon(
+                                      onPressed: () =>
+                                          c.toggleFavorite(book.id),
+                                      icon: Icon(
+                                        c.library.style.favoriteBookIds
+                                                .contains(book.id)
+                                            ? CupertinoIcons.bookmark_fill
+                                            : CupertinoIcons.bookmark,
+                                        size: 16,
+                                      ),
+                                      label: const Text('즐겨찾기'),
                                     ),
                                     if (widget.onArchiveBook != null)
                                       TextButton.icon(
@@ -517,7 +580,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     style: TextStyle(color: burgundy),
                   ),
                 ),
-              if (keyboard == 0)
+              if (!shelf && keyboard == 0)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
                   child: Wrap(
@@ -554,7 +617,18 @@ class _CollectionSheetState extends State<CollectionSheet> {
       );
       return Padding(
         padding: EdgeInsets.only(bottom: keyboard),
-        child: sheet,
+        child: Stack(
+          children: [
+            if (shelf)
+              const Positioned.fill(
+                child: PaperBackdrop(
+                  grainOpacity: .21,
+                  child: SizedBox.expand(),
+                ),
+              ),
+            sheet,
+          ],
+        ),
       );
     },
   );
@@ -588,70 +662,4 @@ class _CollectionSheetState extends State<CollectionSheet> {
     trailing: const Icon(CupertinoIcons.chevron_right, size: 13, color: muted),
     onTap: () => widget.onPassage!(passage),
   );
-
-  Widget _books() {
-    final recordBooks = {for (final r in c.library.records) r.id: r.bookId};
-    final pageCounts = <String, int>{};
-    for (final page in c.library.pages) {
-      final bookId = recordBooks[page.recordId];
-      if (bookId != null) {
-        pageCounts.update(bookId, (count) => count + 1, ifAbsent: () => 1);
-      }
-    }
-    return c.library.books.isEmpty
-        ? const Center(
-            child: Text(
-              '책으로 묶는 건, 나중에 해도 괜찮아요.',
-              style: TextStyle(color: muted, fontSize: 13),
-            ),
-          )
-        : ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            itemCount: c.library.books.length,
-            separatorBuilder: (_, _) => const Divider(color: line, height: 1),
-            itemBuilder: (context, i) {
-              final book = c.library.books[i];
-              final count = c.library.records
-                  .where((r) => r.bookId == book.id)
-                  .length;
-              return ListTile(
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                leading: BookCover(
-                  details: c.library.style.bookDetails,
-                  title: book.title,
-                  width: 48,
-                  variant: c.coverIndexFor(book),
-                  pageCount: pageCounts[book.id] ?? 0,
-                  bookmarked: book.id == c.library.activeBook?.id,
-                ),
-                title: Text(
-                  book.title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                subtitle: Text(
-                  '${book.author.isEmpty ? '나의 문장 모음' : book.author} · $count편',
-                  style: const TextStyle(color: muted, fontSize: 11),
-                ),
-                trailing: IconButton(
-                  tooltip: '즐겨찾기',
-                  onPressed: () => c.toggleFavorite(book.id),
-                  icon: Icon(
-                    c.library.style.favoriteBookIds.contains(book.id)
-                        ? CupertinoIcons.bookmark_fill
-                        : CupertinoIcons.bookmark,
-                    size: 17,
-                    color: muted,
-                  ),
-                ),
-                onTap: () => setState(() {
-                  books = false;
-                  bookId = book.id;
-                }),
-              );
-            },
-          );
-  }
 }

@@ -25,7 +25,7 @@
 
   window.writingHumanCancelOcr = () => active?.cancel(new Error('Cancelled'));
 
-  window.writingHumanRecognizePhoto = async (bytes) => {
+  window.writingHumanScanPhoto = async (bytes, width, height, tight) => {
     window.writingHumanCancelOcr();
     const job = {cancelled: false};
     const interrupted = new Promise((_, reject) => {
@@ -54,23 +54,40 @@
       job.worker = await Promise.race([initializing, interrupted]);
       const image = new Blob([bytes]);
       const read = async () => {
-        // A book photo is normally a single column containing paragraphs.
-        await job.worker.setParameters({tessedit_pageseg_mode: '4'});
+        // Automatic layout handles columns. A selected crop is usually one block.
+        await job.worker.setParameters({tessedit_pageseg_mode: tight ? '6' : '3'});
         let result = await job.worker.recognize(image, {}, {text: true, blocks: true});
-        if (!result.data.text.trim()) {
+        if (!result.data.text.trim() && !tight) {
           await job.worker.setParameters({tessedit_pageseg_mode: '6'});
           result = await job.worker.recognize(image, {}, {text: true, blocks: true});
         }
         return result;
       };
       const {data} = await Promise.race([read(), interrupted]);
-      const paragraphs = data.blocks?.flatMap((block) =>
-        block.paragraphs.map((paragraph) => paragraph.text.trim()).filter(Boolean),
-      );
-      return paragraphs?.length ? paragraphs : data.text.split(/\n\s*\n/).map((text) => text.trim()).filter(Boolean);
+      const bounds = (box) => box
+        ? [box.x0 / width, box.y0 / height, box.x1 / width, box.y1 / height]
+        : null;
+      const word = (item) => ({
+        text: item.text.trim(), bounds: bounds(item.bbox),
+        confidence: item.confidence / 100,
+      });
+      const paragraphs = data.blocks?.flatMap((block) => block.paragraphs.map((paragraph) =>
+        paragraph.lines?.length
+          ? paragraph.lines.filter((line) => line.text.trim()).map((line) => ({
+              ...word(line), words: (line.words ?? []).filter((item) => item.text.trim()).map(word),
+            }))
+          : paragraph.text.trim().split('\n').filter(Boolean).map((text) => ({text})),
+      )).filter((paragraph) => paragraph.length);
+      return paragraphs?.length ? paragraphs : data.text.trim().split(/\n\s*\n/).filter(Boolean)
+        .map((paragraph) => paragraph.split('\n').filter(Boolean).map((text) => ({text})));
     } finally {
       if (active === job) active = undefined;
       if (job.worker) await job.worker.terminate();
     }
   };
+
+  // Older cached app shells can still call the text-only bridge.
+  window.writingHumanRecognizePhoto = async (bytes) =>
+    (await window.writingHumanScanPhoto(bytes, 1, 1, false))
+      .map((paragraph) => paragraph.map((line) => line.text).join('\n'));
 })();

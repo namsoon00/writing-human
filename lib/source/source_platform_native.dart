@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'source_intake.dart';
+import 'source_scan.dart';
 
 SourceIntake createSourceIntake() => _NativeSourceIntake();
 
@@ -38,10 +39,22 @@ class _NativeSourceIntake extends SourceIntake {
   }
 
   @override
-  Future<List<String>> recognize(SourcePhoto photo) async {
+  Future<SourceScan> scan(
+    SourcePhoto photo, {
+    Rect? region,
+    List<Rect> mask = const [],
+  }) async {
     try {
-      return await channel.invokeListMethod<String>('recognize', photo.path) ??
-          const [];
+      final image = await ScanImage.decode(
+        photo.bytes,
+        region: region,
+        mask: mask,
+      );
+      final result = await channel.invokeListMethod<Object?>(
+        'scan',
+        image.bytes,
+      );
+      return SourceScan.fromPlatform(image, result ?? const []);
     } on PlatformException catch (error) {
       if (error.code == 'unsupported') {
         throw const SourceIntakeException(

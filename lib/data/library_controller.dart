@@ -147,15 +147,44 @@ class LibraryController extends ChangeNotifier {
     required String text,
     required String citation,
   }) {
-    final original = RegisteredOriginal(_id(), text, citation: citation);
+    registerOriginals(
+      bookId: bookId,
+      page: page,
+      passages: [text],
+      citation: citation,
+    );
+  }
+
+  void registerOriginals({
+    String? bookId,
+    WritingPage? page,
+    required List<String> passages,
+    required String citation,
+    String? deliveryId,
+  }) {
+    final originals = [
+      for (final (index, text) in passages.indexed)
+        RegisteredOriginal(
+          index == 0 ? deliveryId ?? _id() : _id(),
+          text,
+          citation: citation,
+        ),
+    ];
+    if (originals.isEmpty || !RegisteredOriginal.validList(originals)) return;
     if (bookId != null) {
+      final book = library.books.where((b) => b.id == bookId).firstOrNull;
+      if (book == null ||
+          (deliveryId != null &&
+              book.originals.any((o) => o.id == deliveryId))) {
+        return;
+      }
       _publish(
         library.copy(
           books: [
-            for (final book in library.books)
-              book.id == bookId
-                  ? book.copy(originals: [...book.originals, original])
-                  : book,
+            for (final item in library.books)
+              item.id == bookId
+                  ? item.copy(originals: [...item.originals, ...originals])
+                  : item,
           ],
         ),
       );
@@ -163,7 +192,7 @@ class LibraryController extends ChangeNotifier {
     }
     if (page == null) return;
     if (!library.records.any((record) => record.id == page.recordId)) {
-      saveDraft(page, originals: [original], keepBlank: true);
+      saveDraft(page, originals: originals, keepBlank: true);
       return;
     }
     _publish(
@@ -171,7 +200,7 @@ class LibraryController extends ChangeNotifier {
         records: [
           for (final record in library.records)
             record.id == page.recordId
-                ? record.copy(originals: [...record.originals, original])
+                ? record.copy(originals: [...record.originals, ...originals])
                 : record,
         ],
       ),

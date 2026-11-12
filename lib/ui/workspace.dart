@@ -435,6 +435,14 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
 
   String _sharedRecordId(IncomingSource share) => 'shared-source-${share.id}';
 
+  bool _isShareRegistered(IncomingSource share) {
+    final id = _sharedRecordId(share);
+    return c.library.records.any((record) => record.id == id) ||
+        c.library.books.any(
+          (book) => book.originals.any((original) => original.id == id),
+        );
+  }
+
   Future<void> _pollSources({bool openAutomatically = true}) async {
     if (!mounted || _accountLocked) return;
     if (_pollingSources) {
@@ -456,9 +464,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       if (!mounted || _accountLocked) return;
       IncomingSource? pending;
       for (final share in shares) {
-        final imported = c.library.records.any(
-          (r) => r.id == _sharedRecordId(share),
-        );
+        final imported = _isShareRegistered(share);
         if (imported && !c.saving && c.saveError == null) {
           // A crash after a successful save and before acknowledgement must
           // not import the same OS delivery twice.
@@ -539,7 +545,17 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   Future<SourceImportResult?> _reviewOriginal({
     IncomingSource? shared,
     SourcePhoto? initialPhoto,
+    String? bookId,
+    bool allowUnbound = true,
   }) async {
+    final books = {for (final book in c.library.books) book.id: book.title};
+    final sharedText = shared?.text.trim() ?? '';
+    final link = Uri.tryParse(sharedText);
+    final linkOnly =
+        link != null &&
+        (link.scheme == 'http' || link.scheme == 'https') &&
+        link.host.isNotEmpty &&
+        !RegExp(r'\s').hasMatch(sharedText);
     final route = ModalBottomSheetRoute<SourceImportResult>(
       isScrollControlled: true,
       showDragHandle: true,
@@ -547,11 +563,15 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       constraints: const BoxConstraints(maxWidth: 600),
       builder: (_) => SourceImportSheet(
         intake: _intake,
-        initialText: shared?.text ?? '',
+        initialText: linkOnly ? '' : sharedText,
+        initialCitation: linkOnly ? sharedText : '',
         initialPhoto: initialPhoto,
         choice: c.library.style.bookDetails.sourceSlip,
         shared: shared != null,
         registration: shared == null,
+        books: books,
+        bookId: bookId,
+        allowUnbound: allowUnbound,
       ),
     );
     final result = await Navigator.of(context).push(route);
@@ -572,7 +592,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       if (!mounted || c != owner || _accountLocked || owner.saveError != null) {
         return;
       }
-      final result = await _reviewOriginal(initialPhoto: initialPhoto);
+      final result = await _reviewOriginal(
+        initialPhoto: initialPhoto,
+        bookId: bookId,
+        allowUnbound: selectedPage != null,
+      );
       if (result == null ||
           !mounted ||
           c != owner ||
@@ -580,18 +604,18 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           owner.saveError != null ||
           owner.composing ||
           (selectedPage != null && page.id != selectedPage.id) ||
-          (bookId != null &&
-              !owner.library.books.any((book) => book.id == bookId))) {
+          (result.bookId != null &&
+              !owner.library.books.any((book) => book.id == result.bookId))) {
         return;
       }
-      if (bookId == null && selectedPage != null && fresh) {
+      if (result.bookId == null && selectedPage != null && fresh) {
         fresh = false;
         userFresh = false;
       }
-      owner.registerOriginal(
-        bookId: bookId,
+      owner.registerOriginals(
+        bookId: result.bookId,
         page: selectedPage,
-        text: result.source,
+        passages: result.passages,
         citation: result.citation,
       );
       await owner.settled;
@@ -636,7 +660,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         return;
       }
       final id = _sharedRecordId(shared);
-      if (owner.library.records.any((record) => record.id == id)) {
+      if (_isShareRegistered(shared)) {
         await _pollSources();
         return;
       }
@@ -650,12 +674,31 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           owner.composing) {
         return;
       }
-      fresh = false;
-      userFresh = false;
-      owner.saveDraft(
-        WritingPage(id: '$id-page', recordId: id, number: 1),
-        source: result.source,
-      );
+      if (_isShareRegistered(shared)) {
+        await _pollSources();
+        return;
+      }
+      if (result.bookId case final destination?) {
+        if (!owner.library.books.any((book) => book.id == destination)) return;
+        owner.registerOriginals(
+          bookId: destination,
+          passages: result.passages,
+          citation: result.citation,
+          deliveryId: id,
+        );
+      } else {
+        fresh = false;
+        userFresh = false;
+        final text = result.passages.single;
+        owner.saveDraft(
+          WritingPage(id: '$id-page', recordId: id, number: 1),
+          source: result.citation.isEmpty ? text : '',
+          originals: [
+            if (result.citation.isNotEmpty)
+              RegisteredOriginal(id, text, citation: result.citation),
+          ],
+        );
+      }
       await owner.settled;
       if (mounted && c == owner && !_accountLocked && owner.saveError == null) {
         unawaited(_pollSources(openAutomatically: false));

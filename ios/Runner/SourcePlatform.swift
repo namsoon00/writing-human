@@ -35,13 +35,13 @@ final class SourcePlatform: NSObject, FlutterPlugin {
           finish(FlutterError(code: "inbox", message: "Could not open the source inbox", details: nil))
         }
       }
-    case "recognize":
-      guard #available(iOS 16.0, *), let path = call.arguments as? String else {
+    case "scan":
+      guard #available(iOS 16.0, *), let bytes = call.arguments as? FlutterStandardTypedData else {
         finish(FlutterError(code: "unsupported", message: "Korean recognition requires iOS 16", details: nil))
         return
       }
       Self.photoQueue.async {
-        do { finish(try Self.recognize(path)) }
+        do { finish(try Self.recognize(bytes.data)) }
         catch {
           finish(FlutterError(code: "recognition", message: "Could not read the photo", details: nil))
         }
@@ -52,39 +52,48 @@ final class SourcePlatform: NSObject, FlutterPlugin {
   }
 
   @available(iOS 16.0, *)
-  private static func recognize(_ path: String) throws -> [String] {
-    let url = URL(fileURLWithPath: path)
-    guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-          let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: 2400,
-          ] as CFDictionary) else { throw SourceInbox.InboxError.invalidText }
+  private static func recognize(_ bytes: Data) throws -> [[[String: Any]]] {
+    guard let source = CGImageSourceCreateWithData(bytes as CFData, nil),
+          let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+      throw SourceInbox.InboxError.invalidText
+    }
     let request = VNRecognizeTextRequest()
     request.revision = VNRecognizeTextRequestRevision3
     request.recognitionLevel = .accurate
     request.recognitionLanguages = ["ko-KR", "en-US"]
     request.usesLanguageCorrection = true
     try VNImageRequestHandler(cgImage: image).perform([request])
-    var paragraphs: [String] = []
-    var lines: [String] = []
+    func box(_ rect: CGRect) -> [Double] {
+      [Double(rect.minX), Double(1 - rect.maxY), Double(rect.maxX), Double(1 - rect.minY)]
+    }
+    var paragraphs: [[[String: Any]]] = []
+    var lines: [[String: Any]] = []
     var previous: CGRect?
     for observation in request.results ?? [] {
-      guard let line = observation.topCandidates(1).first?.string, !line.isEmpty else { continue }
+      guard let candidate = observation.topCandidates(1).first, !candidate.string.isEmpty else { continue }
       let bounds = observation.boundingBox
       if let last = previous {
         let gap = last.minY - bounds.maxY
         let movedUp = bounds.midY > last.midY + last.height * 0.5
         let separateColumn = bounds.minX > last.maxX || bounds.maxX < last.minX
         if gap > max(bounds.height, last.height) * 0.9 || movedUp || separateColumn {
-          if !lines.isEmpty { paragraphs.append(lines.joined(separator: "\n")) }
+          if !lines.isEmpty { paragraphs.append(lines) }
           lines.removeAll(keepingCapacity: true)
         }
       }
-      lines.append(line)
+      var words: [[String: Any]] = []
+      candidate.string.enumerateSubstrings(in: candidate.string.startIndex..<candidate.string.endIndex,
+                                           options: .byWords) { text, range, _, _ in
+        guard let text, let rect = try? candidate.boundingBox(for: range) else { return }
+        words.append(["text": text, "bounds": box(rect.boundingBox)])
+      }
+      lines.append([
+        "text": candidate.string, "bounds": box(bounds),
+        "confidence": Double(candidate.confidence), "words": words,
+      ])
       previous = bounds
     }
-    if !lines.isEmpty { paragraphs.append(lines.joined(separator: "\n")) }
+    if !lines.isEmpty { paragraphs.append(lines) }
     return paragraphs
   }
 }

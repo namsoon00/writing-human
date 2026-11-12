@@ -1,7 +1,8 @@
 package com.writinghuman.writing_human
 
 import android.content.Intent
-import android.net.Uri
+import android.graphics.BitmapFactory
+import android.graphics.Rect
 import android.os.Bundle
 import android.widget.Toast
 import com.google.mlkit.vision.common.InputImage
@@ -10,7 +11,6 @@ import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import java.io.File
 import java.util.UUID
 import java.util.concurrent.Executors
 import org.json.JSONArray
@@ -76,7 +76,7 @@ class MainActivity : FlutterActivity() {
         sourceChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName).also { channel ->
             channel.setMethodCallHandler { call, result ->
                 when (call.method) {
-                    "recognize" -> recognizePhoto(call.arguments as? String, result)
+                    "scan" -> recognizePhoto(call.arguments as? ByteArray, result)
                     "pendingShares" -> inboxIo.execute {
                         try {
                             val items = readInbox()
@@ -115,20 +115,47 @@ class MainActivity : FlutterActivity() {
         super.cleanUpFlutterEngine(flutterEngine)
     }
 
-    private fun recognizePhoto(path: String?, result: MethodChannel.Result) {
+    private fun recognizePhoto(bytes: ByteArray?, result: MethodChannel.Result) {
         photoIo.execute {
             try {
-                val file = File(path ?: error("Missing photo"))
-                check(file.isFile && file.length() in 1..(20L * 1024 * 1024))
-                val image = InputImage.fromFilePath(applicationContext, Uri.fromFile(file))
+                check(bytes != null && bytes.isNotEmpty())
+                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    ?: error("Could not decode photo")
+                val width = bitmap.width.toDouble()
+                val height = bitmap.height.toDouble()
+                fun box(rect: Rect?) = rect?.let {
+                    listOf(it.left / width, it.top / height, it.right / width, it.bottom / height)
+                }
+                val image = InputImage.fromBitmap(bitmap, 0)
                 val reader = TextRecognition.getClient(KoreanTextRecognizerOptions.Builder().build())
                 try {
                     reader.process(image)
-                        .addOnSuccessListener { text -> result.success(text.textBlocks.map { it.text }) }
+                        .addOnSuccessListener { text ->
+                            result.success(text.textBlocks.map { block ->
+                                block.lines.map { line ->
+                                    mapOf(
+                                        "text" to line.text,
+                                        "bounds" to box(line.boundingBox),
+                                        "confidence" to line.confidence.toDouble(),
+                                        "words" to line.elements.map { word ->
+                                            mapOf(
+                                                "text" to word.text,
+                                                "bounds" to box(word.boundingBox),
+                                                "confidence" to word.confidence.toDouble(),
+                                            )
+                                        },
+                                    )
+                                }
+                            })
+                        }
                         .addOnFailureListener { result.error("recognition", "Could not read the photo", null) }
-                        .addOnCompleteListener { reader.close() }
+                        .addOnCompleteListener {
+                            reader.close()
+                            bitmap.recycle()
+                        }
                 } catch (error: Exception) {
                     reader.close()
+                    bitmap.recycle()
                     throw error
                 }
             } catch (_: Exception) {

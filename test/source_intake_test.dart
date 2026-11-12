@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/main.dart';
 import 'package:writing_human/source/source_intake.dart';
+import 'package:writing_human/source/source_scan.dart';
 import 'package:writing_human/source/originals.dart';
 import 'package:writing_human/ui/collection_sheet.dart';
 import 'package:writing_human/ui/book_details.dart';
@@ -45,6 +46,9 @@ class FakeIntake extends SourceIntake {
   int photos = 0, cancellations = 0;
   bool cancelPicker = false;
   SourcePhoto? recovered;
+  SourceScan? positioned;
+  Rect? recognizedRegion;
+  List<Rect> recognizedMask = const [];
   final SourcePhoto photo;
 
   FakeIntake({SourcePhoto? photo})
@@ -68,8 +72,20 @@ class FakeIntake extends SourceIntake {
   @override
   Future<SourcePhoto?> recoverPhoto() async => recovered;
   @override
-  Future<List<String>> recognize(SourcePhoto photo) async =>
-      reading == null ? blocks : await reading!.future;
+  Future<SourceScan> scan(
+    SourcePhoto photo, {
+    Rect? region,
+    List<Rect> mask = const [],
+  }) async {
+    recognizedRegion = region;
+    recognizedMask = mask;
+    if (region == null && positioned != null) return positioned!;
+    return SourceScan.fromText(
+      photo.bytes,
+      reading == null ? blocks : await reading!.future,
+    );
+  }
+
   @override
   void cancelRecognition() => cancellations++;
   @override
@@ -704,6 +720,106 @@ void main() {
     },
   );
 
+  testWidgets(
+    'Page review links OCR lines to the photo and saves separate originals',
+    (tester) async {
+      final store = MemoryStore();
+      final intake = FakeIntake();
+      intake.positioned = SourceScan(
+        intake.photo.bytes,
+        const [
+          ScanParagraph([
+            ScanLine('오른쪽 문단', bounds: Rect.fromLTRB(.58, .17, .89, .27)),
+          ]),
+          ScanParagraph([
+            ScanLine(
+              '왼쪽 문단',
+              bounds: Rect.fromLTRB(.12, .17, .44, .27),
+              confidence: .5,
+            ),
+          ]),
+        ],
+        width: 600,
+        height: 800,
+      );
+      await open(tester, store, intake);
+      await openRegistration(tester);
+      await takePhoto(tester);
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      final first = tester.widget<TextField>(sourceField);
+      expect(first.controller!.text, '왼쪽 문단');
+      final line = find.byKey(const ValueKey('source-review-line-0-0'));
+      await tester.ensureVisible(line);
+      await tester.tap(line);
+      await tester.pumpAndSettle();
+      expect(find.text('사진과 대조'), findsOneWidget);
+      expect(find.bySemanticsLabel('사진 속 해당 줄 확대'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, '닫기'));
+      await tester.pumpAndSettle();
+      final citation = find.byKey(const ValueKey('original-citation'));
+      await tester.ensureVisible(citation);
+      await tester.enterText(citation, '12쪽');
+      await tester.pumpAndSettle();
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      final originals = store.data.records.single.originals;
+      expect(originals.map((o) => o.text), ['왼쪽 문단', '오른쪽 문단']);
+      expect(originals.map((o) => o.citation), ['12쪽', '12쪽']);
+      expect(store.data.pages.single.text, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'Paragraph mode selects by photo and re-reads only the selected area',
+    (tester) async {
+      final store = MemoryStore();
+      final intake = FakeIntake()..blocks = ['다시 읽은 구절'];
+      intake.positioned = SourceScan(
+        intake.photo.bytes,
+        const [
+          ScanParagraph([
+            ScanLine(
+              '선택한 단어',
+              bounds: Rect.fromLTRB(.2, .4, .8, .55),
+              words: [
+                ScanWord('선택한', Rect.fromLTRB(.2, .4, .49, .55), .9),
+                ScanWord('단어', Rect.fromLTRB(.51, .4, .8, .55), .9),
+              ],
+            ),
+          ]),
+        ],
+        width: 800,
+        height: 800,
+      );
+      await open(tester, store, intake);
+      await openRegistration(tester);
+      await tester.tap(find.byKey(const ValueKey('source-paragraph-photo')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('사진 찍기'));
+      await tester.pumpAndSettle();
+      final preview = find.byKey(const ValueKey('source-scan-preview'));
+      await tester.tap(preview);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('source-word-range')), findsOneWidget);
+      final retry = find.text('선택 영역 다시 읽기');
+      await tester.ensureVisible(retry);
+      await tester.tap(retry);
+      await tester.pumpAndSettle();
+      expect(intake.recognizedRegion!.width, lessThan(1));
+      expect(intake.recognizedMask, hasLength(1));
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(sourceField).controller!.text,
+        '다시 읽은 구절',
+      );
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      expect(store.data.records.single.originals.single.text, '다시 읽은 구절');
+    },
+  );
+
   testWidgets('Original panel preserves composition, selection, and scroll', (
     tester,
   ) async {
@@ -853,6 +969,31 @@ void main() {
       expect(store.data.pages.first.text, composing.text);
       expect(intake.acknowledged, ['test-delivery']);
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Shared text can be stored on an existing book and acknowledged once',
+    (tester) async {
+      final store = MemoryStore()
+        ..data = existing().copy(
+          books: const [Book(id: 'shared-book', title: '문장 수첩')],
+        );
+      final intake = FakeIntake()
+        ..shares.add(const IncomingSource('book-share', '책에 남길 구절'));
+      await open(tester, store, intake);
+      final destination = find.byType(DropdownButtonFormField<String>);
+      await tester.ensureVisible(destination);
+      await tester.tap(destination);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('문장 수첩').last);
+      await tester.pumpAndSettle();
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      expect(store.data.records, hasLength(1));
+      expect(store.data.books.single.originals.single.text, '책에 남길 구절');
+      expect(store.data.activePageId, 'p');
+      expect(intake.acknowledged, ['book-share']);
     },
   );
 

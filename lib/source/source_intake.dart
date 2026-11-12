@@ -1,4 +1,7 @@
 import 'dart:typed_data';
+import 'dart:ui' show Rect;
+
+import 'source_scan.dart';
 
 import 'package:image_picker/image_picker.dart';
 
@@ -62,7 +65,12 @@ abstract class SourceIntake {
     return SourcePhoto(file.path, bytes);
   }
 
-  Future<List<String>> recognize(SourcePhoto photo);
+  Future<SourceScan> scan(
+    SourcePhoto photo, {
+    Rect? region,
+    List<Rect> mask = const [],
+  });
+
   void cancelRecognition() {}
   Stream<void> get incomingChanges => const Stream.empty();
   Future<List<IncomingSource>> pendingShares() async => const [];

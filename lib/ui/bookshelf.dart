@@ -56,17 +56,6 @@ class Bookshelf extends StatelessWidget {
           pageCount: pageCounts[book.id] ?? 0,
         );
 
-    final resumeStyle = FilledButton.styleFrom(
-      backgroundColor: burgundy,
-      foregroundColor: paper,
-      minimumSize: const Size(48, 48),
-    );
-    Widget resume(Book book) => FilledButton(
-      style: resumeStyle,
-      onPressed: () => onOpen(book),
-      child: Text((pageCounts[book.id] ?? 0) > 0 ? '이어 쓰기' : '쓰기'),
-    );
-
     if (recent == null && books.isEmpty) {
       return Center(
         child: SingleChildScrollView(
@@ -78,7 +67,11 @@ class Bookshelf extends StatelessWidget {
               if (term.isEmpty) ...[
                 const SizedBox(height: 16),
                 FilledButton(
-                  style: resumeStyle,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: burgundy,
+                    foregroundColor: paper,
+                    minimumSize: const Size(48, 48),
+                  ),
                   onPressed: onWrite,
                   child: const Text('새 종이'),
                 ),
@@ -89,17 +82,28 @@ class Bookshelf extends StatelessWidget {
       );
     }
 
-    Widget openCover(Book book, double width) => Semantics(
+    Widget openBook(
+      Book book,
+      Widget child, {
+      required Key key,
+      double radius = 6,
+    }) => Semantics(
       label: '${book.title} 펼치기',
       button: true,
       onTap: () => onOpen(book),
       excludeSemantics: true,
       child: InkWell(
-        key: ValueKey('shelf-book-${book.id}'),
-        borderRadius: BorderRadius.circular(6),
+        key: key,
+        borderRadius: BorderRadius.circular(radius),
         onTap: () => onOpen(book),
-        child: cover(book, width),
+        child: child,
       ),
+    );
+
+    Widget openCover(Book book, double width) => openBook(
+      book,
+      cover(book, width),
+      key: ValueKey('shelf-book-${book.id}'),
     );
 
     Widget details(Book book) => IconButton(
@@ -129,42 +133,46 @@ class Bookshelf extends StatelessWidget {
                 children: [
                   if (recent != null)
                     if (compact)
-                      Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xffeee3d3),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        padding: const EdgeInsets.all(10),
-                        child: Row(
-                          children: [
-                            ExcludeSemantics(
-                              child: cover(recent, 42, thumbnail: true),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                recent.title,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
+                      openBook(
+                        recent,
+                        Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xffeee3d3),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          padding: const EdgeInsets.fromLTRB(10, 10, 14, 10),
+                          child: Row(
+                            children: [
+                              cover(recent, 42, thumbnail: true),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  recent.title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(child: resume(recent)),
-                          ],
+                              const SizedBox(width: 8),
+                              const Icon(
+                                CupertinoIcons.chevron_right,
+                                size: 16,
+                                color: muted,
+                              ),
+                            ],
+                          ),
                         ),
+                        key: const ValueKey('shelf-recent'),
+                        radius: 16,
                       )
                     else ...[
                       const _ShelfLabel('최근 노트'),
                       const SizedBox(height: 8),
                       Center(child: openCover(recent, featuredWidth)),
                       const _WoodShelf(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [resume(recent), details(recent)],
-                      ),
+                      Center(child: details(recent)),
                     ],
                   if (books.isNotEmpty)
                     Padding(

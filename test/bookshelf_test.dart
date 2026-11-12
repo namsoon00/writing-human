@@ -46,7 +46,7 @@ void main() {
 
     await shelf(tester);
     final writes = store.writes;
-    await tester.tap(find.text('이어 쓰기'));
+    await tester.tap(cover('a'));
     await tester.pumpAndSettle();
     expect(store.data.activePageId, 'one');
     expect(store.writes, writes);
@@ -84,6 +84,12 @@ void main() {
       );
     await tester.pumpWidget(WritingHumanApp(store: store));
     await tester.pumpAndSettle();
+    await shelf(tester);
+    expect(find.text('이어 쓰기'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('shelf-recent')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('shelf-recent')), findsNothing);
+    expect(store.data.activePageId, 'p');
     await shelf(tester);
     expect(find.text('모든 노트'), findsOneWidget);
     expect(

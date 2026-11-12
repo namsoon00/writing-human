@@ -10,6 +10,10 @@
   작업 폴더의 `artifacts/back-cover-closing.png`, `artifacts/back-cover-closed.png`,
   `artifacts/back-cover-reopening.png`에 보관했다.
 - 배포 웹에서 직접 스와이프하거나 모바일 실기기에서 조작하는 검증은 하지 않았다.
+- [GitHub Actions 43327094278](https://github.com/namsoon00/writing-human/actions/runs/43327094278)에서
+  `d92ce19231c77c1221ea92414a42603c9c982f61`의 검사·빌드·게시가 완료됐다.
+  공개 앱 JS와 번들 서체·브랜드 이미지가 캐시를 지운 뒤 만든 로컬 빌드와 일치했다.
+  앱 JS SHA-256은 `fc30de776dfccbcbfef8bf74cb8a956d7364a095fbb0a1863dc8a70f7f664e09`다.
 
 ## 2026-11-13 · 마지막 장과 뒷표지 안쪽
 

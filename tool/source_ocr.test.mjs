@@ -48,7 +48,7 @@ test('photo bridge loads same-origin assets lazily and returns normalized positi
   assert.equal(state.options.corePath, base);
   assert.equal(state.options.langPath, base.slice(0, -1));
   assert.deepEqual(state.options.languages, ['kor']);
-  assert.deepEqual(state.modes, ['3']);
+  assert.deepEqual(state.modes, ['4']);
   assert.equal(state.terminated, 1);
 });
 
@@ -60,4 +60,27 @@ test('closing a photo review cancels pending recognition and terminates its work
   await assert.rejects(result, /Cancelled/);
   assert.deepEqual(state.modes, ['6']);
   assert.equal(state.terminated, 1);
+});
+
+test('a recurring gutter is re-read as two columns without losing heading or footer', async () => {
+  const box = (x0, y0, x1, y1) => ({x0, y0, x1, y1});
+  const line = (text, y, words = []) => ({text, bbox: box(4, y, 96, y + 5), words});
+  const row = (y) => line('두 단이 붙은 문장', y, [
+    {text: '첫', bbox: box(4, y, 14, y + 5)},
+    {text: '문장', bbox: box(16, y, 32, y + 5)},
+    {text: '둘째', bbox: box(65, y, 80, y + 5)},
+    {text: '문장', bbox: box(84, y, 96, y + 5)},
+  ]);
+  const rectangles = [];
+  const {window} = environment(async (_, options) => {
+    const rectangle = options.rectangle;
+    if (rectangle) rectangles.push(rectangle);
+    const lines = rectangle
+      ? [line(rectangle.left === 0 ? '왼쪽 단' : '오른쪽 단', 20)]
+      : [line('제목', 5), row(20), row(38), line('12', 94)];
+    return {data: {text: '인식 결과', blocks: [{paragraphs: [{lines}]}]}};
+  });
+  const result = await window.writingHumanScanPhoto(new Uint8Array([1]), 100, 100, false);
+  assert.deepEqual(rectangles.map(r => r.left), [0, 49]);
+  assert.deepEqual(Array.from(result, paragraph => paragraph[0].text), ['제목', '왼쪽 단', '오른쪽 단', '12']);
 });

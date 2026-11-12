@@ -85,6 +85,8 @@ Android는 [ML Kit 한글 모델](https://developers.google.com/ml-kit/vision/te
 웹은 촬영본이나 이미지 파일을 브라우저의 [Tesseract.js](https://github.com/naptha/tesseract.js/blob/master/docs/api.md)
 작업자에서 한글 중심으로 인식한다. `tool/prepare_ocr.mjs`가 검증한 모델·엔진은
 빌드와 함께 같은 출처에 둔다. 인식할 때만 받아오며 사진은 전송하지 않는다.
+웹 인식에서 여러 줄이 같은 중앙 여백으로 나뉘면 좌우 단을 별도로 읽는다.
+단 범위 밖의 제목과 쪽수는 전체 인식 결과에서 유지한다.
 로컬 웹 실행은 `node tool/prepare_ocr.mjs` 후
 `flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true`를 사용한다.
 GitHub Pages·Sites의 빌드 스크립트에는 준비 단계가 포함된다.

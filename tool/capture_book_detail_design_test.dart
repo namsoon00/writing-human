@@ -147,7 +147,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.runAsync(
         () => precacheImage(
-          const AssetImage('assets/images/ink-mark-person.png'),
+          const AssetImage('assets/images/ink-mark-bleed.png'),
           key.currentContext!,
         ),
       );
@@ -251,7 +251,7 @@ void main() {
     await tester.runAsync(() async {
       for (final name in [
         'cotton-paper.jpg',
-        'ink-mark-person.png',
+        'ink-mark-bleed.png',
         'linen-cover.png',
         'ivory-linen-cover.png',
         'blue-linen-cover.png',

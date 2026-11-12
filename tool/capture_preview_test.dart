@@ -67,7 +67,7 @@ void main() {
           'ivory-linen-cover.png',
           'blue-linen-cover.png',
           'fountain-pen.png',
-          'ink-mark-person.png',
+          'ink-mark-bleed.png',
         ]) {
           await precacheImage(
             AssetImage('assets/images/$name'),

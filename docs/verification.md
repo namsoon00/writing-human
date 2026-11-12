@@ -9,6 +9,9 @@
 - 390×844 화면에서 노트 3권과 12권을 실제 Flutter 위젯으로 렌더링했다.
   작업 폴더의 `artifacts/bookshelf-few.png`, `artifacts/bookshelf-many.png`에 보관했다.
 - 모바일 실기기의 터치와 키보드, 공개 웹에서의 브라우저 조작은 미검증이다.
+- [GitHub Actions 43331995801](https://github.com/namsoon00/writing-human/actions/runs/43331995801)에서
+  `1e7e330c2d36bc9addd48945789f5be646af27a9`의 검사·빌드·게시가 완료됐다. 공개 앱 JS와 번들 서체·잉크 이미지가
+  로컬 빌드와 일치했다. 앱 JS SHA-256은 `a9aa8e765567cb9e48036b08f22d9669e11c82b1d83eb21e422fbc13bfde2f67`이다.
 
 ## 2026-11-13 · 마지막 장에서 겉뒷표지 닫기
 

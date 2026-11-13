@@ -2,7 +2,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'editable_geometry.dart';
-import 'ink_mark.dart';
 
 /// Read-only feedback beside the native editable. Never writes input state.
 class WritingPen extends StatefulWidget {
@@ -26,7 +25,7 @@ class WritingPen extends StatefulWidget {
   State<WritingPen> createState() => _WritingPenState();
 }
 
-const _inkCaretSize = 12.0;
+const _nibSize = Size(10, 12);
 
 class _WritingPenState extends State<WritingPen>
     with SingleTickerProviderStateMixin {
@@ -36,7 +35,7 @@ class _WritingPenState extends State<WritingPen>
     value: 1,
   );
   late TextEditingValue observed;
-  ({Offset center, bool showInk})? target;
+  Offset? target;
   Size? viewport;
   bool queued = false, reduced = false, newStroke = false;
   TextRange? freshRange;
@@ -155,7 +154,7 @@ class _WritingPenState extends State<WritingPen>
 
   void _readGeometry() {
     final value = widget.controller.value;
-    ({Offset center, bool showInk})? next;
+    Offset? next;
     final editable = findEditable(
       widget.fieldKey.currentContext?.findRenderObject(),
     );
@@ -173,30 +172,9 @@ class _WritingPenState extends State<WritingPen>
       final editorBounds = Offset.zero & editable.size;
       if (caret.overlaps(editorBounds)) {
         final point = overlay.globalToLocal(
-          editable.localToGlobal(caret.center),
+          editable.localToGlobal(caret.bottomCenter.translate(0, 2)),
         );
-        final bounds = Offset.zero & overlay.size;
-        if (bounds.contains(point)) {
-          final line = editable.getLineAtOffset(position);
-          next = (center: point, showInk: false);
-          if (line.isCollapsed ||
-              (line.isValid && position.offset == line.end)) {
-            final direction = editable.textDirection;
-            final cellWidth = TextPainter.computeWidth(
-              text: TextSpan(text: '한', style: editable.text?.style),
-              textDirection: direction,
-              textScaler: editable.textScaler,
-              locale: editable.locale,
-            );
-            final offset = direction == TextDirection.ltr
-                ? cellWidth / 2
-                : -cellWidth / 2;
-            final center = point.translate(offset, 0);
-            if (bounds.deflate(_inkCaretSize / 2).contains(center)) {
-              next = (center: center, showInk: true);
-            }
-          }
-        }
+        if ((Offset.zero & overlay.size).contains(point)) next = point;
       }
       if (animateInk &&
           newStroke &&
@@ -273,10 +251,6 @@ class _WritingPenState extends State<WritingPen>
               animation: drying,
               builder: (context, _) {
                 final at = widget.focus.hasFocus ? target : null;
-                final center = at?.center;
-                final showInk = at?.showInk ?? false;
-                final cursorWidth = showInk ? _inkCaretSize : 2.0;
-                final cursorColor = widget.color.withValues(alpha: .55);
                 final wet = (1 - drying.value * 3).clamp(0.0, 1.0);
                 return Stack(
                   clipBehavior: Clip.hardEdge,
@@ -293,25 +267,17 @@ class _WritingPenState extends State<WritingPen>
                           ),
                         ),
                       ),
-                    if (center != null)
+                    if (at != null)
                       Positioned(
-                        left: center.dx - cursorWidth / 2,
-                        top: center.dy - _inkCaretSize / 2,
-                        child: showInk
-                            ? InkMark(
-                                key: const ValueKey('writing-ink-caret'),
-                                size: _inkCaretSize,
-                                color: cursorColor,
-                              )
-                            : Container(
-                                key: const ValueKey('writing-ink-caret'),
-                                width: cursorWidth,
-                                height: _inkCaretSize,
-                                decoration: BoxDecoration(
-                                  color: cursorColor,
-                                  borderRadius: BorderRadius.circular(1),
-                                ),
-                              ),
+                        left: at.dx - _nibSize.width / 2,
+                        top: at.dy,
+                        child: CustomPaint(
+                          key: const ValueKey('writing-pen-nib'),
+                          size: _nibSize,
+                          painter: _CaretNibPainter(
+                            widget.color.withValues(alpha: .55),
+                          ),
+                        ),
                       ),
                   ],
                 );
@@ -322,6 +288,30 @@ class _WritingPenState extends State<WritingPen>
       ),
     ),
   );
+}
+
+class _CaretNibPainter extends CustomPainter {
+  const _CaretNibPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final nib = Path()
+      ..fillType = PathFillType.evenOdd
+      ..moveTo(size.width / 2, 0)
+      ..lineTo(size.width, 6)
+      ..lineTo(8, size.height)
+      ..lineTo(2, size.height)
+      ..lineTo(0, 6)
+      ..close()
+      ..addOval(Rect.fromCircle(center: const Offset(5, 6), radius: 1.15));
+    canvas.drawPath(nib, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(_CaretNibPainter oldDelegate) =>
+      color != oldDelegate.color;
 }
 
 class FreshInkPainter extends CustomPainter {

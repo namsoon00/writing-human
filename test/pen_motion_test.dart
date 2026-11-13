@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/ui/editor.dart';
-import 'package:writing_human/ui/ink_mark.dart';
 
 class PenHarness extends StatefulWidget {
   const PenHarness({super.key, this.initial = ''});
@@ -53,32 +52,22 @@ class PenHarnessState extends State<PenHarness> {
 }
 
 final _field = find.byKey(const ValueKey('page-text'));
-final _pen = find.byKey(const ValueKey('writing-ink-caret'));
+final _pen = find.byKey(const ValueKey('writing-pen-nib'));
 
 Offset nibPoint(WidgetTester tester) {
   final box = tester.renderObject<RenderBox>(_pen);
-  return box.localToGlobal(box.size.center(Offset.zero));
+  return box.localToGlobal(box.size.topCenter(Offset.zero));
 }
 
-void expectNibAtCaret(WidgetTester tester, {bool inCell = false}) {
+void expectNibAtCaret(WidgetTester tester) {
   expect(_pen, findsOneWidget);
   final editable = tester
       .state<EditableTextState>(find.byType(EditableText))
       .renderEditable;
   expect(editable.showCursor.value, isFalse);
   final value = tester.widget<TextField>(_field).controller!.value;
-  final cellWidth = inCell
-      ? TextPainter.computeWidth(
-          text: TextSpan(text: '한', style: editable.text?.style),
-          textDirection: editable.textDirection,
-          textScaler: editable.textScaler,
-          locale: editable.locale,
-        )
-      : 0.0;
-  final expected = editable.localToGlobal(
-    editable.getLocalRectForCaret(value.selection.extent).center +
-        Offset(cellWidth / 2, 0),
-  );
+  final caret = editable.getLocalRectForCaret(value.selection.extent);
+  final expected = editable.localToGlobal(caret.bottomCenter.translate(0, 2));
   expect((nibPoint(tester) - expected).distance, lessThan(.2));
 }
 
@@ -104,8 +93,8 @@ void main() {
     'Ink settles after committed typing and follows wrapping and taps',
     (tester) async {
       final key = await open(tester);
-      expectNibAtCaret(tester, inCell: true);
-      expect(tester.widget(_pen), isA<InkMark>());
+      expectNibAtCaret(tester);
+      expect(tester.widget(_pen), isA<CustomPaint>());
       final first = nibPoint(tester);
       await tester.enterText(_field, '한');
       await tester.pump();
@@ -114,27 +103,8 @@ void main() {
       final duringStroke = nibPoint(tester);
       expect(find.byKey(const ValueKey('fresh-ink')), findsOneWidget);
       await tester.pumpAndSettle();
-      expectNibAtCaret(tester, inCell: true);
-      final ink = tester.widget<InkMark>(_pen);
-      expect(
-        ink.color,
-        tester.widget<TextField>(_field).style!.color!.withValues(alpha: .55),
-      );
-      expect(tester.getSize(_pen), const Size.square(12));
-      final editable = tester
-          .state<EditableTextState>(find.byType(EditableText))
-          .renderEditable;
-      final start = editable.getLocalRectForCaret(
-        const TextPosition(offset: 0),
-      );
-      final end = editable.getLocalRectForCaret(const TextPosition(offset: 1));
-      expect(
-        first.dx,
-        closeTo(
-          editable.localToGlobal(Rect.lerp(start, end, .5)!.center).dx,
-          1,
-        ),
-      );
+      expectNibAtCaret(tester);
+      expect(tester.getSize(_pen), const Size(10, 12));
       expect(duringStroke.dx, greaterThan(first.dx));
       expect(duringStroke, nibPoint(tester));
       expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
@@ -143,7 +113,7 @@ void main() {
       final prose = '한 문장\n${List.filled(4, '천천히 옮겨 쓰는 문장 ').join()}';
       await tester.enterText(_field, prose);
       await tester.pumpAndSettle();
-      expectNibAtCaret(tester, inCell: true);
+      expectNibAtCaret(tester);
       expect(nibPoint(tester).dy, greaterThan(singleLine.dy));
       expect(key.currentState!.saved, prose);
       final controller = tester.widget<TextField>(_field).controller!;
@@ -151,7 +121,7 @@ void main() {
         offset: prose.indexOf('\n'),
       );
       await tester.pumpAndSettle();
-      expectNibAtCaret(tester, inCell: true);
+      expectNibAtCaret(tester);
       controller.selection = const TextSelection.collapsed(offset: 1);
       await tester.pumpAndSettle();
       expectNibAtCaret(tester);
@@ -163,9 +133,7 @@ void main() {
       final beforeIdle = controller.value;
       await tester.pump(const Duration(milliseconds: 650));
       expectNibAtCaret(tester);
-      expect(tester.getSize(_pen), const Size(2, 12));
-      final tick = tester.widget<Container>(_pen).decoration as BoxDecoration;
-      expect(tick.color, ink.color);
+      expect(tester.getSize(_pen), const Size(10, 12));
       expect(controller.value, beforeIdle);
       // The ink overlay must not intercept a tap in the writing field.
       await tester.tapAt(tester.getCenter(_field));
@@ -196,7 +164,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(controller.value, value);
         expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
-        expectNibAtCaret(tester, inCell: true);
+        expectNibAtCaret(tester);
         final point = nibPoint(tester);
         await tester.pump(const Duration(milliseconds: 60));
         expect(nibPoint(tester), point);
@@ -209,7 +177,7 @@ void main() {
       tester.testTextInput.updateEditingValue(committed);
       await tester.pumpAndSettle();
       expect(controller.value, committed);
-      expectNibAtCaret(tester, inCell: true);
+      expectNibAtCaret(tester);
       controller.selection = const TextSelection(
         baseOffset: 0,
         extentOffset: 2,

@@ -174,6 +174,10 @@ collection_sheet.dart는 필요할 때 여는 글/책 보관함이다. tools_scr
 현재 종이 화면은 paper.dart의 PaperBackdrop이 최대 폭 760의 연속된 면지·왼쪽 음영을 담당한다. 면지 소재는 24% 강도의 정적인 RepaintBoundary이며 입력/접근성 트리에서 제외한다. PageEditor는 별도 종이 카드 없이 실제 TextField와 읽기 전용 펜 레이어를 올린다. WritingGuides는 실제 본문 패딩·행 높이·스크롤을 읽어 줄 가이드를 그린다. writing_chrome.dart의 WritingHeader/WritingFooter가 최소 조작부를 담당한다. 작성 화면 상단에는 현재 책 제목이나 앱 이름을 양옆 버튼과 같은 높이로 표시한다. 포커스·키보드·크기 변경은 레이아웃만 조정하며 controller·selection·composing을 되쓰지 않는다.
 안전 영역을 뺀 키보드 인셋만큼 편집기 하단을 줄이고 하단 조작부를 위로 옮긴다.
 본문 양옆의 여백 탭은 선택 위치를 변경하지 않고 입력 포커스를 해제한다.
+iOS 본문에서 탭과 길게 누르기는 RenderEditable의 좌표를 기준으로 삽입 위치와
+단어 범위를 선택한다. iOS 웹의 투명한 본문 textarea는 포인터 대상에서 제외하고
+포커스와 키보드 입력에 사용한다. 본문 터치 뒤 Safari가 생성하는 마우스 클릭을
+막아 입력 포커스를 유지한다. 조합 중에는 추가 터치 선택을 적용하지 않는다.
 선택 쪽지는 EditableText의 툴바 앵커에 배치한다. 복사·잘라내기·붙여넣기는 Flutter의
 선택 동작을 사용하며, 느낀 점은 선택한 UTF-16 범위에서 읽은 구절이 원문에서 한 번
 일치할 때 기존 메모 편집을 연다.

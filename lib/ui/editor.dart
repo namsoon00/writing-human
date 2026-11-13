@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../data/model.dart';
 import '../source/originals.dart';
@@ -50,6 +52,7 @@ class _PageEditorState extends State<PageEditor> {
   bool restoring = true;
   final fieldRenderKey = GlobalKey();
   final _reflectionKey = GlobalKey<NotebookReflectionState>();
+  ({Offset point, double scroll})? _holdOrigin;
   bool _reflectionFocused = false, _reflectionComposing = false;
 
   @override
@@ -241,11 +244,90 @@ class _PageEditorState extends State<PageEditor> {
       behavior: HitTestBehavior.opaque,
       excludeFromSemantics: true,
       onTap: () {
-        if (_reflectionComposing) return;
+        if (_composing) return;
         widget.reflectionFocus?.unfocus();
         focus.unfocus();
       },
     ),
+  );
+
+  bool get _composing =>
+      _reflectionComposing ||
+      (text.value.isComposingRangeValid && !text.value.composing.isCollapsed);
+
+  EditableTextState? get _editable {
+    EditableTextState? result;
+    void visit(Element child) {
+      if (result != null) return;
+      if (child is StatefulElement && child.state is EditableTextState) {
+        result = child.state as EditableTextState;
+      } else {
+        child.visitChildren(visit);
+      }
+    }
+
+    fieldRenderKey.currentContext?.visitChildElements(visit);
+    return result;
+  }
+
+  void _placeCaret(TapUpDetails details) {
+    final editor = _editable;
+    if (editor == null || _composing) return;
+    editor.hideToolbar();
+    editor.renderEditable.selectPositionAt(
+      from: details.globalPosition,
+      cause: SelectionChangedCause.tap,
+    );
+  }
+
+  void _beginSelection(LongPressStartDetails details) {
+    final editor = _editable;
+    if (editor == null || _composing) return;
+    editor.hideToolbar();
+    final point = details.globalPosition;
+    final render = editor.renderEditable;
+    final line = render.getLineAtOffset(render.getPositionForPoint(point));
+    if (!line.isValid || line.textInside(text.text).trim().isEmpty) {
+      render.selectPositionAt(
+        from: point,
+        cause: SelectionChangedCause.longPress,
+      );
+    } else {
+      _holdOrigin = (point: point, scroll: render.offset.pixels);
+      render.selectWordsInRange(
+        from: point,
+        cause: SelectionChangedCause.longPress,
+      );
+    }
+  }
+
+  void _extendSelection(LongPressMoveUpdateDetails details) {
+    final editor = _editable;
+    final origin = _holdOrigin;
+    if (editor == null || origin == null || _composing) return;
+    final render = editor.renderEditable;
+    render.selectWordsInRange(
+      from: origin.point.translate(0, origin.scroll - render.offset.pixels),
+      to: details.globalPosition,
+      cause: SelectionChangedCause.longPress,
+    );
+  }
+
+  void _showSelectionMenu(LongPressEndDetails details) {
+    _holdOrigin = null;
+    if (!_composing) _editable?.showToolbar();
+  }
+
+  Widget _preciseTouchSelection() => GestureDetector(
+    // The field still receives hits for scrolling and non-touch input.
+    behavior: HitTestBehavior.translucent,
+    excludeFromSemantics: true,
+    supportedDevices: const {PointerDeviceKind.touch},
+    onTapUp: _placeCaret,
+    onLongPressStart: _beginSelection,
+    onLongPressMoveUpdate: _extendSelection,
+    onLongPressEnd: _showSelectionMenu,
+    onLongPressCancel: () => _holdOrigin = null,
   );
 
   @override
@@ -302,47 +384,52 @@ class _PageEditorState extends State<PageEditor> {
                 ),
               RepaintBoundary(
                 key: fieldRenderKey,
-                child: TextSelectionTheme(
-                  data: TextSelectionThemeData(
-                    selectionColor: const Color(
-                      0xffaa833c,
-                    ).withValues(alpha: .25),
-                    selectionHandleColor: penColors[style.penIndex],
-                  ),
-                  child: TextField(
-                    key: const ValueKey('page-text'),
-                    controller: text,
-                    scrollController: scroll,
-                    focusNode: focus,
-                    // Keep native input/selection, with a separate ink indicator.
-                    showCursor: false,
-                    maxLines: null,
-                    minLines: null,
-                    expands: true,
-                    textAlignVertical: TextAlignVertical.top,
-                    keyboardType: TextInputType.multiline,
-                    textInputAction: TextInputAction.newline,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    contextMenuBuilder: _selectionMenu,
-                    style: writingTextStyle(
-                      style.fontIndex,
-                      size: 23,
-                      color: penColors[style.penIndex],
-                      useDevelopmentTypeface: style.useDevelopmentTypeface,
+                child: Semantics(
+                  identifier: 'writing-page-body',
+                  child: TextSelectionTheme(
+                    data: TextSelectionThemeData(
+                      selectionColor: const Color(
+                        0xffaa833c,
+                      ).withValues(alpha: .25),
+                      selectionHandleColor: penColors[style.penIndex],
                     ),
-                    cursorColor: brandInk,
-                    cursorWidth: 1.2,
-                    decoration: InputDecoration(
-                      contentPadding: visiblePadding,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      filled: false,
+                    child: TextField(
+                      key: const ValueKey('page-text'),
+                      controller: text,
+                      scrollController: scroll,
+                      focusNode: focus,
+                      // Keep native input/selection, with a separate ink indicator.
+                      showCursor: false,
+                      maxLines: null,
+                      minLines: null,
+                      expands: true,
+                      textAlignVertical: TextAlignVertical.top,
+                      keyboardType: TextInputType.multiline,
+                      textInputAction: TextInputAction.newline,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      contextMenuBuilder: _selectionMenu,
+                      style: writingTextStyle(
+                        style.fontIndex,
+                        size: 23,
+                        color: penColors[style.penIndex],
+                        useDevelopmentTypeface: style.useDevelopmentTypeface,
+                      ),
+                      cursorColor: brandInk,
+                      cursorWidth: 1.2,
+                      decoration: InputDecoration(
+                        contentPadding: visiblePadding,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                      ),
                     ),
                   ),
                 ),
               ),
+              if (defaultTargetPlatform == TargetPlatform.iOS)
+                Positioned.fill(child: _preciseTouchSelection()),
               if (focus.hasFocus || _reflectionFocused) ...[
                 Positioned(
                   top: 0,

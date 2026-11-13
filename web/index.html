@@ -35,6 +35,15 @@
     /* The semantics textarea sits outside Flutter's touch-action pane.
        Leave pan arbitration to the editor and paper recognizers. */
     flutter-view flt-semantics textarea { touch-action: none; }
+
+    @supports (-webkit-touch-callout: none) {
+      /* Flutter handles touch selection for the notebook body. Keep its
+         semantic textarea available for focus, keyboard and IME events. */
+      flutter-view [flt-semantics-identifier="writing-page-body"],
+      flutter-view [flt-semantics-identifier="writing-page-body"] textarea {
+        pointer-events: none !important;
+      }
+    }
   </style>
 </head>
 <body style="margin:0;background:#f8f5ef">
@@ -47,6 +56,25 @@
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
   <script src="source_ocr.js?v=3"></script>
+  <script>
+    if (CSS.supports('-webkit-touch-callout', 'none')) {
+      // Preserve the focus Flutter placed on touch release by suppressing the
+      // compatibility mouse click over the notebook body.
+      document.addEventListener('touchend', (event) => {
+        if (event.target.localName !== 'flutter-view' || !event.cancelable) return;
+        const editor = event.target.querySelector(
+          '[flt-semantics-identifier="writing-page-body"] textarea'
+        );
+        if (!editor) return;
+        const {left, right, top, bottom} = editor.getBoundingClientRect();
+        const touch = event.changedTouches[0];
+        if (touch && touch.clientX >= left && touch.clientX < right &&
+            touch.clientY >= top && touch.clientY < bottom) {
+          event.preventDefault();
+        }
+      }, {capture: true, passive: false});
+    }
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

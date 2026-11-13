@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,6 +27,69 @@ class MemoryStore implements LibraryStore {
 }
 
 void main() {
+  testWidgets(
+    'iOS touch places the caret inside a word and holds to select',
+    (tester) async {
+      const sentence = '햇빛이 책장에\n\n다음 줄';
+      final store = MemoryStore()
+        ..data = const Library(
+          records: [WritingRecord(id: 'r', title: '필사')],
+          pages: [
+            WritingPage(id: 'p', recordId: 'r', number: 1, text: sentence),
+          ],
+          activePageId: 'p',
+          writing: true,
+        );
+      await tester.pumpWidget(WritingHumanApp(store: store));
+      await tester.pumpAndSettle();
+      final field = find.byKey(const ValueKey('page-text'));
+      final editor = tester.state<EditableTextState>(find.byType(EditableText));
+      final render = editor.renderEditable;
+      final controller = tester.widget<TextField>(field).controller!;
+      Offset pointAt(int offset) => render.localToGlobal(
+        render.getLocalRectForCaret(TextPosition(offset: offset)).center,
+      );
+      final menu = find.byKey(const ValueKey('paper-selection-menu'));
+      await tester.tapAt(pointAt(1));
+      await tester.pumpAndSettle();
+      expect(controller.selection.isCollapsed, isTrue);
+      expect(controller.selection.extentOffset, 1);
+      await tester.longPressAt(pointAt(1));
+      await tester.pumpAndSettle();
+      expect(controller.selection.textInside(sentence), '햇빛이');
+      expect(menu, findsOneWidget);
+      final drag = await tester.startGesture(pointAt(1));
+      await tester.pump(kLongPressTimeout);
+      await drag.moveTo(pointAt(5));
+      await drag.up();
+      await tester.pumpAndSettle();
+      expect(controller.selection.textInside(sentence), '햇빛이 책장에');
+      expect(menu, findsOneWidget);
+      await tester.tapAt(pointAt(2));
+      await tester.pumpAndSettle();
+      expect(controller.selection.isCollapsed, isTrue);
+      expect(controller.selection.extentOffset, 2);
+      expect(menu, findsNothing);
+      await tester.longPressAt(pointAt(sentence.indexOf('\n') + 1));
+      await tester.pumpAndSettle();
+      expect(controller.selection.isCollapsed, isTrue);
+      expect(controller.selection.extentOffset, sentence.indexOf('\n') + 1);
+      const composing = TextEditingValue(
+        text: sentence,
+        selection: TextSelection.collapsed(offset: 2),
+        composing: TextRange(start: 0, end: 2),
+      );
+      tester.testTextInput.updateEditingValue(composing);
+      await tester.pumpAndSettle();
+      await tester.tapAt(pointAt(5));
+      await tester.longPressAt(pointAt(5));
+      await tester.pumpAndSettle();
+      expect(controller.value, composing);
+      expect(menu, findsNothing);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
+
   testWidgets('Paper menu follows the selection and opens a unique original', (
     tester,
   ) async {

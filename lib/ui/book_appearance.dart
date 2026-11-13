@@ -29,7 +29,6 @@ Future<void> showBookAppearance(
 
 enum _Section {
   materials('표지·내지'),
-  ribbon('책갈피'),
   details('책 장식');
 
   const _Section(this.label);
@@ -51,7 +50,7 @@ class BookAppearance extends StatefulWidget {
 }
 
 class _BookAppearanceState extends State<BookAppearance> {
-  _Section section = _Section.ribbon;
+  _Section section = _Section.materials;
   BookDetailKind? detail;
   bool showCover = true;
   LibraryController get controller => widget.controller;
@@ -97,7 +96,6 @@ class _BookAppearanceState extends State<BookAppearance> {
       final writingStyle = controller.styleFor(book);
       final closed = switch (section) {
         _Section.materials => showCover,
-        _Section.ribbon => false,
         _Section.details => detail == BookDetailKind.pressedFlower,
       };
       final height = MediaQuery.sizeOf(context).height;
@@ -263,10 +261,9 @@ class _BookAppearanceState extends State<BookAppearance> {
                                 ),
                             ],
                           ),
-                        ] else if (section == _Section.ribbon)
-                          _options(BookDetailKind.ribbon, details.ribbon)
-                        else ...[
+                        ] else ...[
                           _detailGroup('책의 겉과 첫 장', const [
+                            BookDetailKind.ribbon,
                             BookDetailKind.binding,
                             BookDetailKind.bookplate,
                             BookDetailKind.pressedFlower,
@@ -420,6 +417,13 @@ class _DetailSample extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(5),
                   child: switch (kind) {
+                    BookDetailKind.ribbon => Center(
+                      child: RibbonBookmark(
+                        choice: choice.copy(enabled: true),
+                        width: 10,
+                        height: 25,
+                      ),
+                    ),
                     BookDetailKind.binding => Center(
                       child: SizedBox(
                         width: 26,
@@ -623,6 +627,7 @@ class _OpenBook extends StatelessWidget {
                 final selected = detail;
                 if (left &&
                     selected != null &&
+                    selected != BookDetailKind.ribbon &&
                     selected != BookDetailKind.binding &&
                     selected != BookDetailKind.ornament) {
                   return Center(

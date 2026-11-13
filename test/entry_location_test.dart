@@ -112,6 +112,15 @@ void main() {
       expect(find.byType(BookAppearance), findsOneWidget);
       final preview = find.byKey(const ValueKey('book-preview-ribbon'));
       final shape = find.byKey(const ValueKey('detail-ribbon-variant-1'));
+      final ribbon = find.byKey(const ValueKey('book-detail-ribbon'));
+      expect(find.widgetWithText(TextButton, '책갈피'), findsNothing);
+      await tester.tap(find.text('책 장식'));
+      await tester.pumpAndSettle();
+      expect(find.text('천 책갈피'), findsOneWidget);
+      expect(shape, findsNothing);
+      await tester.tap(ribbon);
+      await tester.pumpAndSettle();
+      expect(preview, findsOneWidget);
       await tester.ensureVisible(shape);
       await tester.pumpAndSettle();
       expect(find.text('완료'), findsNothing);
@@ -133,6 +142,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(BookAppearance), findsNothing);
       await tester.tap(find.text('책 꾸미기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('책 장식'));
       await tester.pumpAndSettle();
       expect(tester.widget<RibbonBookmark>(preview).choice.variant, 1);
       expect(store.data.style.bookDetails.ribbon.variant, 0);
@@ -168,18 +179,19 @@ void main() {
       await tester.pumpAndSettle();
       final preview = find.byKey(const ValueKey('book-appearance-preview'));
       final previewRect = tester.getRect(preview);
-      final ribbonTab = find.text('책갈피');
-      final ribbonRect = tester.getRect(ribbonTab);
+      final materialsTab = find.text('표지·내지');
+      final materialsRect = tester.getRect(materialsTab);
       await tester.tap(find.text('책 장식'));
       await tester.pumpAndSettle();
       expect(tester.getRect(preview), previewRect);
-      expect(tester.getRect(ribbonTab), ribbonRect);
+      expect(tester.getRect(materialsTab), materialsRect);
 
       Finder row(BookDetailKind kind) =>
           find.byKey(ValueKey('book-detail-${kind.name}'));
       Finder options(BookDetailKind kind) =>
           find.byKey(ValueKey('book-options-${kind.name}'));
       const order = [
+        BookDetailKind.ribbon,
         BookDetailKind.binding,
         BookDetailKind.bookplate,
         BookDetailKind.pressedFlower,

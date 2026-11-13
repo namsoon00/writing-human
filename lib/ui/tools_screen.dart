@@ -211,9 +211,7 @@ class ToolsScreen extends StatelessWidget {
                     ),
                   ),
                   subtitle: Text(
-                    book == null
-                        ? '책갈피 · 장서표 · 쪽지와 작은 흔적들'
-                        : '표지 · 내지 · 책갈피와 책 장식',
+                    book == null ? '책갈피 · 장서표 · 쪽지와 작은 흔적들' : '표지 · 내지 · 책 장식',
                     style: const TextStyle(color: muted, fontSize: 11),
                   ),
                   trailing: const Icon(

@@ -366,7 +366,7 @@ void main() {
   });
 
   testWidgets(
-    'A pencil reflection saves with its original and returns to writing',
+    'A pencil reflection is edited and autosaved on the writing paper',
     (tester) async {
       const source = '아침이다. 햇빛이 책장에 천천히 내려앉았다.';
       final store = MemoryStore()
@@ -416,7 +416,12 @@ void main() {
       await tester.tap(margin);
       await tester.pumpAndSettle();
 
-      final noteField = find.byKey(const ValueKey('original-reflection-input'));
+      final inlineField = find.byKey(
+        const ValueKey('notebook-reflection-input'),
+      );
+      expect(inlineField, findsOneWidget);
+      expect(reading, findsNothing);
+      expect(tester.getSize(bodyField), paperSize);
       tester.view.physicalSize = const Size(320, 640);
       tester.view.viewInsets = const FakeViewPadding(bottom: 265);
       await tester.pumpAndSettle();
@@ -427,29 +432,33 @@ void main() {
       );
       tester.testTextInput.updateEditingValue(composing);
       await tester.pumpAndSettle();
-      final save = find.widgetWithText(FilledButton, '저장');
-      expect(tester.widget<FilledButton>(save).onPressed, isNull);
-      expect(tester.widget<TextField>(noteField).controller!.value, composing);
+      expect(store.data.books.single.originals.single.reflection, isNull);
+      expect(
+        tester.widget<TextField>(inlineField).controller!.value,
+        composing,
+      );
       const note = '오늘은 나도 천천히 걷고 싶다.';
-      await tester.enterText(noteField, note);
-      await tester.pumpAndSettle();
       store.fail = true;
-      await tester.tap(save);
+      await tester.enterText(inlineField, note);
       await tester.pumpAndSettle();
-      expect(find.text('느낀 점을 저장하지 못했어요. 다시 저장해 주세요.'), findsOneWidget);
-      expect(tester.widget<TextField>(noteField).controller!.text, note);
+      final retry = find.byTooltip('느낀 점 저장 재시도');
+      expect(retry, findsOneWidget);
+      expect(tester.widget<TextField>(inlineField).controller!.text, note);
       expect(store.data.books.single.originals.single.reflection, isNull);
       store.fail = false;
-      await tester.tap(save);
+      await tester.tap(retry);
       await tester.pumpAndSettle();
+      expect(retry, findsNothing);
 
       tester.view.resetViewInsets();
       tester.view.physicalSize = const Size(390, 844);
       await tester.pumpAndSettle();
+      await tester.tapAt(tester.getTopLeft(bodyField) + const Offset(12, 100));
+      await tester.pumpAndSettle();
       expect(reading, findsNothing);
+      expect(inlineField, findsNothing);
       expect(tester.widget<TextField>(bodyField).controller, same(body));
       expect(body.value, before);
-      expect(tester.testTextInput.isVisible, isTrue);
       expect(store.data.activePage!.text, '책장에');
       expect(tester.getSize(bodyField), paperSize);
       expect(
@@ -473,6 +482,8 @@ void main() {
       );
       await tester.tap(find.text('느낀 점 고치기'));
       await tester.pumpAndSettle();
+      final noteField = find.byKey(const ValueKey('original-reflection-input'));
+      final save = find.widgetWithText(FilledButton, '저장');
       expect(tester.widget<TextField>(noteField).controller!.text, note);
       await tester.enterText(noteField, '내일도 한 줄씩.');
       await tester.tap(save);
@@ -486,6 +497,17 @@ void main() {
         find.descendant(of: margin, matching: find.text('내일도 한 줄씩.')),
         findsOneWidget,
       );
+      await tester.tap(margin);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(inlineField).controller!.text,
+        '내일도 한 줄씩.',
+      );
+      await tester.enterText(inlineField, '');
+      await tester.pumpAndSettle();
+      expect(store.data.books.single.originals.single.reflection, isNull);
+      await tester.enterText(inlineField, '내일도 한 줄씩.');
+      await tester.pumpAndSettle();
       expect(store.data.activePage!.text, '책장에');
       await tester.enterText(bodyField, '책장에\n\n새 문장');
       await tester.pumpAndSettle();

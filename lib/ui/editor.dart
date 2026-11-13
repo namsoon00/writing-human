@@ -20,7 +20,8 @@ class PageEditor extends StatefulWidget {
     this.focusNode,
     this.onEditingState,
     this.onPencilMark,
-    this.onReflection,
+    this.onSaveReflection,
+    this.reflectionFocus,
     this.keyboardOverlap = 0,
     this.originals = const [],
     this.reveal,
@@ -32,7 +33,9 @@ class PageEditor extends StatefulWidget {
   final void Function(String, String, int, int, double) onChanged;
   final void Function(String, int, int)? onPencilMark;
   final List<RegisteredOriginal> originals;
-  final ValueChanged<OriginalMatch>? onReflection;
+  final Future<bool> Function(RegisteredOriginal, OriginalReflection?)?
+  onSaveReflection;
+  final FocusNode? reflectionFocus;
   final double keyboardOverlap;
   final ({int offset, int request})? reveal;
   @override
@@ -46,6 +49,8 @@ class _PageEditorState extends State<PageEditor> {
   late final focus = widget.focusNode ?? FocusNode();
   bool restoring = true;
   final fieldRenderKey = GlobalKey();
+  final _reflectionKey = GlobalKey<NotebookReflectionState>();
+  bool _reflectionFocused = false, _reflectionComposing = false;
 
   @override
   void initState() {
@@ -114,8 +119,10 @@ class _PageEditorState extends State<PageEditor> {
   void _emitEditingState() {
     if (!restoring) {
       widget.onEditingState?.call(
-        focus.hasFocus,
-        text.value.composing.isValid && !text.value.composing.isCollapsed,
+        focus.hasFocus || _reflectionFocused,
+        _reflectionComposing ||
+            (text.value.isComposingRangeValid &&
+                !text.value.composing.isCollapsed),
       );
     }
   }
@@ -198,11 +205,9 @@ class _PageEditorState extends State<PageEditor> {
           ),
         );
       }
-      if (widget.onReflection case final reflect?) {
-        final match = matchSelectedOriginal(
-          widget.originals,
-          selection.textInside(value.text),
-        );
+      if (widget.onSaveReflection != null) {
+        final passage = selection.textInside(value.text);
+        final match = matchSelectedOriginal(widget.originals, passage);
         if (match != null) {
           writingActions.add(
             ContextMenuButtonItem(
@@ -210,7 +215,10 @@ class _PageEditorState extends State<PageEditor> {
               onPressed: () {
                 if (text.value != value) return;
                 state.hideToolbar();
-                reflect(match);
+                _reflectionKey.currentState?.edit((
+                  match: match,
+                  offset: selection.start + passage.trimRight().length,
+                ));
               },
             ),
           );
@@ -232,7 +240,11 @@ class _PageEditorState extends State<PageEditor> {
     child: GestureDetector(
       behavior: HitTestBehavior.opaque,
       excludeFromSemantics: true,
-      onTap: focus.unfocus,
+      onTap: () {
+        if (_reflectionComposing) return;
+        widget.reflectionFocus?.unfocus();
+        focus.unfocus();
+      },
     ),
   );
 
@@ -331,7 +343,7 @@ class _PageEditorState extends State<PageEditor> {
                   ),
                 ),
               ),
-              if (focus.hasFocus) ...[
+              if (focus.hasFocus || _reflectionFocused) ...[
                 Positioned(
                   top: 0,
                   bottom: 0,
@@ -372,12 +384,26 @@ class _PageEditorState extends State<PageEditor> {
               if (widget.originals.isNotEmpty)
                 Positioned.fill(
                   child: NotebookReflection(
+                    key: _reflectionKey,
                     originals: widget.originals,
                     controller: text,
                     scroll: scroll,
                     fieldKey: fieldRenderKey,
                     padding: visiblePadding,
-                    onEdit: widget.onReflection,
+                    paperColor: paperColors[style.paperIndex],
+                    focus: widget.reflectionFocus,
+                    onSave: widget.onSaveReflection,
+                    onEditingState: (focused, composing) {
+                      if (_reflectionFocused == focused &&
+                          _reflectionComposing == composing) {
+                        return;
+                      }
+                      setState(() {
+                        _reflectionFocused = focused;
+                        _reflectionComposing = composing;
+                      });
+                      _emitEditingState();
+                    },
                   ),
                 ),
               Positioned.fill(

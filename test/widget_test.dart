@@ -115,10 +115,10 @@ void main() {
     expect(tester.getRect(menu).right, lessThanOrEqualTo(320));
     await tester.tap(action('느낀 점'));
     await tester.pumpAndSettle();
-    final note = find.byKey(const ValueKey('original-reflection-input'));
+    final note = find.byKey(const ValueKey('notebook-reflection-input'));
     await tester.enterText(note, '이 대목을 다시 읽고 싶다.');
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, '저장'));
+    await tester.tapAt(tester.getTopLeft(editor) + const Offset(305, 130));
     await tester.pumpAndSettle();
     final saved = store.data.books.single.originals.single.reflection!;
     expect(saved.text, '이 대목을 다시 읽고 싶다.');

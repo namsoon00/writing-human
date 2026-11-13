@@ -19,7 +19,6 @@ class SourceReading extends StatefulWidget {
     this.match,
     this.style = const WritingStyle(),
     this.coverIndex,
-    this.startEditing = false,
     this.onRegister,
     this.onRetry,
     this.onSaveReflection,
@@ -30,7 +29,6 @@ class SourceReading extends StatefulWidget {
   final OriginalMatch? match;
   final WritingStyle style;
   final int? coverIndex;
-  final bool startEditing;
   final VoidCallback? onRegister;
   final VoidCallback? onRetry;
   final Future<bool> Function(RegisteredOriginal, PencilMark?)? onSaveRange;
@@ -46,21 +44,6 @@ class _SourceReadingState extends State<SourceReading> {
   final reflectionField = TextEditingController();
   bool editing = false, saving = false, failed = false;
   PencilMark? draftMark;
-
-  @override
-  void initState() {
-    super.initState();
-    final match = widget.match;
-    if (widget.startEditing && match != null) {
-      final original = widget.originals
-          .where((item) => item.id == match.original.id)
-          .firstOrNull;
-      if (original != null) {
-        _loadReflection(original, match);
-        editing = true;
-      }
-    }
-  }
 
   @override
   void dispose() {
@@ -94,10 +77,6 @@ class _SourceReadingState extends State<SourceReading> {
   }
 
   void _cancelEdit() {
-    if (widget.startEditing) {
-      Navigator.pop(context);
-      return;
-    }
     setState(() {
       editing = false;
       failed = false;

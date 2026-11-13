@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
@@ -21,7 +22,10 @@ class NotebookReflection extends StatefulWidget {
     required this.scroll,
     required this.fieldKey,
     required this.padding,
-    this.onEdit,
+    required this.paperColor,
+    this.focus,
+    this.onSave,
+    this.onEditingState,
   });
 
   final List<RegisteredOriginal> originals;
@@ -29,15 +33,121 @@ class NotebookReflection extends StatefulWidget {
   final ScrollController scroll;
   final GlobalKey fieldKey;
   final EdgeInsets padding;
-  final ValueChanged<OriginalMatch>? onEdit;
+  final Color paperColor;
+  final FocusNode? focus;
+  final Future<bool> Function(RegisteredOriginal, OriginalReflection?)? onSave;
+  final void Function(bool focused, bool composing)? onEditingState;
 
   @override
-  State<NotebookReflection> createState() => _NotebookReflectionState();
+  State<NotebookReflection> createState() => NotebookReflectionState();
 }
 
-class _NotebookReflectionState extends State<NotebookReflection> {
+class NotebookReflectionState extends State<NotebookReflection> {
+  final _field = TextEditingController();
+  final _tapGroup = Object();
+  late final _focus = widget.focus ?? FocusNode();
+  NotebookReflectionMatch? _active;
+  PencilMark? _mark;
+  String _submitted = '';
+  int _revision = 0;
+  bool _failed = false;
+  bool _saving = false;
+  bool _opening = false;
   bool _queued = false;
   _Placement? _placement;
+
+  bool get _composing =>
+      _field.value.isComposingRangeValid && !_field.value.composing.isCollapsed;
+
+  String get _draft => _field.text.trim().isEmpty ? '' : _field.text;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(_focusChanged);
+    _field.addListener(_draftChanged);
+  }
+
+  void edit(NotebookReflectionMatch anchor) {
+    if (widget.onSave == null || _composing) return;
+    if (_active?.match.original.id == anchor.match.original.id) {
+      _focus.requestFocus();
+      return;
+    }
+    if (_failed || _saving) return;
+    final match = anchor.match;
+    final reflection = match.original.reflection;
+    _revision++;
+    _active = anchor;
+    _mark = reflection?.mark ?? PencilMark(match.start, match.end);
+    _submitted = reflection?.text ?? '';
+    _opening = true;
+    _field.value = TextEditingValue(
+      text: _submitted,
+      selection: TextSelection.collapsed(offset: _submitted.length),
+    );
+    _opening = false;
+    setState(() {});
+    // Attach the native field before asking it to open the keyboard.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _active != anchor) return;
+      _focus.requestFocus();
+    });
+  }
+
+  void _draftChanged() {
+    if (_active == null || _opening) return;
+    widget.onEditingState?.call(_focus.hasFocus, _composing);
+    if (!_composing) unawaited(_save());
+  }
+
+  void _focusChanged() {
+    if (_active == null) return;
+    widget.onEditingState?.call(_focus.hasFocus, _composing);
+    if (!_focus.hasFocus) unawaited(_save());
+  }
+
+  Future<void> _save({bool retry = false}) async {
+    final active = _active;
+    final save = widget.onSave;
+    if (active == null || save == null || _composing) return;
+    final draft = _draft;
+    if (draft == _submitted && !retry) {
+      if (!_focus.hasFocus && !_failed && !_saving) _close();
+      return;
+    }
+    final revision = ++_revision;
+    _submitted = draft;
+    _saving = true;
+    final saved = await save(
+      active.match.original,
+      draft.isEmpty ? null : OriginalReflection(draft, mark: _mark),
+    );
+    if (!mounted || revision != _revision) return;
+    _saving = false;
+    if (!_focus.hasFocus && saved && !_composing && _draft == draft) {
+      _close();
+    } else if (_failed == saved) {
+      setState(() => _failed = !saved);
+    }
+  }
+
+  void _close() {
+    if (!mounted || _active == null) return;
+    setState(() {
+      _active = null;
+      _failed = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _focus.removeListener(_focusChanged);
+    _field.removeListener(_draftChanged);
+    _field.dispose();
+    if (widget.focus == null) _focus.dispose();
+    super.dispose();
+  }
 
   void _measure(
     NotebookReflectionMatch? reflection,
@@ -115,7 +225,8 @@ class _NotebookReflectionState extends State<NotebookReflection> {
     if (available >= lineHeight + 5) {
       final maxWidth = size.width - widget.padding.horizontal - 7;
       if (maxWidth > 40) {
-        final lines = hasNote && available >= lineHeight * 2 + 5 ? 2 : 1;
+        final maxLines = _active != null ? 3 : (hasNote ? 2 : 1);
+        final lines = ((available - 5) ~/ lineHeight).clamp(1, maxLines);
         return (
           rect: Rect.fromLTWH(
             widget.padding.left + 7,
@@ -171,14 +282,16 @@ class _NotebookReflectionState extends State<NotebookReflection> {
           }
         }
         final lineHeight = MediaQuery.textScalerOf(context).scale(21);
-        _measure(reflection, box.biggest, lineHeight);
+        _measure(_active ?? reflection, box.biggest, lineHeight);
         final placement = _placement;
+        if (_active != null) {
+          return _editor(box.biggest, placement, lineHeight);
+        }
         if (reflection == null || placement == null) {
           return const SizedBox.expand();
         }
         final note = reflection.match.original.reflection?.text;
-        final match = reflection.match;
-        final action = widget.onEdit;
+        final anchor = reflection;
         final label = note == null ? '느낀 점 남기기' : '느낀 점 고치기';
         return Stack(
           children: [
@@ -195,9 +308,9 @@ class _NotebookReflectionState extends State<NotebookReflection> {
                       label: label,
                       child: InkWell(
                         key: const ValueKey('writing-reflection'),
-                        onTap: action == null || composing
+                        onTap: widget.onSave == null || composing
                             ? null
-                            : () => action(match),
+                            : () => edit(anchor),
                         child: SizedBox(
                           height: placement.rect.height,
                           child: placement.lines == 0
@@ -245,4 +358,90 @@ class _NotebookReflectionState extends State<NotebookReflection> {
       },
     ),
   );
+
+  Widget _editor(Size size, _Placement? placement, double lineHeight) {
+    final left = widget.padding.left + 7;
+    final hasRoom = placement != null && placement.lines > 0;
+    final height = math.min(
+      size.height,
+      hasRoom ? placement.rect.height : lineHeight * 2 + 8,
+    );
+    final anchorY = hasRoom ? placement.rect.top : placement?.rect.bottom;
+    final top = (anchorY ?? size.height - height).clamp(
+      0.0,
+      size.height - height,
+    );
+    return Stack(
+      children: [
+        Positioned(
+          top: top,
+          left: left,
+          right: widget.padding.right,
+          height: height,
+          child: TextFieldTapRegion(
+            groupId: _tapGroup,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: hasRoom ? null : widget.paperColor,
+                boxShadow: hasRoom
+                    ? null
+                    : const [
+                        BoxShadow(color: Color(0x2270472f), blurRadius: 4),
+                      ],
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const CustomPaint(
+                    size: Size(24, 22),
+                    painter: ReflectionArrow(),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Semantics(
+                      label: '느낀 점 입력',
+                      child: TextField(
+                        key: const ValueKey('notebook-reflection-input'),
+                        groupId: _tapGroup,
+                        controller: _field,
+                        focusNode: _focus,
+                        keyboardType: TextInputType.multiline,
+                        textInputAction: TextInputAction.newline,
+                        expands: true,
+                        minLines: null,
+                        maxLines: null,
+                        textAlignVertical: TextAlignVertical.top,
+                        onTapOutside: (_) {
+                          if (!_composing) _focus.unfocus();
+                        },
+                        style: reflectionHandwriting.copyWith(fontSize: 21),
+                        decoration: InputDecoration(
+                          isCollapsed: true,
+                          contentPadding: EdgeInsets.zero,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          hintText: '느낀 점',
+                          hintStyle: reflectionHandwriting.copyWith(
+                            fontSize: 21,
+                            color: reflectionGraphite.withValues(alpha: .62),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_failed)
+                    IconButton(
+                      tooltip: '느낀 점 저장 재시도',
+                      onPressed: () => _save(retry: true),
+                      icon: const Icon(Icons.refresh, size: 18),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }

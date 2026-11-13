@@ -232,7 +232,7 @@ class LibraryController extends ChangeNotifier {
     required String? bookId,
     required String recordId,
     required RegisteredOriginal original,
-    required OriginalReflection reflection,
+    required OriginalReflection? reflection,
   }) => _saveOriginal(
     bookId: bookId,
     recordId: recordId,

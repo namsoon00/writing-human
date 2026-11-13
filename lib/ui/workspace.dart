@@ -45,6 +45,7 @@ class Workspace extends StatefulWidget {
 class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   LibraryController get c => widget.controller;
   final editorFocus = FocusNode();
+  final reflectionFocus = FocusNode();
   final _pageTurn = PageTurnController();
   AudioPlayer? _pageAudio;
   String? _coverAnchor;
@@ -279,6 +280,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       c.addListener(_changed);
       widget.sync?.addListener(_changed);
       editorFocus.unfocus();
+      reflectionFocus.unfocus();
       _editingPageId = null;
       _coverAnchor = null;
       _reveal = null;
@@ -312,6 +314,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     c.removeListener(_changed);
     widget.sync?.removeListener(_changed);
     editorFocus.dispose();
+    reflectionFocus.dispose();
     final audio = _pageAudio;
     if (audio != null) unawaited(audio.dispose());
     super.dispose();
@@ -320,6 +323,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   void _blur() {
     _editingPageId = null;
     editorFocus.unfocus();
+    reflectionFocus.unfocus();
     c.setEditorState(focused: false, isComposing: _editorComposing);
   }
 
@@ -428,6 +432,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   }
 
   void _tools() {
+    if (_editorComposing && reflectionFocus.hasFocus) return;
     _blur();
     _sheet(
       ToolsScreen(
@@ -725,10 +730,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _showOriginals({
-    Book? bookDetails,
-    OriginalMatch? reflectionMatch,
-  }) async {
+  Future<void> _showOriginals({Book? bookDetails}) async {
     if (_readingSource || _sourceBusy || _accountLocked || !_canLeaveInput()) {
       return;
     }
@@ -758,12 +760,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         await register();
       } else {
         final initial = bookDetails == null
-            ? reflectionMatch ??
-                  matchOriginal(
-                    available,
-                    selectedPage.text,
-                    selectedPage.extent,
-                  )
+            ? matchOriginal(available, selectedPage.text, selectedPage.extent)
             : null;
         final route = ModalBottomSheetRoute<void>(
           isScrollControlled: true,
@@ -782,7 +779,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               coverIndex: selectedBook == null
                   ? null
                   : owner.coverIndexFor(selectedBook),
-              startEditing: reflectionMatch != null,
               onRegister: owner.saveError == null ? register : null,
               onRetry: owner.saveError == null ? null : _retrySave,
               onSaveRange: (original, range) async {
@@ -805,28 +801,15 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                   range: range,
                 );
               },
-              onSaveReflection: (original, reflection) async {
-                if (!mounted ||
-                    c != owner ||
-                    _accountLocked ||
-                    owner.composing) {
-                  return false;
-                }
-                final latest = originals()
-                    .where((item) => item.id == original.id)
-                    .firstOrNull;
-                if (latest == null ||
-                    latest.text != original.text ||
-                    latest.citation != original.citation) {
-                  return false;
-                }
-                return owner.saveOriginalReflection(
-                  bookId: bookId,
-                  recordId: selectedPage.recordId,
-                  original: latest,
-                  reflection: reflection,
-                );
-              },
+              onSaveReflection: (original, reflection) => owner.composing
+                  ? Future.value(false)
+                  : _saveReflection(
+                      owner,
+                      bookId,
+                      selectedPage.recordId,
+                      original,
+                      reflection,
+                    ),
             ),
           ),
         );
@@ -849,6 +832,32 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     } finally {
       _readingSource = false;
     }
+  }
+
+  Future<bool> _saveReflection(
+    LibraryController owner,
+    String? bookId,
+    String recordId,
+    RegisteredOriginal original,
+    OriginalReflection? reflection,
+  ) async {
+    if (!mounted || c != owner || _accountLocked) return false;
+    final latest = originalsFor(
+      owner.library,
+      bookId: bookId,
+      recordId: recordId,
+    ).where((item) => item.id == original.id).firstOrNull;
+    if (latest == null ||
+        latest.text != original.text ||
+        latest.citation != original.citation) {
+      return false;
+    }
+    return owner.saveOriginalReflection(
+      bookId: bookId,
+      recordId: recordId,
+      original: latest,
+      reflection: reflection,
+    );
   }
 
   Future<void> _bind() async {
@@ -941,6 +950,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   }
 
   void _more() {
+    if (_editorComposing && reflectionFocus.hasFocus) return;
     _blur();
     _sheet(
       SafeArea(
@@ -1067,7 +1077,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         !_editorComposing &&
         !c.composing &&
         c.saveError == null;
-    final canSwipe = navigationEnabled && !editorFocus.hasFocus;
+    final canSwipe =
+        navigationEnabled && !editorFocus.hasFocus && !reflectionFocus.hasFocus;
     final compact = MediaQuery.sizeOf(context).height < 520;
     Widget paper(WritingPage target, int index, {bool preview = true}) =>
         _paperSurface(
@@ -1178,6 +1189,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             bookId: bookId,
             recordId: currentPage.recordId,
           );
+    final owner = c;
     return PaperBackdrop(
       binding: style.bookDetails.binding,
       color: paperColors[style.paperIndex],
@@ -1270,9 +1282,15 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         focusNode: editorFocus,
                         originals: originals,
                         keyboardOverlap: keyboardOverlap,
-                        onReflection: navigationEnabled
-                            ? (match) => _showOriginals(reflectionMatch: match)
-                            : null,
+                        reflectionFocus: reflectionFocus,
+                        onSaveReflection: (original, reflection) =>
+                            _saveReflection(
+                              owner,
+                              bookId,
+                              currentPage.recordId,
+                              original,
+                              reflection,
+                            ),
                         reveal: _reveal?.pageId == currentPage.id
                             ? (
                                 offset: _reveal!.offset,

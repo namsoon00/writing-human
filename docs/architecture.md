@@ -53,18 +53,19 @@ SQLite v9에서 두 테이블에 기본값이 빈 목록인 `originals` 컬럼�
 메타데이터를 보존하고 같은 범위의 원문 목록에 결정적인 ID로 저장한다. 같은 메모를
 동시에 다르게 수정하면 동기화에서 두 내용을 문단으로 보존한다.
 
-원문 패널 안에서 별도의 Flutter 편집기로 입력한다. 조합 중에는 저장 버튼을
-비활성화하고, 저장 실패 시 입력을 유지한다. 쓰기 화면에서 들어온 경우 저장 후
-원래 입력기와 커서로 돌아간다. 메모 서체는 Google Fonts의 Nanum Pen Script를
-SIL OFL 문서와 함께 번들에 둔다. [원본 서체와 라이선스](https://github.com/google/fonts/tree/main/ofl/nanumpenscript)
+원문 패널 안의 편집기는 저장 버튼을 사용하며 조합 중에는 저장을 쉬고 실패하면
+입력을 유지한다. 메모 서체는 Google Fonts의 Nanum Pen Script를 SIL OFL 문서와 함께
+번들에 둔다. [원본 서체와 라이선스](https://github.com/google/fonts/tree/main/ofl/nanumpenscript)
 
 원문 읽기 패널은 `PaperBackdrop`, `SourceSlip`, `RecordDivider`와 필사
 밑줄 스타일을 재사용한다. 책의 내지와 글꼴·펜·책의 디테일 설정을 전달한다.
 쓰기 화면은 원문 일치 위치와 저장한 밑줄을 실제 본문의 UTF-16 위치로 연결한다.
 `NotebookReflection`이 배치된 RenderEditable의 줄과 스크롤을 읽어 같은 종이에
-화살표와 손글씨를 그린다. 다음 줄의 본문이 공간을 차지하면 같은 줄 옆에 연필
-표시를 둔다. 편집기 높이와 본문·선택·조합은 그대로 두며, 메모는 원문에 붙여
-저장한다. 노트와 원문 패널은 같은 메모 편집기와 저장 경로를 사용한다.
+화살표와 손글씨를 그린다. 노트에서 메모를 누르거나 선택 메뉴에서 느낀 점을
+고르면 같은 페이지에 별도의 TextField를 열고 본문 컨트롤러와 선택은 보존한다.
+다음 줄에 글이 있으면 연필 표시를 두고, 편집할 때만 종이 위에 겹쳐 띄운다.
+조합이 끝난 메모는 기존 원문의 순차 저장 경로로 보내며, 메모를 모두 지우면
+reflection만 제거한다. 저장에 실패하면 입력을 유지하고 같은 자리에서 재시도할 수 있다.
 
 기존 `WritingRecord.source`, `sourceParagraph`, `WritingPage.passages`를 보존한다.
 조회할 때 기존 기록 원문과 쪽의 원문·출처를 새 목록과 함께 표시하고, 같은 본문과

@@ -113,6 +113,9 @@ class WritingFooter extends StatelessWidget {
   final bool failed;
   final BookDetailChoice ornament;
 
+  static const _toolsWidth = 78.0;
+  static const _sourceWidth = 48.0;
+
   @override
   Widget build(BuildContext context) => PaperSwipe(
     key: const ValueKey('page-number-swipe'),
@@ -133,38 +136,27 @@ class WritingFooter extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 SizedBox(
-                  width: 56,
+                  width: _toolsWidth,
                   child: Tooltip(
                     message: '쓰기 도구',
+                    excludeFromSemantics: true,
                     child: TextButton(
                       onPressed: onTools,
                       style: TextButton.styleFrom(
                         foregroundColor: brandInk,
                         minimumSize: const Size(48, 48),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
                       ),
-                      child: Semantics(
-                        label: '쓰기 도구',
-                        excludeSemantics: true,
-                        child: const CustomPaint(
-                          painter: _Underline(),
-                          child: Padding(
-                            padding: EdgeInsets.only(bottom: 5),
-                            child: Text(
-                              'Aa',
-                              style: TextStyle(
-                                fontFamily: appFontFamily,
-                                fontFamilyFallback: appFontFallback,
-                                fontSize: 21,
-                              ),
-                            ),
-                          ),
-                        ),
+                      child: const Text(
+                        '쓰기 도구',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12),
                       ),
                     ),
                   ),
                 ),
                 SizedBox(
-                  width: 52,
+                  width: _sourceWidth,
                   child: TextFieldTapRegion(
                     child: TextButton(
                       key: const ValueKey('writing-originals'),
@@ -181,8 +173,8 @@ class WritingFooter extends StatelessWidget {
             ),
           ),
           Positioned(
-            left: 108,
-            right: 108,
+            left: _toolsWidth + _sourceWidth,
+            right: _toolsWidth + _sourceWidth,
             top: 0,
             bottom: 0,
             child: Semantics(
@@ -247,29 +239,4 @@ class WritingFooter extends StatelessWidget {
       ),
     ),
   );
-}
-
-class _Underline extends CustomPainter {
-  const _Underline();
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawPath(
-      Path()
-        ..moveTo(-2, size.height - 1)
-        ..quadraticBezierTo(
-          size.width * .5,
-          size.height - 5,
-          size.width + 2,
-          size.height - 3,
-        ),
-      Paint()
-        ..color = brandInk
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.1
-        ..strokeCap = StrokeCap.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_Underline oldDelegate) => false;
 }

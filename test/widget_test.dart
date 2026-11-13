@@ -434,7 +434,10 @@ void main() {
       await tester.pumpAndSettle();
       final editor = find.byKey(const ValueKey('page-text'));
       final controller = tester.widget<TextField>(editor).controller!;
-      await tester.tap(find.byTooltip('쓰기 도구'));
+      expect(find.text('Aa'), findsNothing);
+      final writingTools = find.text('쓰기 도구');
+      expect(writingTools, findsOneWidget);
+      await tester.tap(writingTools);
       await tester.pumpAndSettle();
       expect(find.text('쓰는 인간체'), findsOneWidget);
       await tester.tap(find.text('나눔고딕'));

@@ -60,16 +60,24 @@ Offset nibPoint(WidgetTester tester) {
   return box.localToGlobal(box.size.center(Offset.zero));
 }
 
-void expectNibAtCaret(WidgetTester tester, {bool spaced = false}) {
+void expectNibAtCaret(WidgetTester tester, {bool inCell = false}) {
   expect(_pen, findsOneWidget);
   final editable = tester
       .state<EditableTextState>(find.byType(EditableText))
       .renderEditable;
   expect(editable.showCursor.value, isFalse);
   final value = tester.widget<TextField>(_field).controller!.value;
+  final cellWidth = inCell
+      ? TextPainter.computeWidth(
+          text: TextSpan(text: '한', style: editable.text?.style),
+          textDirection: editable.textDirection,
+          textScaler: editable.textScaler,
+          locale: editable.locale,
+        )
+      : 0.0;
   final expected = editable.localToGlobal(
     editable.getLocalRectForCaret(value.selection.extent).center +
-        Offset(spaced ? 18 : 0, 0),
+        Offset(cellWidth / 2, 0),
   );
   expect((nibPoint(tester) - expected).distance, lessThan(.2));
 }
@@ -96,7 +104,7 @@ void main() {
     'Ink settles after committed typing and follows wrapping and taps',
     (tester) async {
       final key = await open(tester);
-      expectNibAtCaret(tester);
+      expectNibAtCaret(tester, inCell: true);
       expect(tester.widget(_pen), isA<InkMark>());
       final first = nibPoint(tester);
       await tester.enterText(_field, '한');
@@ -106,13 +114,27 @@ void main() {
       final duringStroke = nibPoint(tester);
       expect(find.byKey(const ValueKey('fresh-ink')), findsOneWidget);
       await tester.pumpAndSettle();
-      expectNibAtCaret(tester, spaced: true);
+      expectNibAtCaret(tester, inCell: true);
       final ink = tester.widget<InkMark>(_pen);
       expect(
         ink.color,
         tester.widget<TextField>(_field).style!.color!.withValues(alpha: .55),
       );
       expect(tester.getSize(_pen), const Size.square(12));
+      final editable = tester
+          .state<EditableTextState>(find.byType(EditableText))
+          .renderEditable;
+      final start = editable.getLocalRectForCaret(
+        const TextPosition(offset: 0),
+      );
+      final end = editable.getLocalRectForCaret(const TextPosition(offset: 1));
+      expect(
+        first.dx,
+        closeTo(
+          editable.localToGlobal(Rect.lerp(start, end, .5)!.center).dx,
+          1,
+        ),
+      );
       expect(duringStroke.dx, greaterThan(first.dx));
       expect(duringStroke, nibPoint(tester));
       expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
@@ -121,7 +143,7 @@ void main() {
       final prose = '한 문장\n${List.filled(4, '천천히 옮겨 쓰는 문장 ').join()}';
       await tester.enterText(_field, prose);
       await tester.pumpAndSettle();
-      expectNibAtCaret(tester, spaced: true);
+      expectNibAtCaret(tester, inCell: true);
       expect(nibPoint(tester).dy, greaterThan(singleLine.dy));
       expect(key.currentState!.saved, prose);
       final controller = tester.widget<TextField>(_field).controller!;
@@ -129,7 +151,7 @@ void main() {
         offset: prose.indexOf('\n'),
       );
       await tester.pumpAndSettle();
-      expectNibAtCaret(tester, spaced: true);
+      expectNibAtCaret(tester, inCell: true);
       controller.selection = const TextSelection.collapsed(offset: 1);
       await tester.pumpAndSettle();
       expectNibAtCaret(tester);
@@ -174,7 +196,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(controller.value, value);
         expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
-        expectNibAtCaret(tester, spaced: true);
+        expectNibAtCaret(tester, inCell: true);
         final point = nibPoint(tester);
         await tester.pump(const Duration(milliseconds: 60));
         expect(nibPoint(tester), point);
@@ -187,7 +209,7 @@ void main() {
       tester.testTextInput.updateEditingValue(committed);
       await tester.pumpAndSettle();
       expect(controller.value, committed);
-      expectNibAtCaret(tester, spaced: true);
+      expectNibAtCaret(tester, inCell: true);
       controller.selection = const TextSelection(
         baseOffset: 0,
         extentOffset: 2,

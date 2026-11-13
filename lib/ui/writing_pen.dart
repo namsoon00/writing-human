@@ -27,7 +27,6 @@ class WritingPen extends StatefulWidget {
 }
 
 const _inkCaretSize = 12.0;
-const _inkCaretGap = 12.0;
 
 class _WritingPenState extends State<WritingPen>
     with SingleTickerProviderStateMixin {
@@ -179,17 +178,22 @@ class _WritingPenState extends State<WritingPen>
         final bounds = Offset.zero & overlay.size;
         if (bounds.contains(point)) {
           final line = editable.getLineAtOffset(position);
-          next = (center: point, showInk: line.isCollapsed);
+          next = (center: point, showInk: false);
           if (line.isValid &&
-              position.offset == line.end &&
-              line.start < line.end) {
-            final distance = _inkCaretSize / 2 + _inkCaretGap;
-            final offset = editable.textDirection == TextDirection.ltr
-                ? distance
-                : -distance;
-            final spaced = point.translate(offset, 0);
-            if (bounds.deflate(_inkCaretSize / 2).contains(spaced)) {
-              next = (center: spaced, showInk: true);
+              (line.isCollapsed || position.offset == line.end)) {
+            final direction = editable.textDirection;
+            final cellWidth = TextPainter.computeWidth(
+              text: TextSpan(text: '한', style: editable.text?.style),
+              textDirection: direction,
+              textScaler: editable.textScaler,
+              locale: editable.locale,
+            );
+            final offset = direction == TextDirection.ltr
+                ? cellWidth / 2
+                : -cellWidth / 2;
+            final center = point.translate(offset, 0);
+            if (bounds.deflate(_inkCaretSize / 2).contains(center)) {
+              next = (center: center, showInk: true);
             }
           }
         }

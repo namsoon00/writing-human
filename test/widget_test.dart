@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/main.dart';
 import 'package:writing_human/ui/transcription_guide.dart';
+import 'package:writing_human/ui/paper.dart';
+import 'package:writing_human/ui/tools_screen.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/data/store.dart';
 
@@ -493,9 +495,23 @@ void main() {
       expect(find.text('쓰는 인간체'), findsOneWidget);
       await tester.tap(find.text('나눔고딕'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('미색지'));
-      await tester.pumpAndSettle();
-      expect(store.data.style.paperIndex, 1);
+      final chip = find.widgetWithText(ChoiceChip, '나눔고딕');
+      final toolPaper = find.descendant(
+        of: find.byType(ToolsScreen),
+        matching: find.byType(PaperBackdrop),
+      );
+      for (final index in [3, 2]) {
+        await tester.tap(find.byTooltip(paperNames[index]));
+        await tester.pumpAndSettle();
+        final panel = panelPaperColor(paperColors[index]);
+        expect(tester.widget<PaperBackdrop>(toolPaper).color, panel);
+        expect(
+          tester.widget<ChoiceChip>(chip).backgroundColor,
+          panelChipColor(panel),
+        );
+        expect(tester.widget<ChoiceChip>(chip).selected, isTrue);
+      }
+      expect(store.data.style.paperIndex, 2);
       expect(store.data.style.fontIndex, 2);
       expect(store.data.style.penIndex, 0);
       await tester.ensureVisible(find.text('잉크 반응'));

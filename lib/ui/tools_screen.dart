@@ -29,11 +29,15 @@ class ToolsScreen extends StatelessWidget {
       final book = controller.library.books
           .where((b) => b.id == bookId)
           .firstOrNull;
+      final panel = panelPaperColor(
+        paperColors[book?.paperIndex ?? style.paperIndex],
+      );
       return SafeArea(
         top: false,
         child: PaperBackdrop(
-          color: paperColors[book?.paperIndex ?? style.paperIndex],
-          grainOpacity: paperGrainOpacity[book?.paperIndex ?? style.paperIndex],
+          color: panel,
+          outsideColor: panel,
+          grainOpacity: panelGrainOpacity,
           binding: controller.detailsFor(book).binding,
           coverIndex: book == null ? null : controller.coverIndexFor(book),
           pagesAfter: book == null
@@ -121,8 +125,8 @@ class ToolsScreen extends StatelessWidget {
                         style.copy(useDevelopmentTypeface: true),
                       ),
                       showCheckmark: false,
-                      selectedColor: const Color(0xffeeddd3),
-                      backgroundColor: paper,
+                      selectedColor: panelSelectedColor(panel),
+                      backgroundColor: panelChipColor(panel),
                       side: BorderSide(
                         color: style.useDevelopmentTypeface ? brandInk : line,
                       ),
@@ -146,13 +150,13 @@ class ToolsScreen extends StatelessWidget {
                           ),
                         ),
                         showCheckmark: false,
-                        selectedColor: const Color(0xffeeddd3),
-                        backgroundColor: paper,
+                        selectedColor: panelSelectedColor(panel),
+                        backgroundColor: panelChipColor(panel),
                         side: BorderSide(
                           color:
                               !style.useDevelopmentTypeface &&
                                   style.fontIndex == i
-                              ? burgundy
+                              ? brandInk
                               : line,
                         ),
                       ),
@@ -164,7 +168,10 @@ class ToolsScreen extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('잉크 반응', style: TextStyle(fontSize: 14)),
                   value: style.penMotion,
-                  activeTrackColor: burgundy,
+                  activeTrackColor: panelSwitchTrack,
+                  activeThumbColor: panelSwitchThumb,
+                  inactiveThumbColor: muted,
+                  inactiveTrackColor: panelSelectedColor(panel),
                   onChanged: (v) =>
                       controller.setStyle(style.copy(penMotion: v)),
                 ),
@@ -172,7 +179,10 @@ class ToolsScreen extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('글씨 쓰는 소리', style: TextStyle(fontSize: 14)),
                   value: style.writingSound,
-                  activeTrackColor: burgundy,
+                  activeTrackColor: panelSwitchTrack,
+                  activeThumbColor: panelSwitchThumb,
+                  inactiveThumbColor: muted,
+                  inactiveTrackColor: panelSelectedColor(panel),
                   onChanged: (v) => controller.setStyle(
                     controller.library.style.copy(writingSound: v),
                   ),
@@ -181,7 +191,10 @@ class ToolsScreen extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('종이 넘김 효과', style: TextStyle(fontSize: 14)),
                   value: style.pageMotion,
-                  activeTrackColor: burgundy,
+                  activeTrackColor: panelSwitchTrack,
+                  activeThumbColor: panelSwitchThumb,
+                  inactiveThumbColor: muted,
+                  inactiveTrackColor: panelSelectedColor(panel),
                   onChanged: (v) =>
                       controller.setStyle(style.copy(pageMotion: v)),
                 ),
@@ -189,7 +202,10 @@ class ToolsScreen extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('종이 넘김 소리', style: TextStyle(fontSize: 14)),
                   value: style.pageSound,
-                  activeTrackColor: burgundy,
+                  activeTrackColor: panelSwitchTrack,
+                  activeThumbColor: panelSwitchThumb,
+                  inactiveThumbColor: muted,
+                  inactiveTrackColor: panelSelectedColor(panel),
                   onChanged: (v) =>
                       controller.setStyle(style.copy(pageSound: v)),
                 ),
@@ -197,7 +213,10 @@ class ToolsScreen extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('줄 가이드', style: TextStyle(fontSize: 14)),
                   value: style.guides,
-                  activeTrackColor: burgundy,
+                  activeTrackColor: panelSwitchTrack,
+                  activeThumbColor: panelSwitchThumb,
+                  inactiveThumbColor: muted,
+                  inactiveTrackColor: panelSelectedColor(panel),
                   onChanged: (v) => controller.setStyle(style.copy(guides: v)),
                 ),
                 ListTile(
@@ -295,7 +314,7 @@ class ToolsScreen extends StatelessWidget {
           decoration: BoxDecoration(
             shape: sheet ? BoxShape.rectangle : BoxShape.circle,
             borderRadius: sheet ? BorderRadius.circular(7) : null,
-            border: Border.all(color: selected ? burgundy : Colors.transparent),
+            border: Border.all(color: selected ? brandInk : Colors.transparent),
           ),
           child: DecoratedBox(
             decoration: BoxDecoration(

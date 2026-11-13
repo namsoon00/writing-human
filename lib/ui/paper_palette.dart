@@ -23,3 +23,14 @@ const paperNames = ['순면지', '미색지', '회백지', '크림지'];
 const paperGrainOpacity = [.24, .16, .11, .30];
 const penColors = [ink, brandInk, Color(0xff5b6f8e)];
 const fontNames = ['나눔명조', '나눔명조 Bold', '나눔고딕'];
+
+/// A quieter sheet for controls, tinted by the current writing paper.
+Color panelPaperColor(Color stock) =>
+    Color.lerp(stock, const Color(0xfff5efe3), .72)!;
+Color panelChipColor(Color panel) =>
+    Color.lerp(panel, const Color(0xfffffaf1), .48)!;
+Color panelSelectedColor(Color panel) => Color.lerp(panel, brandInk, .12)!;
+
+const panelSwitchTrack = Color(0xff74503c);
+const panelSwitchThumb = Color(0xfffffaf1);
+const panelGrainOpacity = .08;

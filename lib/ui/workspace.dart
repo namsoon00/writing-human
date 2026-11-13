@@ -903,7 +903,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               isScrollControlled: true,
               showDragHandle: false,
               enableDrag: false,
-              backgroundColor: referencePaperColor(
+              backgroundColor: panelPaperColor(
                 paperColors[_paperStyle(selectedBook).paperIndex],
               ),
               barrierLabel: MaterialLocalizations.of(

@@ -343,6 +343,7 @@ class _SourceReadingState extends State<SourceReading> {
     final keyboard = media.viewInsets.bottom;
     final style = widget.style;
     final details = style.bookDetails;
+    final panel = panelPaperColor(paperColors[style.paperIndex]);
     return PopScope(
       canPop: _canLeave && !editing,
       onPopInvokedWithResult: (didPop, _) {
@@ -362,12 +363,12 @@ class _SourceReadingState extends State<SourceReading> {
             child: PaperBackdrop(
               key: const ValueKey('source-paper'),
               binding: details.binding,
-              color: paperColors[style.paperIndex],
-              grainOpacity: paperGrainOpacity[style.paperIndex],
+              color: panel,
+              outsideColor: panel,
+              grainOpacity: panelGrainOpacity,
               coverIndex: widget.coverIndex,
               pagesBefore: widget.pagesBefore,
               pagesAfter: widget.pagesAfter,
-              referencePage: true,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 2, 24, 12),
                 child: Column(
@@ -412,6 +413,10 @@ class _SourceReadingState extends State<SourceReading> {
                         alignment: Alignment.centerLeft,
                         child: FilterChip(
                           label: const Text('밑칠한 구절만 보기'),
+                          backgroundColor: panelChipColor(panel),
+                          selectedColor: panelSelectedColor(panel),
+                          checkmarkColor: brandInk,
+                          side: BorderSide(color: markedOnly ? brandInk : line),
                           selected: markedOnly,
                           onSelected: (value) =>
                               setState(() => markedOnly = value),
@@ -468,9 +473,7 @@ class _SourceReadingState extends State<SourceReading> {
                           : visibleOriginals.isEmpty
                           ? Center(
                               child: Text(
-                                markedOnly
-                                    ? '연필로 표시한 구절이 없어요.'
-                                    : '등록한 원문이 없습니다.',
+                                markedOnly ? '밑칠한 구절이 없어요.' : '등록한 원문이 없습니다.',
                               ),
                             )
                           : SingleChildScrollView(
@@ -492,6 +495,7 @@ class _SourceReadingState extends State<SourceReading> {
                                       onTap: () => _open(item.id),
                                       child: SourceSlip(
                                         compact: true,
+                                        panelColor: panel,
                                         choice: details.sourceSlip,
                                         child: ListTile(
                                           contentPadding: EdgeInsets.zero,
@@ -511,7 +515,7 @@ class _SourceReadingState extends State<SourceReading> {
                                               size: 17,
                                               useDevelopmentTypeface:
                                                   style.useDevelopmentTypeface,
-                                              color: penColors[style.penIndex],
+                                              color: ink,
                                             ),
                                           ),
                                           subtitle:

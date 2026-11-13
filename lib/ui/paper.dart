@@ -76,7 +76,6 @@ class PaperBackdrop extends StatelessWidget {
     this.pagesBefore = 0,
     this.pagesAfter = 0,
     this.grainOpacity = .24,
-    this.referencePage = false,
     this.shrinkWrap = false,
     this.outsideColor = appPaper,
   });
@@ -86,7 +85,7 @@ class PaperBackdrop extends StatelessWidget {
   final int? coverIndex;
   final int pagesBefore, pagesAfter;
   final double grainOpacity;
-  final bool referencePage, shrinkWrap;
+  final bool shrinkWrap;
 
   @override
   Widget build(BuildContext context) => ColoredBox(
@@ -104,9 +103,7 @@ class PaperBackdrop extends StatelessWidget {
                   child: RepaintBoundary(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: referencePage
-                            ? referencePaperColor(color)
-                            : color,
+                        color: color,
                         image: paperGrain(color, grainOpacity),
                       ),
                       child: DecoratedBox(
@@ -171,9 +168,6 @@ class PaperBackdrop extends StatelessWidget {
     ),
   );
 }
-
-Color referencePaperColor(Color color) =>
-    Color.lerp(color, const Color(0xffd8bc92), .17)!;
 
 DecorationImage paperGrain(Color color, double opacity) => DecorationImage(
   image: const AssetImage('assets/images/cotton-paper.jpg'),

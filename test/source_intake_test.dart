@@ -516,8 +516,9 @@ void main() {
       final paper = tester.widget<PaperBackdrop>(
         find.byKey(const ValueKey('source-paper')),
       );
-      expect(paper.color, paperColors[3]);
-      expect(paper.grainOpacity, paperGrainOpacity[3]);
+      final panel = panelPaperColor(paperColors[3]);
+      expect(paper.color, panel);
+      expect(paper.grainOpacity, panelGrainOpacity);
       expect(paper.coverIndex, 2);
       expect(paper.binding.toJson(), style.bookDetails.binding.toJson());
       final slips = find.descendant(
@@ -530,6 +531,12 @@ void main() {
             .map((item) => item.choice.toJson()),
         [slip.toJson(), slip.toJson()],
       );
+      final sourceCard = tester.widget<SourceSlip>(slips.first);
+      expect(sourceCard.panelColor, panel);
+      expect(sourceCard.stockColor, isNot(Colors.white));
+      expect(tester.widget<Text>(find.text(first)).style!.color, ink);
+      final filter = tester.widget<FilterChip>(find.byType(FilterChip));
+      expect(filter.backgroundColor, panelChipColor(panel));
       final separators = find.descendant(
         of: reading,
         matching: find.byType(RecordDivider),

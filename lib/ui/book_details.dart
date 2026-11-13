@@ -379,23 +379,24 @@ class SourceSlip extends StatelessWidget {
     this.compact = false,
     this.showCaption = true,
     this.choice = const BookDetailChoice(),
+    this.panelColor,
   });
   final Widget child;
   final bool compact, showCaption;
   final BookDetailChoice choice;
+  final Color? panelColor;
+
+  Color get stockColor {
+    final stock = BookDetailDesign.color(BookDetailKind.sourceSlip, choice);
+    final panel = panelColor;
+    return panel == null ? stock : Color.lerp(panel, stock, .38)!;
+  }
+
   @override
   Widget build(BuildContext context) => CustomPaint(
-    painter: choice.enabled
-        ? _SlipPaper(
-            BookDetailDesign.color(BookDetailKind.sourceSlip, choice),
-            choice.variant,
-          )
-        : null,
+    painter: choice.enabled ? _SlipPaper(stockColor, choice.variant) : null,
     foregroundPainter: choice.enabled
-        ? _SlipDetail(
-            choice.variant,
-            BookDetailDesign.color(BookDetailKind.sourceSlip, choice),
-          )
+        ? _SlipDetail(choice.variant, stockColor)
         : null,
     child: Padding(
       padding: EdgeInsets.fromLTRB(

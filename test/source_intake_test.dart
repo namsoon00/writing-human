@@ -685,7 +685,8 @@ void main() {
       expect(find.text('페이지 인식 결과'), findsOneWidget);
       expect(store.data.records, isEmpty);
       final paragraph = find.byKey(const ValueKey('source-paragraph-0'));
-      await tester.ensureVisible(paragraph);
+      await Scrollable.ensureVisible(tester.element(paragraph), alignment: .5);
+      await tester.pumpAndSettle();
       await tester.tap(paragraph);
       await tester.pumpAndSettle();
       await tester.tap(confirm);

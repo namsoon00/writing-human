@@ -125,6 +125,7 @@ void main() {
     expect(original.substring(saved.mark!.start, saved.mark!.end), '책장에');
     expect(controller.text, prose);
     expect(controller.selection, selection);
+    expect(find.byTooltip('느낀 점 고치기'), findsOneWidget);
   });
 
   testWidgets(

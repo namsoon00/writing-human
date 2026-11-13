@@ -151,9 +151,25 @@ class _NotebookReflectionState extends State<NotebookReflection> {
         final caret = composing && value.composing.end == selection.extentOffset
             ? value.composing.start
             : selection.extentOffset;
-        final reflection = selection.isCollapsed
-            ? reflectionForWriting(widget.originals, value.text, caret)
-            : null;
+        NotebookReflectionMatch? reflection;
+        if (selection.isCollapsed) {
+          reflection = reflectionForWriting(
+            widget.originals,
+            value.text,
+            caret,
+          );
+        } else if (!composing &&
+            selection.isValid &&
+            selection.end <= value.text.length) {
+          final passage = selection.textInside(value.text);
+          final match = matchSelectedOriginal(widget.originals, passage);
+          if (match != null && match.original.reflection != null) {
+            reflection = (
+              match: match,
+              offset: selection.start + passage.trimRight().length,
+            );
+          }
+        }
         final lineHeight = MediaQuery.textScalerOf(context).scale(21);
         _measure(reflection, box.biggest, lineHeight);
         final placement = _placement;
@@ -161,6 +177,7 @@ class _NotebookReflectionState extends State<NotebookReflection> {
           return const SizedBox.expand();
         }
         final note = reflection.match.original.reflection?.text;
+        final match = reflection.match;
         final action = widget.onEdit;
         final label = note == null ? '느낀 점 남기기' : '느낀 점 고치기';
         return Stack(
@@ -180,7 +197,7 @@ class _NotebookReflectionState extends State<NotebookReflection> {
                         key: const ValueKey('writing-reflection'),
                         onTap: action == null || composing
                             ? null
-                            : () => action(reflection.match),
+                            : () => action(match),
                         child: SizedBox(
                           height: placement.rect.height,
                           child: placement.lines == 0

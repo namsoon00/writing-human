@@ -51,8 +51,8 @@ SQLite v10은 `books.detail_overrides`에 빈 JSON 객체를 기본값으로 추
 
 ## 쓰기 위치와 새 잉크의 표현
 
-`WritingPen`은 실제 삽입 위치의 커서 영역 하단에서 2px 아래에 10×12px 펜촉을
-그린다. 펜촉 끝은 삽입 위치의 가로 좌표를 가리키며 현재 펜 색을 불투명도 55%로 사용한다.
+`WritingPen`은 실제 삽입 위치의 커서 영역 중앙에 폭 1.2 논리 픽셀, 높이 72%의
+세로획을 그린다. 현재 펜 색을 불투명도 50%로 사용한다.
 `penMotion` 값과 OS 동작 줄이기는 새로 확정된 글자의 일시적인 농도 효과를 제어한다.
 효과는 실제 RenderEditable의 글꼴·배율·문자열로 한 번 배치한 TextPainter를
 마지막 한 글자의 영역에만 겹쳐 그린다. 약 140ms 동안 추가 농도가 가라앉는다.
@@ -274,11 +274,11 @@ WritingStyle은 종이, 펜, 글꼴, 줄 가이드, 즐겨찾기를 독립적으
 
 도구 화면은 기존 편집기 위에 표시한다. 선택 변경으로 TextEditingController를 새로 만들거나 본문/selection/composing을 덮어쓰지 않는다. 펜 선택은 잉크빛에 반영되며 종이·글꼴을 바꾸지 않는다.
 
-## 입력 위치를 따르는 펜
+## 입력 위치를 표시하는 세로획
 
 lib/ui/writing_pen.dart는 TextEditingController·FocusNode·ScrollController를 읽기만 하는 장식 위젯이다. 한 프레임에 하나로 합친 post-frame callback에서 실제 RenderEditable의 getLocalRectForCaret를 읽고, global/local 좌표 변환으로 FittedBox·본문 패딩·스크롤·글자 크기를 반영한다. 텍스트 길이로 펜 위치를 추측하지 않는다.
 
-일반 확정 입력은 최대 130ms 동안 위치를 따라가며 미세한 회전과 들림을 표현한다. 줄바꿈·큰 붙여넣기·스크롤·커서 탭은 긴 궤적을 그리지 않고 새 위치로 옮긴다. composing이 유효한 동안 위치만 즉시 표시하며 흔들림/보간은 멈춘다. 선택 영역이 펼쳐져 있거나 커서가 보이지 않거나 포커스를 잃으면 추적 펜을 숨긴다. OS disableAnimations 또는 TickerMode 비활성화 시에도 숨긴다. 지속 반복 애니메이션은 없다.
+입력과 스크롤에 맞춰 세로획의 위치를 갱신한다. 한글 조합 중에는 위치를 표시하고, 선택 영역이 펼쳐지거나 포커스를 잃으면 세로획을 숨긴다. OS 동작 줄이기를 켜면 확정 글자의 농도 효과를 쉰다.
 
 펜 레이어는 IgnorePointer·ExcludeSemantics·RepaintBoundary로 입력과 분리한다. 새 TextEditingController를 만들거나 TextEditingValue·selection·composing·focus·scroll을 되쓰지 않는다. WritingStyle.penMotion은 기본 true인 optional JSON 값으로 기존 SQLite settings 및 웹 저장/동기화에 보관하며 DB 스키마를 바꾸지 않는다. sync/merge.dart에서 다른 도구 값과 독립적으로 병합한다.
 

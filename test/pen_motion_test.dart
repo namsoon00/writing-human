@@ -52,23 +52,26 @@ class PenHarnessState extends State<PenHarness> {
 }
 
 final _field = find.byKey(const ValueKey('page-text'));
-final _pen = find.byKey(const ValueKey('writing-pen-nib'));
+final _stroke = find.byKey(const ValueKey('writing-caret-stroke'));
 
-Offset nibPoint(WidgetTester tester) {
-  final box = tester.renderObject<RenderBox>(_pen);
-  return box.localToGlobal(box.size.topCenter(Offset.zero));
+Offset strokeCenter(WidgetTester tester) {
+  final box = tester.renderObject<RenderBox>(_stroke);
+  return box.localToGlobal(box.size.center(Offset.zero));
 }
 
-void expectNibAtCaret(WidgetTester tester) {
-  expect(_pen, findsOneWidget);
+void expectStrokeAtCaret(WidgetTester tester) {
+  expect(_stroke, findsOneWidget);
   final editable = tester
       .state<EditableTextState>(find.byType(EditableText))
       .renderEditable;
   expect(editable.showCursor.value, isFalse);
   final value = tester.widget<TextField>(_field).controller!.value;
   final caret = editable.getLocalRectForCaret(value.selection.extent);
-  final expected = editable.localToGlobal(caret.bottomCenter.translate(0, 2));
-  expect((nibPoint(tester) - expected).distance, lessThan(.2));
+  final expected = editable.localToGlobal(caret.center);
+  expect((strokeCenter(tester) - expected).distance, lessThan(.2));
+  final height =
+      (editable.localToGlobal(caret.bottomCenter).dy - expected.dy) * 1.44;
+  expect(tester.getSize(_stroke).height, closeTo(height, .2));
 }
 
 void main() {
@@ -93,47 +96,48 @@ void main() {
     'Ink settles after committed typing and follows wrapping and taps',
     (tester) async {
       final key = await open(tester);
-      expectNibAtCaret(tester);
-      expect(tester.widget(_pen), isA<CustomPaint>());
-      final first = nibPoint(tester);
+      expectStrokeAtCaret(tester);
+      final stroke = tester.widget<DecoratedBox>(_stroke);
+      expect((stroke.decoration as BoxDecoration).color!.a, closeTo(.5, .001));
+      final first = strokeCenter(tester);
       await tester.enterText(_field, '한');
       await tester.pump();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 40));
-      final duringStroke = nibPoint(tester);
+      final duringStroke = strokeCenter(tester);
       expect(find.byKey(const ValueKey('fresh-ink')), findsOneWidget);
       await tester.pumpAndSettle();
-      expectNibAtCaret(tester);
-      expect(tester.getSize(_pen), const Size(10, 12));
+      expectStrokeAtCaret(tester);
+      expect(tester.getSize(_stroke).width, closeTo(1.2, .001));
       expect(duringStroke.dx, greaterThan(first.dx));
-      expect(duringStroke, nibPoint(tester));
+      expect(duringStroke, strokeCenter(tester));
       expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
-      expect(nibPoint(tester).dx, greaterThan(first.dx));
-      final singleLine = nibPoint(tester);
+      expect(strokeCenter(tester).dx, greaterThan(first.dx));
+      final singleLine = strokeCenter(tester);
       final prose = '한 문장\n${List.filled(4, '천천히 옮겨 쓰는 문장 ').join()}';
       await tester.enterText(_field, prose);
       await tester.pumpAndSettle();
-      expectNibAtCaret(tester);
-      expect(nibPoint(tester).dy, greaterThan(singleLine.dy));
+      expectStrokeAtCaret(tester);
+      expect(strokeCenter(tester).dy, greaterThan(singleLine.dy));
       expect(key.currentState!.saved, prose);
       final controller = tester.widget<TextField>(_field).controller!;
       controller.selection = TextSelection.collapsed(
         offset: prose.indexOf('\n'),
       );
       await tester.pumpAndSettle();
-      expectNibAtCaret(tester);
+      expectStrokeAtCaret(tester);
       controller.selection = const TextSelection.collapsed(offset: 1);
       await tester.pumpAndSettle();
-      expectNibAtCaret(tester);
+      expectStrokeAtCaret(tester);
       expect(controller.text, prose);
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await tester.pumpAndSettle();
       expect(controller.selection, const TextSelection.collapsed(offset: 2));
-      expectNibAtCaret(tester);
+      expectStrokeAtCaret(tester);
       final beforeIdle = controller.value;
       await tester.pump(const Duration(milliseconds: 650));
-      expectNibAtCaret(tester);
-      expect(tester.getSize(_pen), const Size(10, 12));
+      expectStrokeAtCaret(tester);
+      expect(tester.getSize(_stroke).width, closeTo(1.2, .001));
       expect(controller.value, beforeIdle);
       // The ink overlay must not intercept a tap in the writing field.
       await tester.tapAt(tester.getCenter(_field));
@@ -144,7 +148,7 @@ void main() {
   );
 
   testWidgets(
-    'Korean composing and emoji are untouched; selection hides the pen',
+    'Korean composing and emoji are untouched; selection hides the caret',
     (tester) async {
       final key = await open(tester);
       final controller = tester.widget<TextField>(_field).controller!;
@@ -164,10 +168,10 @@ void main() {
         await tester.pumpAndSettle();
         expect(controller.value, value);
         expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
-        expectNibAtCaret(tester);
-        final point = nibPoint(tester);
+        expectStrokeAtCaret(tester);
+        final point = strokeCenter(tester);
         await tester.pump(const Duration(milliseconds: 60));
-        expect(nibPoint(tester), point);
+        expect(strokeCenter(tester), point);
         expect(controller.value, value);
       }
       final committed = TextEditingValue(
@@ -177,13 +181,13 @@ void main() {
       tester.testTextInput.updateEditingValue(committed);
       await tester.pumpAndSettle();
       expect(controller.value, committed);
-      expectNibAtCaret(tester);
+      expectStrokeAtCaret(tester);
       controller.selection = const TextSelection(
         baseOffset: 0,
         extentOffset: 2,
       );
       await tester.pumpAndSettle();
-      expect(_pen, findsNothing);
+      expect(_stroke, findsNothing);
       expect(
         controller.selection,
         const TextSelection(baseOffset: 0, extentOffset: 2),
@@ -204,15 +208,15 @@ void main() {
       await tester.pumpAndSettle();
       field.scrollController!.jumpTo(0);
       await tester.pumpAndSettle();
-      expectNibAtCaret(tester);
+      expectStrokeAtCaret(tester);
       field.scrollController!.jumpTo(800);
       await tester.pumpAndSettle();
-      expect(_pen, findsNothing);
+      expect(_stroke, findsNothing);
       field.scrollController!.jumpTo(0);
       await tester.pumpAndSettle();
       tester.view.viewInsets = const FakeViewPadding(bottom: 240);
       await tester.pumpAndSettle();
-      expectNibAtCaret(tester);
+      expectStrokeAtCaret(tester);
       tester.view.viewInsets = const FakeViewPadding();
       await tester.pumpAndSettle();
       key.currentState!.change(() {
@@ -221,11 +225,11 @@ void main() {
       });
       tester.view.physicalSize = const Size(640, 390);
       await tester.pumpAndSettle();
-      expectNibAtCaret(tester);
+      expectStrokeAtCaret(tester);
       final value = field.controller!.value;
       key.currentState!.change(() => key.currentState!.enabled = false);
       await tester.pumpAndSettle();
-      expectNibAtCaret(tester);
+      expectStrokeAtCaret(tester);
       expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
       expect(
         tester.widget<TextField>(_field).controller,
@@ -236,7 +240,7 @@ void main() {
         key.currentState!.reduced = true;
       });
       await tester.pumpAndSettle();
-      expectNibAtCaret(tester);
+      expectStrokeAtCaret(tester);
       expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
       expect(field.controller!.value, value);
       final typed = value.copyWith(
@@ -247,12 +251,12 @@ void main() {
       await tester.pump();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 40));
-      expectNibAtCaret(tester);
+      expectStrokeAtCaret(tester);
       expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
       expect(field.controller!.value, typed);
       field.focusNode!.unfocus();
       await tester.pumpAndSettle();
-      expect(_pen, findsNothing);
+      expect(_stroke, findsNothing);
       expect(tester.takeException(), isNull);
     },
   );

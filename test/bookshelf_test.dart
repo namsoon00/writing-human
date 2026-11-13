@@ -111,7 +111,8 @@ void main() {
     expect(cover('b16'), findsOneWidget);
     await tester.tap(find.byTooltip('노트 검색 닫기'));
     await tester.pumpAndSettle();
-    expect(find.text('모든 노트'), findsOneWidget);
+    expect(cover('b16'), findsOneWidget);
+    expect(find.text('검색 결과'), findsNothing);
     expect(store.writes, 0);
     await tester.tap(find.byTooltip('노트 검색'));
     await tester.pumpAndSettle();

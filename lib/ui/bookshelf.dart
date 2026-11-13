@@ -15,12 +15,14 @@ class Bookshelf extends StatelessWidget {
     required this.onDetails,
     required this.onWrite,
     required this.query,
+    this.scrollController,
   });
 
   final LibraryController controller;
   final ValueChanged<Book> onOpen, onDetails;
   final VoidCallback onWrite;
   final String query;
+  final ScrollController? scrollController;
 
   @override
   Widget build(BuildContext context) {
@@ -123,6 +125,7 @@ class Bookshelf extends StatelessWidget {
         final featuredWidth = math.min(194.0, width * .57);
         return ListView.builder(
           key: const ValueKey('bookshelf-scroll'),
+          controller: scrollController,
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.fromLTRB(padding, 14, padding, 20),
           itemCount: (books.length + columns - 1) ~/ columns + 1,

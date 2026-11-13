@@ -379,7 +379,17 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('내 글'));
       await tester.pumpAndSettle();
-      expect(find.byType(DateStamp), findsOneWidget);
+      final recordSheet = find.byWidgetPredicate(
+        (widget) =>
+            widget.key is ValueKey<String> &&
+            (widget.key! as ValueKey<String>).value.startsWith(
+              'writing-sheet-',
+            ),
+      );
+      expect(
+        find.descendant(of: recordSheet, matching: find.byType(DateStamp)),
+        findsOneWidget,
+      );
       await tester.tap(find.text('책장'));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('오래 곁에 둘 문장들 상세'));

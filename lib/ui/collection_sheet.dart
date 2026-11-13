@@ -9,6 +9,7 @@ import 'book_details.dart';
 import 'bookshelf.dart';
 import 'reading_details.dart';
 import 'new_book_dialog.dart';
+import 'writing_sheet_preview.dart';
 
 class CollectionSheet extends StatefulWidget {
   const CollectionSheet({
@@ -35,21 +36,26 @@ class CollectionSheet extends StatefulWidget {
 
 class _CollectionSheetState extends State<CollectionSheet> {
   bool books = true;
-  bool showTitleSearch = false;
+  bool showSearch = false;
   String? bookId;
   String query = '';
   final searchField = TextEditingController();
+  final shelfScroll = ScrollController();
+  final writingScroll = ScrollController();
+  final scrollStorage = PageStorageBucket();
   LibraryController get c => widget.controller;
 
   void _clearSearch() {
     searchField.clear();
     query = '';
-    showTitleSearch = false;
+    showSearch = false;
   }
 
   @override
   void dispose() {
     searchField.dispose();
+    shelfScroll.dispose();
+    writingScroll.dispose();
     super.dispose();
   }
 
@@ -183,13 +189,23 @@ class _CollectionSheetState extends State<CollectionSheet> {
     ),
   );
 
-  String _excerpt(WritingRecord r) {
-    final pages = c.library.pages.where((p) => p.recordId == r.id);
-    final text = pages
-        .map((p) => p.text.trim())
-        .where((t) => t.isNotEmpty)
-        .firstOrNull;
-    return text?.split('\n').first ?? '아직 비어 있는 종이';
+  void _switchView() {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      books = !books;
+      _clearSearch();
+    });
+  }
+
+  void _toggleSearch() {
+    if (showSearch) FocusScope.of(context).unfocus();
+    setState(() {
+      if (showSearch) {
+        _clearSearch();
+      } else {
+        showSearch = true;
+      }
+    });
   }
 
   @override
@@ -200,12 +216,17 @@ class _CollectionSheetState extends State<CollectionSheet> {
       final records = c.library.records.reversed
           .where((r) => bookId == null || r.bookId == bookId)
           .toList();
-      final passages = LibraryPassages(c.library);
+      final passages = !books && widget.onPassage != null
+          ? LibraryPassages(c.library)
+          : null;
       final shelf = books && bookId == null;
-      final searching = !shelf && query.trim().isNotEmpty;
+      final searching = passages != null && query.trim().isNotEmpty;
+      final topLevel = bookId == null;
+      final canSearch = shelf || (records.isNotEmpty && passages != null);
+      final searchLabel = shelf ? '노트 검색' : '내 글 검색';
       final revisit =
           !books && !searching && bookId == null && widget.onPassage != null
-          ? passages.revisit(DateTime.now())
+          ? passages?.revisit(DateTime.now())
           : null;
       final media = MediaQuery.of(context);
       final keyboard = media.viewInsets.bottom;
@@ -235,7 +256,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     Expanded(
                       child: Row(
                         children: [
-                          if (shelf) ...[
+                          if (topLevel) ...[
                             const InkMark(size: 20),
                             const SizedBox(width: 8),
                           ],
@@ -255,19 +276,12 @@ class _CollectionSheetState extends State<CollectionSheet> {
                         ],
                       ),
                     ),
-                    if (shelf)
+                    if (topLevel && canSearch)
                       IconButton(
-                        tooltip: showTitleSearch ? '노트 검색 닫기' : '노트 검색',
-                        onPressed: () => setState(() {
-                          if (showTitleSearch) {
-                            _clearSearch();
-                            FocusScope.of(context).unfocus();
-                          } else {
-                            showTitleSearch = true;
-                          }
-                        }),
+                        tooltip: showSearch ? '$searchLabel 닫기' : searchLabel,
+                        onPressed: _toggleSearch,
                         icon: Icon(
-                          showTitleSearch
+                          showSearch
                               ? CupertinoIcons.xmark_circle
                               : CupertinoIcons.search,
                           size: 19,
@@ -287,29 +301,39 @@ class _CollectionSheetState extends State<CollectionSheet> {
                   ],
                 ),
               ),
-              if (bookId == null && keyboard == 0)
+              if (topLevel && keyboard == 0)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       TextButton(
-                        onPressed: () => setState(() {
-                          books = !books;
-                          _clearSearch();
-                        }),
-                        child: Text(shelf ? '내 글' : '책장'),
-                      ),
-                      if (shelf)
-                        TextButton.icon(
-                          onPressed: widget.onNewBook,
-                          icon: const Icon(CupertinoIcons.plus, size: 15),
-                          label: const Text('새 노트'),
+                        onPressed: _switchView,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              shelf
+                                  ? CupertinoIcons.doc_text
+                                  : CupertinoIcons.book,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(shelf ? '내 글' : '책장'),
+                          ],
                         ),
+                      ),
+                      TextButton.icon(
+                        onPressed: shelf
+                            ? widget.onNewBook
+                            : () => widget.onNewSheet(null),
+                        icon: const Icon(CupertinoIcons.plus, size: 15),
+                        label: Text(shelf ? '새 노트' : '새 종이'),
+                      ),
                     ],
                   ),
                 ),
-              if (shelf && showTitleSearch)
+              if (shelf && showSearch)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
                   child: TextField(
@@ -329,12 +353,13 @@ class _CollectionSheetState extends State<CollectionSheet> {
                   c.library.books.isNotEmpty &&
                   c.library.style.bookDetails.indexTab.enabled)
                 _indexTabs(),
-              if (!books && records.isNotEmpty && widget.onPassage != null)
+              if (!shelf && canSearch && (showSearch || !topLevel))
                 Padding(
                   key: const ValueKey('collection-search'),
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
                   child: TextField(
                     controller: searchField,
+                    autofocus: topLevel,
                     decoration: const InputDecoration(
                       hintText: '문장, 책, 날짜 찾기',
                       prefixIcon: Icon(CupertinoIcons.search, size: 17),
@@ -347,8 +372,13 @@ class _CollectionSheetState extends State<CollectionSheet> {
                 key: const ValueKey('collection-results'),
                 child: shelf
                     ? Bookshelf(
-                        key: ValueKey(query.trim().toLowerCase()),
+                        key: query.trim().isEmpty
+                            ? const PageStorageKey('books')
+                            : ValueKey(query.trim().toLowerCase()),
                         controller: c,
+                        scrollController: query.trim().isEmpty
+                            ? shelfScroll
+                            : null,
                         query: query,
                         onOpen: widget.onBook,
                         onWrite: () => widget.onNewSheet(null),
@@ -358,31 +388,16 @@ class _CollectionSheetState extends State<CollectionSheet> {
                           _clearSearch();
                         }),
                       )
+                    : topLevel
+                    ? _writingSheets(
+                        records,
+                        revisit: revisit,
+                        results: searching
+                            ? passages.search(query).toList()
+                            : null,
+                      )
                     : searching
                     ? _results(passages.search(query, bookId: bookId).toList())
-                    : records.isEmpty && book == null
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              CupertinoIcons.doc_plaintext,
-                              color: muted,
-                              size: 28,
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              '써 내려간 문장은\n여기에 차곡차곡.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: muted,
-                                fontSize: 14,
-                                height: 1.8,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
                     : ListView.separated(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
@@ -519,7 +534,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                               vertical: 10,
                             ),
                             title: Text(
-                              _excerpt(r),
+                              _firstWriting(recordPages, maxLines: 1),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -580,7 +595,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     style: TextStyle(color: burgundy),
                   ),
                 ),
-              if (!shelf && keyboard == 0)
+              if (!topLevel && keyboard == 0)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
                   child: Wrap(
@@ -615,23 +630,115 @@ class _CollectionSheetState extends State<CollectionSheet> {
           ),
         ),
       );
-      return Padding(
-        padding: EdgeInsets.only(bottom: keyboard),
-        child: Stack(
-          children: [
-            if (shelf)
-              const Positioned.fill(
-                child: PaperBackdrop(
-                  grainOpacity: .21,
-                  child: SizedBox.expand(),
+      return PageStorage(
+        bucket: scrollStorage,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: keyboard),
+          child: Stack(
+            children: [
+              if (topLevel)
+                Positioned.fill(
+                  child: PaperBackdrop(
+                    color: shelf ? paper : const Color(0xffe8dbca),
+                    grainOpacity: .21,
+                    child: const SizedBox.expand(),
+                  ),
                 ),
-              ),
-            sheet,
-          ],
+              sheet,
+            ],
+          ),
         ),
       );
     },
   );
+
+  Widget _writingSheets(
+    List<WritingRecord> records, {
+    Passage? revisit,
+    List<Passage>? results,
+  }) {
+    final count = results?.length ?? records.length + (revisit == null ? 0 : 1);
+    if (count == 0) {
+      return Center(
+        child: Text(
+          results == null ? '아직 쓴 글이 없어요.' : '일치하는 기록이 없어요.',
+          style: const TextStyle(color: muted),
+        ),
+      );
+    }
+
+    final library = c.library;
+    final books = {for (final book in library.books) book.id: book};
+    final recordBooks = {
+      for (final record in records) record.id: record.bookId,
+    };
+    final pages = <String, List<WritingPage>>{};
+    if (results == null) {
+      for (final page in library.pages) {
+        (pages[page.recordId] ??= []).add(page);
+      }
+      for (final recordPages in pages.values) {
+        recordPages.sort((a, b) => a.number.compareTo(b.number));
+      }
+    }
+
+    WritingStyle styleFor(Book? book) {
+      final style = library.style;
+      return book?.paperIndex == null
+          ? style
+          : style.copy(paperIndex: book!.paperIndex);
+    }
+
+    Widget passageSheet(Passage passage, {String? heading}) {
+      final book = books[recordBooks[passage.page.recordId]];
+      return WritingSheetPreview(
+        excerpt: passage.excerpt,
+        notebook: book?.title,
+        date: passage.page.writtenOn,
+        style: styleFor(book),
+        heading: heading,
+        onOpen: () => widget.onPassage!(passage),
+      );
+    }
+
+    return ListView.separated(
+      key: results == null
+          ? const PageStorageKey('writing')
+          : ValueKey(query.trim()),
+      controller: results == null ? writingScroll : null,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
+      itemCount: count,
+      separatorBuilder: (_, _) => const SizedBox(height: 18),
+      itemBuilder: (context, index) {
+        if (results != null) return passageSheet(results[index]);
+        if (revisit != null && index == 0) {
+          return passageSheet(revisit, heading: '다시 만난 문장');
+        }
+        final record = records[index - (revisit == null ? 0 : 1)];
+        final book = books[record.bookId];
+        final recordPages = pages[record.id] ?? const [];
+        return WritingSheetPreview(
+          key: ValueKey('writing-sheet-${record.id}'),
+          excerpt: _firstWriting(recordPages),
+          notebook: book?.title,
+          date: recordPages.firstOrNull?.writtenOn,
+          style: styleFor(book),
+          onOpen: () => widget.onRecord(record),
+        );
+      },
+    );
+  }
+
+  String _firstWriting(List<WritingPage> pages, {int maxLines = 3}) {
+    for (final page in pages) {
+      final text = page.text.trim();
+      if (text.isEmpty) continue;
+      final lines = text.split('\n').where((line) => line.trim().isNotEmpty);
+      return lines.take(maxLines).join('\n');
+    }
+    return '아직 비어 있는 종이';
+  }
 
   Widget _results(List<Passage> results) => results.isEmpty
       ? const Center(child: Text('일치하는 기록이 없어요.'))

@@ -97,6 +97,15 @@ void main() {
       await shelf(tester);
       await tester.tap(find.byKey(const ValueKey('shelf-details-book')));
       await tester.pumpAndSettle();
+      expect(find.text('2편 · 4쪽'), findsOneWidget);
+      await tester.tap(find.text('이어서 쓰기'));
+      await tester.pumpAndSettle();
+      expect(store.data.activePageId, 'b2');
+      expect(store.data.pages, hasLength(5));
+
+      await shelf(tester);
+      await tester.tap(find.byKey(const ValueKey('shelf-details-book')));
+      await tester.pumpAndSettle();
       final firstNumber = find.byKey(const ValueKey('contents-page-a'));
       final secondNumber = find.byKey(const ValueKey('contents-page-b'));
       expect(tester.widget<Text>(firstNumber).data, '1');

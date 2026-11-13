@@ -271,10 +271,50 @@ class _CollectionSheetState extends State<CollectionSheet> {
     );
   }
 
+  Widget _contentsHeader(Book book, String summary, WritingPage? resumePage) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 18, 4, 24),
+      child: Column(
+        children: [
+          const InkMark(size: 12),
+          const SizedBox(height: 12),
+          Semantics(
+            header: true,
+            child: Text(
+              book.title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 30, height: 1.3, color: ink),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            summary,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, height: 1.5, color: muted),
+          ),
+          if (resumePage != null) ...[
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: () => widget.onBook(book),
+              icon: const Icon(CupertinoIcons.book, size: 16),
+              label: const Text('이어서 쓰기'),
+              style: FilledButton.styleFrom(
+                backgroundColor: brandInk,
+                foregroundColor: paper,
+                minimumSize: const Size(0, 48),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _contents(
     List<WritingRecord> records,
     List<WritingPage> pages,
     Book book,
+    String summary,
   ) {
     final first = <String, ({WritingPage page, int number})>{};
     final firstWrittenLine = <String, String>{};
@@ -288,7 +328,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
         );
       }
     }
-    final resumedRecord = c.resumePageForBook(book.id)?.recordId;
+    final resumePage = c.resumePageForBook(book.id);
     final details = c.library.style.bookDetails;
     return ListView.builder(
       key: ValueKey('book-contents-${book.id}'),
@@ -299,19 +339,23 @@ class _CollectionSheetState extends State<CollectionSheet> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Text('필사 기록', style: TextStyle(fontSize: 21)),
+              if (!showSearch) _contentsHeader(book, summary, resumePage),
+              const Divider(height: 1, color: line),
+              Row(
+                children: [
+                  Expanded(
+                    child: Semantics(
+                      header: true,
+                      child: const Text('목차', style: TextStyle(fontSize: 19)),
                     ),
-                    Text(
-                      '${records.length}편',
-                      style: const TextStyle(color: muted),
-                    ),
-                  ],
-                ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => widget.onNewSheet(book.id),
+                    icon: const Icon(CupertinoIcons.plus, size: 16),
+                    label: const Text('새 종이'),
+                    style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
+                  ),
+                ],
               ),
               if (records.isEmpty)
                 const Padding(
@@ -323,7 +367,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
         }
         final record = records[index - 1];
         final entry = first[record.id];
-        final resumed = record.id == resumedRecord;
+        final resumed = record.id == resumePage?.recordId;
         final excerpt = firstWrittenLine[record.id];
         final title =
             RegExp(r'^필사 [0-9]+$').hasMatch(record.title) && excerpt != null
@@ -339,14 +383,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
             Semantics(
               selected: resumed,
               child: Material(
-                color: resumed && details.ribbon.enabled
-                    ? Color.lerp(
-                        paperColors[book.paperIndex ??
-                            c.library.style.paperIndex],
-                        brandInk,
-                        .08,
-                      )
-                    : Colors.transparent,
+                type: MaterialType.transparency,
                 borderRadius: BorderRadius.circular(4),
                 child: InkWell(
                   key: ValueKey('contents-record-${record.id}'),
@@ -363,14 +400,14 @@ class _CollectionSheetState extends State<CollectionSheet> {
                         },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
+                      horizontal: 4,
                       vertical: 14,
                     ),
                     child: Row(
                       children: [
                         if (details.ribbon.enabled)
                           SizedBox(
-                            width: 17,
+                            width: 18,
                             child: resumed
                                 ? RibbonBookmark(
                                     choice: details.ribbon,
@@ -518,29 +555,54 @@ class _CollectionSheetState extends State<CollectionSheet> {
                         }),
                         icon: const Icon(CupertinoIcons.chevron_left, size: 18),
                       ),
-                    Expanded(
-                      child: Row(
-                        children: [
-                          if (topLevel) ...[
-                            const InkMark(size: 20),
-                            const SizedBox(width: 8),
-                          ],
-                          Flexible(
-                            child: Text(
-                              book?.title ?? (shelf ? '책장' : '내 글'),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontFamily: appFontFamily,
-                                fontFamilyFallback: appFontFallback,
-                                fontSize: 21,
-                                fontWeight: FontWeight.w700,
+                    if (book == null)
+                      Expanded(
+                        child: Row(
+                          children: [
+                            if (topLevel) ...[
+                              const InkMark(size: 20),
+                              const SizedBox(width: 8),
+                            ],
+                            Flexible(
+                              child: Text(
+                                shelf ? '책장' : '내 글',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontFamily: appFontFamily,
+                                  fontFamilyFallback: appFontFallback,
+                                  fontSize: 21,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
+                          ],
+                        ),
+                      )
+                    else ...[
+                      const Spacer(),
+                      if (showSearch)
+                        IconButton(
+                          tooltip: '이 책에서 찾기 닫기',
+                          onPressed: _toggleSearch,
+                          icon: const Icon(
+                            CupertinoIcons.xmark_circle,
+                            size: 19,
                           ),
-                        ],
-                      ),
-                    ),
+                        )
+                      else ...[
+                        if (widget.onBookOriginals != null)
+                          TextButton.icon(
+                            onPressed: () => widget.onBookOriginals!(book),
+                            icon: const Icon(
+                              CupertinoIcons.quote_bubble,
+                              size: 16,
+                            ),
+                            label: const Text('원문'),
+                          ),
+                        _bookMenu(book, summary, canSearch),
+                      ],
+                    ],
                     if (topLevel && canSearch)
                       IconButton(
                         tooltip: showSearch ? '$searchLabel 닫기' : searchLabel,
@@ -607,32 +669,6 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     onChanged: (value) => setState(() => query = value),
                   ),
                 ),
-              if (book != null && keyboard == 0)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 26),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          if (widget.onBookOriginals != null)
-                            TextButton.icon(
-                              onPressed: () => widget.onBookOriginals!(book),
-                              icon: const Icon(
-                                CupertinoIcons.quote_bubble,
-                                size: 16,
-                              ),
-                              label: const Text('원문'),
-                            )
-                          else
-                            const SizedBox.shrink(),
-                          _bookMenu(book, summary, canSearch),
-                        ],
-                      ),
-                      const Divider(height: 1, color: line),
-                    ],
-                  ),
-                ),
               if (!shelf && canSearch && showSearch)
                 Padding(
                   key: const ValueKey('collection-search'),
@@ -690,7 +726,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     ? _results(passages.search(query, bookId: bookId).toList())
                     : book == null
                     ? const SizedBox.shrink()
-                    : _contents(records, volume, book),
+                    : _contents(records, volume, book, summary),
               ),
               if (c.saveError != null)
                 TextButton(
@@ -698,26 +734,6 @@ class _CollectionSheetState extends State<CollectionSheet> {
                   child: const Text(
                     '저장 실패 · 다시 시도',
                     style: TextStyle(color: burgundy),
-                  ),
-                ),
-              if (!topLevel && keyboard == 0)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: FilledButton.icon(
-                      onPressed: () => widget.onNewSheet(bookId),
-                      icon: const Icon(CupertinoIcons.plus, size: 16),
-                      label: const Text('새 종이'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: brandInk,
-                        foregroundColor: paper,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 14,
-                        ),
-                      ),
-                    ),
                   ),
                 ),
             ],

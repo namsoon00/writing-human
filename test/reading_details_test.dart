@@ -389,7 +389,7 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      expect(find.text('필사 기록'), findsOneWidget);
+      expect(find.text('목차'), findsOneWidget);
       expect(find.byType(BookIndexTab), findsNothing);
       await choose('다른 책의 목차');
       expect(find.byType(BookIndexTab), findsNWidgets(2));

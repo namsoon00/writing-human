@@ -25,7 +25,7 @@
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>NSCameraUsageDescription</key>
-	<string>필사할 책의 구절을 찍어 이 기기에서 글자를 읽습니다.</string>
+	<string>카메라에 비춘 책의 글자를 이 기기에서 읽습니다.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>선택한 책 사진에서 필사할 원문을 가져옵니다.</string>
 	<key>LSRequiresIPhoneOS</key>

@@ -13,8 +13,9 @@ extension OriginalPhotoLineBounds on OriginalPhotoLine {
 }
 
 List<OriginalPhotoLine> mapPhotoLines(
-  Iterable<(String, List<ScanLine>)> paragraphs,
-) {
+  Iterable<(String, List<ScanLine>)> paragraphs, {
+  Rect Function(Rect)? transformBounds,
+}) {
   final result = <OriginalPhotoLine>[];
   var offset = 0;
   for (final (text, scanned) in paragraphs) {
@@ -33,7 +34,8 @@ List<OriginalPhotoLine> mapPhotoLines(
           : matches.length == 1
           ? matches.single
           : null;
-      if (scanLine?.bounds case final box?) {
+      if (scanLine?.bounds case final bounds?) {
+        final box = transformBounds?.call(bounds) ?? bounds;
         final left = _coordinate(box.left), top = _coordinate(box.top);
         final right = _coordinate(box.right), bottom = _coordinate(box.bottom);
         if (left >= right || top >= bottom) continue;

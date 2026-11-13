@@ -6,11 +6,13 @@ import 'package:flutter/services.dart';
 
 import '../data/model.dart';
 import '../data/original_photo_store.dart';
+import '../source/camera_page.dart';
 import '../source/photo_lines.dart';
 import '../source/scan_passage.dart';
 import '../source/source_intake.dart';
 import '../source/source_scan.dart';
 import 'book_details.dart';
+import 'live_source_camera.dart';
 import 'paper.dart';
 import 'original_range_sheet.dart';
 import 'source_scan_preview.dart';
@@ -26,6 +28,8 @@ typedef SourceImportResult = ({
 });
 
 enum _ScanMode { page, paragraph }
+
+enum _PhotoInput { live, camera, library }
 
 class SourceImportSheet extends StatefulWidget {
   const SourceImportSheet({
@@ -71,6 +75,8 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   final _savedReviews = <(_ScanMode, int, String), String>{};
   SourceScan? _scan;
   SourcePhoto? _originalPhoto;
+  CameraPage? _cameraPage;
+  bool _fromLiveCamera = false;
   ({String text, PencilMark range})? _range;
   bool _savingPhoto = false;
   late final OriginalPhotoStore _photos = const OriginalPhotoStore();
@@ -167,31 +173,54 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   Future<void> _choosePhoto(_ScanMode mode) async {
     if (!_editable) return;
     FocusScope.of(context).unfocus();
-    final camera = widget.intake.canUseCamera
-        ? await showDialog<bool>(
-            context: context,
-            builder: (context) => SimpleDialog(
-              title: Text(mode == _ScanMode.page ? '책 한 페이지 인식' : '문단 인식'),
-              children: [
-                SimpleDialogOption(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('사진 찍기'),
-                ),
-                SimpleDialogOption(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('사진 고르기'),
-                ),
-              ],
+    final input = await showDialog<_PhotoInput>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(mode == _ScanMode.page ? '책 한 페이지 인식' : '문단 인식'),
+        children: [
+          if (widget.intake.canUseLiveCamera)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, _PhotoInput.live),
+              child: const Text('카메라로 바로 읽기'),
             ),
-          )
-        : false;
-    if (!mounted || camera == null || !_editable) return;
+          if (widget.intake.canUseCamera)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, _PhotoInput.camera),
+              child: const Text('사진 찍기'),
+            ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, _PhotoInput.library),
+            child: const Text('사진 고르기'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || input == null || !_editable) return;
+    if (input == _PhotoInput.live) {
+      final result = await showLiveSourceCamera(
+        context,
+        widget.intake,
+        pageMode: mode == _ScanMode.page,
+      );
+      if (!mounted || result == null) return;
+      _useScan(
+        result.photo,
+        result.scan,
+        mode,
+        cameraPage: result.page,
+        live: true,
+      );
+      if (result.paragraph case final index?) _pickParagraph(index);
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      final photo = await widget.intake.pickPhoto(camera: camera);
+      final photo = await widget.intake.pickPhoto(
+        camera: input == _PhotoInput.camera,
+      );
       if (photo != null && mounted) await _read(photo, mode);
     } on SourceIntakeException catch (error) {
       if (mounted) setState(() => _error = error.message);
@@ -245,8 +274,21 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   Future<void> _read(SourcePhoto photo, _ScanMode mode) async {
     final scan = await _recognize(photo);
     if (scan == null || !mounted) return;
+    _useScan(photo, scan, mode);
+  }
+
+  void _useScan(
+    SourcePhoto photo,
+    SourceScan scan,
+    _ScanMode mode, {
+    CameraPage? cameraPage,
+    bool live = false,
+  }) {
     setState(() {
       _scan = scan;
+      _cameraPage = cameraPage;
+      _fromLiveCamera = live;
+      _error = null;
       _originalPhoto = photo;
       _range = null;
       _savedReviews.clear();
@@ -324,7 +366,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   ScanPassage? get _passage =>
       _paragraph == null ? null : ScanPassage(_scan!.paragraphs[_paragraph!]);
 
-  Future<void> _readRegion(ScanPassage passage) async {
+  Future<void> _readRegion(ScanPassage passage, {bool quiet = false}) async {
     final boxes = passage.lineBoxes(_first, _last);
     if (boxes.isEmpty || _busy) return;
     final bounds = boxes.reduce((a, b) => a.expandToInclude(b));
@@ -335,17 +377,27 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       region: region,
       mask: boxes.map((box) => box.inflate(.003)).toList(),
     );
-    if (mounted && result != null) {
+    if (!mounted) return;
+    if (result != null) {
       setState(
         () => _reread = result.paragraphs.map((p) => p.text).join('\n\n'),
       );
+    } else if (quiet) {
+      setState(() => _error = null);
     }
   }
 
-  void _reviewSelection() {
+  Future<void> _reviewSelection() async {
     if (_busy) return;
     final paragraphs = _scan!.paragraphs;
     final passage = _passage;
+    if (_fromLiveCamera &&
+        _mode == _ScanMode.paragraph &&
+        passage != null &&
+        _reread == null) {
+      await _readRegion(passage, quiet: true);
+      if (!mounted) return;
+    }
     final texts = _mode == _ScanMode.page
         ? [
             for (final index in _order.where(_selected.contains))
@@ -400,10 +452,11 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       .where((text) => text.isNotEmpty)
       .join('\n\n');
 
-  List<OriginalPhotoLine> get _photoLines => mapPhotoLines([
-    for (final (index, editor) in _editors.indexed)
-      (normalizeSource(editor.text), _reviewLines[index]),
-  ]);
+  List<OriginalPhotoLine> _photoLines({bool original = false}) =>
+      mapPhotoLines([
+        for (final (index, editor) in _editors.indexed)
+          (normalizeSource(editor.text), _reviewLines[index]),
+      ], transformBounds: original ? _cameraPage?.originalBounds : null);
 
   bool get _isPageReview => _reviewing && _mode == _ScanMode.page;
 
@@ -416,7 +469,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       text,
       current: _range?.text == text ? _range?.range : null,
       photo: _scan,
-      photoLines: _photoLines,
+      photoLines: _photoLines(),
     );
     if (mounted && result != null && text == _confirmedText) {
       setState(() {
@@ -444,7 +497,9 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     final photo = _reviewing ? _originalPhoto : null;
     final citation = _citation.text.trim(), bookId = _bookId;
     final range = isFullPage ? _range?.range : null;
-    final photoLines = isFullPage ? _photoLines : const <OriginalPhotoLine>[];
+    final photoLines = isFullPage
+        ? _photoLines(original: true)
+        : const <OriginalPhotoLine>[];
     String? photoId;
     if (photo != null) {
       FocusScope.of(context).unfocus();

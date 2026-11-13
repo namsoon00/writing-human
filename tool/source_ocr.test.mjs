@@ -84,3 +84,20 @@ test('a recurring gutter is re-read as two columns without losing heading or foo
   assert.deepEqual(rectangles.map(r => r.left), [0, 49]);
   assert.deepEqual(Array.from(result, paragraph => paragraph[0].text), ['제목', '왼쪽 단', '오른쪽 단', '12']);
 });
+
+test('live frames reuse one OCR worker and release it when the camera closes', async () => {
+  const {window, state} = environment(async () => ({
+    data: {text: '카메라 글자', blocks: []},
+  }));
+  const input = new Uint8Array([1, 2, 3]);
+  await window.writingHumanScanPhoto(input, 100, 100, false, true);
+  const firstWorkerOptions = state.options;
+  await window.writingHumanScanPhoto(input, 100, 100, false, true);
+  assert.equal(state.options, firstWorkerOptions);
+  assert.equal(state.terminated, 0);
+  window.writingHumanEndLiveOcr();
+  assert.equal(state.terminated, 1);
+  await window.writingHumanScanPhoto(input, 100, 100, false);
+  assert.notEqual(state.options, firstWorkerOptions);
+  assert.equal(state.terminated, 2);
+});

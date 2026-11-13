@@ -22,6 +22,7 @@ external void _endLive();
 SourceIntake createSourceIntake() => _WebSourceIntake();
 
 class _WebSourceIntake extends SourceIntake {
+  int _liveGeneration = 0;
   @override
   bool get canUseLiveCamera => true;
 
@@ -30,7 +31,10 @@ class _WebSourceIntake extends SourceIntake {
       _read(photo, live: true);
 
   @override
-  void endLiveRecognition() => _endLive();
+  void endLiveRecognition() {
+    _liveGeneration++;
+    _endLive();
+  }
 
   @override
   Future<SourceScan> scan(
@@ -45,12 +49,16 @@ class _WebSourceIntake extends SourceIntake {
     List<Rect> mask = const [],
     bool live = false,
   }) async {
+    final generation = _liveGeneration;
     try {
       final image = await ScanImage.decode(
         photo.bytes,
         region: region,
         mask: mask,
       );
+      if (live && generation != _liveGeneration) {
+        return SourceScan.fromText(photo.bytes, const []);
+      }
       final result = await _scan(
         image.bytes.toJS,
         image.width.toJS,

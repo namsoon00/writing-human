@@ -102,7 +102,9 @@
         legacyCore: false,
         errorHandler: () => {
           const running = live ? active : job;
-          running?.cancel(new Error('OCR worker failed'));
+          if (running && (!live || running.live)) {
+            running.cancel(new Error('OCR worker failed'));
+          }
         },
       }).then(async (worker) => {
         if (job.cancelled) {

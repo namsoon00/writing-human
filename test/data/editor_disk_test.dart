@@ -67,7 +67,7 @@ void main() {
     final field = find.byKey(const ValueKey('page-text'));
     expect(tester.widget<Text>(heading).data, '쓰는 인간');
     expect(tester.widget<TextField>(field).decoration!.hintText, isNull);
-    await tester.tap(find.text('보관함'));
+    await tester.tap(find.text('책장'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('새 노트'));
     await tester.pumpAndSettle();
@@ -75,7 +75,7 @@ void main() {
     await tester.tap(find.text('책 만들고 쓰기'));
     await saved();
     final initialBookId = controller.library.books.single.id;
-    await tester.tap(find.text('보관함'));
+    await tester.tap(find.text('책장'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(ValueKey('shelf-details-$initialBookId')));
     await tester.pumpAndSettle();
@@ -146,7 +146,7 @@ void main() {
     await saved();
     expect(tester.widget<Text>(heading).data, '실제 파일 검수');
     final bookId = controller.library.books.single.id;
-    await tester.tap(find.text('보관함'));
+    await tester.tap(find.text('책장'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(ValueKey('shelf-details-$bookId')));
     await tester.pumpAndSettle();
@@ -268,7 +268,7 @@ void main() {
       expect(stored.pages.length, 2);
       expect(stored.activePage!.text, body);
     });
-    await tester.tap(find.text('책 펼치기'));
+    await tester.tap(find.byKey(const ValueKey('open-front-cover')));
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(field).controller!.text, body);
     expect(tester.takeException(), isNull);

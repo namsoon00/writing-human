@@ -281,7 +281,7 @@ void main() {
     await saveOriginal(first, '12쪽');
     expect(store.data.books.first.originals.single.text, first);
     expect(store.data.records.first.originals, isEmpty);
-    await tester.tap(find.text('보관함'));
+    await tester.tap(find.text('책장'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('shelf-details-b')));
     await tester.pumpAndSettle();

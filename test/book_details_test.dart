@@ -375,7 +375,7 @@ void main() {
       expect(find.byType(SourceReading), findsOneWidget);
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('보관함'));
+      await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('내 글'));
       await tester.pumpAndSettle();
@@ -390,7 +390,7 @@ void main() {
         find.descendant(of: recordSheet, matching: find.byType(DateStamp)),
         findsOneWidget,
       );
-      await tester.tap(find.text('책장'));
+      await tester.tap(find.widgetWithText(TextButton, '책장').last);
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('오래 곁에 둘 문장들 상세'));
       await tester.pumpAndSettle();

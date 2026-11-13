@@ -196,7 +196,7 @@ void main() {
       }
       void expectTypeface(String text) {
         final rich = find.descendant(
-          of: find.text(text),
+          of: find.text(text).last,
           matching: find.byType(RichText),
         );
         expect(rich, findsOneWidget, reason: text);
@@ -208,8 +208,8 @@ void main() {
       }
 
       expectTypeface('내 책');
-      expectTypeface('보관함');
-      await tester.tap(find.text('보관함'));
+      expectTypeface('책장');
+      await tester.tap(find.text('책장'));
       await tester.pumpAndSettle();
       expectTypeface('책장');
       expectTypeface('새 노트');

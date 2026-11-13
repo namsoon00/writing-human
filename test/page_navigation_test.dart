@@ -333,7 +333,7 @@ void main() {
     await previousSheet(tester);
     await tester.pumpAndSettle();
     expect(find.text('지은이'), findsOneWidget);
-    await tester.tap(find.text('책 펼치기'));
+    await tester.tap(find.byKey(const ValueKey('open-front-cover')));
     await tester.pumpAndSettle();
     expect(store.data.activePageId, 'a1');
     await nextSheet(tester);
@@ -404,14 +404,22 @@ void main() {
   );
 
   testWidgets(
-    'A front cover button turns the board with reduced motion support',
+    'Tapping the front cover turns the board with reduced motion support',
     (tester) async {
       final store = MemoryStore()..data = twoPages();
       await open(tester, store);
       await previousSheet(tester);
       await tester.pumpAndSettle();
       expect(cover, findsOneWidget);
-      await tester.tap(find.text('책 펼치기'));
+      expect(find.text('책 펼치기'), findsNothing);
+      await tester.tap(find.text('책장'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('bookshelf-scroll')), findsNothing);
+      expect(find.text('아직 노트가 없어요.'), findsOneWidget);
+      await tester.tap(find.byTooltip('닫기'));
+      await tester.pumpAndSettle();
+      expect(cover, findsOneWidget);
+      await tester.tapAt(tester.getCenter(cover) + const Offset(80, 120));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
       expect(
@@ -466,8 +474,8 @@ void main() {
       await previousSheet(tester);
       await tester.pumpAndSettle();
       expect(tester.getRect(material), Offset.zero & viewport);
-      expect(tester.getTopLeft(find.text('보관함')).dy, greaterThan(28));
-      await tester.tap(find.text('책 펼치기'));
+      expect(tester.getTopLeft(find.text('책장')).dy, greaterThan(28));
+      await tester.tap(find.byKey(const ValueKey('open-front-cover')));
       await tester.pumpAndSettle();
       expect(tester.getSize(surface).width, 760);
       expect(tester.widget<TextField>(field).controller, same(editor));
@@ -545,7 +553,7 @@ void main() {
       await tester.fling(cover, const Offset(140, 0), 800);
       await tester.pumpAndSettle();
       expect(cover, findsOneWidget);
-      await tester.tap(find.text('책 펼치기'));
+      await tester.tap(find.byKey(const ValueKey('open-front-cover')));
       await tester.pumpAndSettle();
       await tester.drag(field, const Offset(0, -180));
       await tester.pumpAndSettle();

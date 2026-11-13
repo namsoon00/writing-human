@@ -79,6 +79,24 @@ class BookFrontCover extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         motion?.transformArtwork(artwork, back: back) ?? artwork,
+        if (!back && motion?.enabled != true)
+          Semantics(
+            label: '책 펼치기',
+            button: true,
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                key: const ValueKey('open-front-cover'),
+                onTap: onOpen,
+                mouseCursor: SystemMouseCursors.click,
+                overlayColor: WidgetStateProperty.resolveWith(
+                  (states) => states.contains(WidgetState.focused)
+                      ? lettering.withValues(alpha: .10)
+                      : Colors.transparent,
+                ),
+              ),
+            ),
+          ),
         if (!back || motion?.enabled != true)
           IgnorePointer(
             ignoring: visibility < 1,
@@ -162,19 +180,22 @@ class BookFrontCover extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton(
+              key: const ValueKey('open-bookshelf'),
               style: button,
               onPressed: onCollection,
-              child: const Text('보관함'),
+              child: const Text('책장'),
             ),
           ),
           const Spacer(),
           Text('$pageCount쪽', style: TextStyle(color: color, fontSize: 13)),
-          const SizedBox(height: 10),
-          TextButton(
-            style: button,
-            onPressed: onOpen,
-            child: Text(back ? '마지막 장 펼치기' : '책 펼치기'),
-          ),
+          if (back) ...[
+            const SizedBox(height: 10),
+            TextButton(
+              style: button,
+              onPressed: onOpen,
+              child: const Text('마지막 장 펼치기'),
+            ),
+          ],
           if (onAppend != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -187,7 +208,8 @@ class BookFrontCover extends StatelessWidget {
         ],
       );
       final scale = MediaQuery.textScalerOf(context);
-      final minHeight = (onAppend == null ? 3 : 4) * (scale.scale(14) + 34);
+      final minHeight =
+          (back ? (onAppend == null ? 3 : 4) : 2) * (scale.scale(14) + 34);
       if (box.maxHeight >= minHeight) return controls;
       return SingleChildScrollView(
         child: SizedBox(height: minHeight, child: controls),

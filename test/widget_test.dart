@@ -252,7 +252,7 @@ void main() {
       final store = MemoryStore();
       await tester.pumpWidget(WritingHumanApp(store: store));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('보관함'));
+      await tester.tap(find.text('책장'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('새 노트'));
       await tester.pumpAndSettle();

@@ -6,7 +6,7 @@ import 'package:writing_human/main.dart';
 import 'widget_test.dart' show MemoryStore;
 
 void main() {
-  final collection = find.text('보관함');
+  final collection = find.byKey(const ValueKey('open-bookshelf'));
   final editor = find.byKey(const ValueKey('page-text'));
   Finder cover(String id) => find.byKey(ValueKey('shelf-book-$id'));
   final scroll = find.descendant(
@@ -178,7 +178,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(cover('b16'));
     await tester.pumpAndSettle();
-    expect(find.text('책장'), findsNothing);
+    expect(find.byKey(const ValueKey('bookshelf-scroll')), findsNothing);
     expect(store.data.books.length, 16);
     expect(store.data.pages.length, 1);
   });

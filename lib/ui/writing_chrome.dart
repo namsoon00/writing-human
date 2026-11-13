@@ -58,13 +58,14 @@ class WritingHeader extends StatelessWidget {
         Align(
           alignment: Alignment.centerLeft,
           child: TextButton(
+            key: const ValueKey('open-bookshelf'),
             onPressed: onCollection,
             style: TextButton.styleFrom(
               foregroundColor: brandInk,
               minimumSize: const Size(68, 48),
               padding: const EdgeInsets.symmetric(horizontal: 12),
             ),
-            child: const Text('보관함', style: TextStyle(fontSize: 13)),
+            child: const Text('책장', style: TextStyle(fontSize: 13)),
           ),
         ),
         Align(

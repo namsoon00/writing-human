@@ -177,7 +177,7 @@ void main() {
       await close.up();
       await tester.pumpAndSettle();
       await capture('cover');
-      await tester.tap(find.text('책 펼치기'));
+      await tester.tap(find.byKey(const ValueKey('open-front-cover')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('page-number')));
       await tester.pumpAndSettle();
@@ -189,7 +189,7 @@ void main() {
       await capture('tools');
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('보관함'));
+      await tester.tap(find.text('책장'));
       await tester.pumpAndSettle();
       await capture('collection');
       await tester.tap(find.byTooltip('닫기'));

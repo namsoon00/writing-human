@@ -49,7 +49,7 @@ void main() {
       await tester.pumpWidget(WritingHumanApp(store: store));
       await tester.pumpAndSettle();
       expect(store.writes, 0);
-      await tester.tap(find.text('보관함'));
+      await tester.tap(find.text('책장'));
       await tester.pumpAndSettle();
       expect(find.textContaining('예시'), findsNothing);
       expect(find.text('새 종이'), findsOneWidget);

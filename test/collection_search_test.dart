@@ -40,7 +40,7 @@ void main() {
         MaterialApp(home: Workspace(controller: controller)),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('보관함'));
+      await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('내 글'));
       await tester.pumpAndSettle();
@@ -113,7 +113,7 @@ void main() {
         MaterialApp(home: Workspace(controller: controller)),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('보관함'));
+      await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
       await tester.pumpAndSettle();
 
       final shelf = find.byKey(const ValueKey('bookshelf-scroll'));
@@ -138,7 +138,7 @@ void main() {
       final sheetOffset = position(sheets);
       expect(sheetOffset, greaterThan(0));
 
-      await tester.tap(find.text('책장'));
+      await tester.tap(find.widgetWithText(TextButton, '책장').last);
       await tester.pumpAndSettle();
       expect(position(shelf), closeTo(shelfOffset, .01));
       await tester.tap(find.text('내 글'));

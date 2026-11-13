@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/ui/editor.dart';
+import 'package:writing_human/ui/ink_mark.dart';
 
 class PenHarness extends StatefulWidget {
   const PenHarness({super.key, this.initial = ''});
@@ -52,7 +53,7 @@ class PenHarnessState extends State<PenHarness> {
 }
 
 final _field = find.byKey(const ValueKey('page-text'));
-final _pen = find.byKey(const ValueKey('writing-ink-point'));
+final _pen = find.byKey(const ValueKey('writing-ink-caret'));
 
 Offset nibPoint(WidgetTester tester) {
   final box = tester.renderObject<RenderBox>(_pen);
@@ -67,8 +68,7 @@ void expectNibAtCaret(WidgetTester tester) {
   expect(editable.showCursor.value, isFalse);
   final value = tester.widget<TextField>(_field).controller!.value;
   final expected = editable.localToGlobal(
-    editable.getLocalRectForCaret(value.selection.extent).bottomCenter +
-        const Offset(0, -1),
+    editable.getLocalRectForCaret(value.selection.extent).center,
   );
   expect((nibPoint(tester) - expected).distance, lessThan(.2));
 }
@@ -128,13 +128,11 @@ void main() {
       final beforeIdle = controller.value;
       await tester.pump(const Duration(milliseconds: 650));
       expectNibAtCaret(tester);
-      final dot = tester.widget<DecoratedBox>(_pen).decoration as BoxDecoration;
-      expect(tester.getSize(_pen), const Size.square(6));
-      expect(dot.color!.a, 1);
-      expect(dot.shape, BoxShape.circle);
-      final bleed = find.byKey(const ValueKey('writing-ink-bleed'));
-      expect(tester.getSize(bleed), const Size.square(12));
-      expect(tester.getCenter(bleed), nibPoint(tester));
+      expect(
+        tester.widget<InkMark>(_pen).color,
+        tester.widget<TextField>(_field).style!.color,
+      );
+      expect(tester.getSize(_pen), const Size.square(14));
       expect(controller.value, beforeIdle);
       // The ink overlay must not intercept a tap in the writing field.
       await tester.tapAt(tester.getCenter(_field));

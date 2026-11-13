@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'editable_geometry.dart';
 import 'ink_mark.dart';
-import 'paper_palette.dart';
 
 /// Read-only feedback beside the native editable. Never writes input state.
 class WritingPen extends StatefulWidget {
@@ -27,7 +26,7 @@ class WritingPen extends StatefulWidget {
   State<WritingPen> createState() => _WritingPenState();
 }
 
-const _inkPointDiameter = 6.0;
+const _inkCaretSize = 14.0;
 
 class _WritingPenState extends State<WritingPen>
     with SingleTickerProviderStateMixin {
@@ -172,7 +171,7 @@ class _WritingPenState extends State<WritingPen>
       final caret = editable.getLocalRectForCaret(value.selection.extent);
       if (caret.overlaps(Offset.zero & editable.size)) {
         final point = overlay.globalToLocal(
-          editable.localToGlobal(caret.bottomCenter + const Offset(0, -1)),
+          editable.localToGlobal(caret.center),
         );
         if ((Offset.zero & overlay.size).contains(point)) next = point;
       }
@@ -269,34 +268,12 @@ class _WritingPenState extends State<WritingPen>
                       ),
                     if (at != null)
                       Positioned(
-                        left: at.dx - _inkPointDiameter / 2,
-                        top: at.dy - _inkPointDiameter / 2,
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          alignment: Alignment.center,
-                          children: [
-                            Positioned.fill(
-                              left: -3,
-                              right: -3,
-                              top: -3,
-                              bottom: -3,
-                              child: InkMark(
-                                key: const ValueKey('writing-ink-bleed'),
-                                size: 12,
-                                color: widget.color.withValues(alpha: .64),
-                              ),
-                            ),
-                            DecoratedBox(
-                              key: const ValueKey('writing-ink-point'),
-                              decoration: BoxDecoration(
-                                color: Color.lerp(widget.color, ink, .24),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const SizedBox.square(
-                                dimension: _inkPointDiameter,
-                              ),
-                            ),
-                          ],
+                        left: at.dx - _inkCaretSize / 2,
+                        top: at.dy - _inkCaretSize / 2,
+                        child: InkMark(
+                          key: const ValueKey('writing-ink-caret'),
+                          size: _inkCaretSize,
+                          color: widget.color,
                         ),
                       ),
                   ],

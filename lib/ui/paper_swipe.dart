@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 /// One deliberate horizontal gesture turns one sheet. Vertical scrolling,
-/// taps and long presses still go to the native editor.
+/// taps and long presses still go to the paper’s editing surface.
 class PaperSwipe extends StatefulWidget {
   const PaperSwipe({
     super.key,
@@ -122,7 +122,7 @@ class _SwipeHitBox extends RenderProxyBox {
   bool hitTest(BoxHitTestResult result, {required Offset position}) {
     if (!size.contains(position)) return false;
     // Register the horizontal recognizer before the editor's pan recognizer.
-    // It only wins on horizontal intent; native tap/long-press/vertical scroll
+    // It only wins on horizontal intent; tap/long-press/vertical scroll
     // recognizers can still win. No editing value or pointer is synthesized.
     result.add(BoxHitTestEntry(this, position));
     hitTestChildren(result, position: position);

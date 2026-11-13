@@ -186,19 +186,19 @@ void main() {
     },
   );
 
-  testWidgets('A native long press selects text instead of turning the paper', (
+  testWidgets('A stationary hold leaves the page and editing value alone', (
     tester,
   ) async {
     final store = MemoryStore()..data = twoPages();
     await open(tester, store);
     final controller = tester.widget<TextField>(field).controller!;
-    final original = controller.text;
+    final original = controller.value;
     await tester.longPressAt(tester.getTopLeft(field) + const Offset(90, 80));
     await tester.pumpAndSettle();
     expect(store.data.activePageId, 'one');
     expect(tester.widget<TextField>(field).controller, same(controller));
-    expect(controller.text, original);
-    expect(controller.selection.isCollapsed, isFalse);
+    expect(controller.value, original);
+    expect(store.data.pages.first.pencilMarks, isEmpty);
     expect(tester.takeException(), isNull);
   });
 

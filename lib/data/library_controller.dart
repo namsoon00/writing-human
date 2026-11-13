@@ -427,14 +427,27 @@ class LibraryController extends ChangeNotifier {
     ),
   );
 
-  void togglePencilMark(String id, int start, int end) {
+  void addPencilMark(String id, int start, int end) =>
+      _applyPencilMark(id, start, end, eraseIfCovered: false);
+
+  void togglePencilMark(String id, int start, int end) =>
+      _applyPencilMark(id, start, end, eraseIfCovered: true);
+
+  void _applyPencilMark(
+    String id,
+    int start,
+    int end, {
+    required bool eraseIfCovered,
+  }) {
     if (composing) return;
     final page = library.pages.where((p) => p.id == id).firstOrNull;
     if (page == null || start < 0 || end <= start || end > page.text.length) {
       return;
     }
     final marks = page.pencilMarks;
-    final removing = marks.any((m) => m.start <= start && m.end >= end);
+    final covered = marks.any((m) => m.start <= start && m.end >= end);
+    if (covered && !eraseIfCovered) return;
+    final removing = covered && eraseIfCovered;
     final next = removing
         ? [
             for (final m in marks) ...[

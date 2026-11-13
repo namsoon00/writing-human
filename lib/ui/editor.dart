@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../data/model.dart';
 import 'notebook_reflection.dart';
 import 'paper.dart';
+import 'paper_highlighter.dart';
 import 'paper_selection_menu.dart';
 import 'writing_pen.dart';
 import 'writing_sound.dart';
@@ -23,6 +24,7 @@ class PageEditor extends StatefulWidget {
     this.focusNode,
     this.onEditingState,
     this.onPencilMark,
+    this.onHighlight,
     this.keyboardOverlap = 0,
     this.originals = const [],
     this.guidedOriginal,
@@ -33,7 +35,7 @@ class PageEditor extends StatefulWidget {
   final WritingPage page;
   final WritingStyle style;
   final void Function(String, String, int, int, double) onChanged;
-  final void Function(String, int, int)? onPencilMark;
+  final void Function(String, int, int)? onPencilMark, onHighlight;
   final List<RegisteredOriginal> originals;
   final RegisteredOriginal? guidedOriginal;
   final double keyboardOverlap;
@@ -51,7 +53,6 @@ class _PageEditorState extends State<PageEditor> {
   late final focus = widget.focusNode ?? FocusNode();
   bool restoring = true;
   final fieldRenderKey = GlobalKey();
-  ({Offset point, double scroll})? _holdOrigin;
 
   @override
   void initState() {
@@ -300,57 +301,6 @@ class _PageEditorState extends State<PageEditor> {
     editor.requestKeyboard();
   }
 
-  void _beginSelection(LongPressStartDetails details) {
-    final editor = _editable;
-    if (editor == null || _composing) return;
-    editor.hideToolbar();
-    final point = details.globalPosition;
-    final render = editor.renderEditable;
-    final line = render.getLineAtOffset(render.getPositionForPoint(point));
-    if (!line.isValid || line.textInside(text.text).trim().isEmpty) {
-      render.selectPositionAt(
-        from: point,
-        cause: SelectionChangedCause.longPress,
-      );
-    } else {
-      _holdOrigin = (point: point, scroll: render.offset.pixels);
-      render.selectWordsInRange(
-        from: point,
-        cause: SelectionChangedCause.longPress,
-      );
-    }
-  }
-
-  void _extendSelection(LongPressMoveUpdateDetails details) {
-    final editor = _editable;
-    final origin = _holdOrigin;
-    if (editor == null || origin == null || _composing) return;
-    final render = editor.renderEditable;
-    render.selectWordsInRange(
-      from: origin.point.translate(0, origin.scroll - render.offset.pixels),
-      to: details.globalPosition,
-      cause: SelectionChangedCause.longPress,
-    );
-  }
-
-  void _showSelectionMenu(LongPressEndDetails details) {
-    _holdOrigin = null;
-    if (!_composing) _editable?.showToolbar();
-  }
-
-  Widget _paperTouchSelection({required bool preciseSelection}) =>
-      GestureDetector(
-        // The field still receives hits for scrolling and non-touch input.
-        behavior: HitTestBehavior.translucent,
-        excludeFromSemantics: true,
-        supportedDevices: const {PointerDeviceKind.touch},
-        onTapUp: _placeCaret,
-        onLongPressStart: preciseSelection ? _beginSelection : null,
-        onLongPressMoveUpdate: preciseSelection ? _extendSelection : null,
-        onLongPressEnd: preciseSelection ? _showSelectionMenu : null,
-        onLongPressCancel: preciseSelection ? () => _holdOrigin = null : null,
-      );
-
   @override
   void dispose() {
     _closeSound();
@@ -465,8 +415,24 @@ class _PageEditorState extends State<PageEditor> {
                 Positioned.fill(
                   left: writingMargins.left,
                   right: writingMargins.right,
-                  child: _paperTouchSelection(
-                    preciseSelection: preciseSelection,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    excludeFromSemantics: true,
+                    supportedDevices: const {PointerDeviceKind.touch},
+                    onTapUp: _placeCaret,
+                  ),
+                ),
+              if (widget.onHighlight case final highlight?)
+                Positioned.fill(
+                  left: writingMargins.left,
+                  right: writingMargins.right,
+                  child: PaperHighlighter(
+                    controller: text,
+                    scroll: scroll,
+                    editable: () => _editable,
+                    choice: style.bookDetails.pencil,
+                    onStroke: (range) =>
+                        highlight(widget.page.id, range.start, range.end),
                   ),
                 ),
               Positioned(

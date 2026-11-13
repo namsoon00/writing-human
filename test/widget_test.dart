@@ -30,7 +30,7 @@ class MemoryStore implements LibraryStore {
 
 void main() {
   testWidgets(
-    'iOS touch places the caret inside a word and holds to select',
+    'A hold and drag paints the paper without changing the caret',
     (tester) async {
       const sentence = '햇빛이 책장에\n\n다음 줄';
       final store = MemoryStore()
@@ -59,26 +59,68 @@ void main() {
       expect(controller.selection.extentOffset, 1);
       expect(tester.widget<TextField>(field).focusNode!.hasFocus, isTrue);
       expect(tester.testTextInput.isVisible, isTrue);
-      await tester.longPressAt(pointAt(1));
+      Offset glyph(int offset) => render.localToGlobal(
+        render
+            .getBoxesForSelection(
+              TextSelection(baseOffset: offset, extentOffset: offset + 1),
+            )
+            .single
+            .toRect()
+            .center,
+      );
+      final preview = find.byKey(const ValueKey('paper-highlight-preview'));
+      final before = controller.value;
+      final writes = store.writes;
+      await tester.longPressAt(glyph(1));
       await tester.pumpAndSettle();
-      expect(controller.selection.textInside(sentence), '햇빛이');
-      expect(menu, findsOneWidget);
-      final drag = await tester.startGesture(pointAt(1));
+      expect(controller.value, before);
+      expect(store.writes, writes);
+      expect(menu, findsNothing);
+      expect(preview, findsNothing);
+
+      final cancelled = await tester.startGesture(glyph(5));
       await tester.pump(kLongPressTimeout);
-      await drag.moveTo(pointAt(5));
+      await cancelled.moveTo(glyph(1));
+      await tester.pump();
+      expect(preview, findsOneWidget);
+      await cancelled.cancel();
+      await tester.pumpAndSettle();
+      expect(preview, findsNothing);
+      expect(store.writes, writes);
+
+      final drag = await tester.startGesture(glyph(1));
+      await tester.pump(kLongPressTimeout);
+      await drag.moveTo(glyph(5));
+      await tester.pump();
+      expect(controller.value, before);
+      expect(menu, findsNothing);
+      expect(preview, findsOneWidget);
+      expect(store.writes, writes);
       await drag.up();
       await tester.pumpAndSettle();
-      expect(controller.selection.textInside(sentence), '햇빛이 책장에');
-      expect(menu, findsOneWidget);
+      expect(preview, findsNothing);
+      expect(menu, findsNothing);
+      expect(controller.value, before);
+      final saved = store.data.pages.single.pencilMarks.single;
+      expect(sentence.substring(saved.start, saved.end), '빛이 책장');
+
+      final repeat = await tester.startGesture(glyph(5));
+      await tester.pump(kLongPressTimeout);
+      await repeat.moveTo(glyph(1));
+      await repeat.up();
+      await tester.pumpAndSettle();
+      final repeated = store.data.pages.single.pencilMarks.single;
+      expect((repeated.start, repeated.end), (saved.start, saved.end));
+      expect(store.writes, writes + 1);
+      expect(controller.value, before);
+
       await tester.tapAt(pointAt(2));
       await tester.pumpAndSettle();
       expect(controller.selection.isCollapsed, isTrue);
       expect(controller.selection.extentOffset, 2);
-      expect(menu, findsNothing);
       await tester.longPressAt(pointAt(sentence.indexOf('\n') + 1));
       await tester.pumpAndSettle();
-      expect(controller.selection.isCollapsed, isTrue);
-      expect(controller.selection.extentOffset, sentence.indexOf('\n') + 1);
+      expect(controller.selection.extentOffset, 2);
       const composing = TextEditingValue(
         text: sentence,
         selection: TextSelection.collapsed(offset: 2),
@@ -87,12 +129,21 @@ void main() {
       tester.testTextInput.updateEditingValue(composing);
       await tester.pumpAndSettle();
       await tester.tapAt(pointAt(5));
-      await tester.longPressAt(pointAt(5));
+      final composingDrag = await tester.startGesture(glyph(5));
+      await tester.pump(kLongPressTimeout);
+      await composingDrag.moveTo(glyph(1));
+      await tester.pump();
+      expect(preview, findsNothing);
+      await composingDrag.up();
       await tester.pumpAndSettle();
       expect(controller.value, composing);
       expect(menu, findsNothing);
+      expect(store.data.pages.single.pencilMarks.length, 1);
     },
-    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+    variant: TargetPlatformVariant({
+      TargetPlatform.iOS,
+      TargetPlatform.android,
+    }),
   );
 
   testWidgets(

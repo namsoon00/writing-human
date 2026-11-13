@@ -7,6 +7,9 @@
   저장이 발생하지 않는지 확인했다.
 - 390×844의 Flutter 위젯 렌더를 `artifacts/bookshelf-direct.png`에 보관했다.
   배포 웹과 모바일 실기기의 직접 조작은 미검증이다.
+- [GitHub Actions 43333046498](https://github.com/namsoon00/writing-human/actions/runs/43333046498)에서
+  `3bea66233a0806ac72eb9714c976376c2b815b71`의 검사·빌드·게시가 완료됐다. 공개 앱 JS와 번들 서체·잉크 이미지가
+  로컬 빌드와 일치했다. 앱 JS SHA-256은 `4f4b05f61a38ebf4ca03427b314c338056df0b20302580dd7bbce8dee5e16cbc`이다.
 
 ## 2026-11-13 · 노트 책장
 

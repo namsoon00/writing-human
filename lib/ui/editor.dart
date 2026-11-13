@@ -411,19 +411,21 @@ class _PageEditorState extends State<PageEditor> {
                   ),
                 ),
               ),
-              if (preciseSelection || focus.hasFocus)
-                Positioned.fill(
-                  left: writingMargins.left,
-                  right: writingMargins.right,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    excludeFromSemantics: true,
-                    supportedDevices: const {PointerDeviceKind.touch},
-                    onTapUp: _placeCaret,
-                  ),
+              Positioned.fill(
+                left: writingMargins.left,
+                right: writingMargins.right,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  excludeFromSemantics: true,
+                  supportedDevices: const {PointerDeviceKind.touch},
+                  onTapUp: preciseSelection || focus.hasFocus
+                      ? _placeCaret
+                      : null,
                 ),
+              ),
               if (widget.onHighlight case final highlight?)
                 Positioned.fill(
+                  key: const ValueKey('paper-highlighter'),
                   left: writingMargins.left,
                   right: writingMargins.right,
                   child: PaperHighlighter(

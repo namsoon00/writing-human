@@ -36,13 +36,11 @@
        Leave pan arbitration to the editor and paper recognizers. */
     flutter-view [flt-semantics-identifier="writing-page-body"] textarea { touch-action: none; }
 
-    @supports (-webkit-touch-callout: none) {
-      /* Flutter handles touch selection for the notebook body. Keep its
-         semantic textarea available for focus, keyboard and IME events. */
-      flutter-view [flt-semantics-identifier="writing-page-body"],
-      flutter-view [flt-semantics-identifier="writing-page-body"] textarea {
-        pointer-events: none !important;
-      }
+    /* On touch screens Flutter handles the paper gestures directly. The
+       semantic textarea remains available for keyboard and IME events. */
+    .paper-touch-input flutter-view [flt-semantics-identifier="writing-page-body"],
+    .paper-touch-input flutter-view [flt-semantics-identifier="writing-page-body"] textarea {
+      pointer-events: none !important;
     }
   </style>
 </head>
@@ -57,7 +55,9 @@
   -->
   <script src="source_ocr.js?v=4"></script>
   <script>
-    if (CSS.supports('-webkit-touch-callout', 'none')) {
+    if (matchMedia('(any-pointer: coarse)').matches ||
+        CSS.supports('-webkit-touch-callout', 'none')) {
+      document.documentElement.classList.add('paper-touch-input');
       const body = '[flt-semantics-identifier="writing-page-body"]';
       // Match Flutter's default touch slop and long-press timeout.
       const touchSlop = 18;
@@ -123,7 +123,7 @@
         if (!composingField?.matches(':focus') && !start.moved &&
             event.timeStamp - start.time < longPressMs &&
             Math.hypot(touch.clientX - start.x, touch.clientY - start.y) <= touchSlop) {
-          // Safari requires focus during the trusted tap. Flutter still places the caret.
+          // Focus within the trusted tap so mobile browsers can open the keyboard.
           start.editor.focus({preventScroll: true});
         }
         // A compatibility click can blur the editor or disturb Flutter selection.

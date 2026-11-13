@@ -205,7 +205,7 @@ collection_sheet.dart는 필요할 때 여는 글/책 보관함이다. tools_scr
 종이 여백과 본문의 마지막 글줄 아래를 터치하면 조합이 끝난 상태에서 입력 포커스를
 해제한다. 마지막 글줄의 위치는 RenderEditable에서 읽고, 본문이나 선택 범위를 변경하지 않는다.
 iOS 본문에서 짧은 탭은 RenderEditable의 좌표를 기준으로 삽입 위치를 찾는다.
-iOS 웹의 투명한 본문 textarea는 포인터 대상에서 제외하고 포커스와 키보드 입력에
+터치 웹의 투명한 본문 textarea는 포인터 대상에서 제외하고 포커스와 키보드 입력에
 사용한다. 짧은 탭의 touchend에서 본문 textarea에 직접 포커스를 주고,
 후속 마우스 클릭을 막아 입력 포커스를 유지한다.
 PaperHighlighter는 길게 누른 뒤 움직이는 제스처를 받아 RenderEditable의 글자 상자와

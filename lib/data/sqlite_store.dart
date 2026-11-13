@@ -18,7 +18,7 @@ class SqliteLibraryStore implements LibraryStore {
     final db = await (factory ?? databaseFactory).openDatabase(
       file,
       options: OpenDatabaseOptions(
-        version: 9,
+        version: 10,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
         onUpgrade: (db, oldVersion, newVersion) async {
           if (oldVersion < 2) {
@@ -73,10 +73,15 @@ class SqliteLibraryStore implements LibraryStore {
               );
             }
           }
+          if (oldVersion < 10) {
+            await db.execute(
+              "ALTER TABLE books ADD COLUMN detail_overrides TEXT NOT NULL DEFAULT '{}'",
+            );
+          }
         },
         onCreate: (db, version) async {
           await db.execute(
-            "CREATE TABLE books (id TEXT PRIMARY KEY, title TEXT NOT NULL, author TEXT NOT NULL, owner TEXT NOT NULL DEFAULT '', index_label TEXT NOT NULL DEFAULT '', cover_index INTEGER CHECK(cover_index BETWEEN 0 AND 2), paper_index INTEGER CHECK(paper_index BETWEEN 0 AND 3), originals TEXT NOT NULL DEFAULT '[]')",
+            "CREATE TABLE books (id TEXT PRIMARY KEY, title TEXT NOT NULL, author TEXT NOT NULL, owner TEXT NOT NULL DEFAULT '', index_label TEXT NOT NULL DEFAULT '', cover_index INTEGER CHECK(cover_index BETWEEN 0 AND 2), paper_index INTEGER CHECK(paper_index BETWEEN 0 AND 3), detail_overrides TEXT NOT NULL DEFAULT '{}', originals TEXT NOT NULL DEFAULT '[]')",
           );
           await db.execute(
             "CREATE TABLE records (id TEXT PRIMARY KEY, book_id TEXT REFERENCES books(id), title TEXT NOT NULL, source TEXT NOT NULL DEFAULT '', source_paragraph INTEGER NOT NULL DEFAULT 0, originals TEXT NOT NULL DEFAULT '[]')",
@@ -111,6 +116,9 @@ class SqliteLibraryStore implements LibraryStore {
               indexLabel: j['index_label'] as String,
               coverIndex: j['cover_index'] as int?,
               paperIndex: j['paper_index'] as int?,
+              detailOverrides: Book.readDetailOverrides(
+                jsonDecode(j['detail_overrides'] as String),
+              ),
               originals: RegisteredOriginal.read(
                 jsonDecode(j['originals'] as String),
               ),
@@ -191,6 +199,10 @@ class SqliteLibraryStore implements LibraryStore {
           'index_label': b.indexLabel,
           'cover_index': b.coverIndex,
           'paper_index': b.paperIndex,
+          'detail_overrides': jsonEncode({
+            for (final entry in b.detailOverrides.entries)
+              entry.key.name: entry.value.toJson(),
+          }),
           'originals': jsonEncode(b.originals.map((o) => o.toJson()).toList()),
         });
       }

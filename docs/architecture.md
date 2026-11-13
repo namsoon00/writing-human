@@ -1,5 +1,15 @@
 # 구현 구조
 
+## 책별 꾸밈과 미리보기
+
+`BookAppearance`는 표지·내지·꾸밈 변경값을 화면에 보관하고, 완료할 때
+`LibraryController.saveBookAppearance`가 현재 책 메타데이터에 합쳐 한 번의 저장으로
+보낸다. 쓰기 화면과 책장·목차·원문은 같은 책의 설정을 읽는다.
+`Book.detailOverrides`에 없는 항목은 기존 `WritingStyle.bookDetails`에서 상속한다.
+SQLite v10은 `books.detail_overrides`에 빈 JSON 객체를 기본값으로 추가한다. 웹·백업·
+동기화에는 선택 필드 `detailOverrides`를 사용한다. 동기화는 책별 꾸밈의 표시·모양·색·위치를
+각각 병합하며, 처음 바꾼 요소는 공통 기준의 기본 설정과 비교한다.
+
 ## 책장과 이어 쓰기
 
 `CollectionSheet`는 책장을 먼저 열고 책 상세와 ‘내 글’로 연결한다. `Bookshelf`는

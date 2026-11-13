@@ -63,6 +63,21 @@ void main() {
             bookDetails: details,
           ),
         );
+        final other = c.addBook('다른 책', '');
+        expect(
+          await c.saveBookAppearance(
+            'b',
+            coverIndex: 2,
+            paperIndex: 3,
+            useDefaultPaper: false,
+            changes: {
+              for (final kind in BookDetailKind.values)
+                kind: details.choice(kind).copy(variant: 1, tone: 3),
+            },
+          ),
+          isTrue,
+        );
+        expect(c.detailsFor(other).toJson(), details.toJson());
         final expected = c.library.encode();
         await c.settled;
         expect(c.saveError, isNull);
@@ -74,7 +89,16 @@ void main() {
         final restored = await store.load();
         expect(restored.encode(), expected);
         expect(restored.activePage!.pencilMarks.single.end, 7);
-        expect(restored.books.single.owner, '남기는 사람');
+        final restoredBook = restored.books.first;
+        expect(restoredBook.owner, '남기는 사람');
+        expect(
+          restoredBook.detailOverrides.length,
+          BookDetailKind.values.length,
+        );
+        expect(restoredBook.coverIndex, 2);
+        expect(restoredBook.paperIndex, 3);
+        expect(restored.books.last.detailOverrides, isEmpty);
+        expect(Library.decode(restored.encode()).encode(), expected);
         expect(restored.activePage!.writtenOn, '2026-11-10');
       } finally {
         c.dispose();
@@ -83,6 +107,36 @@ void main() {
       }
     },
   );
+
+  test('Book overrides merge against the inherited style on first edit', () {
+    final fixture = specimen();
+    final inherited = const BookDetailChoice(variant: 2, tone: 1);
+    final base = fixture.copy(
+      style: fixture.style.copy(
+        bookDetails: fixture.style.bookDetails.withChoice(
+          BookDetailKind.ribbon,
+          inherited,
+        ),
+      ),
+    );
+    Library withRibbon(BookDetailChoice choice) => base.copy(
+      books: [
+        base.books.single.copy(
+          detailOverrides: {BookDetailKind.ribbon: choice},
+        ),
+      ],
+    );
+    final merged = mergeLibraries(
+      base,
+      withRibbon(inherited.copy(tone: 3)),
+      withRibbon(inherited.copy(variant: 1)),
+    ).library;
+    expect(
+      merged.books.single.detailOverrides[BookDetailKind.ribbon]?.toJson(),
+      inherited.copy(variant: 1, tone: 3).toJson(),
+    );
+    expect(merged.style.bookDetails.ribbon.toJson(), inherited.toJson());
+  });
 
   test(
     'Concurrent changes to the same element merge field by field alongside paper and ink',
@@ -221,7 +275,17 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final store = MemoryStore();
-      final c = LibraryController(store, specimen());
+      final fixture = specimen();
+      final c = LibraryController(
+        store,
+        fixture.copy(
+          records: [
+            WritingRecord.fromJson(
+              fixture.records.single.toJson()..['bookId'] = null,
+            ),
+          ],
+        ),
+      );
       addTearDown(c.dispose);
       final original = c.library.style.bookDetails.withChoice(
         BookDetailKind.dateStamp,

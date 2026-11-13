@@ -46,6 +46,16 @@ const originals = values => Array.isArray(values) &&
       validPhotoLines(value.photoLines, value.text))) &&
     (!('reflection' in value) || reflection(value.reflection, value.text)));
 
+function validBookDetails(details) {
+    const kinds = ['ribbon', 'bookplate', 'sourceSlip', 'pencil', 'ornament', 'binding', 'dateStamp', 'indexTab', 'recordDivider', 'pressedFlower'];
+    return object(details) && !Object.entries(details).some(([kind, choice]) =>
+      !kinds.includes(kind) || !object(choice) || Object.keys(choice).some(k => !['enabled', 'variant', 'tone', 'placement'].includes(k)) ||
+      ('enabled' in choice && typeof choice.enabled !== 'boolean') ||
+      ('variant' in choice && (!integer(choice.variant) || choice.variant < 0 || choice.variant > 2)) ||
+      ('placement' in choice && (!integer(choice.placement) || choice.placement < 0 || choice.placement > 2)) ||
+      ('tone' in choice && (!integer(choice.tone) || choice.tone < 0 || choice.tone > 3)));
+}
+
 export function validLibrary(l) {
   if (!object(l) || l.version !== 1 || 'sync' in l || !Array.isArray(l.books) || !Array.isArray(l.records) || !Array.isArray(l.pages) || l.books.length > 10000 || l.records.length > 20000 || l.pages.length > 30000 || typeof l.writing !== 'boolean') return false;
   const books = new Set(), records = new Map(), pages = new Map(), numbers = new Set();
@@ -55,6 +65,7 @@ export function validLibrary(l) {
     if ('indexLabel' in b && !text(b.indexLabel, 80)) return false;
     if ('coverIndex' in b && (!integer(b.coverIndex) || b.coverIndex < 0 || b.coverIndex > 2)) return false;
     if ('paperIndex' in b && (!integer(b.paperIndex) || b.paperIndex < 0 || b.paperIndex > 3)) return false;
+    if ('detailOverrides' in b && !validBookDetails(b.detailOverrides)) return false;
     if ('originals' in b && !originals(b.originals)) return false;
     books.add(b.id);
   }
@@ -87,15 +98,7 @@ export function validLibrary(l) {
   if (!object(s) || !integer(s.paperIndex) || s.paperIndex < 0 || s.paperIndex > 3 || !integer(s.penIndex) || s.penIndex < 0 || s.penIndex > 2 || !integer(s.fontIndex) || s.fontIndex < 0 || s.fontIndex > 2 || typeof s.guides !== 'boolean' || !Array.isArray(s.favoriteBookIds) || s.favoriteBookIds.some(v => !id(v))) return false;
   if ('useDevelopmentTypeface' in s && typeof s.useDevelopmentTypeface !== 'boolean') return false;
   if (['pageMotion', 'pageSound'].some(k => k in s && typeof s[k] !== 'boolean')) return false;
-  if ('bookDetails' in s) {
-    const kinds = ['ribbon', 'bookplate', 'sourceSlip', 'pencil', 'ornament', 'binding', 'dateStamp', 'indexTab', 'recordDivider', 'pressedFlower'];
-    if (!object(s.bookDetails) || Object.entries(s.bookDetails).some(([kind, choice]) =>
-      !kinds.includes(kind) || !object(choice) || Object.keys(choice).some(k => !['enabled', 'variant', 'tone', 'placement'].includes(k)) ||
-      ('enabled' in choice && typeof choice.enabled !== 'boolean') ||
-      ('variant' in choice && (!integer(choice.variant) || choice.variant < 0 || choice.variant > 2)) ||
-      ('placement' in choice && (!integer(choice.placement) || choice.placement < 0 || choice.placement > 2)) ||
-      ('tone' in choice && (!integer(choice.tone) || choice.tone < 0 || choice.tone > 3)))) return false;
-  }
+  if ('bookDetails' in s && !validBookDetails(s.bookDetails)) return false;
   // Do not let clients smuggle extra secrets or alternate identities into storage.
   const keys = ['version', 'books', 'records', 'pages', 'activePageId', 'bookPositions', 'writing', 'style'];
   return Object.keys(l).every(k => keys.includes(k));

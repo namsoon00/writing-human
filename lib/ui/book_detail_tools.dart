@@ -101,32 +101,108 @@ class BookDetailTools extends StatelessWidget {
         style: const TextStyle(color: muted, fontSize: 11),
       ),
       children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            design.description,
-            style: const TextStyle(color: muted, fontSize: 12, height: 1.6),
-          ),
+        BookDetailOptions(
+          kind: kind,
+          choice: choice,
+          onChanged: (value) => _change(kind, value),
         ),
-        const SizedBox(height: 16),
-        Semantics(
-          label: '${design.title} 모양 미리보기',
-          child: ExcludeSemantics(
-            child: ExcludeFocus(
-              child: IgnorePointer(
-                child: BookDetailPreview(kind: kind, choice: choice),
+      ],
+    );
+  }
+}
+
+class BookDetailOptions extends StatelessWidget {
+  const BookDetailOptions({
+    super.key,
+    required this.kind,
+    required this.choice,
+    required this.onChanged,
+    this.showSpecimen = true,
+  });
+
+  final BookDetailKind kind;
+  final BookDetailChoice choice;
+  final ValueChanged<BookDetailChoice> onChanged;
+  final bool showSpecimen;
+
+  @override
+  Widget build(BuildContext context) {
+    final design = BookDetailDesign.of(kind);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (showSpecimen) ...[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              design.description,
+              style: const TextStyle(color: muted, fontSize: 12, height: 1.6),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Semantics(
+            label: '${design.title} 모양 미리보기',
+            child: ExcludeSemantics(
+              child: ExcludeFocus(
+                child: IgnorePointer(
+                  child: BookDetailPreview(kind: kind, choice: choice),
+                ),
               ),
             ),
           ),
-        ),
+        ],
         SwitchListTile.adaptive(
           key: ValueKey('detail-${kind.name}-enabled'),
           contentPadding: EdgeInsets.zero,
           title: const Text('꾸밈 표시', style: TextStyle(fontSize: 13)),
           value: choice.enabled,
           activeTrackColor: burgundy,
-          onChanged: (value) => _change(kind, choice.copy(enabled: value)),
+          onChanged: (value) => onChanged(choice.copy(enabled: value)),
         ),
+        if (!showSpecimen && kind == BookDetailKind.ribbon) ...[
+          const SizedBox(height: 8),
+          const Text('리본 색'),
+          Wrap(
+            spacing: 10,
+            children: [
+              for (var i = 0; i < design.colors.length; i++)
+                Semantics(
+                  label: design.tones[i],
+                  selected: choice.tone == i,
+                  child: IconButton(
+                    key: ValueKey('detail-ribbon-tone-$i'),
+                    tooltip: design.tones[i],
+                    onPressed: choice.enabled
+                        ? () => onChanged(choice.copy(tone: i))
+                        : null,
+                    icon: Container(
+                      width: 30,
+                      height: 30,
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: choice.tone == i
+                              ? design.colors[i]
+                              : Colors.transparent,
+                        ),
+                      ),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: design.colors[i].withValues(
+                            alpha: choice.enabled ? 1 : .35,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text('리본 모양'),
+        ],
         Align(
           alignment: Alignment.centerLeft,
           child: Wrap(
@@ -143,46 +219,48 @@ class BookDetailTools extends StatelessWidget {
                   selected: choice.variant == i,
                   showCheckmark: false,
                   onSelected: choice.enabled
-                      ? (_) => _change(kind, choice.copy(variant: i))
+                      ? (_) => onChanged(choice.copy(variant: i))
                       : null,
                 ),
             ],
           ),
         ),
-        const SizedBox(height: 12),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (var i = 0; i < design.tones.length; i++)
-                ChoiceChip(
-                  key: ValueKey('detail-${kind.name}-tone-$i'),
-                  avatar: ExcludeSemantics(
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: design.colors[i],
-                        shape: BoxShape.circle,
-                        border: Border.all(color: line),
+        if (showSpecimen || kind != BookDetailKind.ribbon) ...[
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (var i = 0; i < design.tones.length; i++)
+                  ChoiceChip(
+                    key: ValueKey('detail-${kind.name}-tone-$i'),
+                    avatar: ExcludeSemantics(
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: design.colors[i],
+                          shape: BoxShape.circle,
+                          border: Border.all(color: line),
+                        ),
                       ),
                     ),
+                    label: Text(
+                      design.tones[i],
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    selected: choice.tone == i,
+                    showCheckmark: false,
+                    onSelected: choice.enabled
+                        ? (_) => onChanged(choice.copy(tone: i))
+                        : null,
                   ),
-                  label: Text(
-                    design.tones[i],
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  selected: choice.tone == i,
-                  showCheckmark: false,
-                  onSelected: choice.enabled
-                      ? (_) => _change(kind, choice.copy(tone: i))
-                      : null,
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
         if (kind == BookDetailKind.pressedFlower) ...[
           const SizedBox(height: 12),
           Align(
@@ -201,7 +279,7 @@ class BookDetailTools extends StatelessWidget {
                     selected: choice.placement == i,
                     showCheckmark: false,
                     onSelected: choice.enabled
-                        ? (_) => _change(kind, choice.copy(placement: i))
+                        ? (_) => onChanged(choice.copy(placement: i))
                         : null,
                   ),
               ],
@@ -212,7 +290,7 @@ class BookDetailTools extends StatelessWidget {
           alignment: Alignment.centerRight,
           child: TextButton(
             key: ValueKey('detail-${kind.name}-reset'),
-            onPressed: () => _change(kind, const BookDetailChoice()),
+            onPressed: () => onChanged(const BookDetailChoice()),
             child: const Text('이 요소만 기본으로', style: TextStyle(fontSize: 12)),
           ),
         ),

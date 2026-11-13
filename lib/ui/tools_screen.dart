@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/library_controller.dart';
 import 'paper.dart';
 import 'book_detail_tools.dart';
+import 'book_appearance.dart';
 
 /// Secondary preferences, deliberately kept off the writing surface.
 class ToolsScreen extends StatelessWidget {
@@ -29,7 +30,7 @@ class ToolsScreen extends StatelessWidget {
         child: PaperBackdrop(
           color: paperColors[book?.paperIndex ?? style.paperIndex],
           grainOpacity: paperGrainOpacity[book?.paperIndex ?? style.paperIndex],
-          binding: style.bookDetails.binding,
+          binding: controller.detailsFor(book).binding,
           coverIndex: book == null ? null : controller.coverIndexFor(book),
           pagesAfter: book == null
               ? 0
@@ -200,30 +201,35 @@ class ToolsScreen extends StatelessWidget {
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text(
-                    '책의 디테일',
-                    style: TextStyle(
+                  title: Text(
+                    book == null ? '책의 디테일' : '책 꾸미기',
+                    style: const TextStyle(
                       fontFamily: appFontFamily,
                       fontFamilyFallback: appFontFallback,
                       fontSize: 17,
                     ),
                   ),
-                  subtitle: const Text(
-                    '책갈피 · 장서표 · 쪽지와 작은 흔적들',
-                    style: TextStyle(color: muted, fontSize: 11),
+                  subtitle: Text(
+                    book == null
+                        ? '책갈피 · 장서표 · 쪽지와 작은 흔적들'
+                        : '표지 · 내지 · 책갈피와 쪽 디테일',
+                    style: const TextStyle(color: muted, fontSize: 11),
                   ),
                   trailing: const Icon(
                     CupertinoIcons.chevron_right,
                     size: 16,
                     color: muted,
                   ),
-                  onTap: () => showModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    showDragHandle: true,
-                    constraints: const BoxConstraints(maxWidth: 600),
-                    builder: (_) => BookDetailTools(controller: controller),
-                  ),
+                  onTap: book != null
+                      ? () => showBookAppearance(context, controller, book.id)
+                      : () => showModalBottomSheet<void>(
+                          context: context,
+                          isScrollControlled: true,
+                          showDragHandle: true,
+                          constraints: const BoxConstraints(maxWidth: 600),
+                          builder: (_) =>
+                              BookDetailTools(controller: controller),
+                        ),
                 ),
                 if (controller.saveError != null)
                   TextButton(

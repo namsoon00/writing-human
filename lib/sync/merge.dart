@@ -132,6 +132,34 @@ List<PagePassage> _mergePassages(
   ];
 }
 
+BookDetailChoice _mergeDetailChoice(
+  BookDetailChoice base,
+  BookDetailChoice local,
+  BookDetailChoice remote,
+) => BookDetailChoice(
+  enabled: _field(base.enabled, local.enabled, remote.enabled),
+  variant: _field(base.variant, local.variant, remote.variant),
+  tone: _field(base.tone, local.tone, remote.tone),
+  placement: _field(base.placement, local.placement, remote.placement),
+);
+
+Map<BookDetailKind, BookDetailChoice> _mergeDetailOverrides(
+  Map<BookDetailKind, BookDetailChoice> base,
+  Map<BookDetailKind, BookDetailChoice> local,
+  Map<BookDetailKind, BookDetailChoice> remote,
+  BookDetailsStyle defaults,
+) {
+  final result = <BookDetailKind, BookDetailChoice>{};
+  for (final kind in {...base.keys, ...local.keys, ...remote.keys}) {
+    final before = base[kind], left = local[kind], right = remote[kind];
+    final choice = left == null || right == null
+        ? (sameData(before?.toJson(), left?.toJson()) ? right : left)
+        : _mergeDetailChoice(before ?? defaults.choice(kind), left, right);
+    if (choice != null) result[kind] = choice;
+  }
+  return Map.unmodifiable(result);
+}
+
 class MergeResult {
   const MergeResult(this.library, this.conflictCopies);
   final Library library;
@@ -154,6 +182,12 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         indexLabel: _field(old.indexLabel, b.indexLabel, r.indexLabel),
         coverIndex: _field(old.coverIndex, b.coverIndex, r.coverIndex),
         paperIndex: _field(old.paperIndex, b.paperIndex, r.paperIndex),
+        detailOverrides: _mergeDetailOverrides(
+          old.detailOverrides,
+          b.detailOverrides,
+          r.detailOverrides,
+          base.style.bookDetails,
+        ),
         originals: _mergeOriginals(old.originals, b.originals, r.originals),
       );
     } else if (r == null ||
@@ -162,6 +196,12 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
       books[b.id] = r == null
           ? b
           : b.copy(
+              detailOverrides: _mergeDetailOverrides(
+                const {},
+                b.detailOverrides,
+                r.detailOverrides,
+                base.style.bookDetails,
+              ),
               originals: _mergeOriginals(
                 old?.originals ?? const [],
                 b.originals,
@@ -347,28 +387,11 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
   final style = WritingStyle(
     bookDetails: BookDetailsStyle.fromJson({
       for (final kind in BookDetailKind.values)
-        kind.name: {
-          'enabled': _field(
-            base.style.bookDetails.choice(kind).enabled,
-            local.style.bookDetails.choice(kind).enabled,
-            remote.style.bookDetails.choice(kind).enabled,
-          ),
-          'variant': _field(
-            base.style.bookDetails.choice(kind).variant,
-            local.style.bookDetails.choice(kind).variant,
-            remote.style.bookDetails.choice(kind).variant,
-          ),
-          'placement': _field(
-            base.style.bookDetails.choice(kind).placement,
-            local.style.bookDetails.choice(kind).placement,
-            remote.style.bookDetails.choice(kind).placement,
-          ),
-          'tone': _field(
-            base.style.bookDetails.choice(kind).tone,
-            local.style.bookDetails.choice(kind).tone,
-            remote.style.bookDetails.choice(kind).tone,
-          ),
-        },
+        kind.name: _mergeDetailChoice(
+          base.style.bookDetails.choice(kind),
+          local.style.bookDetails.choice(kind),
+          remote.style.bookDetails.choice(kind),
+        ).toJson(),
     }),
     paperIndex: _field(
       base.style.paperIndex,

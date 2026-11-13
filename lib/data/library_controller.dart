@@ -329,6 +329,50 @@ class LibraryController extends ChangeNotifier {
     return book.coverIndex ?? (position < 0 ? 0 : position % 3);
   }
 
+  BookDetailsStyle detailsFor(Book? book) {
+    var details = library.style.bookDetails;
+    if (book == null) return details;
+    for (final entry in book.detailOverrides.entries) {
+      details = details.withChoice(entry.key, entry.value);
+    }
+    return details;
+  }
+
+  WritingStyle styleFor(Book? book) {
+    if (book == null) return library.style;
+    return library.style.copy(
+      paperIndex: book.paperIndex,
+      bookDetails: detailsFor(book),
+    );
+  }
+
+  Future<bool> saveBookAppearance(
+    String id, {
+    int? coverIndex,
+    int? paperIndex,
+    required bool useDefaultPaper,
+    required Map<BookDetailKind, BookDetailChoice> changes,
+  }) async {
+    final book = library.books.where((entry) => entry.id == id).firstOrNull;
+    if (book == null) return false;
+    final updated = book.copy(
+      coverIndex: coverIndex,
+      paperIndex: paperIndex,
+      useDefaultPaper: useDefaultPaper,
+      detailOverrides: Map.unmodifiable({...book.detailOverrides, ...changes}),
+    );
+    _publish(
+      library.copy(
+        books: [
+          for (final entry in library.books)
+            if (entry.id == id) updated else entry,
+        ],
+      ),
+    );
+    await settled;
+    return saveError == null;
+  }
+
   void setBookMaterials(
     String id, {
     int? coverIndex,

@@ -6,6 +6,7 @@ import '../data/library_search.dart';
 import '../data/model.dart';
 import 'paper.dart';
 import 'book_details.dart';
+import 'book_appearance.dart';
 import 'bookshelf.dart';
 import 'reading_details.dart';
 import 'new_book_dialog.dart';
@@ -95,75 +96,6 @@ class _CollectionSheetState extends State<CollectionSheet> {
     }
   }
 
-  Future<void> _cover(Book book) async {
-    final controller = c;
-    final selected = c.coverIndexFor(book);
-    final details = c.library.style.bookDetails;
-    final choice = await showDialog<int>(
-      context: context,
-      builder: (dialog) => SimpleDialog(
-        title: const Text('책 표지'),
-        children: [
-          for (var i = 0; i < coverNames.length; i++)
-            ListTile(
-              leading: ExcludeSemantics(
-                child: BookCover(
-                  title: book.title,
-                  width: 34,
-                  variant: i,
-                  details: details,
-                ),
-              ),
-              title: Text(coverNames[i]),
-              selected: selected == i,
-              trailing: selected == i ? const Icon(Icons.check) : null,
-              onTap: () => Navigator.pop(dialog, i),
-            ),
-        ],
-      ),
-    );
-    if (choice != null && mounted && c == controller) {
-      c.setBookMaterials(book.id, coverIndex: choice);
-    }
-  }
-
-  Future<void> _paper(Book book) async {
-    final controller = c;
-    final selected = book.paperIndex ?? -1;
-    final fallback = c.library.style.paperIndex;
-    final choice = await showDialog<int>(
-      context: context,
-      builder: (dialog) => SimpleDialog(
-        title: const Text('책 내지'),
-        children: [
-          for (var i = -1; i < paperNames.length; i++)
-            ListTile(
-              leading: Container(
-                width: 26,
-                height: 26,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: paperColors[i < 0 ? fallback : i],
-                  border: Border.all(color: line),
-                ),
-              ),
-              title: Text(i < 0 ? '기본 종이 사용' : paperNames[i]),
-              selected: selected == i,
-              trailing: selected == i ? const Icon(Icons.check) : null,
-              onTap: () => Navigator.pop(dialog, i),
-            ),
-        ],
-      ),
-    );
-    if (choice != null && mounted && c == controller) {
-      c.setBookMaterials(
-        book.id,
-        paperIndex: choice < 0 ? null : choice,
-        useDefaultPaper: choice < 0,
-      );
-    }
-  }
-
   Future<void> _showBookplate(Book book, String summary) => showDialog<void>(
     context: context,
     builder: (dialog) => Dialog(
@@ -173,7 +105,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
           final current =
               c.library.books.where((item) => item.id == book.id).firstOrNull ??
               book;
-          final details = c.library.style.bookDetails;
+          final details = c.detailsFor(current);
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -209,17 +141,18 @@ class _CollectionSheetState extends State<CollectionSheet> {
         title: const Text('다른 책의 목차'),
         children: [
           for (final entry in c.library.books)
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(dialog, entry.id),
-              child: BookIndexTab(
-                key: ValueKey('book-index-${entry.id}'),
-                label: entry.indexLabel.isEmpty
-                    ? entry.title
-                    : entry.indexLabel,
-                choice: c.library.style.bookDetails.indexTab,
-                selected: entry.id == book.id,
+            if (c.detailsFor(entry).indexTab.enabled)
+              SimpleDialogOption(
+                onPressed: () => Navigator.pop(dialog, entry.id),
+                child: BookIndexTab(
+                  key: ValueKey('book-index-${entry.id}'),
+                  label: entry.indexLabel.isEmpty
+                      ? entry.title
+                      : entry.indexLabel,
+                  choice: c.detailsFor(entry).indexTab,
+                  selected: entry.id == book.id,
+                ),
               ),
-            ),
         ],
       ),
     );
@@ -232,7 +165,6 @@ class _CollectionSheetState extends State<CollectionSheet> {
   }
 
   Widget _bookMenu(Book book, String summary, bool canSearch) {
-    final details = c.library.style.bookDetails;
     final favorite = c.library.style.favoriteBookIds.contains(book.id);
     return PopupMenuButton<VoidCallback>(
       tooltip: '책 더 보기',
@@ -246,13 +178,18 @@ class _CollectionSheetState extends State<CollectionSheet> {
           value: () => _showBookplate(book, summary),
           child: const Text('장서표'),
         ),
-        PopupMenuItem(value: () => _cover(book), child: const Text('표지 고르기')),
-        PopupMenuItem(value: () => _paper(book), child: const Text('내지 고르기')),
+        PopupMenuItem(
+          value: () => showBookAppearance(context, c, book.id),
+          child: const Text('책 꾸미기'),
+        ),
         PopupMenuItem(
           value: () => c.toggleFavorite(book.id),
           child: Text(favorite ? '즐겨찾기 해제' : '즐겨찾기'),
         ),
-        if (details.indexTab.enabled && c.library.books.length > 1)
+        if (c.library.books.any(
+          (entry) =>
+              entry.id != book.id && c.detailsFor(entry).indexTab.enabled,
+        ))
           PopupMenuItem(
             value: () => _chooseBook(book),
             child: const Text('다른 책의 목차'),
@@ -329,7 +266,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
       }
     }
     final resumePage = c.resumePageForBook(book.id);
-    final details = c.library.style.bookDetails;
+    final details = c.detailsFor(book);
     return ListView.builder(
       key: ValueKey('book-contents-${book.id}'),
       padding: const EdgeInsets.fromLTRB(26, 4, 26, 24),
@@ -760,7 +697,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
               : PaperBackdrop(
                   color: bookPaper,
                   grainOpacity: paperGrainOpacity[paperIndex],
-                  binding: c.library.style.bookDetails.binding,
+                  binding: c.detailsFor(book).binding,
                   coverIndex: c.coverIndexFor(book),
                   pagesAfter: volume.length,
                   outsideColor: bookPaper,
@@ -801,20 +738,13 @@ class _CollectionSheetState extends State<CollectionSheet> {
       }
     }
 
-    WritingStyle styleFor(Book? book) {
-      final style = library.style;
-      return book?.paperIndex == null
-          ? style
-          : style.copy(paperIndex: book!.paperIndex);
-    }
-
     Widget passageSheet(Passage passage, {String? heading}) {
       final book = books[recordBooks[passage.page.recordId]];
       return WritingSheetPreview(
         excerpt: passage.excerpt,
         notebook: book?.title,
         date: passage.page.writtenOn,
-        style: styleFor(book),
+        style: c.styleFor(book),
         heading: heading,
         onOpen: () => widget.onPassage!(passage),
       );
@@ -842,7 +772,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
           excerpt: _firstWriting(recordPages),
           notebook: book?.title,
           date: recordPages.firstOrNull?.writtenOn,
-          style: styleFor(book),
+          style: c.styleFor(book),
           onOpen: () => widget.onRecord(record),
         );
       },

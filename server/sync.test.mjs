@@ -133,12 +133,18 @@ test('Book materials and page feedback accept legacy snapshots and validate inde
 
 test('Independent book details accept legacy defaults and validate every separate choice', () => {
   const library = empty();
+  const book = {id:'book', title:'노트', author:''};
+  library.books.push(book);
   for (const bookDetails of [{}, {indexTab:{enabled:true,variant:1,tone:2}, recordDivider:{variant:2}, pressedFlower:{variant:1,tone:1,placement:2}}, {ribbon:{enabled:false,variant:1,tone:2},dateStamp:{enabled:true,variant:2,tone:3}}]) {
     library.style.bookDetails = bookDetails;
+    book.detailOverrides = bookDetails;
     assert.equal(validLibrary(library), true);
   }
   for (const bookDetails of [null, [], {ribbon:{enabled:'yes'}}, {pencil:{variant:3}}, {binding:{tone:-1}}, {dateStamp:{tone:1.5}}, {unknown:{}}, {pressedFlower:{placement:3}}, {pressedFlower:{placement:null}}]) {
     library.style.bookDetails = bookDetails;
+    assert.equal(validLibrary(library), false);
+    delete library.style.bookDetails;
+    book.detailOverrides = bookDetails;
     assert.equal(validLibrary(library), false);
   }
 });

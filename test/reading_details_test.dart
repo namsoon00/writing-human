@@ -181,7 +181,7 @@ void main() {
       LibraryController? c;
       try {
         final migrated = await store.load();
-        expect(await store.db.getVersion(), 9);
+        expect(await store.db.getVersion(), 10);
         expect(migrated.encode(), original.encode());
         expect(migrated.pages.single.passages, isEmpty);
         const passage = PagePassage(
@@ -405,18 +405,29 @@ void main() {
       expect(find.byType(PressedFlower), findsOneWidget);
       await tester.tap(find.text('닫기'));
       await tester.pumpAndSettle();
-      await choose('표지 고르기');
+      await choose('책 꾸미기');
+      await tester.tap(find.text('표지·내지'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('푸른 리넨'));
       await tester.pumpAndSettle();
-      await choose('내지 고르기');
+      await tester.tap(find.text('내지'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('크림지'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('완료'));
       await tester.pumpAndSettle();
       expect(c.library.books.first.coverIndex, 2);
       expect(c.library.books.first.paperIndex, 3);
       expect(c.library.books.last.coverIndex, isNull);
       expect(c.library.style.paperIndex, initial.style.paperIndex);
-      await choose('내지 고르기');
+      await choose('책 꾸미기');
+      await tester.tap(find.text('표지·내지'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('내지'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('기본 종이 사용'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('완료'));
       await tester.pumpAndSettle();
       expect(c.library.books.first.paperIndex, isNull);
       expect(c.library.books.first.coverIndex, 2);

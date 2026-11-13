@@ -199,10 +199,12 @@ class Book {
     this.indexLabel = '',
     this.coverIndex,
     this.paperIndex,
+    this.detailOverrides = const {},
     this.originals = const [],
   });
   final String id, title, author, owner, indexLabel;
   final int? coverIndex, paperIndex;
+  final Map<BookDetailKind, BookDetailChoice> detailOverrides;
   final List<RegisteredOriginal> originals;
   Book copy({
     String? title,
@@ -211,6 +213,7 @@ class Book {
     int? coverIndex,
     int? paperIndex,
     bool useDefaultPaper = false,
+    Map<BookDetailKind, BookDetailChoice>? detailOverrides,
     List<RegisteredOriginal>? originals,
   }) => Book(
     id: id,
@@ -220,6 +223,7 @@ class Book {
     indexLabel: indexLabel ?? this.indexLabel,
     coverIndex: coverIndex ?? this.coverIndex,
     paperIndex: useDefaultPaper ? null : paperIndex ?? this.paperIndex,
+    detailOverrides: detailOverrides ?? this.detailOverrides,
     originals: originals ?? this.originals,
   );
   Json toJson() => {
@@ -230,6 +234,12 @@ class Book {
     'indexLabel': indexLabel,
     if (coverIndex != null) 'coverIndex': coverIndex,
     if (paperIndex != null) 'paperIndex': paperIndex,
+    if (detailOverrides.isNotEmpty)
+      'detailOverrides': {
+        for (final kind in BookDetailKind.values)
+          if (detailOverrides.containsKey(kind))
+            kind.name: detailOverrides[kind]!.toJson(),
+      },
     if (originals.isNotEmpty)
       'originals': originals.map((o) => o.toJson()).toList(),
   };
@@ -251,8 +261,24 @@ class Book {
       indexLabel: j['indexLabel'] as String? ?? '',
       coverIndex: cover,
       paperIndex: paper,
+      detailOverrides: j.containsKey('detailOverrides')
+          ? readDetailOverrides(j['detailOverrides'])
+          : const {},
       originals: RegisteredOriginal.read(j['originals']),
     );
+  }
+
+  static Map<BookDetailKind, BookDetailChoice> readDetailOverrides(
+    Object? value,
+  ) {
+    if (value is! Json) {
+      throw const FormatException('책 꾸밈 설정을 확인할 수 없습니다.');
+    }
+    final details = BookDetailsStyle.fromJson(value);
+    return Map.unmodifiable({
+      for (final kind in BookDetailKind.values)
+        if (value.containsKey(kind.name)) kind: details.choice(kind),
+    });
   }
 }
 
@@ -827,6 +853,11 @@ class Library {
 
   void validate() {
     style.bookDetails.validate();
+    for (final book in books) {
+      for (final choice in book.detailOverrides.values) {
+        choice.validate();
+      }
+    }
     final bookIds = books.map((b) => b.id).toSet();
     final recordIds = records.map((r) => r.id).toSet();
     final pageIds = pages.map((p) => p.id).toSet();

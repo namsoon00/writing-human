@@ -243,13 +243,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
 
   int get _coverVariant => c.coverIndexFor(book);
 
-  WritingStyle _paperStyle(Book? book) {
-    final style = c.library.style;
-    final index = book?.paperIndex;
-    return index == null || index == style.paperIndex
-        ? style
-        : style.copy(paperIndex: index);
-  }
+  WritingStyle _paperStyle(Book? book) => c.styleFor(book);
 
   @override
   void initState() {
@@ -899,7 +893,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                     title: '',
                     width: 29,
                     variant: c.coverIndexFor(b),
-                    details: c.library.style.bookDetails,
+                    details: c.detailsFor(b),
                   ),
                   title: Text(b.title),
                   onTap: () => Navigator.pop(context, b.id),
@@ -1042,7 +1036,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                           ),
                           DateStamp(
                             date: page.writtenOn!,
-                            choice: c.library.style.bookDetails.dateStamp,
+                            choice: c.detailsFor(book).dateStamp,
                           ),
                         ],
                       ),
@@ -1253,7 +1247,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               WritingHeader(
-                ribbon: c.library.style.bookDetails.ribbon,
+                ribbon: style.bookDetails.ribbon,
                 bookmarked: record != null,
                 useDevelopmentTypeface: c.library.style.useDevelopmentTypeface,
                 compact: compact,
@@ -1360,7 +1354,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               Transform.translate(
                 offset: Offset(0, preview ? 0 : -keyboardOverlap),
                 child: WritingFooter(
-                  ornament: c.library.style.bookDetails.ornament,
+                  ornament: style.bookDetails.ornament,
                   onTools: _tools,
                   onSource: navigationEnabled ? _showOriginals : null,
                   onMore: _more,

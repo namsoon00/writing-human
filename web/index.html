@@ -58,19 +58,54 @@
   <script src="source_ocr.js?v=4"></script>
   <script>
     if (CSS.supports('-webkit-touch-callout', 'none')) {
-      const bodyField = '[flt-semantics-identifier="writing-page-body"] textarea';
+      const body = '[flt-semantics-identifier="writing-page-body"]';
+      // Match Flutter's default touch slop and long-press timeout.
+      const touchSlop = 18;
+      const longPressMs = 500;
       let tapStart = null;
+      let composingField = null;
+      document.addEventListener('compositionstart', event => {
+        composingField = event.composedPath()[0];
+      }, true);
+      document.addEventListener('compositionend', event => {
+        if (composingField === event.composedPath()[0]) composingField = null;
+      }, true);
+
+      function editorAt(event, touch) {
+        const path = event.composedPath();
+        const view = path.find(node => node.localName === 'flutter-view');
+        if (!view || !touch) return null;
+        // A semantic control above the paper keeps its own touch behavior.
+        const control = path.find(node => node.localName === 'flt-semantics');
+        if (control && !control.closest(body)) return null;
+        const editor = view.querySelector(`${body} textarea`);
+        if (!editor || editor.disabled) return null;
+        const {left, right, top, bottom} = editor.getBoundingClientRect();
+        return touch.clientX >= left && touch.clientX < right &&
+          touch.clientY >= top && touch.clientY < bottom ? editor : null;
+      }
+
       document.addEventListener('touchstart', (event) => {
+        tapStart = null;
+        if (event.touches.length !== 1) return;
         const touch = event.touches[0];
-        tapStart = event.touches.length === 1 && event.target.localName === 'flutter-view'
-          ? {x: touch.clientX, y: touch.clientY, id: touch.identifier, time: event.timeStamp}
-          : null;
+        const editor = editorAt(event, touch);
+        if (editor) {
+          tapStart = {
+            editor, x: touch.clientX, y: touch.clientY,
+            id: touch.identifier, time: event.timeStamp, moved: false,
+          };
+        }
       }, {capture: true, passive: true});
       document.addEventListener('touchmove', (event) => {
-        const touch = event.touches[0];
-        if (tapStart && (event.touches.length !== 1 ||
-            Math.hypot(touch.clientX - tapStart.x, touch.clientY - tapStart.y) > 10)) {
+        if (!tapStart) return;
+        if (event.touches.length !== 1) {
           tapStart = null;
+          return;
+        }
+        const touch = event.touches[0];
+        if (Math.hypot(touch.clientX - tapStart.x, touch.clientY - tapStart.y) > touchSlop) {
+          tapStart.moved = true;
         }
       }, {capture: true, passive: true});
       document.addEventListener('touchcancel', () => { tapStart = null; }, true);
@@ -78,22 +113,16 @@
       document.addEventListener('touchend', (event) => {
         const start = tapStart;
         tapStart = null;
-        if (event.target.localName !== 'flutter-view' || !event.cancelable) return;
-        const editor = event.target.querySelector(bodyField);
+        if (!start || !event.isTrusted || !event.cancelable || event.touches.length !== 0) return;
         const touch = event.changedTouches[0];
-        if (!editor || !touch) return;
-        const {left, right, top, bottom} = editor.getBoundingClientRect();
-        if (touch.clientX < left || touch.clientX >= right ||
-            touch.clientY < top || touch.clientY >= bottom) return;
-
-        // Focus during the trusted tap so Safari can open its software keyboard.
-        // Flutter still places the caret from the pointer coordinates.
-        if (event.isTrusted && start && start.id === touch.identifier &&
-            event.timeStamp - start.time < 500 &&
-            Math.hypot(touch.clientX - start.x, touch.clientY - start.y) <= 10) {
-          editor.focus({preventScroll: true});
+        if (touch?.identifier !== start.id || editorAt(event, touch) !== start.editor) return;
+        if (!composingField?.matches(':focus') && !start.moved &&
+            event.timeStamp - start.time < longPressMs &&
+            Math.hypot(touch.clientX - start.x, touch.clientY - start.y) <= touchSlop) {
+          // Safari requires focus during the trusted tap. Flutter still places the caret.
+          start.editor.focus({preventScroll: true});
         }
-        // The compatibility click can blur the field or move its selection.
+        // A compatibility click can blur the editor or disturb Flutter selection.
         event.preventDefault();
       }, {capture: true, passive: false});
     }

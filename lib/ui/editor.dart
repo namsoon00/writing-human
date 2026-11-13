@@ -353,6 +353,10 @@ class _PageEditorState extends State<PageEditor> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final padding = writingPagePadding(constraints.biggest);
+        final writingMargins = EdgeInsets.only(
+          left: padding.left,
+          right: padding.right,
+        );
         final overlap = widget.keyboardOverlap;
         final visiblePadding = padding.copyWith(
           bottom: overlap > 0 ? 12 : padding.bottom,
@@ -387,68 +391,76 @@ class _PageEditorState extends State<PageEditor> {
                 ),
               RepaintBoundary(
                 key: fieldRenderKey,
-                child: Semantics(
-                  identifier: 'writing-page-body',
-                  child: TextSelectionTheme(
-                    data: TextSelectionThemeData(
-                      selectionColor: const Color(
-                        0xffaa833c,
-                      ).withValues(alpha: .25),
-                      selectionHandleColor: penColors[style.penIndex],
-                    ),
-                    child: TextField(
-                      key: const ValueKey('page-text'),
-                      controller: text,
-                      scrollController: scroll,
-                      focusNode: focus,
-                      // Keep native input/selection, with a separate ink indicator.
-                      showCursor: false,
-                      maxLines: null,
-                      minLines: null,
-                      expands: true,
-                      textAlignVertical: TextAlignVertical.top,
-                      keyboardType: TextInputType.multiline,
-                      textInputAction: TextInputAction.newline,
-                      autocorrect: false,
-                      enableSuggestions: false,
-                      contextMenuBuilder: _selectionMenu,
-                      style: writingTextStyle(
-                        style.fontIndex,
-                        size: 23,
-                        color: penColors[style.penIndex],
-                        useDevelopmentTypeface: style.useDevelopmentTypeface,
+                child: Padding(
+                  padding: writingMargins,
+                  child: Semantics(
+                    identifier: 'writing-page-body',
+                    child: TextSelectionTheme(
+                      data: TextSelectionThemeData(
+                        selectionColor: const Color(
+                          0xffaa833c,
+                        ).withValues(alpha: .25),
+                        selectionHandleColor: penColors[style.penIndex],
                       ),
-                      cursorColor: brandInk,
-                      cursorWidth: 1.2,
-                      decoration: InputDecoration(
-                        contentPadding: visiblePadding,
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        filled: false,
+                      child: TextField(
+                        key: const ValueKey('page-text'),
+                        controller: text,
+                        scrollController: scroll,
+                        focusNode: focus,
+                        // Keep native input/selection, with a separate ink indicator.
+                        showCursor: false,
+                        maxLines: null,
+                        minLines: null,
+                        expands: true,
+                        textAlignVertical: TextAlignVertical.top,
+                        keyboardType: TextInputType.multiline,
+                        textInputAction: TextInputAction.newline,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        contextMenuBuilder: _selectionMenu,
+                        style: writingTextStyle(
+                          style.fontIndex,
+                          size: 23,
+                          color: penColors[style.penIndex],
+                          useDevelopmentTypeface: style.useDevelopmentTypeface,
+                        ),
+                        cursorColor: brandInk,
+                        cursorWidth: 1.2,
+                        decoration: InputDecoration(
+                          contentPadding: EdgeInsets.only(
+                            top: visiblePadding.top,
+                            bottom: visiblePadding.bottom,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: false,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
               if (defaultTargetPlatform == TargetPlatform.iOS)
-                Positioned.fill(child: _preciseTouchSelection()),
-              if (focus.hasFocus || _reflectionFocused) ...[
-                Positioned(
-                  top: 0,
-                  bottom: 0,
-                  left: 0,
-                  width: padding.left,
-                  child: _dismissGutter(),
+                Positioned.fill(
+                  left: writingMargins.left,
+                  right: writingMargins.right,
+                  child: _preciseTouchSelection(),
                 ),
-                Positioned(
-                  top: 0,
-                  bottom: 0,
-                  right: 0,
-                  width: padding.right,
-                  child: _dismissGutter(),
-                ),
-              ],
+              Positioned(
+                top: 0,
+                bottom: 0,
+                left: 0,
+                width: padding.left,
+                child: _dismissGutter(),
+              ),
+              Positioned(
+                top: 0,
+                bottom: 0,
+                right: 0,
+                width: padding.right,
+                child: _dismissGutter(),
+              ),
               if (widget.originals.isNotEmpty)
                 Positioned.fill(
                   child: IgnorePointer(

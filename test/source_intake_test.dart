@@ -455,7 +455,7 @@ void main() {
       tester.view.resetViewInsets();
       tester.view.physicalSize = const Size(390, 844);
       await tester.pumpAndSettle();
-      await tester.tapAt(tester.getTopLeft(bodyField) + const Offset(12, 100));
+      await tester.tapAt(tester.getTopLeft(bodyField) + const Offset(-12, 100));
       await tester.pumpAndSettle();
       expect(reading, findsNothing);
       expect(inlineField, findsNothing);

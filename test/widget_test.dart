@@ -105,6 +105,10 @@ void main() {
       final point = render.localToGlobal(
         render.getLocalRectForCaret(const TextPosition(offset: 0)).center,
       );
+      final margin = tester.getTopLeft(field) + const Offset(-12, 100);
+      await tester.tapAt(margin);
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(field).focusNode!.hasFocus, isFalse);
       expect(tester.testTextInput.isVisible, isFalse);
       await tester.tapAt(point);
       await tester.pumpAndSettle();
@@ -120,6 +124,15 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.testTextInput.isVisible, isTrue);
       expect(input.controller!.selection.extentOffset, 0);
+      final before = input.controller!.value;
+      await tester.tapAt(margin);
+      await tester.pumpAndSettle();
+      expect(input.focusNode!.hasFocus, isFalse);
+      expect(tester.testTextInput.isVisible, isFalse);
+      expect(input.controller!.value, before);
+      await tester.tapAt(point);
+      await tester.pumpAndSettle();
+      expect(tester.testTextInput.isVisible, isTrue);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.iOS),
   );
@@ -236,7 +249,7 @@ void main() {
     final note = find.byKey(const ValueKey('notebook-reflection-input'));
     await tester.enterText(note, '이 대목을 다시 읽고 싶다.');
     await tester.pumpAndSettle();
-    await tester.tapAt(tester.getTopLeft(editor) + const Offset(305, 130));
+    await tester.tapAt(tester.getTopRight(editor) + const Offset(12, 130));
     await tester.pumpAndSettle();
     final saved = store.data.books.single.originals.single.reflection!;
     expect(saved.text, '이 대목을 다시 읽고 싶다.');
@@ -370,7 +383,7 @@ void main() {
       expect(find.text('완료'), findsNothing);
       final focused = tester.widget<TextField>(editor);
       final selection = focused.controller!.selection;
-      await tester.tapAt(editorTop + const Offset(12, 100));
+      await tester.tapAt(editorTop + const Offset(-12, 100));
       await tester.pumpAndSettle();
       expect(focused.focusNode!.hasFocus, isFalse);
       expect(focused.controller!.selection, selection);

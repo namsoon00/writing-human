@@ -25,13 +25,19 @@ class SourceScanPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = scan.width, height = scan.height;
     if (width == null || height == null) {
-      return Image.memory(
-        scan.photo,
-        height: 116,
-        cacheWidth: 640,
-        fit: BoxFit.contain,
-        excludeFromSemantics: true,
-        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+      return Semantics(
+        label: '인식한 책 사진',
+        image: true,
+        child: SizedBox(
+          height: this.height ?? 116,
+          width: double.infinity,
+          child: Image.memory(
+            scan.photo,
+            fit: BoxFit.contain,
+            excludeFromSemantics: true,
+            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          ),
+        ),
       );
     }
     final viewport = focus == null

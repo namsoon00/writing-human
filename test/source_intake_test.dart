@@ -677,7 +677,9 @@ void main() {
       expect(intake.photos, 1);
       expect(find.text('페이지 인식 결과'), findsOneWidget);
       expect(store.data.records, isEmpty);
-      await tester.tap(find.byKey(const ValueKey('source-paragraph-0')));
+      final paragraph = find.byKey(const ValueKey('source-paragraph-0'));
+      await tester.ensureVisible(paragraph);
+      await tester.tap(paragraph);
       await tester.pumpAndSettle();
       await tester.tap(confirm);
       await tester.pumpAndSettle();
@@ -724,6 +726,20 @@ void main() {
       await open(tester, store, intake);
       await openRegistration(tester);
       await takePhoto(tester);
+      final preview = find.byKey(const ValueKey('source-scan-preview'));
+      final inlineHeight = tester.getSize(preview).height;
+      expect(inlineHeight, greaterThan(350));
+      await tester.tap(find.text('사진 크게 보기'));
+      await tester.pumpAndSettle();
+      final fullPhoto = find.descendant(
+        of: find.byType(Dialog),
+        matching: preview,
+      );
+      expect(tester.getSize(fullPhoto).height, greaterThan(inlineHeight * 1.7));
+      await tester.tap(find.byTooltip('큰 사진 닫기'));
+      await tester.pumpAndSettle();
+      expect(tester.getSize(preview).height, inlineHeight);
+      expect(intake.photos, 1);
       await tester.tap(confirm);
       await tester.pumpAndSettle();
       final first = tester.widget<TextField>(sourceField);
@@ -828,7 +844,7 @@ void main() {
       expect(find.byKey(const ValueKey('source-word-range')), findsOneWidget);
       final frame = tester.getRect(preview);
       final rightWord = Offset(
-        frame.center.dx + frame.height * (.66 - .5),
+        frame.center.dx + frame.shortestSide * (.66 - .5),
         frame.center.dy,
       );
       await tester.tapAt(rightWord);

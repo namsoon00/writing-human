@@ -676,7 +676,51 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     return null;
   }
 
-  List<Widget> _selectionPanel() {
+  Widget _largePhotoButton(
+    SourceScan scan, [
+    List<Rect> selection = const [],
+  ]) => TextButton.icon(
+    onPressed: () => _showScanPhoto(scan, selection),
+    icon: const Icon(CupertinoIcons.arrow_up_left_arrow_down_right, size: 14),
+    label: const Text('사진 크게 보기'),
+  );
+
+  Future<void> _showScanPhoto(SourceScan scan, List<Rect> selection) =>
+      showDialog<void>(
+        context: context,
+        useSafeArea: false,
+        builder: (context) => Dialog.fullscreen(
+          backgroundColor: paper,
+          child: SafeArea(
+            child: Column(
+              children: [
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    tooltip: '큰 사진 닫기',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(CupertinoIcons.xmark, size: 19),
+                  ),
+                ),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, box) => InteractiveViewer(
+                      maxScale: 5,
+                      child: SourceScanPreview(
+                        scan: scan,
+                        height: box.maxHeight,
+                        selection: selection,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+  List<Widget> _selectionPanel(double photoHeight) {
     final scan = _scan!;
     final pageMode = _mode == _ScanMode.page;
     final passage = _passage;
@@ -708,6 +752,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
             onPressed: _editable ? () => _choosePhoto(_mode) : null,
             child: const Text('다른 사진'),
           ),
+          _largePhotoButton(scan, selectedBoxes),
         ],
       ),
       Text(
@@ -724,7 +769,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         maxScale: 5,
         child: SourceScanPreview(
           scan: scan,
-          height: pageMode ? 208 : 292,
+          height: photoHeight,
           selection: selectedBoxes,
           onTap: _busy || pageMode ? null : _tapPhoto,
         ),
@@ -898,12 +943,15 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   );
 
   List<Widget> _reviewPanel() => [
-    Align(
-      alignment: Alignment.centerLeft,
-      child: TextButton(
-        onPressed: _editable ? _backToSelection : null,
-        child: Text(_isPageReview ? '페이지 인식 결과' : '구절 다시 고르기'),
-      ),
+    Wrap(
+      spacing: 8,
+      children: [
+        TextButton(
+          onPressed: _editable ? _backToSelection : null,
+          child: Text(_isPageReview ? '페이지 인식 결과' : '구절 다시 고르기'),
+        ),
+        _largePhotoButton(_scan!),
+      ],
     ),
     if (_isPageReview) ...[
       const Text('한 페이지를 원문 하나로 저장합니다.'),
@@ -991,7 +1039,9 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
           top: false,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxHeight: math.min(680, available * .88),
+              maxHeight: _selecting
+                  ? available * .92
+                  : math.min(680, available * .88),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1046,7 +1096,9 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                           ),
                         ),
                       if (_selecting)
-                        ..._selectionPanel()
+                        ..._selectionPanel(
+                          (available * .46).clamp(180.0, 520.0),
+                        )
                       else if (_reviewing)
                         ..._reviewPanel()
                       else ...[

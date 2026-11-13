@@ -382,6 +382,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                 const Divider(height: 1, color: line),
             Semantics(
               selected: resumed,
+              label: resumed ? '이어서 쓰는 기록' : null,
               child: Material(
                 type: MaterialType.transparency,
                 borderRadius: BorderRadius.circular(4),
@@ -398,80 +399,79 @@ class _CollectionSheetState extends State<CollectionSheet> {
                             open(entry.page);
                           }
                         },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 14,
-                    ),
-                    child: Row(
-                      children: [
-                        if (details.ribbon.enabled)
-                          SizedBox(
-                            width: 18,
-                            child: resumed
-                                ? RibbonBookmark(
-                                    choice: details.ribbon,
-                                    width: 9,
-                                    height: 23,
-                                  )
-                                : null,
-                          ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              LayoutBuilder(
-                                builder: (_, box) => Row(
-                                  children: [
-                                    ConstrainedBox(
-                                      constraints: BoxConstraints(
-                                        maxWidth: entry == null
-                                            ? box.maxWidth
-                                            : box.maxWidth * .72,
-                                      ),
-                                      child: Text(
-                                        title,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 17,
-                                          height: 1.55,
-                                        ),
+                  child: Stack(
+                    children: [
+                      Padding(
+                        padding: EdgeInsetsDirectional.fromSTEB(
+                          details.ribbon.enabled ? 26 : 4,
+                          14,
+                          4,
+                          14,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            LayoutBuilder(
+                              builder: (_, box) => Row(
+                                children: [
+                                  ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      maxWidth: entry == null
+                                          ? box.maxWidth
+                                          : box.maxWidth * .72,
+                                    ),
+                                    child: Text(
+                                      title,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 17,
+                                        height: 1.55,
                                       ),
                                     ),
-                                    if (entry != null) ...[
-                                      const Expanded(child: _ContentsLeader()),
-                                      Text(
-                                        '${entry.number}',
-                                        key: ValueKey(
-                                          'contents-page-${record.id}',
-                                        ),
-                                        semanticsLabel: '${entry.number}쪽',
-                                        style: const TextStyle(
-                                          color: muted,
-                                          fontSize: 14,
-                                        ),
+                                  ),
+                                  if (entry != null) ...[
+                                    const Expanded(child: _ContentsLeader()),
+                                    Text(
+                                      '${entry.number}',
+                                      key: ValueKey(
+                                        'contents-page-${record.id}',
                                       ),
-                                    ],
+                                      semanticsLabel: '${entry.number}쪽',
+                                      style: const TextStyle(
+                                        color: muted,
+                                        fontSize: 14,
+                                      ),
+                                    ),
                                   ],
+                                ],
+                              ),
+                            ),
+                            if (excerpt != null && excerpt != title)
+                              Text(
+                                excerpt,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: muted,
+                                  fontSize: 12,
+                                  height: 1.55,
                                 ),
                               ),
-                              if (excerpt != null && excerpt != title)
-                                Text(
-                                  excerpt,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: muted,
-                                    fontSize: 12,
-                                    height: 1.55,
-                                  ),
-                                ),
-                            ],
+                          ],
+                        ),
+                      ),
+                      if (resumed && details.ribbon.enabled)
+                        PositionedDirectional(
+                          top: 0,
+                          start: 4,
+                          child: RibbonBookmark(
+                            choice: details.ribbon.copy(variant: 1),
+                            width: 13,
+                            height: 32,
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
               ),

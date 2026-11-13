@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/main.dart';
+import 'package:writing_human/ui/book_details.dart';
 
 import 'widget_test.dart' show MemoryStore;
 
@@ -119,6 +120,21 @@ void main() {
         lessThan(tester.getTopLeft(secondNumber).dy),
       );
       expect(find.text('책 밖의 기록'), findsNothing);
+
+      final bookmark = find.descendant(
+        of: find.byKey(const ValueKey('contents-record-b')),
+        matching: find.byType(RibbonBookmark),
+      );
+      expect(bookmark, findsOneWidget);
+      expect(tester.getSize(bookmark), const Size(13, 32));
+      expect(tester.widget<RibbonBookmark>(bookmark).choice.variant, 1);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('contents-record-a')),
+          matching: find.byType(RibbonBookmark),
+        ),
+        findsNothing,
+      );
 
       await tester.tap(find.byKey(const ValueKey('contents-record-b')));
       await tester.pumpAndSettle();

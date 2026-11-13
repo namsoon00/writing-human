@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:archive/archive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -861,16 +860,14 @@ void main() {
       expect(bytes, intake.photo.bytes);
       expect(matchOriginal([original], '왼쪽', 2), isNull);
       expect(matchOriginal([original], '오른쪽', 3)?.remainder, ' 문단');
-      final output = OutputMemoryStream();
       final restored = await tester.runAsync(() async {
-        await LibraryBackup.write(
-          output,
+        final backup = await LibraryBackup.collect(
           store.data,
           DateTime.utc(2026, 11, 13),
         );
-        return LibraryBackup.read(InputMemoryStream(output.getBytes()));
+        return LibraryBackup.decode(backup.encode());
       });
-      expect(restored!.photoIds, {original.photoId});
+      expect(restored!.photos.keys.toSet(), {original.photoId});
       expect(
         restored.library.records.single.originals.single.writingRange?.toJson(),
         original.writingRange?.toJson(),

@@ -756,7 +756,7 @@ void main() {
       await openRegistration(tester);
       await takePhoto(tester);
       expect(intake.photos, 1);
-      expect(find.text('문단 고르기'), findsOneWidget);
+      expect(find.text('페이지 인식 결과'), findsOneWidget);
       expect(store.data.records, isEmpty);
       await tester.tap(find.byKey(const ValueKey('source-paragraph-0')));
       await tester.pumpAndSettle();
@@ -825,10 +825,15 @@ void main() {
       await tester.ensureVisible(chooseRange);
       await tester.tap(chooseRange);
       await tester.pumpAndSettle();
-      final range = tester.widget<RangeSlider>(
-        find.byKey(const ValueKey('original-line-range')),
-      );
-      range.onChanged!(const RangeValues(1, 1));
+      final rangePhoto = find.byKey(const ValueKey('source-scan-preview'));
+      expect(find.bySemanticsLabel('인식한 책 사진'), findsOneWidget);
+      final frame = tester.getRect(rangePhoto);
+      final imageWidth = frame.height * 600 / 800;
+      final rightLine = frame.center.dx + imageWidth * (.73 - .5);
+      await tester.tapAt(Offset(rightLine, frame.top + frame.height * .22));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('끝 줄을 누르세요.'), findsOneWidget);
+      await tester.tapAt(Offset(rightLine, frame.top + frame.height * .22));
       await tester.pumpAndSettle();
       await tester.tap(find.text('범위 적용'));
       await tester.pumpAndSettle();
@@ -837,6 +842,7 @@ void main() {
       expect(original.text, '왼쪽 문단\n\n오른쪽 문단');
       expect(original.citation, '12쪽');
       expect(original.isFullPage, isTrue);
+      expect(original.photoLines, hasLength(2));
       expect(
         original.text.substring(
           original.writingRange!.start,
@@ -898,11 +904,27 @@ void main() {
       await tester.tap(preview);
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('source-word-range')), findsOneWidget);
+      final frame = tester.getRect(preview);
+      final rightWord = Offset(
+        frame.center.dx + frame.height * (.66 - .5),
+        frame.center.dy,
+      );
+      await tester.tapAt(rightWord);
+      await tester.pumpAndSettle();
+      expect(find.text('사진에서 끝 단어를 누르세요.'), findsOneWidget);
+      await tester.tapAt(rightWord);
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<Text>(find.byKey(const ValueKey('source-selected-passage')))
+            .data,
+        '단어',
+      );
       final retry = find.text('선택 영역 다시 읽기');
       await tester.ensureVisible(retry);
       await tester.tap(retry);
       await tester.pumpAndSettle();
-      expect(intake.recognizedRegion!.width, lessThan(1));
+      expect(intake.recognizedRegion!.width, lessThan(.34));
       expect(intake.recognizedMask, hasLength(1));
       await tester.tap(confirm);
       await tester.pumpAndSettle();
@@ -1165,7 +1187,7 @@ void main() {
     final intake = FakeIntake();
     intake.recovered = intake.photo;
     await open(tester, store, intake);
-    expect(find.text('문단 고르기'), findsOneWidget);
+    expect(find.text('페이지 인식 결과'), findsOneWidget);
     expect(intake.photos, 0);
     expect(store.writes, 0);
   });

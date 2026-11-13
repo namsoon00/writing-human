@@ -638,6 +638,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         photoId: result.photoId,
         isFullPage: result.isFullPage,
         writingRange: result.writingRange,
+        photoLines: result.photoLines,
       );
       if (!registered) {
         _sourceNotice('원문을 저장하지 못했어요. 다시 시도해 주세요.');

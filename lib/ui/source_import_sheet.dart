@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../data/model.dart';
 import '../data/original_photo_store.dart';
+import '../source/photo_lines.dart';
 import '../source/scan_passage.dart';
 import '../source/source_intake.dart';
 import '../source/source_scan.dart';
@@ -18,6 +19,7 @@ typedef SourceImportResult = ({
   String text,
   bool isFullPage,
   PencilMark? writingRange,
+  List<OriginalPhotoLine> photoLines,
   String? photoId,
   String citation,
   String? bookId,
@@ -77,6 +79,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   Set<int> _selected = {};
   int? _paragraph;
   int _first = 0, _last = 0;
+  int? _photoAnchor;
   String? _reread;
   String? _error;
   bool _busy = false, _readingPhoto = false;
@@ -250,6 +253,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       _mode = mode;
       _reread = null;
       _paragraph = null;
+      _photoAnchor = null;
       _order = scan.pageReadingOrder;
       _selected = _order.toSet();
     });
@@ -259,6 +263,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     final passage = ScanPassage(_scan!.paragraphs[index]);
     setState(() {
       _paragraph = index;
+      _photoAnchor = null;
       _first = 0;
       _last = passage.terms.length - 1;
       _reread = null;
@@ -289,11 +294,26 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
             )
             .firstOrNull;
     if (index == null) return;
-    if (_mode == _ScanMode.paragraph) {
+    if (_paragraph != index) {
       _pickParagraph(index);
-    } else {
-      _toggle(index, !_selected.contains(index));
+      return;
     }
+    final terms = _passage!.terms;
+    final hitsByWord = [
+      for (final (i, term) in terms.indexed)
+        if (term.bounds?.inflate(.005).contains(point) ?? false) i,
+    ];
+    if (hitsByWord.isEmpty) return;
+    final anchor = _photoAnchor;
+    final word = anchor == null || hitsByWord.last < anchor
+        ? hitsByWord.first
+        : hitsByWord.last;
+    setState(() {
+      _photoAnchor = anchor == null ? word : null;
+      _first = math.min(anchor ?? word, word);
+      _last = anchor == null ? hitsByWord.last : math.max(anchor, word);
+      _reread = null;
+    });
   }
 
   void _move(int index, int delta) => setState(() {
@@ -380,15 +400,23 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       .where((text) => text.isNotEmpty)
       .join('\n\n');
 
+  List<OriginalPhotoLine> get _photoLines => mapPhotoLines([
+    for (final (index, editor) in _editors.indexed)
+      (normalizeSource(editor.text), _reviewLines[index]),
+  ]);
+
   bool get _isPageReview => _reviewing && _mode == _ScanMode.page;
 
   Future<void> _pickWritingRange() async {
     final text = _confirmedText;
     if (!_editable || text.isEmpty) return;
+    FocusScope.of(context).unfocus();
     final result = await chooseOriginalRange(
       context,
       text,
       current: _range?.text == text ? _range?.range : null,
+      photo: _scan,
+      photoLines: _photoLines,
     );
     if (mounted && result != null && text == _confirmedText) {
       setState(() {
@@ -416,6 +444,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     final photo = _reviewing ? _originalPhoto : null;
     final citation = _citation.text.trim(), bookId = _bookId;
     final range = isFullPage ? _range?.range : null;
+    final photoLines = isFullPage ? _photoLines : const <OriginalPhotoLine>[];
     String? photoId;
     if (photo != null) {
       FocusScope.of(context).unfocus();
@@ -447,6 +476,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       bookId: bookId,
       isFullPage: isFullPage,
       writingRange: range,
+      photoLines: photoLines,
       photoId: photoId,
     ));
   }
@@ -626,13 +656,21 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       Text(
         pageMode
             ? '페이지 전체를 읽습니다. 머리글이나 쪽수를 빼고 읽는 순서를 고칠 수 있어요.'
-            : '사진이나 목록에서 원하는 문단을 고르세요.',
+            : passage == null
+            ? '사진에서 저장할 문단을 누르세요.'
+            : _photoAnchor == null
+            ? '사진에서 시작 단어를 눌러 구절을 좁힐 수 있어요.'
+            : '사진에서 끝 단어를 누르세요.',
       ),
       const SizedBox(height: 6),
-      SourceScanPreview(
-        scan: scan,
-        selection: selectedBoxes,
-        onTap: _busy ? null : _tapPhoto,
+      InteractiveViewer(
+        maxScale: 5,
+        child: SourceScanPreview(
+          scan: scan,
+          height: pageMode ? 208 : 292,
+          selection: selectedBoxes,
+          onTap: _busy || pageMode ? null : _tapPhoto,
+        ),
       ),
       if (pageMode)
         TextButton(
@@ -658,6 +696,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                 : (range) => setState(() {
                     _first = range.start.round();
                     _last = range.end.round();
+                    _photoAnchor = null;
                     _reread = null;
                   }),
           ),
@@ -799,7 +838,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       alignment: Alignment.centerLeft,
       child: TextButton(
         onPressed: _editable ? _backToSelection : null,
-        child: const Text('문단 다시 고르기'),
+        child: Text(_isPageReview ? '페이지 인식 결과' : '구절 다시 고르기'),
       ),
     ),
     if (_isPageReview) ...[
@@ -903,7 +942,9 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                           Expanded(
                             child: Text(
                               _selecting
-                                  ? '문단 고르기'
+                                  ? _mode == _ScanMode.page
+                                        ? '페이지 인식 결과'
+                                        : '문단 고르기'
                                   : _reviewing
                                   ? '원문 확인'
                                   : widget.shared
@@ -1042,7 +1083,13 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                               : canSubmit
                               ? _submit
                               : null,
-                          child: Text(_selecting ? '선택한 문단 확인' : '저장'),
+                          child: Text(
+                            !_selecting
+                                ? '저장'
+                                : _mode == _ScanMode.page
+                                ? '페이지 확인'
+                                : '선택한 구절 확인',
+                          ),
                         ),
                       ],
                     ),

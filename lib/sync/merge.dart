@@ -56,6 +56,9 @@ List<RegisteredOriginal> _mergeOriginals(
       photoId: incoming.photoId ?? entry.photoId,
       isFullPage: entry.isFullPage || incoming.isFullPage,
       writingRange: range,
+      photoLines: incoming.photoLines.isEmpty
+          ? entry.photoLines
+          : incoming.photoLines,
     );
   }
   return merged.values.toList();

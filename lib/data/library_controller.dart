@@ -157,6 +157,7 @@ class LibraryController extends ChangeNotifier {
     String? photoId,
     bool isFullPage = false,
     PencilMark? writingRange,
+    List<OriginalPhotoLine> photoLines = const [],
   }) => registerOriginals(
     bookId: bookId,
     page: page,
@@ -165,6 +166,7 @@ class LibraryController extends ChangeNotifier {
     photoId: photoId,
     isFullPage: isFullPage,
     writingRange: writingRange,
+    photoLines: photoLines,
   );
 
   bool registerOriginals({
@@ -176,6 +178,7 @@ class LibraryController extends ChangeNotifier {
     String? photoId,
     bool isFullPage = false,
     PencilMark? writingRange,
+    List<OriginalPhotoLine> photoLines = const [],
   }) {
     final originals = [
       for (final (index, text) in passages.indexed)
@@ -186,6 +189,7 @@ class LibraryController extends ChangeNotifier {
           photoId: photoId,
           isFullPage: isFullPage,
           writingRange: writingRange,
+          photoLines: photoLines,
         ),
     ];
     if (originals.isEmpty || !RegisteredOriginal.validList(originals)) {

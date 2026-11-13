@@ -12,12 +12,14 @@ class SourceScanPreview extends StatelessWidget {
     this.selection = const [],
     this.focus,
     this.onTap,
+    this.height,
   });
 
   final SourceScan scan;
   final List<Rect> selection;
   final Rect? focus;
   final ValueChanged<Offset>? onTap;
+  final double? height;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +43,7 @@ class SourceScanPreview extends StatelessWidget {
       child: ColoredBox(
         color: paper,
         child: SizedBox(
-          height: focus == null ? 208 : 116,
+          height: this.height ?? (focus == null ? 208 : 116),
           width: double.infinity,
           child: LayoutBuilder(
             builder: (context, constraints) {

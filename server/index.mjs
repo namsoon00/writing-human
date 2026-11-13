@@ -14,6 +14,20 @@ const writingRange = (range, original) => object(range) &&
   (original.charCodeAt(range.end) & 0xfc00) !== 0xdc00 &&
   original.slice(range.start, range.end).trim().length > 0;
 
+const validPhotoLines = (lines, original) => {
+  if (!Array.isArray(lines) || lines.length > 500) return false;
+  let previousEnd = 0;
+  for (const row of lines) {
+    if (!Array.isArray(row) || row.length !== 6 || !row.every(integer)) return false;
+    const [start, end, left, top, right, bottom] = row;
+    if (start < previousEnd || !writingRange({start, end}, original) ||
+        left < 0 || top < 0 || right > 10000 || bottom > 10000 ||
+        left >= right || top >= bottom) return false;
+    previousEnd = end;
+  }
+  return true;
+};
+
 const reflection = (value, original) => object(value) && text(value.text) &&
   value.text.trim().length > 0 &&
   (!('mark' in value) || (object(value.mark) && integer(value.mark.start) &&
@@ -28,6 +42,8 @@ const originals = values => Array.isArray(values) &&
     (!('isFullPage' in value) || typeof value.isFullPage === 'boolean') &&
     (!('writingRange' in value) ||
       (value.isFullPage === true && writingRange(value.writingRange, value.text))) &&
+    (!('photoLines' in value) || (value.isFullPage === true && photoId(value.photoId) &&
+      validPhotoLines(value.photoLines, value.text))) &&
     (!('reflection' in value) || reflection(value.reflection, value.text)));
 
 export function validLibrary(l) {

@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 import '../data/model.dart';
 import '../data/original_photo_store.dart';
 import '../source/originals.dart';
+import '../source/source_scan.dart';
 import 'book_details.dart';
 import 'paper.dart';
 import 'original_range_sheet.dart';
@@ -117,14 +118,39 @@ class _SourceReadingState extends State<SourceReading> {
   }
 
   Future<void> _changeRange(RegisteredOriginal original) async {
-    final choice = await chooseOriginalRange(
-      context,
-      original.text,
-      current: original.writingRange,
-    );
-    if (!mounted || choice == null || saving) return;
+    if (saving) return;
     setState(() => saving = true);
     try {
+      SourceScan? photo;
+      if (original.photoId case final id?) {
+        try {
+          final bytes = await const OriginalPhotoStore().load(id);
+          if (bytes != null) {
+            final image = await ScanImage.decode(bytes);
+            photo = SourceScan(
+              image.bytes,
+              const [],
+              width: image.width,
+              height: image.height,
+            );
+          }
+        } catch (_) {
+          if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('원본 사진을 읽지 못했어요.')));
+          }
+        }
+      }
+      if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+      final choice = await chooseOriginalRange(
+        context,
+        original.text,
+        current: original.writingRange,
+        photo: photo,
+        photoLines: original.photoLines,
+      );
+      if (!mounted || choice == null) return;
       final saved = await widget.onSaveRange!(original, choice.range);
       if (mounted && !saved) {
         ScaffoldMessenger.of(

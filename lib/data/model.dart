@@ -38,6 +38,7 @@ class RegisteredOriginal {
     this.photoId,
     this.isFullPage = false,
     this.writingRange,
+    this.photoLines = const [],
   });
 
   final String id, text, citation;
@@ -45,12 +46,14 @@ class RegisteredOriginal {
   final String? photoId;
   final bool isFullPage;
   final PencilMark? writingRange;
+  final List<OriginalPhotoLine> photoLines;
 
   RegisteredOriginal withDetails({
     required OriginalReflection? reflection,
     required PencilMark? writingRange,
     String? photoId,
     bool? isFullPage,
+    List<OriginalPhotoLine>? photoLines,
   }) => RegisteredOriginal(
     id,
     text,
@@ -59,6 +62,7 @@ class RegisteredOriginal {
     photoId: photoId ?? this.photoId,
     isFullPage: isFullPage ?? this.isFullPage,
     writingRange: writingRange,
+    photoLines: photoLines ?? this.photoLines,
   );
 
   RegisteredOriginal withReflection(OriginalReflection? value) =>
@@ -72,6 +76,8 @@ class RegisteredOriginal {
     if (photoId != null) 'photoId': photoId,
     if (isFullPage) 'isFullPage': true,
     if (writingRange != null) 'writingRange': writingRange!.toJson(),
+    if (photoLines.isNotEmpty)
+      'photoLines': photoLines.map((line) => line.toJson()).toList(),
   };
 
   factory RegisteredOriginal.fromJson(Json j) => RegisteredOriginal(
@@ -86,6 +92,10 @@ class RegisteredOriginal {
     writingRange: j['writingRange'] == null
         ? null
         : PencilMark.fromJson(j['writingRange'] as Json),
+    photoLines: [
+      for (final line in (j['photoLines'] as List?) ?? const [])
+        OriginalPhotoLine.fromJson(line as List),
+    ],
   );
 
   static List<RegisteredOriginal> read(Object? value) => [
@@ -106,6 +116,13 @@ class RegisteredOriginal {
             (value.writingRange == null ||
                 (value.isFullPage &&
                     validOriginalRange(value.text, value.writingRange!))) &&
+            (value.photoLines.isEmpty ||
+                (value.isFullPage &&
+                    value.photoId != null &&
+                    OriginalPhotoLine.validList(
+                      value.text,
+                      value.photoLines,
+                    ))) &&
             (value.reflection?.isValidFor(value.text) ?? true),
       );
 }
@@ -123,6 +140,54 @@ bool validOriginalRange(String text, PencilMark range) {
       atCharacterBoundary(range.start) &&
       atCharacterBoundary(range.end) &&
       text.substring(range.start, range.end).trim().isNotEmpty;
+}
+
+/// Text offsets and the rectangle of a line in the oriented original photo.
+class OriginalPhotoLine {
+  const OriginalPhotoLine(
+    this.range,
+    this.left,
+    this.top,
+    this.right,
+    this.bottom,
+  );
+
+  static const coordinateScale = 10000;
+  static const limit = 500;
+  final PencilMark range;
+  final int left, top, right, bottom;
+
+  List<int> toJson() => [range.start, range.end, left, top, right, bottom];
+
+  factory OriginalPhotoLine.fromJson(List<dynamic> value) {
+    if (value.length != 6) throw const FormatException('Invalid photo line');
+    return OriginalPhotoLine(
+      PencilMark(value[0] as int, value[1] as int),
+      value[2] as int,
+      value[3] as int,
+      value[4] as int,
+      value[5] as int,
+    );
+  }
+
+  static bool validList(String text, List<OriginalPhotoLine> lines) {
+    if (lines.length > limit) return false;
+    var end = 0;
+    for (final line in lines) {
+      if (line.range.start < end ||
+          !validOriginalRange(text, line.range) ||
+          line.left < 0 ||
+          line.top < 0 ||
+          line.right > coordinateScale ||
+          line.bottom > coordinateScale ||
+          line.left >= line.right ||
+          line.top >= line.bottom) {
+        return false;
+      }
+      end = line.range.end;
+    }
+    return true;
+  }
 }
 
 class Book {

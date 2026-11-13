@@ -36,13 +36,15 @@ test('Registered originals round-trip in book and record snapshots', () => {
   library.books = [book];
   library.records = [record];
   assert.equal(validLibrary(JSON.parse(JSON.stringify(library))), true);
-  const pageOriginal = {...original, photoId: 'a'.repeat(64), isFullPage: true, writingRange: {start: 0, end: 5}};
+  const pageOriginal = {...original, photoId: 'a'.repeat(64), isFullPage: true, writingRange: {start: 0, end: 5}, photoLines: [[0, 5, 100, 100, 1000, 1000]]};
   book.originals = [pageOriginal];
   assert.equal(validLibrary(JSON.parse(JSON.stringify(library))), true);
   for (const fields of [
     {photoId: 'not-a-hash'},
     {isFullPage: false},
     {writingRange: {start: 0, end: 100}},
+    {photoLines: [[0, 5, 100, 100, 10001, 1000]]},
+    {photoLines: [[0, 5, 100, 100, 1000, 1000], [3, 5, 100, 1100, 1000, 2000]]},
   ]) {
     book.originals = [{...pageOriginal, ...fields}];
     assert.equal(validLibrary(library), false);

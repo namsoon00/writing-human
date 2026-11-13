@@ -179,7 +179,6 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         title: _field(old.title, b.title, r.title),
         author: _field(old.author, b.author, r.author),
         owner: _field(old.owner, b.owner, r.owner),
-        indexLabel: _field(old.indexLabel, b.indexLabel, r.indexLabel),
         coverIndex: _field(old.coverIndex, b.coverIndex, r.coverIndex),
         paperIndex: _field(old.paperIndex, b.paperIndex, r.paperIndex),
         detailOverrides: _mergeDetailOverrides(

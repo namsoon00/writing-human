@@ -187,7 +187,6 @@ void main() {
       const order = [
         BookDetailKind.binding,
         BookDetailKind.bookplate,
-        BookDetailKind.indexTab,
         BookDetailKind.pressedFlower,
         BookDetailKind.sourceSlip,
         BookDetailKind.pencil,

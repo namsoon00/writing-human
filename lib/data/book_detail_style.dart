@@ -7,7 +7,6 @@ enum BookDetailKind {
   ornament,
   binding,
   dateStamp,
-  indexTab,
   recordDivider,
   pressedFlower,
 }
@@ -79,7 +78,6 @@ class BookDetailsStyle {
     this.ornament = const BookDetailChoice(),
     this.binding = const BookDetailChoice(),
     this.dateStamp = const BookDetailChoice(),
-    this.indexTab = const BookDetailChoice(),
     this.recordDivider = const BookDetailChoice(),
     this.pressedFlower = const BookDetailChoice(),
   });
@@ -90,7 +88,6 @@ class BookDetailsStyle {
       ornament,
       binding,
       dateStamp,
-      indexTab,
       recordDivider,
       pressedFlower;
   BookDetailChoice choice(BookDetailKind kind) => switch (kind) {
@@ -101,7 +98,6 @@ class BookDetailsStyle {
     BookDetailKind.ornament => ornament,
     BookDetailKind.binding => binding,
     BookDetailKind.dateStamp => dateStamp,
-    BookDetailKind.indexTab => indexTab,
     BookDetailKind.recordDivider => recordDivider,
     BookDetailKind.pressedFlower => pressedFlower,
   };
@@ -116,7 +112,6 @@ class BookDetailsStyle {
     ornament: kind == BookDetailKind.ornament ? value : ornament,
     binding: kind == BookDetailKind.binding ? value : binding,
     dateStamp: kind == BookDetailKind.dateStamp ? value : dateStamp,
-    indexTab: kind == BookDetailKind.indexTab ? value : indexTab,
     recordDivider: kind == BookDetailKind.recordDivider ? value : recordDivider,
     pressedFlower: kind == BookDetailKind.pressedFlower ? value : pressedFlower,
   );
@@ -131,7 +126,10 @@ class BookDetailsStyle {
   };
   factory BookDetailsStyle.fromJson(Map<String, dynamic> json) {
     if (json.keys.any(
-      (key) => !BookDetailKind.values.any((kind) => kind.name == key),
+      // Old settings and per-book overrides may still carry this key.
+      (key) =>
+          key != 'indexTab' &&
+          !BookDetailKind.values.any((kind) => kind.name == key),
     )) {
       throw const FormatException('알 수 없는 책의 디테일입니다.');
     }

@@ -304,20 +304,14 @@ class BookCover extends StatelessWidget {
   final bool bookmarked, back, materialPreview;
   final BookDetailsStyle details;
 
-  static double totalWidthFactor(BookDetailsStyle details) =>
-      details.indexTab.enabled ? 1.04 : 1;
-
   @override
   Widget build(BuildContext context) => Transform.flip(
     flipX: back,
     child: SizedBox(
-      width: width * totalWidthFactor(details),
+      width: width,
       height: width * 1.36,
       child: LayoutBuilder(
-        builder: (context, box) {
-          final imageWidth = box.maxWidth / totalWidthFactor(details);
-          return _buildCover(imageWidth, box.maxHeight);
-        },
+        builder: (context, box) => _buildCover(box.maxWidth, box.maxHeight),
       ),
     ),
   );
@@ -339,7 +333,6 @@ class BookCover extends StatelessWidget {
       face.right + pageDepth,
       face.bottom + pageDepth * .45,
     );
-    final tabWidth = width * .105;
     return Stack(
       children: [
         if (pageCount > 0)
@@ -359,12 +352,6 @@ class BookCover extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-        if (details.indexTab.enabled)
-          Positioned(
-            left: face.right + width * .065 - tabWidth,
-            top: face.top + face.height * .38,
-            child: BookIndexEdge(choice: details.indexTab, width: tabWidth),
           ),
         Positioned(
           left: 0,

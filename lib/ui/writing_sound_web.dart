@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:js_interop';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -70,7 +71,9 @@ class WritingSound {
         bytes.offsetInBytes,
         bytes.lengthInBytes,
       );
-      final buffer = await context.decodeAudioData(data.toJS.buffer).toDart;
+      final buffer = await context
+          .decodeAudioData(Uint8List.fromList(data).buffer.toJS)
+          .toDart;
       if (!_closed) _buffer = buffer;
     } catch (error) {
       if (!_closed) debugPrint('Writing audio could not be loaded: $error');

@@ -427,14 +427,6 @@ class LibraryController extends ChangeNotifier {
     ),
   );
 
-  void setBookIndexLabel(String id, String label) => _publish(
-    library.copy(
-      books: library.books
-          .map((b) => b.id == id ? b.copy(indexLabel: label.trim()) : b)
-          .toList(),
-    ),
-  );
-
   void togglePencilMark(String id, int start, int end) {
     if (composing) return;
     final page = library.pages.where((p) => p.id == id).firstOrNull;

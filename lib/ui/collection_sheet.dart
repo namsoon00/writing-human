@@ -90,18 +90,6 @@ class _CollectionSheetState extends State<CollectionSheet> {
     }
   }
 
-  Future<void> _indexName(Book book) async {
-    final controller = c;
-    final name = await showDialog<String>(
-      context: context,
-      builder: (_) =>
-          BookIndexDialog(label: book.indexLabel, title: book.title),
-    );
-    if (name != null && mounted && controller == c) {
-      c.setBookIndexLabel(book.id, name);
-    }
-  }
-
   Future<void> _showBookplate(Book book, String summary) => showDialog<void>(
     context: context,
     builder: (dialog) => Dialog(
@@ -140,36 +128,6 @@ class _CollectionSheetState extends State<CollectionSheet> {
     ),
   );
 
-  Future<void> _chooseBook(Book book) async {
-    final chosen = await showDialog<String>(
-      context: context,
-      builder: (dialog) => SimpleDialog(
-        title: const Text('다른 책의 목차'),
-        children: [
-          for (final entry in c.library.books)
-            if (c.detailsFor(entry).indexTab.enabled)
-              SimpleDialogOption(
-                onPressed: () => Navigator.pop(dialog, entry.id),
-                child: BookIndexTab(
-                  key: ValueKey('book-index-${entry.id}'),
-                  label: entry.indexLabel.isEmpty
-                      ? entry.title
-                      : entry.indexLabel,
-                  choice: c.detailsFor(entry).indexTab,
-                  selected: entry.id == book.id,
-                ),
-              ),
-        ],
-      ),
-    );
-    if (mounted && chosen != null) {
-      setState(() {
-        bookId = chosen;
-        _clearSearch();
-      });
-    }
-  }
-
   Widget _bookMenu(Book book, String summary, bool canSearch) {
     final favorite = c.library.style.favoriteBookIds.contains(book.id);
     return PopupMenuButton<VoidCallback>(
@@ -191,19 +149,6 @@ class _CollectionSheetState extends State<CollectionSheet> {
         PopupMenuItem(
           value: () => c.toggleFavorite(book.id),
           child: Text(favorite ? '즐겨찾기 해제' : '즐겨찾기'),
-        ),
-        if (c.library.books.any(
-          (entry) =>
-              entry.id != book.id && c.detailsFor(entry).indexTab.enabled,
-        ))
-          PopupMenuItem(
-            value: () => _chooseBook(book),
-            child: const Text('다른 책의 목차'),
-          ),
-        PopupMenuItem(
-          key: const ValueKey('edit-book-index'),
-          value: () => _indexName(book),
-          child: const Text('색인 이름 고치기'),
         ),
         if (widget.onArchiveBook != null)
           PopupMenuItem(

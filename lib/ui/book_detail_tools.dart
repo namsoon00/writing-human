@@ -415,13 +415,6 @@ class BookDetailPreview extends StatelessWidget {
         ),
       ),
     ),
-    BookDetailKind.indexTab => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: BookIndexTab(label: '나의 문장', choice: choice),
-      ),
-    ),
     BookDetailKind.recordDivider => RecordDivider(choice: choice),
     BookDetailKind.pressedFlower => SizedBox(
       height: 112,

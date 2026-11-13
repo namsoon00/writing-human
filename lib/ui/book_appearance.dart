@@ -111,9 +111,7 @@ class _BookAppearanceState extends State<BookAppearance> {
       final closed = switch (section) {
         _Section.materials => showCover,
         _Section.ribbon => false,
-        _Section.details =>
-          detail == BookDetailKind.pressedFlower ||
-              detail == BookDetailKind.indexTab,
+        _Section.details => detail == BookDetailKind.pressedFlower,
       };
       final height = MediaQuery.sizeOf(context).height;
       final pinPreview = height >= 520;
@@ -293,7 +291,6 @@ class _BookAppearanceState extends State<BookAppearance> {
                             _detailGroup('책의 겉과 첫 장', const [
                               BookDetailKind.binding,
                               BookDetailKind.bookplate,
-                              BookDetailKind.indexTab,
                               BookDetailKind.pressedFlower,
                             ], details),
                             const SizedBox(height: 12),

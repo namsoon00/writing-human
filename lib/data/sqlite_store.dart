@@ -113,7 +113,6 @@ class SqliteLibraryStore implements LibraryStore {
               title: j['title'] as String,
               author: j['author'] as String,
               owner: j['owner'] as String,
-              indexLabel: j['index_label'] as String,
               coverIndex: j['cover_index'] as int?,
               paperIndex: j['paper_index'] as int?,
               detailOverrides: Book.readDetailOverrides(
@@ -196,7 +195,6 @@ class SqliteLibraryStore implements LibraryStore {
           'title': b.title,
           'author': b.author,
           'owner': b.owner,
-          'index_label': b.indexLabel,
           'cover_index': b.coverIndex,
           'paper_index': b.paperIndex,
           'detail_overrides': jsonEncode({

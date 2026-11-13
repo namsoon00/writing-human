@@ -205,10 +205,6 @@ void main() {
     final book = library.books.first;
     final details = library.style.bookDetails
         .withChoice(
-          BookDetailKind.indexTab,
-          const BookDetailChoice(variant: 1, tone: 1),
-        )
-        .withChoice(
           BookDetailKind.recordDivider,
           const BookDetailChoice(variant: 2),
         )
@@ -218,10 +214,6 @@ void main() {
         );
     await store.save(
       library.copy(
-        books: [
-          book.copy(indexLabel: '다시 읽기'),
-          ...library.books.skip(1),
-        ],
         records: [
           ...library.records,
           WritingRecord(

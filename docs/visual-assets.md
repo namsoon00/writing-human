@@ -4,7 +4,7 @@
 
 녹색, 아이보리, 푸른 린넨 세 원본에서 금박 식물 문양을 지웠다. 이미지 생성 도구에
 각 원본을 전달했고, 투명 WebP로 변환해 번들에 넣었다. Flutter에서 압화, 천 책갈피,
-색인 탭과 글자를 그린다.
+글자를 그린다.
 
 > Precisely edit the supplied transparent front-facing linen book cover for a production app. Remove only the little metallic gold botanical branch on the lower half of the front panel, seamlessly filling its location with matching neighboring woven linen. Keep the exact original cover color, grain, light, thin rectangular inset border, outline, aspect ratio, rounded corners, scuffs, spine on left, camera angle, dimensions and clear transparent perimeter, with the cover occupying the same bounds. No text, embellishment, plant, symbol or extra element. Return just the same single isolated cover, now blank, on transparent background.
 

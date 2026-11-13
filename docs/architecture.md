@@ -136,19 +136,12 @@ Android는 [ML Kit 한글 모델](https://developers.google.com/ml-kit/vision/te
 `flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true`를 사용한다.
 GitHub Pages·Sites의 빌드 스크립트에는 준비 단계가 포함된다.
 
-## 색인 탭·구분표·압화의 표현과 저장 · 2026-11-11
+## 문장 구분표와 압화
 
-`ui/reading_details.dart`가 종이·천·반달 탭, 구분표, 식물 세 가지를 정적인 벡터로 그린다.
-보관함의 실제 탭은 `Book.id`로 책을 열고 최소 48px 조작 영역과 접근성 이름을 제공한다.
-표지의 작은 탭과 압화·구분표는 장식이다. 구분표는 책 안쪽 기록 행 사이에만 그리며,
-압화는 제목이나 이름과 분리된 아래쪽 영역을 쓴다. PageEditor와 입력 컨트롤러는 변경하지 않는다.
-
-SQLite v5는 `books.index_label`을 기본 빈 문자열의 optional 책 메타데이터로 이전한다.
-책 제목·저자·소유자와 별개인 `Book.indexLabel`을 웹 JSON v1과 동기화에도 보관한다.
-빈 이름은 화면에서 실제 책 제목으로 표시한다. 설정과 탭 이름 저장에는 기존 큐·오류·재시도를
-사용한다. 서버 검증은 새 스타일 및 이름을 허용하고 잘못된 타입·범위를 거부한다.
-새 동기화 클라이언트를 비공개 사이트에 게시할 때는 검증 서버도 함께 갱신해야 한다.
-GitHub Pages는 로컬 전용이며 비공개 Sites의 설정과 배포를 유지한다.
+`ui/reading_details.dart`가 기록 행 사이의 구분표와 표지·장서표의 압화를 그린다.
+이전 SQLite의 `books.index_label` 컬럼은 호환을 위해 남겨 둔다. 기존 웹 저장,
+백업, 동기화에서 읽은 `indexLabel`과 전역·책별 `indexTab`은 앱에서 무시한다.
+새 저장과 백업에는 두 필드를 쓰지 않는다.
 
 ## 기존 일곱 요소의 재료 표현 · 2026-11-10
 
@@ -178,7 +171,7 @@ DemoStore는 명시적으로 주입하는 개발 검증용 fixture로만 남으�
 색의 밝기를 높인다. 현재 책의 책갈피, 날짜인의 간격, 제본 폭, 원문 목록의 구분표와
 쪽수 문양은 각 화면의 크기에 맞춘다.
 
-열 가지 독립 설정은 `data/book_detail_style.dart`의 BookDetailsStyle에 보관한다. 기존 ribbon/bookplate/sourceSlip/pencil/ornament/binding/dateStamp에 indexTab/recordDivider/pressedFlower가 추가됐다. BookDetailChoice의 enabled·variant·tone과 압화에 사용하는 optional placement를 기존 SQLite settings JSON과 웹 라이브러리에 저장한다. 이전 데이터에 새 키가 없으면 기본값을 읽는다. 동기화는 요소별 필드를 따로 병합한다.
+아홉 가지 독립 설정은 `data/book_detail_style.dart`의 BookDetailsStyle에 보관한다. 기존 ribbon/bookplate/sourceSlip/pencil/ornament/binding/dateStamp에 recordDivider/pressedFlower가 추가됐다. BookDetailChoice의 enabled·variant·tone과 압화에 사용하는 optional placement를 기존 SQLite settings JSON과 웹 라이브러리에 저장한다. 이전 데이터에 새 키가 없으면 기본값을 읽는다. 동기화는 요소별 필드를 따로 병합한다.
 
 `ui/book_detail_design.dart`는 요소별 이름·세 모양·네 색을 정의하고, `ui/book_detail_tools.dart`는 개별 미리보기·표시 스위치·모양/색 칩·해당 요소만 초기화를 제공한다. 설정 진입은 기존 쓰기 취향의 ‘책의 디테일’이다. 장식 숨김은 메타데이터를 지우지 않으며 평문 책 정보·원문·날짜를 유지한다. `paper_palette.dart`와 `ink_mark.dart`를 분리하여 종이 면과 장식이 서로를 가져오는 의존 순환을 제거했다. 자세한 조형·상태·경계는 [독립 설계](book-details-design.md)를 따른다.
 

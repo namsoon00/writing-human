@@ -69,13 +69,6 @@ class BookDetailDesign {
       ['브라운', '포도', '올리브', '회청'],
       [brandInk, burgundy, green, Color(0xff4c607a)],
     ),
-    BookDetailKind.indexTab => const BookDetailDesign(
-      '색인 탭',
-      '보관함에서 책을 바로 여는 작은 표식',
-      ['종이 탭', '천 탭', '반달 탭'],
-      ['올리브', '포도', '브라운', '회청'],
-      [green, burgundy, brandInk, Color(0xff4c607a)],
-    ),
     BookDetailKind.recordDivider => const BookDetailDesign(
       '문장 구분표',
       '필사 기록과 기록 사이에 두는 작은 쉼',

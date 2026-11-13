@@ -196,20 +196,18 @@ class Book {
     required this.title,
     this.author = '',
     this.owner = '',
-    this.indexLabel = '',
     this.coverIndex,
     this.paperIndex,
     this.detailOverrides = const {},
     this.originals = const [],
   });
-  final String id, title, author, owner, indexLabel;
+  final String id, title, author, owner;
   final int? coverIndex, paperIndex;
   final Map<BookDetailKind, BookDetailChoice> detailOverrides;
   final List<RegisteredOriginal> originals;
   Book copy({
     String? title,
     String? owner,
-    String? indexLabel,
     int? coverIndex,
     int? paperIndex,
     bool useDefaultPaper = false,
@@ -220,7 +218,6 @@ class Book {
     title: title ?? this.title,
     author: author,
     owner: owner ?? this.owner,
-    indexLabel: indexLabel ?? this.indexLabel,
     coverIndex: coverIndex ?? this.coverIndex,
     paperIndex: useDefaultPaper ? null : paperIndex ?? this.paperIndex,
     detailOverrides: detailOverrides ?? this.detailOverrides,
@@ -231,7 +228,6 @@ class Book {
     'title': title,
     'author': author,
     'owner': owner,
-    'indexLabel': indexLabel,
     if (coverIndex != null) 'coverIndex': coverIndex,
     if (paperIndex != null) 'paperIndex': paperIndex,
     if (detailOverrides.isNotEmpty)
@@ -244,9 +240,6 @@ class Book {
       'originals': originals.map((o) => o.toJson()).toList(),
   };
   factory Book.fromJson(Json j) {
-    if (j.containsKey('indexLabel') && j['indexLabel'] is! String) {
-      throw const FormatException('책의 색인 이름을 확인할 수 없습니다.');
-    }
     final cover = j['coverIndex'] as int?;
     final paper = j['paperIndex'] as int?;
     if ((cover != null && (cover < 0 || cover > 2)) ||
@@ -258,7 +251,6 @@ class Book {
       title: j['title'] as String,
       author: j['author'] as String,
       owner: j['owner'] as String? ?? '',
-      indexLabel: j['indexLabel'] as String? ?? '',
       coverIndex: cover,
       paperIndex: paper,
       detailOverrides: j.containsKey('detailOverrides')
@@ -873,9 +865,7 @@ class Library {
         numbers.length != pages.length ||
         books.any(
           (b) =>
-              b.owner.length > 80 ||
-              b.indexLabel.length > 80 ||
-              !RegisteredOriginal.validList(b.originals),
+              b.owner.length > 80 || !RegisteredOriginal.validList(b.originals),
         ) ||
         records.any(
           (r) =>

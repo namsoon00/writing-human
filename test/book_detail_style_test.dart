@@ -295,7 +295,7 @@ void main() {
       await c.settled;
       await tester.pumpWidget(MaterialApp(home: Workspace(controller: c)));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('쓰기 취향'));
+      await tester.tap(find.byTooltip('메뉴'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('책의 디테일'));
       await tester.pumpAndSettle();

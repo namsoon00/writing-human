@@ -495,7 +495,7 @@ void main() {
       final editor = find.byKey(const ValueKey('page-text'));
       final controller = tester.widget<TextField>(editor).controller!;
       expect(find.text('Aa'), findsNothing);
-      final writingTools = find.text('쓰기 취향');
+      final writingTools = find.byTooltip('메뉴');
       expect(writingTools, findsOneWidget);
       await tester.tap(writingTools);
       await tester.pumpAndSettle();
@@ -609,32 +609,28 @@ void main() {
     await tester.pumpAndSettle();
     final pageId = store.data.activePageId;
     final controller = tester.widget<TextField>(editor).controller!;
-    final tools = find.widgetWithText(TextButton, '쓰기 취향');
     final source = find.byKey(const ValueKey('writing-originals'));
     final pageNumber = find.byKey(const ValueKey('page-number'));
-    final more = find.byTooltip('더 보기');
+    final menu = find.byTooltip('메뉴');
     expect(
-      tester.getRect(tools).right,
+      tester.getRect(source).right,
       lessThanOrEqualTo(tester.getRect(pageNumber).left),
     );
     expect(tester.getCenter(pageNumber).dx, 195);
     expect(
-      tester.getRect(source).left,
+      tester.getRect(menu).left,
       greaterThanOrEqualTo(tester.getRect(pageNumber).right),
-    );
-    expect(
-      tester.getRect(source).right,
-      lessThanOrEqualTo(tester.getRect(more).left),
     );
     expect(tester.getSize(source).height, greaterThanOrEqualTo(48));
 
-    await tester.tap(find.byTooltip('더 보기'));
+    await tester.tap(menu);
     await tester.pumpAndSettle();
-    final menu = tester.getRect(find.byType(BottomSheet));
-    final lastItem = tester.getRect(find.widgetWithText(ListTile, '기기 동기화'));
-    expect(menu.height, lessThan(tester.view.physicalSize.height / 2));
-    expect(menu.bottom - lastItem.bottom, 18);
-    await tester.tap(find.text('책으로 묶기'));
+    expect(find.text('잉크'), findsOneWidget);
+    expect(find.text('페이지'), findsNothing);
+    expect(find.text('기기 동기화'), findsNothing);
+    final bind = find.text('책에 넣기');
+    await tester.ensureVisible(bind);
+    await tester.tap(bind);
     await tester.pumpAndSettle();
     await tester.tap(find.text('새 책 만들기'));
     await tester.pumpAndSettle();

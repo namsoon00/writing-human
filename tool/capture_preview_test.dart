@@ -101,7 +101,7 @@ void main() {
         'WritingHumanDevelopment',
       );
       await capture('blank');
-      await tester.tap(find.byTooltip('쓰기 취향'));
+      await tester.tap(find.byTooltip('메뉴'));
       await tester.pumpAndSettle();
       await capture('tools');
       await tester.tap(find.byTooltip('닫기'));
@@ -184,7 +184,7 @@ void main() {
       await capture('overview');
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('쓰기 취향'));
+      await tester.tap(find.byTooltip('메뉴'));
       await tester.pumpAndSettle();
       await capture('tools');
       await tester.tap(find.byTooltip('닫기'));

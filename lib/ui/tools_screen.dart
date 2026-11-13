@@ -5,17 +5,21 @@ import 'paper.dart';
 import 'book_detail_tools.dart';
 import 'book_appearance.dart';
 
-/// Secondary preferences, deliberately kept off the writing surface.
+/// Writing preferences and record actions from the page footer.
 class ToolsScreen extends StatelessWidget {
   const ToolsScreen({
     super.key,
     required this.controller,
     this.bookId,
     this.onBack,
+    required this.onBind,
+    required this.onArchive,
+    this.onSync,
   });
   final LibraryController controller;
   final String? bookId;
-  final VoidCallback? onBack;
+  final VoidCallback? onBack, onSync;
+  final VoidCallback onBind, onArchive;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -47,7 +51,7 @@ class ToolsScreen extends StatelessWidget {
                   children: [
                     const Expanded(
                       child: Text(
-                        '쓰기 취향',
+                        '메뉴',
                         style: TextStyle(
                           fontFamily: appFontFamily,
                           fontFamilyFallback: appFontFallback,
@@ -252,6 +256,27 @@ class ToolsScreen extends StatelessWidget {
                   '현대 한글 11,172자·자모·영문·숫자를 지원합니다.\n지원 범위 밖의 문자는 나눔명조 등으로 표시합니다.',
                   style: TextStyle(color: muted, fontSize: 11, height: 1.7),
                 ),
+                const SizedBox(height: 16),
+                const Divider(color: line),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(CupertinoIcons.book, size: 20),
+                  title: Text(book == null ? '책에 넣기' : '다른 책으로 옮기기'),
+                  onTap: onBind,
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(CupertinoIcons.archivebox, size: 20),
+                  title: const Text('기록 보관'),
+                  onTap: onArchive,
+                ),
+                if (onSync != null)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(CupertinoIcons.cloud, size: 20),
+                    title: const Text('기기 동기화'),
+                    onTap: onSync,
+                  ),
               ],
             ),
           ),

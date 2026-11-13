@@ -87,8 +87,7 @@ class WritingFooter extends StatelessWidget {
   const WritingFooter({
     super.key,
     required this.status,
-    required this.onTools,
-    required this.onMore,
+    required this.onMenu,
     this.pageLabel,
     this.pageCount = 1,
     this.onPages,
@@ -103,7 +102,7 @@ class WritingFooter extends StatelessWidget {
     this.ornament = const BookDetailChoice(),
   });
   final String status;
-  final VoidCallback onTools, onMore;
+  final VoidCallback onMenu;
   final VoidCallback? onPages, onPrevious, onNext, onSource;
   final String? pageLabel;
   final int pageCount;
@@ -113,9 +112,7 @@ class WritingFooter extends StatelessWidget {
   final bool failed;
   final BookDetailChoice ornament;
 
-  static const _sourceWidth = 48.0;
-  static const _moreWidth = 64.0;
-  static const _pageSideInset = _sourceWidth + _moreWidth;
+  static const _pageSideInset = 72.0;
 
   @override
   Widget build(BuildContext context) => PaperSwipe(
@@ -133,24 +130,16 @@ class WritingFooter extends StatelessWidget {
         children: [
           Align(
             alignment: Alignment.centerLeft,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: _pageSideInset),
-              child: Tooltip(
-                message: '쓰기 취향',
-                excludeFromSemantics: true,
-                child: TextButton(
-                  onPressed: onTools,
-                  style: TextButton.styleFrom(
-                    foregroundColor: brandInk,
-                    minimumSize: const Size(48, 48),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                  ),
-                  child: const Text(
-                    '쓰기 취향',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12),
-                  ),
+            child: TextFieldTapRegion(
+              child: TextButton(
+                key: const ValueKey('writing-originals'),
+                onPressed: onSource,
+                style: TextButton.styleFrom(
+                  foregroundColor: brandInk,
+                  minimumSize: const Size(48, 48),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                 ),
+                child: const Text('원문', style: TextStyle(fontSize: 12)),
               ),
             ),
           ),
@@ -207,34 +196,25 @@ class WritingFooter extends StatelessWidget {
           ),
           Align(
             alignment: Alignment.centerRight,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: _sourceWidth,
-                  child: TextFieldTapRegion(
-                    child: TextButton(
-                      key: const ValueKey('writing-originals'),
-                      onPressed: onSource,
-                      style: TextButton.styleFrom(
-                        foregroundColor: brandInk,
-                        minimumSize: const Size(48, 48),
-                        padding: EdgeInsets.zero,
-                      ),
-                      child: const Text('원문', style: TextStyle(fontSize: 12)),
-                    ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: _pageSideInset),
+              child: Tooltip(
+                message: '메뉴',
+                excludeFromSemantics: true,
+                child: TextButton(
+                  onPressed: onMenu,
+                  style: TextButton.styleFrom(
+                    foregroundColor: brandInk,
+                    minimumSize: const Size(48, 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  child: const Text(
+                    '메뉴',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12),
                   ),
                 ),
-                SizedBox(
-                  width: _moreWidth,
-                  child: IconButton(
-                    tooltip: '더 보기',
-                    onPressed: onMore,
-                    color: brandInk,
-                    icon: const Icon(CupertinoIcons.ellipsis, size: 23),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ],

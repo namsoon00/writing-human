@@ -23,7 +23,6 @@ import 'writing_chrome.dart';
 import 'page_turn.dart';
 import 'paper_swipe.dart';
 import 'pages_sheet.dart';
-import 'book_details.dart';
 import 'book_front_cover.dart';
 import 'page_read_preview.dart';
 import 'archive_sheet.dart';
@@ -431,7 +430,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     }
   }
 
-  void _tools() {
+  void _menu() {
     if (_editorComposing && reflectionFocus.hasFocus) return;
     _blur();
     _sheet(
@@ -439,6 +438,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         controller: c,
         bookId: book?.id,
         onBack: () => Navigator.pop(context),
+        onBind: () => _afterSheet(_bind),
+        onArchive: () => _afterSheet(_archive),
+        onSync: widget.sync?.available == true
+            ? () => _afterSheet(() async => _syncInfo())
+            : null,
       ),
       showDragHandle: false,
       backgroundColor: Colors.transparent,
@@ -899,13 +903,16 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const ListTile(
+              ListTile(
                 title: Text(
-                  '책으로 묶기',
-                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+                  book == null ? '책에 넣기' : '다른 책으로 옮기기',
+                  style: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-              for (final b in c.library.books)
+              for (final b in c.library.books.where((b) => b.id != book?.id))
                 ListTile(
                   leading: BookCover(
                     title: '',
@@ -1002,80 +1009,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       pagesAfter: pageCount,
       shrinkWrap: shrinkWrap,
       child: child,
-    );
-  }
-
-  void _more() {
-    if (_editorComposing && reflectionFocus.hasFocus) return;
-    _blur();
-    _sheet(
-      _insertedPage(
-        SafeArea(
-          top: false,
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 18),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const PaperSheetHandle(),
-                  ListTile(
-                    leading: const Icon(CupertinoIcons.book, size: 20),
-                    title: const Text('책으로 묶기'),
-                    subtitle: book == null ? null : Text(book!.title),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _bind();
-                    },
-                  ),
-                  if (record != null)
-                    ListTile(
-                      leading: const Icon(CupertinoIcons.doc_on_doc, size: 20),
-                      title: const Text('페이지'),
-                      onTap: () {
-                        _afterSheet(_pages);
-                      },
-                    ),
-                  if (page.writtenOn != null)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          const Text(
-                            '기록 시작',
-                            style: TextStyle(fontSize: 11, color: muted),
-                          ),
-                          DateStamp(
-                            date: page.writtenOn!,
-                            choice: c.detailsFor(book).dateStamp,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ListTile(
-                    leading: const Icon(CupertinoIcons.archivebox, size: 20),
-                    title: const Text('기록 보관'),
-                    onTap: () => _afterSheet(_archive),
-                  ),
-                  ListTile(
-                    leading: const Icon(CupertinoIcons.cloud, size: 20),
-                    title: const Text('기기 동기화'),
-                    onTap: () => _afterSheet(() async => _syncInfo()),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        forBook: book,
-        pageCount: _volumePages.length,
-        shrinkWrap: true,
-      ),
-      showDragHandle: false,
-      backgroundColor: paperColors[_paperStyle(book).paperIndex],
     );
   }
 
@@ -1374,9 +1307,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 offset: Offset(0, preview ? 0 : -keyboardOverlap),
                 child: WritingFooter(
                   ornament: style.bookDetails.ornament,
-                  onTools: _tools,
+                  onMenu: _menu,
                   onSource: navigationEnabled ? _showOriginals : null,
-                  onMore: _more,
                   failed: c.saveError != null,
                   pageLabel: '${index + 1}',
                   pageCount: count,

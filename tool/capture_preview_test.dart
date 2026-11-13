@@ -154,6 +154,9 @@ void main() {
       await capture('forward-middle');
       await forward.up();
       await tester.pumpAndSettle();
+      await capture('back-cover');
+      await tester.tap(find.text('한 쪽 더'));
+      await tester.pumpAndSettle();
       await capture('new-page');
       await tester.enterText(
         find.byKey(const ValueKey('page-text')),

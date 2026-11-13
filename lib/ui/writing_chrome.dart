@@ -113,8 +113,10 @@ class WritingFooter extends StatelessWidget {
   final bool failed;
   final BookDetailChoice ornament;
 
-  static const _toolsWidth = 78.0;
+  static const _toolsWidth = 76.0;
   static const _sourceWidth = 48.0;
+  static const _toolsGap = 12.0;
+  static const _pageSideInset = _toolsWidth + _toolsGap + _sourceWidth;
 
   @override
   Widget build(BuildContext context) => PaperSwipe(
@@ -155,6 +157,7 @@ class WritingFooter extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(width: _toolsGap),
                 SizedBox(
                   width: _sourceWidth,
                   child: TextFieldTapRegion(
@@ -173,8 +176,8 @@ class WritingFooter extends StatelessWidget {
             ),
           ),
           Positioned(
-            left: _toolsWidth + _sourceWidth,
-            right: _toolsWidth + _sourceWidth,
+            left: _pageSideInset,
+            right: _pageSideInset,
             top: 0,
             bottom: 0,
             child: Semantics(
@@ -190,7 +193,7 @@ class WritingFooter extends StatelessWidget {
                     minimumSize: const Size(48, 48),
                     foregroundColor: muted,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
+                      horizontal: 4,
                       vertical: 6,
                     ),
                   ),

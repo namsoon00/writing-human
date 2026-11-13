@@ -537,6 +537,10 @@ void main() {
   testWidgets('Write first, then bind the same record into a new book', (
     tester,
   ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
     final store = MemoryStore();
     await tester.pumpWidget(WritingHumanApp(store: store));
     await tester.pumpAndSettle();
@@ -545,8 +549,16 @@ void main() {
     await tester.pumpAndSettle();
     final pageId = store.data.activePageId;
     final controller = tester.widget<TextField>(editor).controller!;
+    final tools = find.widgetWithText(TextButton, '쓰기 도구');
+    final source = find.byKey(const ValueKey('writing-originals'));
+    expect(tester.getRect(source).left - tester.getRect(tools).right, 12);
+
     await tester.tap(find.byTooltip('더 보기'));
     await tester.pumpAndSettle();
+    final menu = tester.getRect(find.byType(BottomSheet));
+    final lastItem = tester.getRect(find.widgetWithText(ListTile, '기기 동기화'));
+    expect(menu.height, lessThan(tester.view.physicalSize.height / 2));
+    expect(menu.bottom - lastItem.bottom, 18);
     await tester.tap(find.text('책으로 묶기'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('새 책 만들기'));

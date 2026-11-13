@@ -984,7 +984,12 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     }
   }
 
-  Widget _insertedPage(Widget child, {Book? forBook, int pageCount = 0}) {
+  Widget _insertedPage(
+    Widget child, {
+    Book? forBook,
+    int pageCount = 0,
+    bool shrinkWrap = false,
+  }) {
     final style = _paperStyle(forBook);
     return PaperBackdrop(
       color: paperColors[style.paperIndex],
@@ -992,6 +997,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       binding: style.bookDetails.binding,
       coverIndex: forBook == null ? null : c.coverIndexFor(forBook),
       pagesAfter: pageCount,
+      shrinkWrap: shrinkWrap,
       child: child,
     );
   }
@@ -1009,6 +1015,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  const PaperSheetHandle(),
                   ListTile(
                     leading: const Icon(CupertinoIcons.book, size: 20),
                     title: const Text('책으로 묶기'),
@@ -1062,7 +1069,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         ),
         forBook: book,
         pageCount: _volumePages.length,
+        shrinkWrap: true,
       ),
+      showDragHandle: false,
       backgroundColor: paperColors[_paperStyle(book).paperIndex],
     );
   }

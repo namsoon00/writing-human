@@ -77,6 +77,7 @@ class PaperBackdrop extends StatelessWidget {
     this.pagesAfter = 0,
     this.grainOpacity = .24,
     this.referencePage = false,
+    this.shrinkWrap = false,
     this.outsideColor = appPaper,
   });
   final Widget child;
@@ -85,13 +86,14 @@ class PaperBackdrop extends StatelessWidget {
   final int? coverIndex;
   final int pagesBefore, pagesAfter;
   final double grainOpacity;
-  final bool referencePage;
+  final bool referencePage, shrinkWrap;
 
   @override
   Widget build(BuildContext context) => ColoredBox(
     color: outsideColor,
     child: Align(
       alignment: Alignment.topCenter,
+      heightFactor: shrinkWrap ? 1 : null,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: writingSurfaceMaxWidth),
         child: Stack(

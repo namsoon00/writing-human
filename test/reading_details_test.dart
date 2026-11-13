@@ -412,12 +412,25 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('표지·내지'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('푸른 리넨'));
+      final cover = find.widgetWithText(ChoiceChip, '푸른 리넨');
+      final paper = find.widgetWithText(ChoiceChip, '크림지');
+      final coverPreview = find.descendant(
+        of: find.byKey(const ValueKey('book-appearance-preview')),
+        matching: find.byType(BookCover),
+      );
+      expect(cover, findsOneWidget);
+      expect(paper, findsOneWidget);
+      await tester.tap(cover);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('내지'));
+      expect(coverPreview, findsOneWidget);
+      await tester.ensureVisible(paper);
+      await tester.tap(paper);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('크림지'));
+      expect(coverPreview, findsNothing);
+      await tester.ensureVisible(cover);
+      await tester.tap(cover);
       await tester.pumpAndSettle();
+      expect(coverPreview, findsOneWidget);
       await tester.tap(find.byTooltip('뒤로'));
       await tester.pumpAndSettle();
       expect(c.library.books.first.coverIndex, 2);
@@ -427,9 +440,9 @@ void main() {
       await choose('책 꾸미기');
       await tester.tap(find.text('표지·내지'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('내지'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('기본 종이 사용'));
+      final defaultPaper = find.text('기본 종이 사용');
+      await tester.ensureVisible(defaultPaper);
+      await tester.tap(defaultPaper);
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('뒤로'));
       await tester.pumpAndSettle();

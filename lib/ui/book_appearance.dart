@@ -207,62 +207,61 @@ class _BookAppearanceState extends State<BookAppearance> {
                         if (!pinPreview) header,
                         const SizedBox(height: 10),
                         if (section == _Section.materials) ...[
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              TextButton(
-                                onPressed: () =>
-                                    setState(() => showCover = true),
-                                child: Semantics(
-                                  selected: showCover,
-                                  child: const Text('표지'),
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () =>
-                                    setState(() => showCover = false),
-                                child: Semantics(
-                                  selected: !showCover,
-                                  child: const Text('내지'),
-                                ),
-                              ),
-                            ],
+                          Semantics(
+                            header: true,
+                            child: const Text(
+                              '표지',
+                              style: TextStyle(color: muted),
+                            ),
                           ),
+                          const SizedBox(height: 6),
                           Wrap(
                             spacing: 8,
-                            children: showCover
-                                ? [
-                                    for (final (i, name) in coverNames.indexed)
-                                      ChoiceChip(
-                                        label: Text(name),
-                                        selected: cover == i,
-                                        onSelected: (selected) {
-                                          if (selected) _save(coverIndex: i);
-                                        },
-                                      ),
-                                  ]
-                                : [
-                                    ChoiceChip(
-                                      label: const Text('기본 종이 사용'),
-                                      selected: selectedPaper == null,
-                                      onSelected: (selected) {
-                                        if (selected) {
-                                          _save(useDefaultPaper: true);
-                                        }
-                                      },
-                                    ),
-                                    for (final (i, name) in paperNames.indexed)
-                                      ChoiceChip(
-                                        avatar: CircleAvatar(
-                                          backgroundColor: paperColors[i],
-                                        ),
-                                        label: Text(name),
-                                        selected: selectedPaper == i,
-                                        onSelected: (selected) {
-                                          if (selected) _save(paperIndex: i);
-                                        },
-                                      ),
-                                  ],
+                            children: [
+                              for (final (i, name) in coverNames.indexed)
+                                ChoiceChip(
+                                  label: Text(name),
+                                  selected: cover == i,
+                                  onSelected: (selected) {
+                                    setState(() => showCover = true);
+                                    if (selected) _save(coverIndex: i);
+                                  },
+                                ),
+                            ],
+                          ),
+                          const Divider(height: 24, color: line),
+                          Semantics(
+                            header: true,
+                            child: const Text(
+                              '내지',
+                              style: TextStyle(color: muted),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 8,
+                            children: [
+                              ChoiceChip(
+                                label: const Text('기본 종이 사용'),
+                                selected: selectedPaper == null,
+                                onSelected: (selected) {
+                                  setState(() => showCover = false);
+                                  if (selected) _save(useDefaultPaper: true);
+                                },
+                              ),
+                              for (final (i, name) in paperNames.indexed)
+                                ChoiceChip(
+                                  avatar: CircleAvatar(
+                                    backgroundColor: paperColors[i],
+                                  ),
+                                  label: Text(name),
+                                  selected: selectedPaper == i,
+                                  onSelected: (selected) {
+                                    setState(() => showCover = false);
+                                    if (selected) _save(paperIndex: i);
+                                  },
+                                ),
+                            ],
                           ),
                         ] else if (section == _Section.ribbon)
                           _options(BookDetailKind.ribbon, details.ribbon)

@@ -213,6 +213,8 @@ class _CollectionSheetState extends State<CollectionSheet> {
     animation: c,
     builder: (context, _) {
       final book = c.library.books.where((b) => b.id == bookId).firstOrNull;
+      final paperIndex = book?.paperIndex ?? c.library.style.paperIndex;
+      final bookPaper = paperColors[paperIndex];
       final records = c.library.records.reversed
           .where((r) => bookId == null || r.bookId == bookId)
           .toList();
@@ -360,10 +362,20 @@ class _CollectionSheetState extends State<CollectionSheet> {
                   child: TextField(
                     controller: searchField,
                     autofocus: topLevel,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: '문장, 책, 날짜 찾기',
-                      prefixIcon: Icon(CupertinoIcons.search, size: 17),
+                      prefixIcon: const Icon(CupertinoIcons.search, size: 17),
                       isDense: true,
+                      enabledBorder: book == null
+                          ? null
+                          : const UnderlineInputBorder(
+                              borderSide: BorderSide(color: line),
+                            ),
+                      focusedBorder: book == null
+                          ? null
+                          : const UnderlineInputBorder(
+                              borderSide: BorderSide(color: brandInk),
+                            ),
                     ),
                     onChanged: (v) => setState(() => query = v),
                   ),
@@ -433,6 +445,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Bookplate(
+                                  stockColor: bookPaper,
                                   flower:
                                       c.library.style.bookDetails.pressedFlower,
                                   choice: c.library.style.bookDetails.bookplate,
@@ -615,7 +628,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                         icon: const Icon(CupertinoIcons.plus, size: 16),
                         label: const Text('새 종이'),
                         style: FilledButton.styleFrom(
-                          backgroundColor: burgundy,
+                          backgroundColor: brandInk,
                           foregroundColor: paper,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 20,
@@ -636,14 +649,17 @@ class _CollectionSheetState extends State<CollectionSheet> {
           padding: EdgeInsets.only(bottom: keyboard),
           child: Stack(
             children: [
-              if (topLevel)
-                Positioned.fill(
-                  child: PaperBackdrop(
-                    color: shelf ? paper : const Color(0xffe8dbca),
-                    grainOpacity: .21,
-                    child: const SizedBox.expand(),
-                  ),
+              Positioned.fill(
+                child: PaperBackdrop(
+                  color: book == null
+                      ? (shelf ? paper : const Color(0xffe8dbca))
+                      : bookPaper,
+                  grainOpacity: book == null
+                      ? .21
+                      : paperGrainOpacity[paperIndex],
+                  child: const SizedBox.expand(),
                 ),
+              ),
               sheet,
             ],
           ),

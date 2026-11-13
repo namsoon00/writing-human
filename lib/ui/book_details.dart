@@ -569,12 +569,14 @@ class Bookplate extends StatelessWidget {
     required this.onOwner,
     required this.summary,
     this.choice = const BookDetailChoice(),
+    this.stockColor = paper,
     this.margin = const EdgeInsets.fromLTRB(24, 4, 24, 16),
     this.flower = const BookDetailChoice(enabled: false),
   });
   final String title, owner, summary;
   final VoidCallback onOwner;
   final BookDetailChoice choice;
+  final Color stockColor;
   final EdgeInsets margin;
   final BookDetailChoice flower;
   @override
@@ -583,7 +585,7 @@ class Bookplate extends StatelessWidget {
     return Container(
       margin: margin,
       child: CustomPaint(
-        painter: choice.enabled ? const _PlateStock() : null,
+        painter: choice.enabled ? _PlateStock(stockColor) : null,
         foregroundPainter: choice.enabled
             ? _PlateFrame(choice.variant, color)
             : null,
@@ -677,17 +679,21 @@ class Bookplate extends StatelessWidget {
 }
 
 class _PlateStock extends CustomPainter {
-  const _PlateStock();
+  const _PlateStock(this.color);
+  final Color color;
   @override
   void paint(Canvas canvas, Size size) {
     final bounds = Offset.zero & size;
     canvas.drawRect(
       bounds,
       Paint()
-        ..shader = const LinearGradient(
+        ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xfffcf9f0), Color(0xfff8f2e5)],
+          colors: [
+            Color.lerp(color, Colors.white, .42)!,
+            Color.lerp(color, Colors.white, .18)!,
+          ],
         ).createShader(bounds),
     );
     final grain = Paint()
@@ -704,7 +710,7 @@ class _PlateStock extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_PlateStock old) => false;
+  bool shouldRepaint(_PlateStock old) => color != old.color;
 }
 
 class _PlateFrame extends CustomPainter {

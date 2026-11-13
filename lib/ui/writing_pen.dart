@@ -26,8 +26,8 @@ class WritingPen extends StatefulWidget {
   State<WritingPen> createState() => _WritingPenState();
 }
 
-const _inkCaretSize = 14.0;
-const _inkCaretGap = 5.0;
+const _inkCaretSize = 12.0;
+const _inkCaretGap = 12.0;
 
 class _WritingPenState extends State<WritingPen>
     with SingleTickerProviderStateMixin {
@@ -37,7 +37,7 @@ class _WritingPenState extends State<WritingPen>
     value: 1,
   );
   late TextEditingValue observed;
-  Offset? target;
+  ({Offset center, bool showInk})? target;
   Size? viewport;
   bool queued = false, reduced = false, newStroke = false;
   TextRange? freshRange;
@@ -156,7 +156,7 @@ class _WritingPenState extends State<WritingPen>
 
   void _readGeometry() {
     final value = widget.controller.value;
-    Offset? next;
+    ({Offset center, bool showInk})? next;
     final editable = findEditable(
       widget.fieldKey.currentContext?.findRenderObject(),
     );
@@ -178,8 +178,8 @@ class _WritingPenState extends State<WritingPen>
         );
         final bounds = Offset.zero & overlay.size;
         if (bounds.contains(point)) {
-          next = point;
           final line = editable.getLineAtOffset(position);
+          next = (center: point, showInk: line.isCollapsed);
           if (line.isValid &&
               position.offset == line.end &&
               line.start < line.end) {
@@ -189,7 +189,7 @@ class _WritingPenState extends State<WritingPen>
                 : -distance;
             final spaced = point.translate(offset, 0);
             if (bounds.deflate(_inkCaretSize / 2).contains(spaced)) {
-              next = spaced;
+              next = (center: spaced, showInk: true);
             }
           }
         }
@@ -269,6 +269,10 @@ class _WritingPenState extends State<WritingPen>
               animation: drying,
               builder: (context, _) {
                 final at = widget.focus.hasFocus ? target : null;
+                final center = at?.center;
+                final showInk = at?.showInk ?? false;
+                final cursorWidth = showInk ? _inkCaretSize : 2.0;
+                final cursorColor = widget.color.withValues(alpha: .55);
                 final wet = (1 - drying.value * 3).clamp(0.0, 1.0);
                 return Stack(
                   clipBehavior: Clip.hardEdge,
@@ -285,15 +289,25 @@ class _WritingPenState extends State<WritingPen>
                           ),
                         ),
                       ),
-                    if (at != null)
+                    if (center != null)
                       Positioned(
-                        left: at.dx - _inkCaretSize / 2,
-                        top: at.dy - _inkCaretSize / 2,
-                        child: InkMark(
-                          key: const ValueKey('writing-ink-caret'),
-                          size: _inkCaretSize,
-                          color: widget.color,
-                        ),
+                        left: center.dx - cursorWidth / 2,
+                        top: center.dy - _inkCaretSize / 2,
+                        child: showInk
+                            ? InkMark(
+                                key: const ValueKey('writing-ink-caret'),
+                                size: _inkCaretSize,
+                                color: cursorColor,
+                              )
+                            : Container(
+                                key: const ValueKey('writing-ink-caret'),
+                                width: cursorWidth,
+                                height: _inkCaretSize,
+                                decoration: BoxDecoration(
+                                  color: cursorColor,
+                                  borderRadius: BorderRadius.circular(1),
+                                ),
+                              ),
                       ),
                   ],
                 );

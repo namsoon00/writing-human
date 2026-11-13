@@ -69,7 +69,7 @@ void expectNibAtCaret(WidgetTester tester, {bool spaced = false}) {
   final value = tester.widget<TextField>(_field).controller!.value;
   final expected = editable.localToGlobal(
     editable.getLocalRectForCaret(value.selection.extent).center +
-        Offset(spaced ? 12 : 0, 0),
+        Offset(spaced ? 18 : 0, 0),
   );
   expect((nibPoint(tester) - expected).distance, lessThan(.2));
 }
@@ -97,6 +97,7 @@ void main() {
     (tester) async {
       final key = await open(tester);
       expectNibAtCaret(tester);
+      expect(tester.widget(_pen), isA<InkMark>());
       final first = nibPoint(tester);
       await tester.enterText(_field, '한');
       await tester.pump();
@@ -106,6 +107,12 @@ void main() {
       expect(find.byKey(const ValueKey('fresh-ink')), findsOneWidget);
       await tester.pumpAndSettle();
       expectNibAtCaret(tester, spaced: true);
+      final ink = tester.widget<InkMark>(_pen);
+      expect(
+        ink.color,
+        tester.widget<TextField>(_field).style!.color!.withValues(alpha: .55),
+      );
+      expect(tester.getSize(_pen), const Size.square(12));
       expect(duringStroke.dx, greaterThan(first.dx));
       expect(duringStroke, nibPoint(tester));
       expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
@@ -134,11 +141,9 @@ void main() {
       final beforeIdle = controller.value;
       await tester.pump(const Duration(milliseconds: 650));
       expectNibAtCaret(tester);
-      expect(
-        tester.widget<InkMark>(_pen).color,
-        tester.widget<TextField>(_field).style!.color,
-      );
-      expect(tester.getSize(_pen), const Size.square(14));
+      expect(tester.getSize(_pen), const Size(2, 12));
+      final tick = tester.widget<Container>(_pen).decoration as BoxDecoration;
+      expect(tick.color, ink.color);
       expect(controller.value, beforeIdle);
       // The ink overlay must not intercept a tap in the writing field.
       await tester.tapAt(tester.getCenter(_field));

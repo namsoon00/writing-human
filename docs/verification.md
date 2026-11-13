@@ -8,6 +8,10 @@
 - `flutter test --no-pub tool/capture_source_intake_test.dart`의 합성 사진과 Flutter
   렌더로 원문 등록, 사진 메뉴, 검수와 필사 복귀를 확인했다. 실제 기기의 카메라,
   공유 확장, 한글 키보드는 이번 검증 범위에 포함하지 않았다.
+- [GitHub Pages 실행 43360721589](https://github.com/namsoon00/writing-human/actions/runs/43360721589)에서
+  `141772701be18cdc7f777820ddf77c596d48f3ea`를 게시했다. 제공 JS가 로컬 release와
+  일치했다. 운영 주소의 iPhone 17 Pro 시뮬레이터 Safari에서 합성 책의 원문 등록을
+  열어 책 표시와 두 사진 인식 메뉴 항목을 확인했다.
 
 ## 2026-11-13 · iPhone 본문 터치와 길게 누르기
 

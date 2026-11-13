@@ -10,6 +10,15 @@
 - HarfBuzz에서 현대 한글 11,172자의 NFC/NFD 조판과 명시적 합성 규칙을 확인했다.
   14px 및 27.6px Flutter 견본은 테스트 렌더러로 확인했다. iOS/Android 실기기와
   모바일 Safari 가독성은 별도 검수 범위다.
+- 최종 Pages 소스 `4a555af74b6819abf2011e8da415e5279d1fbeb9`의
+  [Actions 43517672438](https://github.com/namsoon00/writing-human/actions/runs/43517672438)에서
+  Dart 포맷 94개 변경 없음, Flutter 분석 문제 없음, 전체 Flutter 테스트 127개,
+  웹 빌드와 배포가 통과했다. 앞선 배포 시도에서 발견한 원문 백업 테스트의
+  API 불일치와 저장 화면을 닫기 전에 조작하던 테스트를 정리했다.
+- 공개 웹의 번들 TTF와 메타데이터가 HTTP 200으로 응답했고, 검수한 0.008 TTF와
+  공개 TTF의 SHA-256이 일치했다.
+  `52e61fbf08b165ccd2d5f17d232d2e5d509b87edf69b46397668b8398b2d903f`
+
 
 ## 2026-11-14 · 원문과 통합 메뉴
 

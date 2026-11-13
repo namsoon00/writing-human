@@ -79,6 +79,7 @@ class _PageEditorState extends State<PageEditor> {
       ),
     );
     scroll = ScrollController(initialScrollOffset: p.scroll);
+    if (widget.style.writingSound) _sound = WritingSound();
     _observedText = text.value;
     text.addListener(_textChanged);
     scroll.addListener(_save);
@@ -101,8 +102,12 @@ class _PageEditorState extends State<PageEditor> {
     text.annotatedText = widget.page.text;
     text.marks = widget.page.pencilMarks;
     text.choice = widget.style.bookDetails.pencil;
-    if (oldWidget.style.writingSound && !widget.style.writingSound) {
-      _closeSound();
+    if (oldWidget.style.writingSound != widget.style.writingSound) {
+      if (widget.style.writingSound) {
+        _sound = WritingSound();
+      } else {
+        _closeSound();
+      }
     }
     if (widget.reveal != null && widget.reveal != oldWidget.reveal) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -157,11 +162,11 @@ class _PageEditorState extends State<PageEditor> {
     final previous = _observedText;
     final next = _observedText = text.value;
     _save();
-    if (!restoring &&
+    final sound = _sound;
+    if (sound != null &&
+        !restoring &&
         focus.hasFocus &&
-        widget.style.writingSound &&
         hasNewWrittenCharacter(previous, next)) {
-      final sound = _sound ??= WritingSound();
       unawaited(sound.stroke(() => mounted && focus.hasFocus));
     }
   }

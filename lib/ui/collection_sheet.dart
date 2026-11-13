@@ -24,6 +24,7 @@ class CollectionSheet extends StatefulWidget {
     this.onContentsPage,
     this.onArchiveBook,
     this.onBookOriginals,
+    this.showHandle = false,
   });
   final LibraryController controller;
   final ValueChanged<WritingRecord> onRecord;
@@ -33,6 +34,7 @@ class CollectionSheet extends StatefulWidget {
   final ValueChanged<Passage>? onPassage;
   final ValueChanged<WritingPage>? onContentsPage;
   final ValueChanged<Book>? onArchiveBook, onBookOriginals;
+  final bool showHandle;
   @override
   State<CollectionSheet> createState() => _CollectionSheetState();
 }
@@ -469,15 +471,20 @@ class _CollectionSheetState extends State<CollectionSheet> {
           '${book == null || book.author.isEmpty ? '' : ' · ${book.author}'}';
       final media = MediaQuery.of(context);
       final keyboard = media.viewInsets.bottom;
+      final handleHeight = widget.showHandle ? kMinInteractiveDimension : 0.0;
       final sheet = SizedBox(
         height: math.max(
           0.0,
-          math.min(media.size.height * .88, media.size.height - keyboard - 44),
+          math.min(
+            media.size.height * .88 + handleHeight,
+            media.size.height - keyboard,
+          ),
         ),
         child: SafeArea(
           top: false,
           child: Column(
             children: [
+              if (widget.showHandle) const PaperSheetHandle(),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 6, 12, 8),
                 child: Row(

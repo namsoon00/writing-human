@@ -341,10 +341,17 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     });
   }, paperTurn: false);
 
-  Future<void> _sheet(Widget child, {bool enableDrag = true}) {
+  Future<void> _sheet(
+    Widget child, {
+    bool enableDrag = true,
+    bool? showDragHandle,
+    Color? backgroundColor,
+  }) {
     final route = ModalBottomSheetRoute<void>(
       isScrollControlled: true,
-      showDragHandle: enableDrag,
+      showDragHandle: showDragHandle ?? enableDrag,
+      backgroundColor: backgroundColor,
+      clipBehavior: Clip.antiAlias,
       enableDrag: enableDrag,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       constraints: const BoxConstraints(maxWidth: 600),
@@ -369,6 +376,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     _sheet(
       CollectionSheet(
         controller: c,
+        showHandle: true,
         onBook: (book) => _afterSheet(() async {
           if (!c.library.books.any((entry) => entry.id == book.id)) return;
           final target = c.resumePageForBook(book.id);
@@ -401,6 +409,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         onArchiveBook: (book) =>
             _afterSheet(() => _archive(selectedBook: book)),
       ),
+      showDragHandle: false,
+      backgroundColor: Colors.transparent,
     );
   }
 
@@ -427,6 +437,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         bookId: book?.id,
         onBack: () => Navigator.pop(context),
       ),
+      showDragHandle: false,
+      backgroundColor: Colors.transparent,
     );
   }
 
@@ -769,7 +781,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         final route = ModalBottomSheetRoute<void>(
           isScrollControlled: true,
           showDragHandle: true,
-          backgroundColor: paperColors[_paperStyle(selectedBook).paperIndex],
+          backgroundColor: referencePaperColor(
+            paperColors[_paperStyle(selectedBook).paperIndex],
+          ),
           barrierLabel: MaterialLocalizations.of(
             context,
           ).modalBarrierDismissLabel,
@@ -932,6 +946,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     final route = ModalBottomSheetRoute<PageChoice>(
       isScrollControlled: true,
       showDragHandle: true,
+      backgroundColor: paperColors[_paperStyle(book).paperIndex],
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       constraints: const BoxConstraints(maxWidth: 600),
       builder: (_) {
@@ -1059,6 +1074,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         forBook: book,
         pageCount: _volumePages.length,
       ),
+      backgroundColor: paperColors[_paperStyle(book).paperIndex],
     );
   }
 

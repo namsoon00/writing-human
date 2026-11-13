@@ -36,11 +36,13 @@ class ToolsScreen extends StatelessWidget {
               ? 0
               : controller.library.volumePages(bookId: book.id).length,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const PaperSheetHandle(),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     const Expanded(

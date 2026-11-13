@@ -39,6 +39,31 @@ TextStyle writingTextStyle(
   letterSpacing: .15,
 );
 
+/// Drawn inside the surface so the sheet and its grip share one background.
+class PaperSheetHandle extends StatelessWidget {
+  const PaperSheetHandle({super.key});
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    onTap: () => Navigator.maybePop(context),
+    child: SizedBox(
+      height: kMinInteractiveDimension,
+      child: Center(
+        child: Container(
+          width: 32,
+          height: 4,
+          decoration: BoxDecoration(
+            color: ink.withValues(alpha: .86),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 /// A continuous interior page behind header, editable text and footer.
 /// The material is static and never participates in hit testing or semantics.
 class PaperBackdrop extends StatelessWidget {
@@ -78,7 +103,7 @@ class PaperBackdrop extends StatelessWidget {
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: referencePage
-                            ? Color.lerp(color, const Color(0xffd8bc92), .17)
+                            ? referencePaperColor(color)
                             : color,
                         image: paperGrain(color, grainOpacity),
                       ),
@@ -144,6 +169,9 @@ class PaperBackdrop extends StatelessWidget {
     ),
   );
 }
+
+Color referencePaperColor(Color color) =>
+    Color.lerp(color, const Color(0xffd8bc92), .17)!;
 
 DecorationImage paperGrain(Color color, double opacity) => DecorationImage(
   image: const AssetImage('assets/images/cotton-paper.jpg'),

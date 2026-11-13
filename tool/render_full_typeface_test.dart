@@ -59,7 +59,7 @@ Future<void> render(
       (size.height * 3).round(),
     );
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    final output = File('artifacts/typeface/v007/$filename.png');
+    final output = File('artifacts/typeface/v008/$filename.png');
     await output.parent.create(recursive: true);
     await output.writeAsBytes(bytes!.buffer.asUint8List());
     image.dispose();
@@ -80,7 +80,7 @@ void main() {
             ..addFont(rootBundle.load('assets/fonts/NanumGothic-Regular.ttf')))
           .load();
     });
-    for (final size in [18.0, 23.0]) {
+    for (final size in [14.0, 27.6]) {
       await render(tester, 'reading-${size.round()}', const Size(390, 844), (
         canvas,
       ) {
@@ -106,7 +106,7 @@ void main() {
     await render(tester, 'sizes-flutter', const Size(1050, 1180), (canvas) {
       paintText(
         canvas,
-        '쓰는 인간체 0.007 / 실제 번들 TTF / Flutter 테스트 렌더',
+        '쓰는 인간체 0.008 / 실제 번들 TTF / Flutter 테스트 렌더',
         const Offset(45, 30),
         960,
         17,

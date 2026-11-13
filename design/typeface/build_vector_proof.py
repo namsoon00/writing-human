@@ -40,6 +40,8 @@ def polygon(path, points):
 
 
 class Designer:
+    cluster_gap = 60
+
     def __init__(self, source):
         self.source = source
         self.path = pathops.Path()
@@ -120,7 +122,7 @@ class Designer:
         x, y, r, b = box
         pair = DOUBLE.get(jamo) or CLUSTERS.get(jamo)
         if pair:
-            gap = 46 if jamo not in CLUSTERS else 60
+            gap = self.cluster_gap if jamo in CLUSTERS else 46
             mid = (x+r)/2
             self.component(pair[0], (x, y, mid-gap/2, b), weight*.84)
             self.component(pair[1], (mid+gap/2, y, r, b), weight*.84)

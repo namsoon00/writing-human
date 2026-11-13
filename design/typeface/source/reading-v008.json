@@ -1,0 +1,12 @@
+{
+  "revision": "0.008",
+  "units_per_em": 1000,
+  "outline_expansion": 6,
+  "dense_single_finals": "ㄹㅆㅊㅌㅍ",
+  "dense_final_expansion": 3,
+  "double_final_gap": 106,
+  "double_final_top_inset": 12,
+  "capital_digit_height_scale": 0.93,
+  "lowercase_height_scale": 0.97,
+  "method": "Open dense final consonants, balance Latin height around its existing baseline, and preserve the primary Hangul outlines and character advances."
+}

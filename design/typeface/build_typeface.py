@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+from string import ascii_lowercase, ascii_uppercase, digits
 
 import pathops
 from fontTools.feaLib.builder import addOpenTypeFeaturesFromString
@@ -17,24 +18,24 @@ from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.svgLib.path import parse_path
 from fontTools.ttLib import TTFont, newTable
 
-from build_vector_proof import Designer, L, V, T, MIXED, SOURCE, to_glyph as base_to_glyph, polygon
+from build_vector_proof import Designer, L, V, T, CLUSTERS, MIXED, SOURCE, to_glyph as base_to_glyph, polygon
 
 ROOT = Path(__file__).resolve().parent
 APP = ROOT.parents[1] / "assets/fonts"
 OUT = ROOT / "release"
 LATIN = ROOT / "source/latin-v006.json"
-PROFILE = ROOT / "source/reading-v007.json"
+PROFILE = ROOT / "source/reading-v008.json"
 READING = json.loads(PROFILE.read_text())
 REVISION = READING["revision"]
 FILENAME = "WritingHumanDevelopment-Regular.ttf"
 
 
-def to_glyph(path):
+def to_glyph(path, expansion=READING["outline_expansion"]):
     # Expand filled vector contours; their counters shrink by the same amount.
     # Keeping advances fixed preserves spacing and the NFC/NFD composition map.
     clean = pathops.simplify(path, clockwise=False)
     edge = pathops.Path(clean)
-    edge.stroke(READING["outline_expansion"] * 2,
+    edge.stroke(expansion * 2,
                 pathops.LineCap.ROUND_CAP, pathops.LineJoin.ROUND_JOIN, 4)
     edge.convertConicsToQuads(.1)
     expanded = pathops.op(clean, edge, pathops.PathOp.UNION)
@@ -48,18 +49,30 @@ class Layout(Designer):
         self.components.append((jamo, tuple(box), weight))
 
 
+class DenseFinal(Designer):
+    """Keep a wider opening between two consonants at the bottom of a syllable."""
+
+    cluster_gap = READING["double_final_gap"]
+
+
 def name_for(cp):
     return f"uni{cp:04X}"
 
 
-def latin_path(svg):
+def latin_path(svg, char):
     # Expand centerlines in stretched Y space: vertical ink 62, horizontal 34.
     # This keeps stroke contrast consistent with the Hangul masters.
     path = pathops.Path()
     parse_path(svg, TransformPen(path.getPen(), (1, 0, 0, 62 / 34, 0, 0)))
     path.stroke(62, pathops.LineCap.ROUND_CAP, pathops.LineJoin.ROUND_JOIN, 4)
     path.convertConicsToQuads(.1)
-    return path.transform(1, 0, 0, 34 / 62, 0, 0)
+    scale = 1
+    if char in ascii_uppercase + digits:
+        scale = READING["capital_digit_height_scale"]
+    elif char in ascii_lowercase:
+        scale = READING["lowercase_height_scale"]
+    # Latin source Y is top-down. Scale around the shared baseline at 820.
+    return path.transform(1, 0, 0, (34 / 62) * scale, 0, 820 * (1 - scale))
 
 
 def standalone(source, jamo):
@@ -149,7 +162,7 @@ def build(install=False):
                       0x3164: 920, 0xFEFF: 0}.items():
         add(cp, width=width)
     for char, (width, svg) in {**latin["glyphs"], **punctuation()}.items():
-        add(ord(char), latin_path(svg), width)
+        add(ord(char), latin_path(svg, char), width)
     # U+318D archaic araea is punctuation only, not general Old Hangul shaping.
     for cp in range(0x3131, 0x3164):
         add(cp, standalone(source, chr(cp)))
@@ -162,13 +175,22 @@ def build(install=False):
         evidence = d.syllable(chr(cp))
         layouts[evidence["layout"]] = layouts.get(evidence["layout"], 0) + 1
         pen = TTGlyphPen(glyphs)
-        for spec in d.components:
+        final = T[(cp - 0xAC00) % len(T)]
+        has_dense_final = bool(final) and (
+            final in CLUSTERS or final in READING["dense_single_finals"]
+        )
+        for index, (jamo, box, weight) in enumerate(d.components):
+            dense_final = has_dense_final and index == len(d.components) - 1
+            spec = (jamo, box, weight, dense_final)
             if spec not in parts:
-                jamo, box, weight = spec
-                part = Designer(source)
+                part = DenseFinal(source) if dense_final else Designer(source)
+                if dense_final and jamo in CLUSTERS:
+                    x, y, right, bottom = box
+                    box = (x, y + READING["double_final_top_inset"], right, bottom)
                 part.component(jamo, box, weight)
                 part_name = f"part{len(parts):04d}"
-                glyphs[part_name] = to_glyph(part.path)[0]
+                expansion = READING["dense_final_expansion"] if dense_final else READING["outline_expansion"]
+                glyphs[part_name] = to_glyph(part.path, expansion)[0]
                 metrics[part_name] = (920, 0)
                 parts[spec] = part_name
             pen.addComponent(parts[spec], (1, 0, 0, 1, 0, 0))

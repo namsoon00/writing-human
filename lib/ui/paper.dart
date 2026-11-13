@@ -36,7 +36,7 @@ TextStyle writingTextStyle(
   fontSize: size,
   height: 1.8,
   color: color,
-  letterSpacing: .15,
+  letterSpacing: useDevelopmentTypeface ? -.40 : .15,
 );
 
 /// Drawn inside the surface so the sheet and its grip share one background.

@@ -1026,18 +1026,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         _afterSheet(_pages);
                       },
                     ),
-                  const ListTile(
-                    leading: Icon(
-                      CupertinoIcons.pencil,
-                      size: 20,
-                      color: muted,
-                    ),
-                    title: Text('연필로 남기는 독서 흔적'),
-                    subtitle: Text(
-                      '본문에서 구절을 선택한 뒤 ‘연필 표시’를 누르세요.\n표시한 구절을 다시 선택하면 지울 수 있어요.',
-                      style: TextStyle(fontSize: 12, height: 1.6, color: muted),
-                    ),
-                  ),
                   if (page.writtenOn != null)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),

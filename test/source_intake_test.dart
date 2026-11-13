@@ -1215,6 +1215,8 @@ void main() {
       await open(tester, store, FakeIntake());
       await openRegistration(tester);
       await tester.enterText(sourceField, '한 문장을 옮겨 쓴다.');
+      await tester.pumpAndSettle();
+      expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
       await tester.tap(confirm);
       await settleSourceSheets(tester);
       await tester.tap(find.text('이 구절 필사하기').hitTestable());

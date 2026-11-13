@@ -7,6 +7,9 @@
   경우, 여러 글자 붙여넣기·삭제·선택 이동의 제외 조건을 검사했다.
   쓰기 도구에서 독립 설정을 바꾸고 실제 SQLite 파일 재열기와 설정 병합을 검사했다.
 - 브라우저와 물리 기기의 실제 청음은 미검증이다.
+- [GitHub Actions 43394051570](https://github.com/namsoon00/writing-human/actions/runs/43394051570)의
+  검사와 게시가 완료됐다. 공개 앱 JS와 WAV가 로컬 빌드와 일치했다.
+  `artifacts/writing-sound-settings.png`는 Flutter 테스트에서 렌더링한 설정 화면이다.
 
 ## 2026-11-13 · 내 글의 다시 만난 문장 제거
 

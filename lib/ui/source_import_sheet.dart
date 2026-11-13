@@ -16,6 +16,7 @@ import 'live_source_camera.dart';
 import 'paper.dart';
 import 'original_range_sheet.dart';
 import 'source_scan_preview.dart';
+import 'writing_pen.dart';
 
 typedef SourceImportResult = ({
   String text,
@@ -39,6 +40,7 @@ class SourceImportSheet extends StatefulWidget {
     required this.choice,
     this.initialPhoto,
     this.paperColor = paper,
+    this.penColor = ink,
     this.grainOpacity = .16,
     this.initialCitation = '',
     this.shared = false,
@@ -51,7 +53,7 @@ class SourceImportSheet extends StatefulWidget {
   final SourceIntake intake;
   final String initialText, initialCitation;
   final BookDetailChoice choice;
-  final Color paperColor;
+  final Color paperColor, penColor;
   final double grainOpacity;
   final SourcePhoto? initialPhoto;
   final bool shared, registration, allowUnbound;
@@ -839,20 +841,27 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     choice: widget.choice,
     compact: _reviewing,
     showCaption: false,
-    child: TextField(
-      key: index == 0
-          ? const ValueKey('source-text')
-          : ValueKey('source-review-text-$index'),
+    child: WritingCaret(
       controller: controller,
       focusNode: index == 0 ? _focus : null,
-      minLines: _reviewing ? 2 : 4,
-      maxLines: 8,
-      keyboardType: TextInputType.multiline,
-      decoration: const InputDecoration(
-        hintText: '옮겨 쓸 구절을 적어 주세요.',
-        border: InputBorder.none,
-        contentPadding: EdgeInsets.zero,
-        filled: false,
+      color: widget.penColor,
+      builder: (focus, scroll) => TextField(
+        key: index == 0
+            ? const ValueKey('source-text')
+            : ValueKey('source-review-text-$index'),
+        controller: controller,
+        focusNode: focus,
+        scrollController: scroll,
+        showCursor: false,
+        minLines: _reviewing ? 2 : 4,
+        maxLines: 8,
+        keyboardType: TextInputType.multiline,
+        decoration: const InputDecoration(
+          hintText: '옮겨 쓸 구절을 적어 주세요.',
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.zero,
+          filled: false,
+        ),
       ),
     ),
   );
@@ -1087,14 +1096,21 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                           ),
                         _metadataRow(
                           _reviewing ? '쪽수·출처 (선택)' : '출처 (선택)',
-                          TextField(
-                            key: const ValueKey('original-citation'),
+                          WritingCaret(
                             controller: _citation,
-                            decoration: _recordDecoration.copyWith(
-                              hintText: '쪽수나 출처',
-                              errorText: _citation.text.trim().length > 500
-                                  ? '출처를 조금 줄여 주세요.'
-                                  : null,
+                            color: widget.penColor,
+                            builder: (focus, scroll) => TextField(
+                              key: const ValueKey('original-citation'),
+                              controller: _citation,
+                              focusNode: focus,
+                              scrollController: scroll,
+                              showCursor: false,
+                              decoration: _recordDecoration.copyWith(
+                                hintText: '쪽수나 출처',
+                                errorText: _citation.text.trim().length > 500
+                                    ? '출처를 조금 줄여 주세요.'
+                                    : null,
+                              ),
                             ),
                           ),
                         ),

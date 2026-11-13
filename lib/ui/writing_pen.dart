@@ -25,6 +25,58 @@ class WritingPen extends StatefulWidget {
   State<WritingPen> createState() => _WritingPenState();
 }
 
+/// Supplies the same insertion marker to short editors on paper.
+class WritingCaret extends StatefulWidget {
+  const WritingCaret({
+    super.key,
+    required this.controller,
+    required this.builder,
+    this.focusNode,
+    this.color = const Color(0xff302c27),
+  });
+
+  final TextEditingController controller;
+  final Widget Function(FocusNode focus, ScrollController scroll) builder;
+  final FocusNode? focusNode;
+  final Color color;
+
+  @override
+  State<WritingCaret> createState() => _WritingCaretState();
+}
+
+class _WritingCaretState extends State<WritingCaret> {
+  final _focus = FocusNode();
+  final _scroll = ScrollController();
+  final _field = GlobalKey();
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final focus = widget.focusNode ?? _focus;
+    return Stack(
+      children: [
+        KeyedSubtree(key: _field, child: widget.builder(focus, _scroll)),
+        Positioned.fill(
+          child: WritingPen(
+            controller: widget.controller,
+            scroll: _scroll,
+            focus: focus,
+            fieldKey: _field,
+            animateInk: false,
+            color: widget.color,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 const _nibSize = Size(10, 12);
 
 class _WritingPenState extends State<WritingPen>

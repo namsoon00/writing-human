@@ -12,6 +12,7 @@ import 'original_range_sheet.dart';
 import 'pencil_marks.dart';
 import 'reading_details.dart';
 import 'reflection_ink.dart';
+import 'writing_pen.dart';
 
 class SourceReading extends StatefulWidget {
   const SourceReading({
@@ -639,23 +640,30 @@ class _ReflectionNote extends StatelessWidget {
                     )
                   : Semantics(
                       label: '느낀 점 입력',
-                      child: TextField(
-                        key: const ValueKey('original-reflection-input'),
+                      child: WritingCaret(
                         controller: field,
-                        autofocus: true,
-                        minLines: 2,
-                        maxLines: 5,
-                        keyboardType: TextInputType.multiline,
-                        style: reflectionHandwriting,
-                        decoration: InputDecoration(
-                          isCollapsed: true,
-                          contentPadding: EdgeInsets.zero,
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          hintText: '이 문장이 남긴 생각',
-                          hintStyle: reflectionHandwriting.copyWith(
-                            color: reflectionGraphite.withValues(alpha: .62),
+                        color: reflectionGraphite,
+                        builder: (focus, scroll) => TextField(
+                          key: const ValueKey('original-reflection-input'),
+                          controller: field,
+                          focusNode: focus,
+                          scrollController: scroll,
+                          showCursor: false,
+                          autofocus: true,
+                          minLines: 2,
+                          maxLines: 5,
+                          keyboardType: TextInputType.multiline,
+                          style: reflectionHandwriting,
+                          decoration: InputDecoration(
+                            isCollapsed: true,
+                            contentPadding: EdgeInsets.zero,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            hintText: '이 문장이 남긴 생각',
+                            hintStyle: reflectionHandwriting.copyWith(
+                              color: reflectionGraphite.withValues(alpha: .62),
+                            ),
                           ),
                         ),
                       ),

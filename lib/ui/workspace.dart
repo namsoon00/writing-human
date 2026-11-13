@@ -587,6 +587,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           initialCitation: linkOnly ? sharedText : '',
           initialPhoto: initialPhoto,
           choice: style.bookDetails.sourceSlip,
+          penColor: penColors[style.penIndex],
           paperColor: paperColors[style.paperIndex],
           grainOpacity: paperGrainOpacity[style.paperIndex],
           shared: shared != null,

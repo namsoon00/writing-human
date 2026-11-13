@@ -8,6 +8,7 @@ import '../data/model.dart';
 import '../source/originals.dart';
 import 'editable_geometry.dart';
 import 'reflection_ink.dart';
+import 'writing_pen.dart';
 
 typedef _Placement = ({Rect rect, int lines});
 
@@ -400,31 +401,38 @@ class NotebookReflectionState extends State<NotebookReflection> {
                   Expanded(
                     child: Semantics(
                       label: '느낀 점 입력',
-                      child: TextField(
-                        key: const ValueKey('notebook-reflection-input'),
-                        groupId: _tapGroup,
+                      child: WritingCaret(
                         controller: _field,
+                        color: reflectionGraphite,
                         focusNode: _focus,
-                        keyboardType: TextInputType.multiline,
-                        textInputAction: TextInputAction.newline,
-                        expands: true,
-                        minLines: null,
-                        maxLines: null,
-                        textAlignVertical: TextAlignVertical.top,
-                        onTapOutside: (_) {
-                          if (!_composing) _focus.unfocus();
-                        },
-                        style: reflectionHandwriting.copyWith(fontSize: 21),
-                        decoration: InputDecoration(
-                          isCollapsed: true,
-                          contentPadding: EdgeInsets.zero,
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          hintText: '느낀 점',
-                          hintStyle: reflectionHandwriting.copyWith(
-                            fontSize: 21,
-                            color: reflectionGraphite.withValues(alpha: .62),
+                        builder: (focus, scroll) => TextField(
+                          key: const ValueKey('notebook-reflection-input'),
+                          groupId: _tapGroup,
+                          controller: _field,
+                          focusNode: focus,
+                          scrollController: scroll,
+                          showCursor: false,
+                          keyboardType: TextInputType.multiline,
+                          textInputAction: TextInputAction.newline,
+                          expands: true,
+                          minLines: null,
+                          maxLines: null,
+                          textAlignVertical: TextAlignVertical.top,
+                          onTapOutside: (_) {
+                            if (!_composing) _focus.unfocus();
+                          },
+                          style: reflectionHandwriting.copyWith(fontSize: 21),
+                          decoration: InputDecoration(
+                            isCollapsed: true,
+                            contentPadding: EdgeInsets.zero,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            hintText: '느낀 점',
+                            hintStyle: reflectionHandwriting.copyWith(
+                              fontSize: 21,
+                              color: reflectionGraphite.withValues(alpha: .62),
+                            ),
                           ),
                         ),
                       ),

@@ -1152,6 +1152,14 @@ void main() {
       await tester.pumpAndSettle();
       await openRegistration(tester);
       await tester.tap(sourceField);
+      await tester.pumpAndSettle();
+      expect(tester.testTextInput.isVisible, isTrue);
+      final nib = find.byKey(const ValueKey('writing-pen-nib'));
+      final sheet = find.byType(SourceImportSheet);
+      final sourceNib = find.descendant(of: sheet, matching: nib);
+      expect(sourceNib, findsOneWidget);
+      expect(tester.widget<TextField>(sourceField).showCursor, isFalse);
+      final initialNib = tester.getTopLeft(sourceNib);
       tester.view.viewInsets = const FakeViewPadding(bottom: 270);
       const composing = TextEditingValue(
         text: '하ㄴ',
@@ -1165,6 +1173,8 @@ void main() {
         tester.widget<TextField>(sourceField).controller!.value,
         composing,
       );
+      expect(sourceNib, findsOneWidget);
+      expect(tester.getTopLeft(sourceNib).dx, greaterThan(initialNib.dx));
       expect(store.writes, 0);
       tester.testTextInput.updateEditingValue(
         const TextEditingValue(

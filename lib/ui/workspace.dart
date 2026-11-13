@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
@@ -1040,9 +1041,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         !c.composing &&
         c.saveError == null;
     final canSwipe = navigationEnabled && !editorFocus.hasFocus;
-    final compact =
-        MediaQuery.viewInsetsOf(context).bottom > 0 ||
-        MediaQuery.sizeOf(context).height < 520;
+    final compact = MediaQuery.sizeOf(context).height < 520;
     Widget paper(WritingPage target, int index, {bool preview = true}) =>
         _paperSurface(
           target,
@@ -1072,6 +1071,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           );
     return Scaffold(
       backgroundColor: appPaper,
+      resizeToAvoidBottomInset: false,
       body: PageTurnView(
         key: ValueKey((c, c.editorEpoch)),
         controller: _pageTurn,
@@ -1139,6 +1139,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     final bookId = record?.bookId ?? (fresh ? draftBookId : null);
     final book = c.library.books.where((b) => b.id == bookId).firstOrNull;
     final style = _paperStyle(book);
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final keyboardOverlap = math.max(
+      0.0,
+      keyboardInset - MediaQuery.viewPaddingOf(context).bottom,
+    );
     final originals = preview
         ? const <RegisteredOriginal>[]
         : originalsFor(
@@ -1154,6 +1159,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       pagesBefore: index,
       pagesAfter: count - index - 1,
       child: SafeArea(
+        maintainBottomViewPadding: true,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Column(
@@ -1236,6 +1242,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         style: style,
                         focusNode: editorFocus,
                         originals: originals,
+                        keyboardOverlap: keyboardOverlap,
                         onReflection: navigationEnabled
                             ? (match) => _showOriginals(reflectionMatch: match)
                             : null,
@@ -1257,30 +1264,31 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         },
                       ),
               ),
-              WritingFooter(
-                ornament: c.library.style.bookDetails.ornament,
-                onTools: _tools,
-                onSource: navigationEnabled ? _showOriginals : null,
-                onMore: _more,
-                onDone: _blur,
-                focused: !preview && editorFocus.hasFocus,
-                failed: c.saveError != null,
-                pageLabel: '${index + 1}',
-                pageCount: count,
-                onPages: navigationEnabled ? _pages : null,
-                onPrevious: navigationEnabled ? () => _stepPage(-1) : null,
-                onNext: navigationEnabled ? () => _stepPage(1) : null,
-                onTurnStart: _pageTurn.start,
-                onTurnUpdate: _pageTurn.update,
-                onTurnEnd: _pageTurn.end,
-                onTurnCancel: _pageTurn.cancel,
-                status: c.saveError != null
-                    ? '저장 실패'
-                    : record == null
-                    ? '자동 저장'
-                    : c.saving
-                    ? '저장 중'
-                    : '저장됨',
+              Transform.translate(
+                offset: Offset(0, preview ? 0 : -keyboardOverlap),
+                child: WritingFooter(
+                  ornament: c.library.style.bookDetails.ornament,
+                  onTools: _tools,
+                  onSource: navigationEnabled ? _showOriginals : null,
+                  onMore: _more,
+                  failed: c.saveError != null,
+                  pageLabel: '${index + 1}',
+                  pageCount: count,
+                  onPages: navigationEnabled ? _pages : null,
+                  onPrevious: navigationEnabled ? () => _stepPage(-1) : null,
+                  onNext: navigationEnabled ? () => _stepPage(1) : null,
+                  onTurnStart: _pageTurn.start,
+                  onTurnUpdate: _pageTurn.update,
+                  onTurnEnd: _pageTurn.end,
+                  onTurnCancel: _pageTurn.cancel,
+                  status: c.saveError != null
+                      ? '저장 실패'
+                      : record == null
+                      ? '자동 저장'
+                      : c.saving
+                      ? '저장 중'
+                      : '저장됨',
+                ),
               ),
             ],
           ),

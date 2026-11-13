@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/main.dart';
 import 'package:writing_human/ui/transcription_guide.dart';
@@ -25,6 +26,107 @@ class MemoryStore implements LibraryStore {
 }
 
 void main() {
+  testWidgets('Paper menu follows the selection and opens a unique original', (
+    tester,
+  ) async {
+    const original = '아침이다. 책장에 새 빛이 닿았다. 아침이다.';
+    const prose = '다시 보는 책장에 메모\n\n아침이다';
+    final store = MemoryStore()
+      ..data = const Library(
+        books: [
+          Book(
+            id: 'b',
+            title: '책',
+            originals: [RegisteredOriginal('o', original)],
+          ),
+        ],
+        records: [WritingRecord(id: 'r', bookId: 'b', title: '필사')],
+        pages: [WritingPage(id: 'p', recordId: 'r', number: 1, text: prose)],
+        activePageId: 'p',
+        writing: true,
+      );
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final messenger = tester.binding.defaultBinaryMessenger;
+    String clipboard = '붙일 글';
+    messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      switch (call.method) {
+        case 'Clipboard.hasStrings':
+          return {'value': clipboard.isNotEmpty};
+        case 'Clipboard.getData':
+          return {'text': clipboard};
+        case 'Clipboard.setData':
+          clipboard = (call.arguments as Map)['text'] as String;
+      }
+      return null;
+    });
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+    await tester.pumpWidget(WritingHumanApp(store: store));
+    await tester.pumpAndSettle();
+    final editor = find.byKey(const ValueKey('page-text'));
+    final menu = find.byKey(const ValueKey('paper-selection-menu'));
+    Finder action(String label) =>
+        find.descendant(of: menu, matching: find.text(label));
+    await tester.tap(editor);
+    await tester.pumpAndSettle();
+    final state = tester.state<EditableTextState>(find.byType(EditableText));
+    final controller = tester.widget<TextField>(editor).controller!;
+    Future<void> showMenu(TextSelection selection) async {
+      state.hideToolbar();
+      tester.testTextInput.updateEditingValue(
+        TextEditingValue(text: prose, selection: selection),
+      );
+      await tester.pumpAndSettle();
+      expect(state.showToolbar(), isTrue);
+      await tester.pumpAndSettle();
+    }
+
+    final editorRect = tester.getRect(editor);
+    final repeated = prose.indexOf('아침이다');
+    await showMenu(
+      TextSelection(baseOffset: repeated, extentOffset: prose.length),
+    );
+    expect(action('느낀 점'), findsNothing);
+    expect(action('복사'), findsOneWidget);
+    expect(action('잘라내기'), findsOneWidget);
+    expect(action('연필 표시'), findsOneWidget);
+    await tester.tap(action('복사'));
+    await tester.pumpAndSettle();
+    expect(clipboard, '아침이다');
+
+    await showMenu(TextSelection.collapsed(offset: prose.indexOf('\n') + 1));
+    expect(action('붙여넣기'), findsOneWidget);
+    expect(
+      find.descendant(of: menu, matching: find.byType(TextButton)),
+      findsOneWidget,
+    );
+
+    final unique = prose.indexOf('책장에');
+    final selection = TextSelection(
+      baseOffset: unique,
+      extentOffset: unique + 3,
+    );
+    await showMenu(selection);
+    expect(tester.getRect(editor), editorRect);
+    expect(tester.getRect(menu).right, lessThanOrEqualTo(320));
+    await tester.tap(action('느낀 점'));
+    await tester.pumpAndSettle();
+    final note = find.byKey(const ValueKey('original-reflection-input'));
+    await tester.enterText(note, '이 대목을 다시 읽고 싶다.');
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '저장'));
+    await tester.pumpAndSettle();
+    final saved = store.data.books.single.originals.single.reflection!;
+    expect(saved.text, '이 대목을 다시 읽고 싶다.');
+    expect(original.substring(saved.mark!.start, saved.mark!.end), '책장에');
+    expect(controller.text, prose);
+    expect(controller.selection, selection);
+  });
+
   testWidgets(
     'Create book, compose Korean, reopen and restore text and selection',
     (tester) async {
@@ -137,8 +239,22 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(editor).scrollController!.offset, 710);
       await tester.tap(editor);
+      await tester.pumpAndSettle();
+      final editorTop = tester.getTopLeft(editor);
+      final title = find.byKey(const ValueKey('writing-title'));
+      final titlePosition = tester.getTopLeft(title);
       tester.view.viewInsets = const FakeViewPadding(bottom: 320);
       await tester.pumpAndSettle();
+      expect(tester.getTopLeft(editor), editorTop);
+      expect(tester.getTopLeft(title), titlePosition);
+      expect(tester.getRect(editor).bottom, lessThanOrEqualTo(524));
+      expect(find.text('완료'), findsNothing);
+      final focused = tester.widget<TextField>(editor);
+      final selection = focused.controller!.selection;
+      await tester.tapAt(editorTop + const Offset(12, 100));
+      await tester.pumpAndSettle();
+      expect(focused.focusNode!.hasFocus, isFalse);
+      expect(focused.controller!.selection, selection);
       expect(tester.takeException(), isNull);
       tester.view.viewInsets = const FakeViewPadding();
       tester.view.physicalSize = const Size(844, 390);
@@ -154,7 +270,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(editor).controller, same(controller));
       expect(tester.getSize(editor).height, greaterThan(80));
-      expect(tester.getRect(find.text('완료')).bottom, lessThanOrEqualTo(360));
+      expect(tester.getRect(editor).bottom, lessThanOrEqualTo(360));
       expect(tester.takeException(), isNull);
     },
   );
@@ -286,8 +402,6 @@ void main() {
     await tester.pumpAndSettle();
     final pageId = store.data.activePageId;
     final controller = tester.widget<TextField>(editor).controller!;
-    await tester.tap(find.text('완료'));
-    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('더 보기'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('책으로 묶기'));

@@ -132,6 +132,9 @@ void main() {
       expect(tester.getSize(_pen), const Size.square(6));
       expect(dot.color!.a, 1);
       expect(dot.shape, BoxShape.circle);
+      final bleed = find.byKey(const ValueKey('writing-ink-bleed'));
+      expect(tester.getSize(bleed), const Size.square(12));
+      expect(tester.getCenter(bleed), nibPoint(tester));
       expect(controller.value, beforeIdle);
       // The ink overlay must not intercept a tap in the writing field.
       await tester.tapAt(tester.getCenter(_field));

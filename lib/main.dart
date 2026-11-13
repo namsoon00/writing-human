@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'data/library_controller.dart';
 import 'entry_location.dart';
 import 'data/store.dart';
@@ -11,11 +13,12 @@ import 'ui/workspace.dart';
 import 'ui/paper.dart';
 import 'ui/typography.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Make the web app usable by assistive technology without a hidden opt-in.
   SemanticsBinding.instance.ensureSemantics();
   normalizeEntryLocation();
+  if (kIsWeb) await BrowserContextMenu.disableContextMenu();
   runApp(const WritingHumanApp());
 }
 

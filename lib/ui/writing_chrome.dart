@@ -88,8 +88,6 @@ class WritingFooter extends StatelessWidget {
     required this.status,
     required this.onTools,
     required this.onMore,
-    required this.onDone,
-    required this.focused,
     this.pageLabel,
     this.pageCount = 1,
     this.onPages,
@@ -104,14 +102,14 @@ class WritingFooter extends StatelessWidget {
     this.ornament = const BookDetailChoice(),
   });
   final String status;
-  final VoidCallback onTools, onMore, onDone;
+  final VoidCallback onTools, onMore;
   final VoidCallback? onPages, onPrevious, onNext, onSource;
   final String? pageLabel;
   final int pageCount;
   final VoidCallback? onTurnStart, onTurnCancel;
   final ValueChanged<double>? onTurnUpdate;
   final void Function(double distance, double velocity)? onTurnEnd;
-  final bool focused, failed;
+  final bool failed;
   final BookDetailChoice ornament;
 
   @override
@@ -222,17 +220,12 @@ class WritingFooter extends StatelessWidget {
         ),
         SizedBox(
           width: 64,
-          child: focused
-              ? TextButton(
-                  onPressed: onDone,
-                  child: const Text('완료', style: TextStyle(fontSize: 12)),
-                )
-              : IconButton(
-                  tooltip: '더 보기',
-                  onPressed: onMore,
-                  color: brandInk,
-                  icon: const Icon(CupertinoIcons.ellipsis, size: 23),
-                ),
+          child: IconButton(
+            tooltip: '더 보기',
+            onPressed: onMore,
+            color: brandInk,
+            icon: const Icon(CupertinoIcons.ellipsis, size: 23),
+          ),
         ),
       ],
     ),

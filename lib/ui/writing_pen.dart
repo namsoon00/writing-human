@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'editable_geometry.dart';
+import 'ink_mark.dart';
 import 'paper_palette.dart';
 
 /// Read-only feedback beside the native editable. Never writes input state.
@@ -270,15 +271,32 @@ class _WritingPenState extends State<WritingPen>
                       Positioned(
                         left: at.dx - _inkPointDiameter / 2,
                         top: at.dy - _inkPointDiameter / 2,
-                        child: DecoratedBox(
-                          key: const ValueKey('writing-ink-point'),
-                          decoration: BoxDecoration(
-                            color: Color.lerp(widget.color, ink, .24),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const SizedBox.square(
-                            dimension: _inkPointDiameter,
-                          ),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          alignment: Alignment.center,
+                          children: [
+                            Positioned.fill(
+                              left: -3,
+                              right: -3,
+                              top: -3,
+                              bottom: -3,
+                              child: InkMark(
+                                key: const ValueKey('writing-ink-bleed'),
+                                size: 12,
+                                color: widget.color.withValues(alpha: .64),
+                              ),
+                            ),
+                            DecoratedBox(
+                              key: const ValueKey('writing-ink-point'),
+                              decoration: BoxDecoration(
+                                color: Color.lerp(widget.color, ink, .24),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const SizedBox.square(
+                                dimension: _inkPointDiameter,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                   ],

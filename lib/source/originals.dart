@@ -86,15 +86,32 @@ OriginalMatch? matchOriginal(
   if (words.isEmpty) return null;
   final singleWord = words.length == 1;
   final needsWordEnd = singleWord && words.single.end == prefix.length;
+  return _findOriginal(originals, prefix, needsWordEnd: needsWordEnd);
+}
+
+OriginalMatch? matchSelectedOriginal(
+  List<RegisteredOriginal> originals,
+  String selection,
+) {
+  final passage = selection.trim();
+  if (!_wordCharacters.hasMatch(passage)) return null;
+  return _findOriginal(originals, passage, needsWordEnd: true);
+}
+
+OriginalMatch? _findOriginal(
+  List<RegisteredOriginal> originals,
+  String passage, {
+  required bool needsWordEnd,
+}) {
   OriginalMatch? match;
   for (final original in originals) {
     final source = original.text;
     for (
-      var start = source.indexOf(prefix);
+      var start = source.indexOf(passage);
       start >= 0;
-      start = source.indexOf(prefix, start + 1)
+      start = source.indexOf(passage, start + 1)
     ) {
-      final end = start + prefix.length;
+      final end = start + passage.length;
       if (_isWithinWord(source, start) ||
           (needsWordEnd && _isWithinWord(source, end))) {
         continue;

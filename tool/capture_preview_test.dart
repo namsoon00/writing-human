@@ -139,7 +139,10 @@ void main() {
       await capture('keyboard');
       tester.view.viewInsets = const FakeViewPadding();
       await tester.pumpAndSettle();
-      await tester.tap(find.text('완료'));
+      await tester.tapAt(
+        tester.getTopLeft(find.byKey(const ValueKey('page-text'))) +
+            const Offset(12, 100),
+      );
       await tester.pumpAndSettle();
       await capture('resting');
       final number = find.byKey(const ValueKey('page-number'));

@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import '../data/model.dart';
 import '../source/originals.dart';
 import 'notebook_reflection.dart';
 import 'paper.dart';
+import 'paper_selection_menu.dart';
 import 'writing_pen.dart';
 import 'pencil_marks.dart';
 import 'transcription_guide.dart';
@@ -18,6 +21,7 @@ class PageEditor extends StatefulWidget {
     this.onEditingState,
     this.onPencilMark,
     this.onReflection,
+    this.keyboardOverlap = 0,
     this.originals = const [],
     this.reveal,
   });
@@ -29,6 +33,7 @@ class PageEditor extends StatefulWidget {
   final void Function(String, int, int)? onPencilMark;
   final List<RegisteredOriginal> originals;
   final ValueChanged<OriginalMatch>? onReflection;
+  final double keyboardOverlap;
   final ({int offset, int request})? reveal;
   @override
   State<PageEditor> createState() => _PageEditorState();
@@ -140,6 +145,97 @@ class _PageEditorState extends State<PageEditor> {
     );
   }
 
+  Widget _selectionMenu(BuildContext context, EditableTextState state) {
+    final value = text.value;
+    final selection = value.selection;
+    if (!selection.isValid ||
+        selection.end > value.text.length ||
+        (value.isComposingRangeValid && !value.composing.isCollapsed)) {
+      return const SizedBox.shrink();
+    }
+    final native = {
+      for (final item in state.contextMenuButtonItems) item.type: item,
+    };
+    final paste = native[ContextMenuButtonType.paste];
+    final selectAll = native[ContextMenuButtonType.selectAll];
+    final editActions = <ContextMenuButtonItem>[];
+    final writingActions = <ContextMenuButtonItem>[];
+    final otherActions = <ContextMenuButtonItem>[];
+    if (selection.isCollapsed) {
+      final caret = selection.extentOffset;
+      final start = caret == 0
+          ? 0
+          : value.text.lastIndexOf('\n', caret - 1) + 1;
+      final end = value.text.indexOf('\n', caret);
+      final blankLine = value.text
+          .substring(start, end < 0 ? value.text.length : end)
+          .trim()
+          .isEmpty;
+      if (paste != null) editActions.add(paste);
+      if (!blankLine && selectAll != null) editActions.add(selectAll);
+    } else {
+      for (final type in [
+        ContextMenuButtonType.copy,
+        ContextMenuButtonType.cut,
+      ]) {
+        final item = native[type];
+        if (item != null) editActions.add(item);
+      }
+      if (paste != null) otherActions.add(paste);
+      if (selectAll != null) otherActions.add(selectAll);
+      if (widget.onPencilMark case final mark?) {
+        final marked = widget.page.pencilMarks.any(
+          (m) => m.start <= selection.start && m.end >= selection.end,
+        );
+        writingActions.add(
+          ContextMenuButtonItem(
+            label: marked ? '연필 표시 지우기' : '연필 표시',
+            onPressed: () {
+              if (text.value != value) return;
+              state.hideToolbar(false);
+              mark(widget.page.id, selection.start, selection.end);
+            },
+          ),
+        );
+      }
+      if (widget.onReflection case final reflect?) {
+        final match = matchSelectedOriginal(
+          widget.originals,
+          selection.textInside(value.text),
+        );
+        if (match != null) {
+          writingActions.add(
+            ContextMenuButtonItem(
+              label: '느낀 점',
+              onPressed: () {
+                if (text.value != value) return;
+                state.hideToolbar();
+                reflect(match);
+              },
+            ),
+          );
+        }
+      }
+    }
+    if (editActions.isEmpty && writingActions.isEmpty && otherActions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return PaperSelectionMenu(
+      anchors: state.contextMenuAnchors,
+      editActions: editActions,
+      writingActions: writingActions,
+      otherActions: otherActions,
+    );
+  }
+
+  Widget _dismissGutter() => TextFieldTapRegion(
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
+      onTap: focus.unfocus,
+    ),
+  );
+
   @override
   void dispose() {
     text.removeListener(_save);
@@ -160,138 +256,142 @@ class _PageEditorState extends State<PageEditor> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final padding = writingPagePadding(constraints.biggest);
-        return Stack(
-          children: [
-            if (style.guides)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: ExcludeSemantics(
-                    child: AnimatedBuilder(
-                      animation: scroll,
-                      builder: (context, _) => CustomPaint(
-                        painter: WritingGuides(
-                          enabled: style.guides,
-                          top: padding.top,
-                          left: padding.left,
-                          right: padding.right,
-                          lineHeight:
-                              MediaQuery.textScalerOf(context).scale(23) * 1.8,
-                          scroll: scroll.hasClients ? scroll.offset : 0,
+        final overlap = widget.keyboardOverlap;
+        final visiblePadding = padding.copyWith(
+          bottom: overlap > 0 ? 12 : padding.bottom,
+        );
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: math.min(overlap, constraints.maxHeight),
+          ),
+          child: Stack(
+            children: [
+              if (style.guides)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: ExcludeSemantics(
+                      child: AnimatedBuilder(
+                        animation: scroll,
+                        builder: (context, _) => CustomPaint(
+                          painter: WritingGuides(
+                            enabled: style.guides,
+                            top: padding.top,
+                            left: padding.left,
+                            right: padding.right,
+                            lineHeight:
+                                MediaQuery.textScalerOf(context).scale(23) *
+                                1.8,
+                            scroll: scroll.hasClients ? scroll.offset : 0,
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            RepaintBoundary(
-              key: fieldRenderKey,
-              child: TextField(
-                key: const ValueKey('page-text'),
-                controller: text,
-                scrollController: scroll,
-                focusNode: focus,
-                // Keep native input/selection, with a separate ink indicator.
-                showCursor: false,
-                maxLines: null,
-                minLines: null,
-                expands: true,
-                textAlignVertical: TextAlignVertical.top,
-                keyboardType: TextInputType.multiline,
-                textInputAction: TextInputAction.newline,
-                autocorrect: false,
-                enableSuggestions: false,
-                contextMenuBuilder: (context, state) {
-                  final selection = text.selection;
-                  final canMark =
-                      widget.onPencilMark != null &&
-                      selection.isValid &&
-                      !selection.isCollapsed &&
-                      (!text.value.composing.isValid ||
-                          text.value.composing.isCollapsed);
-                  final marked = widget.page.pencilMarks.any(
-                    (m) => m.start <= selection.start && m.end >= selection.end,
-                  );
-                  return AdaptiveTextSelectionToolbar.buttonItems(
-                    anchors: state.contextMenuAnchors,
-                    buttonItems: [
-                      if (canMark)
-                        ContextMenuButtonItem(
-                          label: marked ? '연필 표시 지우기' : '연필 표시',
-                          onPressed: () {
-                            // The selection is read only, including during toolbar actions.
-                            state.hideToolbar();
-                            widget.onPencilMark!(
-                              widget.page.id,
-                              selection.start,
-                              selection.end,
-                            );
-                          },
-                        ),
-                      ...state.contextMenuButtonItems,
-                    ],
-                  );
-                },
-                style: writingTextStyle(
-                  style.fontIndex,
-                  size: 23,
-                  color: penColors[style.penIndex],
-                  useDevelopmentTypeface: style.useDevelopmentTypeface,
-                ),
-                cursorColor: brandInk,
-                cursorWidth: 1.2,
-                decoration: InputDecoration(
-                  contentPadding: padding,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  filled: false,
-                ),
-              ),
-            ),
-            if (widget.originals.isNotEmpty)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: CustomPaint(
-                    key: const ValueKey('transcription-guide'),
-                    painter: TranscriptionGuidePainter(
-                      originals: widget.originals,
-                      focus: focus,
-                      controller: text,
-                      scroll: scroll,
-                      fieldKey: fieldRenderKey,
-                      bottomPadding: padding.bottom,
-                      layout: _guideLayout,
-                      style: writingTextStyle(
-                        style.fontIndex,
-                        color: const Color(0xff8b8273).withValues(alpha: .58),
-                        useDevelopmentTypeface: style.useDevelopmentTypeface,
-                      ),
+              RepaintBoundary(
+                key: fieldRenderKey,
+                child: TextSelectionTheme(
+                  data: TextSelectionThemeData(
+                    selectionColor: const Color(
+                      0xffaa833c,
+                    ).withValues(alpha: .25),
+                    selectionHandleColor: penColors[style.penIndex],
+                  ),
+                  child: TextField(
+                    key: const ValueKey('page-text'),
+                    controller: text,
+                    scrollController: scroll,
+                    focusNode: focus,
+                    // Keep native input/selection, with a separate ink indicator.
+                    showCursor: false,
+                    maxLines: null,
+                    minLines: null,
+                    expands: true,
+                    textAlignVertical: TextAlignVertical.top,
+                    keyboardType: TextInputType.multiline,
+                    textInputAction: TextInputAction.newline,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    contextMenuBuilder: _selectionMenu,
+                    style: writingTextStyle(
+                      style.fontIndex,
+                      size: 23,
+                      color: penColors[style.penIndex],
+                      useDevelopmentTypeface: style.useDevelopmentTypeface,
+                    ),
+                    cursorColor: brandInk,
+                    cursorWidth: 1.2,
+                    decoration: InputDecoration(
+                      contentPadding: visiblePadding,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
                     ),
                   ),
                 ),
               ),
-            if (widget.originals.isNotEmpty)
+              if (focus.hasFocus) ...[
+                Positioned(
+                  top: 0,
+                  bottom: 0,
+                  left: 0,
+                  width: padding.left,
+                  child: _dismissGutter(),
+                ),
+                Positioned(
+                  top: 0,
+                  bottom: 0,
+                  right: 0,
+                  width: padding.right,
+                  child: _dismissGutter(),
+                ),
+              ],
+              if (widget.originals.isNotEmpty)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      key: const ValueKey('transcription-guide'),
+                      painter: TranscriptionGuidePainter(
+                        originals: widget.originals,
+                        focus: focus,
+                        controller: text,
+                        scroll: scroll,
+                        fieldKey: fieldRenderKey,
+                        bottomPadding: visiblePadding.bottom,
+                        layout: _guideLayout,
+                        style: writingTextStyle(
+                          style.fontIndex,
+                          color: const Color(0xff8b8273).withValues(alpha: .58),
+                          useDevelopmentTypeface: style.useDevelopmentTypeface,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (widget.originals.isNotEmpty)
+                Positioned.fill(
+                  child: NotebookReflection(
+                    originals: widget.originals,
+                    controller: text,
+                    scroll: scroll,
+                    fieldKey: fieldRenderKey,
+                    padding: visiblePadding,
+                    onEdit: widget.onReflection,
+                  ),
+                ),
               Positioned.fill(
-                child: NotebookReflection(
-                  originals: widget.originals,
+                child: WritingPen(
                   controller: text,
                   scroll: scroll,
+                  focus: focus,
                   fieldKey: fieldRenderKey,
-                  padding: padding,
-                  onEdit: widget.onReflection,
+                  animateInk: style.penMotion,
+                  color: penColors[style.penIndex],
                 ),
               ),
-            Positioned.fill(
-              child: WritingPen(
-                controller: text,
-                scroll: scroll,
-                focus: focus,
-                fieldKey: fieldRenderKey,
-                animateInk: style.penMotion,
-                color: penColors[style.penIndex],
-              ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );

@@ -179,8 +179,8 @@ class _WritingPenState extends State<WritingPen>
         if (bounds.contains(point)) {
           final line = editable.getLineAtOffset(position);
           next = (center: point, showInk: false);
-          if (line.isValid &&
-              (line.isCollapsed || position.offset == line.end)) {
+          if (line.isCollapsed ||
+              (line.isValid && position.offset == line.end)) {
             final direction = editable.textDirection;
             final cellWidth = TextPainter.computeWidth(
               text: TextSpan(text: '한', style: editable.text?.style),

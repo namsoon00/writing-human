@@ -59,6 +59,37 @@ class DeviceRemote implements CloudRemote {
 }
 
 void main() {
+  test('Concurrent changes to different book positions both survive', () {
+    const base = Library(
+      books: [
+        Book(id: 'a', title: '첫 책'),
+        Book(id: 'b', title: '둘째 책'),
+      ],
+      records: [
+        WritingRecord(id: 'r', bookId: 'a', title: '첫 필사'),
+        WritingRecord(id: 's', bookId: 'b', title: '둘째 필사'),
+      ],
+      pages: [
+        WritingPage(id: 'a1', recordId: 'r', number: 1),
+        WritingPage(id: 'a2', recordId: 'r', number: 2),
+        WritingPage(id: 'b1', recordId: 's', number: 1),
+        WritingPage(id: 'b2', recordId: 's', number: 2),
+      ],
+      bookPositions: {'a': 'a1', 'b': 'b1'},
+    );
+    final local = base.copy(bookPositions: {'a': 'a2', 'b': 'b1'});
+    final remote = base.copy(bookPositions: {'a': 'a1', 'b': 'b2'});
+    expect(mergeLibraries(base, local, remote).library.bookPositions, {
+      'a': 'a2',
+      'b': 'b2',
+    });
+    final olderClient = base.copy(bookPositions: {});
+    expect(
+      mergeLibraries(base, local, olderClient).library.bookPositions,
+      local.bookPositions,
+    );
+  });
+
   test(
     'Source position merges independently without making conflict copies',
     () {

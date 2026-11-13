@@ -169,7 +169,10 @@ Book.owner는 저자와 별개인 장서표 이름이다. WritingPage.writtenOn�
 
 `ui/pencil_marks.dart`의 PencilTextController는 표시 span만 생성한다. composing 밑줄을 함께 표현하며, controller.value·selection·composing을 리스너에서 되쓰지 않는다. 구절 표시/부분 지우기는 LibraryController에서 저장하며 기존 편집기 키와 컨트롤러를 유지한다. 본문 수정은 공통 앞/뒤 문자열의 바깥에 남은 표시를 이동·분할하고, 바뀐 글자의 표시는 제거한다. emoji surrogate pair를 편집 경계에서 분리하지 않는다. 페이지 미리보기·넘김에도 같은 span 표현을 사용한다.
 
-동기화에서는 장서표 이름을 책 제목/저자와 독립적으로 병합한다. 같은 본문 및 한쪽 본문 변경에서는 표시 범위를 대상 본문으로 이동한 뒤 3-way membership으로 병합하고, 본문 충돌 사본에도 날짜와 표시를 복사한다. 서버는 optional 이름·날짜·범위를 검증하며 이전 JSON도 허용한다. 현재 위치의 책갈피 표시는 기존 activePageId를 읽으며 별도의 책별 책갈피 데이터를 만들지 않는다.
+동기화에서는 장서표 이름을 책 제목/저자와 독립적으로 병합한다. 같은 본문 및 한쪽 본문 변경에서는 표시 범위를 대상 본문으로 이동한 뒤 3-way membership으로 병합하고, 본문 충돌 사본에도 날짜와 표시를 복사한다. 서버는 optional 이름·날짜·범위를 검증하며 이전 JSON도 허용한다. 책마다 마지막으로 펼친 쪽은 라이브러리의 선택 필드 `bookPositions`에 저장한다.
+SQLite는 기존 `app_state.settings`에 담고 웹·백업은 라이브러리 JSON에 담는다.
+이전 기록은 기존 활성 쪽부터 기억한다. 동기화는 책별로 위치를 병합하고,
+백업을 합칠 때는 기존 위치를 유지하며 새로 들여온 책과 쪽의 ID를 연결한다.
 
 
 

@@ -5,13 +5,13 @@ import 'store.dart';
 import 'library_backup.dart';
 
 class LibraryController extends ChangeNotifier {
-  LibraryController(this.store, this.library) {
-    _rememberBookPosition(library);
-  }
+  LibraryController(this.store, Library library)
+    : library = library.bookPositions.containsKey(library.activeRecord?.bookId)
+          ? library
+          : library.rememberActiveBookPosition();
 
   final LibraryStore store;
   Library library;
-  final _bookPositions = <String, String>{};
   String? saveError;
   bool saving = false;
   bool _disposed = false;
@@ -37,17 +37,26 @@ class LibraryController extends ChangeNotifier {
       positionGeneration++;
       next = next.copy(sync: next.sync.copy(positionDirty: true));
     }
-    if (next.activePageId != library.activePageId ||
-        !identical(next.records, library.records)) {
-      _rememberBookPosition(next);
+    if (!fromSync) {
+      if (next.activePageId != library.activePageId ||
+          (!identical(next.records, library.records) &&
+              next.activeRecord?.bookId != library.activeRecord?.bookId)) {
+        next = next.rememberActiveBookPosition();
+      }
+      if (!identical(next.records, library.records)) {
+        next = next.copy(
+          bookPositions: next.validBookPositions(next.bookPositions),
+        );
+      }
     }
+    final snapshot = next;
     library = next;
     final revision = ++_revision;
     saving = true;
     notifyListeners();
     _tail = _tail.then((_) async {
       try {
-        await store.save(next);
+        await store.save(snapshot);
         if (revision == _revision) {
           saving = false;
           saveError = null;
@@ -507,18 +516,14 @@ class LibraryController extends ChangeNotifier {
     library.copy(activePageId: id, writing: true),
     positionChanged: true,
   );
-  void _rememberBookPosition(Library snapshot) {
-    final id = snapshot.activeRecord?.bookId;
-    final pageId = snapshot.activePageId;
-    if (id != null && pageId != null) _bookPositions[id] = pageId;
-  }
-
   WritingPage? resumePageForBook(String id) {
     final recordIds = library.records
         .where((record) => record.bookId == id)
         .map((record) => record.id)
         .toSet();
-    final savedId = _bookPositions[id];
+    final savedId =
+        library.bookPositions[id] ??
+        (library.activeRecord?.bookId == id ? library.activePageId : null);
     final lastPages = <String, WritingPage>{};
     for (final page in library.pages) {
       if (!recordIds.contains(page.recordId)) continue;

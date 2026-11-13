@@ -15,6 +15,18 @@ const origin = 'https://writing-human.test';
 const empty = () => ({version: 1, books: [], records: [], pages: [], activePageId: null, writing: false, style: {paperIndex: 0, penIndex: 0, fontIndex: 1, guides: false, favoriteBookIds: []}});
 const request = (user, method='GET', data, path='/api/sync/library', originHeader=origin) => new Request(origin+path, {method, headers: {...(user ? {'oai-authenticated-user-id': user} : {}), origin: originHeader, 'content-type': 'application/json', 'x-writing-human-sync': '1', 'x-writing-human-account': user ?? ''}, ...(data ? {body: JSON.stringify(data)} : {})});
 
+test('Book positions must reference a page in the same book', () => {
+  const library = empty();
+  library.books = [{id: 'a', title: '첫 책', author: ''}, {id: 'b', title: '둘째 책', author: ''}];
+  library.records = [{id: 'r', bookId: 'a', title: '필사', source: ''}];
+  library.pages = [{id: 'p', recordId: 'r', number: 1, text: '', base: 0, extent: 0, scroll: 0}];
+  assert.equal(validLibrary(library), true);
+  assert.equal(validLibrary({...library, bookPositions: {a: 'p'}}), true);
+  for (const bookPositions of [{b: 'p'}, {a: 'missing'}, {missing: 'p'}, null, []]) {
+    assert.equal(validLibrary({...library, bookPositions}), false);
+  }
+});
+
 test('Source paragraph is optional and accepts a nonnegative integer', () => {
   const library = empty();
   const record = {id: 'r', bookId: null, title: '필사', source: '첫째\n\n둘째'};

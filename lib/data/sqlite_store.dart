@@ -155,6 +155,9 @@ class SqliteLibraryStore implements LibraryStore {
         jsonDecode(state?['sync_state'] as String? ?? '{}') as Json,
       ),
       activePageId: state?['active_page_id'] as String?,
+      bookPositions: Map<String, String>.from(
+        settings['bookPositions'] as Json? ?? {},
+      ),
       writing: state?['writing'] == 1,
       style: WritingStyle.fromJson(settings),
       lastBackupAt: DateTime.tryParse(
@@ -228,6 +231,8 @@ class SqliteLibraryStore implements LibraryStore {
         'writing': library.writing ? 1 : 0,
         'settings': jsonEncode({
           ...library.style.toJson(),
+          if (library.bookPositions.isNotEmpty)
+            'bookPositions': library.bookPositions,
           if (library.lastBackupAt != null)
             'lastBackupAt': library.lastBackupAt!.toIso8601String(),
         }),

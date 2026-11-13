@@ -705,6 +705,7 @@ class Library {
     this.records = const [],
     this.pages = const [],
     this.activePageId,
+    this.bookPositions = const {},
     this.writing = false,
     this.style = const WritingStyle(),
     this.sync = const SyncMetadata(),
@@ -714,6 +715,7 @@ class Library {
   final List<WritingRecord> records;
   final List<WritingPage> pages;
   final String? activePageId;
+  final Map<String, String> bookPositions;
   final bool writing;
   final WritingStyle style;
   final SyncMetadata sync;
@@ -743,6 +745,7 @@ class Library {
     List<WritingRecord>? records,
     List<WritingPage>? pages,
     String? activePageId,
+    Map<String, String>? bookPositions,
     bool? writing,
     WritingStyle? style,
     SyncMetadata? sync,
@@ -753,6 +756,7 @@ class Library {
     records: records ?? this.records,
     pages: pages ?? this.pages,
     activePageId: clearActive ? null : activePageId ?? this.activePageId,
+    bookPositions: bookPositions ?? this.bookPositions,
     writing: writing ?? this.writing,
     style: style ?? this.style,
     sync: sync ?? this.sync,
@@ -767,6 +771,7 @@ class Library {
     'records': records.map((r) => r.toJson()).toList(),
     'pages': pages.map((p) => p.toJson()).toList(),
     'activePageId': activePageId,
+    if (bookPositions.isNotEmpty) 'bookPositions': bookPositions,
     'writing': writing,
   };
   Json toCloudJson() => toJson()
@@ -787,6 +792,9 @@ class Library {
           .map((v) => WritingPage.fromJson(v as Json))
           .toList(),
       activePageId: j['activePageId'] as String?,
+      bookPositions: Map<String, String>.from(
+        j['bookPositions'] as Json? ?? {},
+      ),
       writing: j['writing'] as bool,
       style: WritingStyle.fromJson(j['style'] as Json? ?? {}),
       sync: SyncMetadata.fromJson(j['sync'] as Json? ?? {}),
@@ -795,6 +803,28 @@ class Library {
     result.validate();
     return result;
   }
+  Map<String, String> validBookPositions(Map<String, String> positions) {
+    if (positions.isEmpty) return const {};
+    final bookIds = books.map((book) => book.id).toSet();
+    final recordBooks = {
+      for (final record in records) record.id: record.bookId,
+    };
+    final pageBooks = {
+      for (final page in pages) page.id: recordBooks[page.recordId],
+    };
+    return {
+      for (final entry in positions.entries)
+        if (bookIds.contains(entry.key) && pageBooks[entry.value] == entry.key)
+          entry.key: entry.value,
+    };
+  }
+
+  Library rememberActiveBookPosition() {
+    final bookId = activeRecord?.bookId;
+    if (bookId == null || bookPositions[bookId] == activePageId) return this;
+    return copy(bookPositions: {...bookPositions, bookId: activePageId!});
+  }
+
   void validate() {
     style.bookDetails.validate();
     final bookIds = books.map((b) => b.id).toSet();
@@ -847,6 +877,7 @@ class Library {
                 (m) => m.start < 0 || m.end <= m.start || m.end > p.text.length,
               ),
         ) ||
+        validBookPositions(bookPositions).length != bookPositions.length ||
         (activePageId != null && !pageIds.contains(activePageId)) ||
         (writing && activePage == null)) {
       throw const FormatException('저장된 기록의 구조를 확인할 수 없습니다.');

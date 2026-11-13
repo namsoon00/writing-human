@@ -44,6 +44,7 @@ void main() {
       expect(parsed.library.sync.accountId, isNull);
       expect(parsed.library.lastBackupAt, isNull);
       expect(parsed.createdAt, date);
+      expect(parsed.library.bookPositions[record.bookId], page.id);
 
       controller.editPage(page.id, '이 기기에서 바꾼 문장', 2, 6, 4);
       controller.setSource(record.id, '새로 붙인 원문');
@@ -61,6 +62,7 @@ void main() {
       expect(result.records, hasLength(2));
       expect(result.pages, hasLength(2));
       expect(result.activePage!.text, '이 기기에서 바꾼 문장');
+      expect(result.bookPositions[record.bookId], page.id);
       final restored = result.pages.singleWhere((p) => p.id != page.id);
       expect(restored.text, '기록한 문장');
       expect(restored.base, 1);

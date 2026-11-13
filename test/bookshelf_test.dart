@@ -20,7 +20,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('Notebook covers resume the page last open in each book', (
+  testWidgets('Notebook covers resume each book after the app reopens', (
     tester,
   ) async {
     final store = MemoryStore()
@@ -57,6 +57,12 @@ void main() {
     await tester.tap(cover('b'));
     await tester.pumpAndSettle();
     expect(store.data.activePageId, 'other');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    store.data = Library.decode(store.data.encode());
+    await tester.pumpWidget(WritingHumanApp(store: store));
+    await tester.pumpAndSettle();
 
     await shelf(tester);
     await tester.scrollUntilVisible(cover('a'), 200, scrollable: scroll);

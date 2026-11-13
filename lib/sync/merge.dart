@@ -416,7 +416,7 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
   if (!normalized.any((p) => p.id == active)) {
     active = normalized.firstOrNull?.id;
   }
-  final result = Library(
+  final merged = Library(
     books: books.values.toList()..sort((a, b) => a.id.compareTo(b.id)),
     records: records.values.toList()..sort((a, b) => a.id.compareTo(b.id)),
     pages: normalized,
@@ -426,6 +426,19 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
     style: style,
     sync: local.sync,
     lastBackupAt: local.lastBackupAt,
+  );
+  final positions = <String, String>{};
+  final localPositions = merged.validBookPositions(local.bookPositions);
+  final remotePositions = merged.validBookPositions(remote.bookPositions);
+  for (final book in merged.books) {
+    final previous = base.bookPositions[book.id];
+    final here = localPositions[book.id];
+    final there = remotePositions[book.id];
+    final position = here == null || here == previous ? there ?? here : here;
+    if (position != null) positions[book.id] = position;
+  }
+  final result = merged.copy(
+    bookPositions: merged.validBookPositions(positions),
   );
   result.validate();
   return MergeResult(result, copies);

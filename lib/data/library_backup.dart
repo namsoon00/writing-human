@@ -195,6 +195,11 @@ Library mergeBackup(Library current, Library backup) {
     records: records.values.toList(),
     pages: pages.values.toList(),
     activePageId: active,
+    bookPositions: {
+      for (final entry in backup.bookPositions.entries)
+        ?bookIds[entry.key]: ?restoredPageIds[entry.value],
+      ...current.bookPositions,
+    },
     writing: current.activePageId == null ? backup.writing : current.writing,
     style: current.style.copy(
       favoriteBookIds: [

@@ -48,7 +48,7 @@ const originals = values => Array.isArray(values) &&
 
 export function validLibrary(l) {
   if (!object(l) || l.version !== 1 || 'sync' in l || !Array.isArray(l.books) || !Array.isArray(l.records) || !Array.isArray(l.pages) || l.books.length > 10000 || l.records.length > 20000 || l.pages.length > 30000 || typeof l.writing !== 'boolean') return false;
-  const books = new Set(), records = new Set(), pages = new Set(), numbers = new Set();
+  const books = new Set(), records = new Map(), pages = new Map(), numbers = new Set();
   for (const b of l.books) {
     if (!object(b) || !id(b.id) || books.has(b.id) || !text(b.title, 500) || !text(b.author, 500)) return false;
     if ('owner' in b && !text(b.owner, 80)) return false;
@@ -62,7 +62,7 @@ export function validLibrary(l) {
     if (!object(r) || !id(r.id) || records.has(r.id) || (r.bookId !== null && !books.has(r.bookId)) || !text(r.title, 500) || !text(r.source)) return false;
     if ('sourceParagraph' in r && (!integer(r.sourceParagraph) || r.sourceParagraph < 0)) return false;
     if ('originals' in r && !originals(r.originals)) return false;
-    records.add(r.id);
+    records.set(r.id, r.bookId);
   }
   for (const p of l.pages) {
     const n = JSON.stringify([p?.recordId, p?.number]);
@@ -77,9 +77,12 @@ export function validLibrary(l) {
         ('continued' in entry && typeof entry.continued !== 'boolean') ||
         !integer(entry.paragraph) || entry.paragraph < 0 ||
         !integer(entry.sourceOffset) || entry.sourceOffset < 0 || entry.sourceOffset > entry.source.length))) return false;
-    pages.add(p.id); numbers.add(n);
+    pages.set(p.id, records.get(p.recordId)); numbers.add(n);
   }
   if ((l.activePageId !== null && !pages.has(l.activePageId)) || (l.writing && l.activePageId === null)) return false;
+  if ('bookPositions' in l && (!object(l.bookPositions) ||
+    Object.entries(l.bookPositions).some(([book, page]) =>
+      !books.has(book) || !id(page) || pages.get(page) !== book))) return false;
   const s = l.style;
   if (!object(s) || !integer(s.paperIndex) || s.paperIndex < 0 || s.paperIndex > 3 || !integer(s.penIndex) || s.penIndex < 0 || s.penIndex > 2 || !integer(s.fontIndex) || s.fontIndex < 0 || s.fontIndex > 2 || typeof s.guides !== 'boolean' || !Array.isArray(s.favoriteBookIds) || s.favoriteBookIds.some(v => !id(v))) return false;
   if ('useDevelopmentTypeface' in s && typeof s.useDevelopmentTypeface !== 'boolean') return false;
@@ -94,7 +97,7 @@ export function validLibrary(l) {
       ('tone' in choice && (!integer(choice.tone) || choice.tone < 0 || choice.tone > 3)))) return false;
   }
   // Do not let clients smuggle extra secrets or alternate identities into storage.
-  const keys = ['version', 'books', 'records', 'pages', 'activePageId', 'writing', 'style'];
+  const keys = ['version', 'books', 'records', 'pages', 'activePageId', 'bookPositions', 'writing', 'style'];
   return Object.keys(l).every(k => keys.includes(k));
 }
 

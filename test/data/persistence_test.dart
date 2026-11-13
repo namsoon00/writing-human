@@ -64,6 +64,38 @@ void main() {
     },
   );
 
+  test('Each book position survives a real SQLite close and reopen', () async {
+    final file = '${dir.path}/book-positions.db';
+    final store = await SqliteLibraryStore.open(
+      file,
+      factory: databaseFactoryFfi,
+    );
+    final controller = LibraryController(store, await store.load());
+    controller.createBook('첫 책', '');
+    final firstBook = controller.library.activeBook!.id;
+    final firstPage = controller.library.activePageId!;
+    controller.addPage();
+    controller.openPage(firstPage);
+    controller.createBook('둘째 책', '');
+    final secondBook = controller.library.activeBook!.id;
+    final secondPage = controller.library.activePageId!;
+    await controller.settled;
+    expect(controller.saveError, isNull);
+    controller.dispose();
+    await store.close();
+
+    final reopened = await SqliteLibraryStore.open(
+      file,
+      factory: databaseFactoryFfi,
+    );
+    final loaded = LibraryController(reopened, await reopened.load());
+    expect(loaded.library.activePageId, secondPage);
+    expect(loaded.resumePageForBook(firstBook)?.id, firstPage);
+    expect(loaded.resumePageForBook(secondBook)?.id, secondPage);
+    loaded.dispose();
+    await reopened.close();
+  });
+
   test('Unbound record attaches to book without losing its page', () async {
     final store = await SqliteLibraryStore.open(
       '${dir.path}/library.db',

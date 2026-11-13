@@ -194,6 +194,34 @@ void main() {
     await tester.tap(find.byTooltip('노트 검색'));
     await tester.pumpAndSettle();
     final search = find.byKey(const ValueKey('shelf-title-search'));
+    final body = tester.widget<Semantics>(
+      find.bySemanticsIdentifier('writing-page-body'),
+    );
+    final render = tester.renderObject<RenderObject>(find.byWidget(body));
+    expect(render.debugSemantics?.attached ?? false, isFalse);
+    final editable = find.descendant(
+      of: search,
+      matching: find.byType(EditableText),
+    );
+    final input = tester.widget<EditableText>(editable);
+    final searchTop = tester.getTopLeft(search).dy;
+    final composing = TextEditingValue(
+      text: '노',
+      selection: const TextSelection.collapsed(offset: 1),
+      composing: const TextRange(start: 0, end: 1),
+    );
+    tester.testTextInput.updateEditingValue(composing);
+    await tester.pumpAndSettle();
+    addTearDown(tester.view.resetViewInsets);
+    for (final inset in [280.0, 0.0, 280.0]) {
+      tester.view.viewInsets = FakeViewPadding(bottom: inset);
+      await tester.pumpAndSettle();
+      expect(tester.widget<EditableText>(editable).focusNode, input.focusNode);
+      expect(input.focusNode.hasFocus, isTrue);
+      expect(input.controller.value, composing);
+      expect(tester.getTopLeft(search).dy, closeTo(searchTop, 1));
+    }
+    tester.view.resetViewInsets();
     await tester.enterText(search, ' 노트 16 ');
     await tester.pumpAndSettle();
     expect(cover('b1'), findsNothing);

@@ -54,7 +54,12 @@ test('a short tap on a nested Flutter surface opens the body input', () => {
 
 test('paper margins and other controls keep their own tap behavior', () => {
   const control = {localName: 'flt-semantics', closest: () => null};
-  for (const input of [{x: 15}, {x: 370}, {control}]) {
+  for (const input of [
+    {x: 15}, {x: 370}, {control},
+    {control: {localName: 'input'}},
+    {control: {localName: 'textarea'}},
+    {control: {isContentEditable: true}},
+  ]) {
     assert.deepEqual(simulate(input), {focused: false, prevented: false});
   }
 });

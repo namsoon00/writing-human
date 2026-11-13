@@ -45,12 +45,14 @@ class _CollectionSheetState extends State<CollectionSheet> {
   String? bookId;
   String query = '';
   final searchField = TextEditingController();
+  final searchFocus = FocusNode(debugLabel: 'collection search');
   final shelfScroll = ScrollController();
   final writingScroll = ScrollController();
   final scrollStorage = PageStorageBucket();
   LibraryController get c => widget.controller;
 
   void _clearSearch() {
+    searchFocus.unfocus();
     searchField.clear();
     query = '';
     showSearch = false;
@@ -58,6 +60,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
 
   @override
   void dispose() {
+    searchFocus.dispose();
     searchField.dispose();
     shelfScroll.dispose();
     writingScroll.dispose();
@@ -422,7 +425,6 @@ class _CollectionSheetState extends State<CollectionSheet> {
   }
 
   void _switchView() {
-    FocusScope.of(context).unfocus();
     setState(() {
       books = !books;
       _clearSearch();
@@ -430,7 +432,6 @@ class _CollectionSheetState extends State<CollectionSheet> {
   }
 
   void _toggleSearch() {
-    if (showSearch) FocusScope.of(context).unfocus();
     setState(() {
       if (showSearch) {
         _clearSearch();
@@ -468,13 +469,16 @@ class _CollectionSheetState extends State<CollectionSheet> {
       final media = MediaQuery.of(context);
       final keyboard = media.viewInsets.bottom;
       final handleHeight = widget.showHandle ? kMinInteractiveDimension : 0.0;
+      final restingHeight = math.min(
+        media.size.height * .88 + handleHeight,
+        media.size.height,
+      );
       final sheet = SizedBox(
         height: math.max(
           0.0,
-          math.min(
-            media.size.height * .88 + handleHeight,
-            media.size.height - keyboard,
-          ),
+          showSearch
+              ? restingHeight - keyboard
+              : math.min(restingHeight, media.size.height - keyboard),
         ),
         child: SafeArea(
           top: false,
@@ -562,7 +566,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                   ],
                 ),
               ),
-              if (topLevel && keyboard == 0)
+              if (topLevel && !showSearch)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
@@ -600,6 +604,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                   child: TextField(
                     key: const ValueKey('shelf-title-search'),
                     controller: searchField,
+                    focusNode: searchFocus,
                     autofocus: true,
                     decoration: const InputDecoration(
                       hintText: '노트 제목 찾기',
@@ -615,6 +620,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
                   child: TextField(
                     controller: searchField,
+                    focusNode: searchFocus,
                     autofocus: true,
                     decoration: InputDecoration(
                       hintText: '문장, 책, 날짜 찾기',
@@ -681,30 +687,33 @@ class _CollectionSheetState extends State<CollectionSheet> {
       );
       return PageStorage(
         bucket: scrollStorage,
-        child: Padding(
-          padding: EdgeInsets.only(bottom: keyboard),
-          child: book == null
-              ? shelf
-                    ? DecoratedBox(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Color(0xffeee0cd), Color(0xffe2c9ac)],
+        child: BlockSemantics(
+          blocking: widget.showHandle,
+          child: Padding(
+            padding: EdgeInsets.only(bottom: keyboard),
+            child: book == null
+                ? shelf
+                      ? DecoratedBox(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Color(0xffeee0cd), Color(0xffe2c9ac)],
+                            ),
                           ),
-                        ),
-                        child: sheet,
-                      )
-                    : ColoredBox(color: const Color(0xffe8dbca), child: sheet)
-              : PaperBackdrop(
-                  color: bookPaper,
-                  grainOpacity: paperGrainOpacity[paperIndex],
-                  binding: c.detailsFor(book).binding,
-                  coverIndex: c.coverIndexFor(book),
-                  pagesAfter: volume.length,
-                  outsideColor: bookPaper,
-                  child: sheet,
-                ),
+                          child: sheet,
+                        )
+                      : ColoredBox(color: const Color(0xffe8dbca), child: sheet)
+                : PaperBackdrop(
+                    color: bookPaper,
+                    grainOpacity: paperGrainOpacity[paperIndex],
+                    binding: c.detailsFor(book).binding,
+                    coverIndex: c.coverIndexFor(book),
+                    pagesAfter: volume.length,
+                    outsideColor: bookPaper,
+                    child: sheet,
+                  ),
+          ),
         ),
       );
     },

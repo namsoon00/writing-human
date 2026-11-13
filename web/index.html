@@ -34,7 +34,7 @@
   <style>
     /* The semantics textarea sits outside Flutter's touch-action pane.
        Leave pan arbitration to the editor and paper recognizers. */
-    flutter-view flt-semantics textarea { touch-action: none; }
+    flutter-view [flt-semantics-identifier="writing-page-body"] textarea { touch-action: none; }
 
     @supports (-webkit-touch-callout: none) {
       /* Flutter handles touch selection for the notebook body. Keep its
@@ -80,6 +80,10 @@
         if (control && !control.closest(body)) return null;
         const editor = view.querySelector(`${body} textarea`);
         if (!editor || editor.disabled) return null;
+        const editable = path.find(node =>
+          node.localName === 'input' || node.localName === 'textarea' ||
+          node.isContentEditable);
+        if (editable && editable !== editor) return null;
         const {left, right, top, bottom} = editor.getBoundingClientRect();
         return touch.clientX >= left && touch.clientX < right &&
           touch.clientY >= top && touch.clientY < bottom ? editor : null;

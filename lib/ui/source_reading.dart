@@ -448,7 +448,7 @@ class _SourceReadingState extends State<SourceReading> {
                   if (failed && editing)
                     Semantics(
                       liveRegion: true,
-                      child: const Text('느낀 점을 저장하지 못했어요. 다시 저장해 주세요.'),
+                      child: const Text('메모를 저장하지 못했어요. 다시 저장해 주세요.'),
                     ),
                   if (original != null &&
                       original.text.trim().isNotEmpty &&
@@ -478,7 +478,7 @@ class _SourceReadingState extends State<SourceReading> {
                               icon: const Icon(CupertinoIcons.pencil, size: 16),
                               onPressed: () => _editReflection(original, match),
                               label: Text(
-                                reflection == null ? '느낀 점 남기기' : '느낀 점 고치기',
+                                reflection == null ? '메모 남기기' : '메모 고치기',
                               ),
                             ),
                     ),
@@ -687,23 +687,14 @@ class _ReflectionNote extends StatelessWidget {
     final lineHeight = MediaQuery.textScalerOf(context).scale(27) * 1.24;
     return Padding(
       padding: const EdgeInsets.fromLTRB(6, 10, 4, 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const CustomPaint(size: Size(24, 22), painter: ReflectionArrow()),
-              const Icon(
-                CupertinoIcons.pencil,
-                color: reflectionGraphite,
-                size: 15,
-              ),
-              const SizedBox(width: 5),
-              Text('느낀 점', style: reflectionHandwriting.copyWith(fontSize: 21)),
-            ],
+          const ExcludeSemantics(
+            child: CustomPaint(size: Size(24, 22), painter: ReflectionArrow()),
           ),
-          Padding(
-            padding: const EdgeInsets.only(left: 26),
+          const SizedBox(width: 2),
+          Expanded(
             child: CustomPaint(
               painter: _NotebookLines(lineHeight),
               child: field == null
@@ -713,7 +704,7 @@ class _ReflectionNote extends StatelessWidget {
                       child: Text(text ?? '', style: reflectionHandwriting),
                     )
                   : Semantics(
-                      label: '느낀 점 입력',
+                      label: '원문 메모 입력',
                       child: WritingCaret(
                         controller: field,
                         color: reflectionGraphite,

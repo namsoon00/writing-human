@@ -496,7 +496,8 @@ void main() {
             .fontFamily,
         'NanumPenScript',
       );
-      await tester.tap(find.text('느낀 점 고치기'));
+      expect(find.text('느낀 점'), findsNothing);
+      await tester.tap(find.text('메모 고치기'));
       await tester.pumpAndSettle();
       final noteField = find.byKey(const ValueKey('original-reflection-input'));
       final save = find.widgetWithText(FilledButton, '저장');
@@ -691,7 +692,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('줄에 붙인 원문'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('느낀 점 남기기'));
+    await tester.tap(find.text('메모 남기기'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('original-reflection-input')),

@@ -247,6 +247,14 @@ class _CollectionSheetState extends State<CollectionSheet> {
               ),
             ),
           ],
+          TextButton(
+            onPressed: () => showBookAppearance(context, c, book.id),
+            style: TextButton.styleFrom(
+              foregroundColor: brandInk,
+              minimumSize: const Size(0, 48),
+            ),
+            child: const Text('책 꾸미기'),
+          ),
         ],
       ),
     );

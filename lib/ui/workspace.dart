@@ -44,7 +44,6 @@ class Workspace extends StatefulWidget {
 class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   LibraryController get c => widget.controller;
   final editorFocus = FocusNode();
-  final reflectionFocus = FocusNode();
   final _pageTurn = PageTurnController();
   AudioPlayer? _pageAudio;
   String? _coverAnchor;
@@ -61,6 +60,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   ({String pageId, int offset, int request})? _reveal;
   int _revealRequest = 0;
   ({String pageId, String? bookId, RegisteredOriginal original})? _savedSource;
+  final _originalByPage = <String, String>{};
+  final _originalByVolume = <({String? bookId, String? recordId}), String>{};
+
   ({String pageId, String originalId})? _guided;
   late final SourceIntake _intake = widget.sourceIntake ?? createSourceIntake();
   StreamSubscription<void>? _incomingEvents;
@@ -270,8 +272,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       c.addListener(_changed);
       widget.sync?.addListener(_changed);
       editorFocus.unfocus();
-      reflectionFocus.unfocus();
       _editingPageId = null;
+      _originalByPage.clear();
+      _originalByVolume.clear();
       _coverAnchor = null;
       _reveal = null;
       fresh = c.library.pages.isEmpty;
@@ -285,6 +288,10 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     if (!mounted) return;
     setState(() {
       if (fresh && !userFresh && c.library.activePage != null) fresh = false;
+      if (_accountLocked) {
+        _originalByPage.clear();
+        _originalByVolume.clear();
+      }
       if (_accountLocked || !_showCover) _coverAnchor = null;
       if (_accountLocked || _reveal?.pageId != page.id) _reveal = null;
       if (_accountLocked || _guided?.pageId != page.id) _guided = null;
@@ -308,7 +315,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     c.removeListener(_changed);
     widget.sync?.removeListener(_changed);
     editorFocus.dispose();
-    reflectionFocus.dispose();
     final audio = _pageAudio;
     if (audio != null) unawaited(audio.dispose());
     super.dispose();
@@ -317,7 +323,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   void _blur() {
     _editingPageId = null;
     editorFocus.unfocus();
-    reflectionFocus.unfocus();
     c.setEditorState(focused: false, isComposing: _editorComposing);
   }
 
@@ -437,7 +442,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   }
 
   void _menu() {
-    if (_editorComposing && reflectionFocus.hasFocus) return;
     _blur();
     _sheet(
       ToolsScreen(
@@ -870,16 +874,35 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         final saved = await register();
         if (saved != null) _offerTranscription(selectedPage, saved);
       } else {
-        final initial = bookDetails == null
+        final match = bookDetails == null
             ? matchOriginal(available, selectedPage.text, selectedPage.extent)
             : null;
+        final scope = (
+          bookId: bookId,
+          recordId: bookId == null ? selectedPage.recordId : null,
+        );
+        String? availableId(String? id) =>
+            available.any((item) => item.id == id) ? id : null;
+        final pageChoice = bookDetails == null
+            ? _originalByPage[selectedPage.id]
+            : null;
+        final guided = bookDetails == null && _guided?.pageId == selectedPage.id
+            ? _guided?.originalId
+            : null;
+        final initialId =
+            availableId(pageChoice) ??
+            availableId(guided) ??
+            match?.original.id ??
+            availableId(_originalByVolume[scope]);
+        if (initialId != null) _originalByVolume[scope] = initialId;
         ({String? bookId, RegisteredOriginal original})? savedElsewhere;
         final route =
             ModalBottomSheetRoute<
               ({RegisteredOriginal? original, Passage? passage})
             >(
               isScrollControlled: true,
-              showDragHandle: true,
+              showDragHandle: false,
+              enableDrag: false,
               backgroundColor: referencePaperColor(
                 paperColors[_paperStyle(selectedBook).paperIndex],
               ),
@@ -891,7 +914,15 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 listenable: owner,
                 builder: (context, _) => SourceReading(
                   originals: originals(),
-                  match: initial,
+                  initialOriginalId: initialId,
+                  match: match,
+                  onReadOriginal: (id) {
+                    if (!mounted || c != owner || _accountLocked) return;
+                    _originalByVolume[scope] = id;
+                    if (bookDetails == null) {
+                      _originalByPage[selectedPage.id] = id;
+                    }
+                  },
                   style: _paperStyle(selectedBook),
                   coverIndex: selectedBook == null
                       ? null
@@ -949,15 +980,13 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                       range: range,
                     );
                   },
-                  onSaveReflection: (original, reflection) => owner.composing
-                      ? Future.value(false)
-                      : _saveReflection(
-                          owner,
-                          bookId,
-                          selectedPage.recordId,
-                          original,
-                          reflection,
-                        ),
+                  onSaveReflection: (original, reflection) => _saveReflection(
+                    owner,
+                    bookId,
+                    selectedPage.recordId,
+                    original,
+                    reflection,
+                  ),
                 ),
               ),
             );
@@ -1212,8 +1241,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         !_editorComposing &&
         !c.composing &&
         c.saveError == null;
-    final canSwipe =
-        navigationEnabled && !editorFocus.hasFocus && !reflectionFocus.hasFocus;
+    final canSwipe = navigationEnabled && !editorFocus.hasFocus;
     final compact = MediaQuery.sizeOf(context).height < 520;
     Widget paper(WritingPage target, int index, {bool preview = true}) =>
         _paperSurface(
@@ -1326,7 +1354,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             bookId: bookId,
             recordId: currentPage.recordId,
           );
-    final owner = c;
     final surface = PaperBackdrop(
       binding: style.bookDetails.binding,
       color: paperColors[style.paperIndex],
@@ -1460,15 +1487,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                                   .firstOrNull
                             : null,
                         keyboardOverlap: keyboardOverlap,
-                        reflectionFocus: reflectionFocus,
-                        onSaveReflection: (original, reflection) =>
-                            _saveReflection(
-                              owner,
-                              bookId,
-                              currentPage.recordId,
-                              original,
-                              reflection,
-                            ),
                         reveal: _reveal?.pageId == currentPage.id
                             ? (
                                 offset: _reveal!.offset,
@@ -1522,9 +1540,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       behavior: HitTestBehavior.translucent,
       excludeFromSemantics: true,
       onTap: () {
-        if ((editorFocus.hasFocus || reflectionFocus.hasFocus) &&
-            !_editorComposing &&
-            !c.composing) {
+        if (editorFocus.hasFocus && !_editorComposing && !c.composing) {
           _blur();
         }
       },

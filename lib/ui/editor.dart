@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../data/model.dart';
-import '../source/originals.dart';
 import 'notebook_reflection.dart';
 import 'paper.dart';
 import 'paper_selection_menu.dart';
@@ -24,8 +23,6 @@ class PageEditor extends StatefulWidget {
     this.focusNode,
     this.onEditingState,
     this.onPencilMark,
-    this.onSaveReflection,
-    this.reflectionFocus,
     this.keyboardOverlap = 0,
     this.originals = const [],
     this.guidedOriginal,
@@ -39,9 +36,6 @@ class PageEditor extends StatefulWidget {
   final void Function(String, int, int)? onPencilMark;
   final List<RegisteredOriginal> originals;
   final RegisteredOriginal? guidedOriginal;
-  final Future<bool> Function(RegisteredOriginal, OriginalReflection?)?
-  onSaveReflection;
-  final FocusNode? reflectionFocus;
   final double keyboardOverlap;
   final ({int offset, int request})? reveal;
   @override
@@ -57,9 +51,7 @@ class _PageEditorState extends State<PageEditor> {
   late final focus = widget.focusNode ?? FocusNode();
   bool restoring = true;
   final fieldRenderKey = GlobalKey();
-  final _reflectionKey = GlobalKey<NotebookReflectionState>();
   ({Offset point, double scroll})? _holdOrigin;
-  bool _reflectionFocused = false, _reflectionComposing = false;
 
   @override
   void initState() {
@@ -137,10 +129,8 @@ class _PageEditorState extends State<PageEditor> {
   void _emitEditingState() {
     if (!restoring) {
       widget.onEditingState?.call(
-        focus.hasFocus || _reflectionFocused,
-        _reflectionComposing ||
-            (text.value.isComposingRangeValid &&
-                !text.value.composing.isCollapsed),
+        focus.hasFocus,
+        (text.value.isComposingRangeValid && !text.value.composing.isCollapsed),
       );
     }
   }
@@ -242,25 +232,6 @@ class _PageEditorState extends State<PageEditor> {
           ),
         );
       }
-      if (widget.onSaveReflection != null) {
-        final passage = selection.textInside(value.text);
-        final match = matchSelectedOriginal(widget.originals, passage);
-        if (match != null) {
-          writingActions.add(
-            ContextMenuButtonItem(
-              label: '느낀 점',
-              onPressed: () {
-                if (text.value != value) return;
-                state.hideToolbar();
-                _reflectionKey.currentState?.edit((
-                  match: match,
-                  offset: selection.start + passage.trimRight().length,
-                ));
-              },
-            ),
-          );
-        }
-      }
     }
     if (editActions.isEmpty && writingActions.isEmpty && otherActions.isEmpty) {
       return const SizedBox.shrink();
@@ -275,7 +246,6 @@ class _PageEditorState extends State<PageEditor> {
 
   void _dismissKeyboard() {
     if (_composing) return;
-    widget.reflectionFocus?.unfocus();
     focus.unfocus();
   }
 
@@ -288,7 +258,6 @@ class _PageEditorState extends State<PageEditor> {
   );
 
   bool get _composing =>
-      _reflectionComposing ||
       (text.value.isComposingRangeValid && !text.value.composing.isCollapsed);
 
   EditableTextState? get _editable {
@@ -317,8 +286,7 @@ class _PageEditorState extends State<PageEditor> {
         render.globalToLocal(details.globalPosition).dy >
         lastLine.bottom +
             math.max(4.0, (render.preferredLineHeight - lastLine.height) / 2);
-    if (belowLastLine &&
-        (focus.hasFocus || widget.reflectionFocus?.hasFocus == true)) {
+    if (belowLastLine && focus.hasFocus) {
       _dismissKeyboard();
       return;
     }
@@ -493,7 +461,7 @@ class _PageEditorState extends State<PageEditor> {
                   ),
                 ),
               ),
-              if (preciseSelection || focus.hasFocus || _reflectionFocused)
+              if (preciseSelection || focus.hasFocus)
                 Positioned.fill(
                   left: writingMargins.left,
                   right: writingMargins.right,
@@ -538,30 +506,15 @@ class _PageEditorState extends State<PageEditor> {
                     ),
                   ),
                 ),
-              if (widget.originals.isNotEmpty)
+              if (widget.originals.any((item) => item.reflection != null))
                 Positioned.fill(
                   child: NotebookReflection(
-                    key: _reflectionKey,
                     originals: widget.originals,
                     guided: widget.guidedOriginal,
                     controller: text,
                     scroll: scroll,
                     fieldKey: fieldRenderKey,
                     padding: visiblePadding,
-                    paperColor: paperColors[style.paperIndex],
-                    focus: widget.reflectionFocus,
-                    onSave: widget.onSaveReflection,
-                    onEditingState: (focused, composing) {
-                      if (_reflectionFocused == focused &&
-                          _reflectionComposing == composing) {
-                        return;
-                      }
-                      setState(() {
-                        _reflectionFocused = focused;
-                        _reflectionComposing = composing;
-                      });
-                      _emitEditingState();
-                    },
                   ),
                 ),
               Positioned.fill(

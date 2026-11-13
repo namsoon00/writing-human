@@ -80,13 +80,13 @@ SQLite v9에서 두 테이블에 기본값이 빈 목록인 `originals` 컬럼�
 
 원문 읽기 패널은 `PaperBackdrop`, `SourceSlip`, `RecordDivider`와 필사
 밑칠 스타일을 재사용한다. 책의 내지와 글꼴·펜·책의 디테일 설정을 전달한다.
-쓰기 화면은 원문 일치 위치와 저장한 밑줄을 실제 본문의 UTF-16 위치로 연결한다.
-`NotebookReflection`이 배치된 RenderEditable의 줄과 스크롤을 읽어 같은 종이에
-화살표와 손글씨를 그린다. 노트에서 메모를 누르거나 선택 메뉴에서 느낀 점을
-고르면 같은 페이지에 별도의 TextField를 열고 본문 컨트롤러와 선택은 보존한다.
-다음 줄에 글이 있으면 연필 표시를 두고, 편집할 때만 종이 위에 겹쳐 띄운다.
-조합이 끝난 메모는 기존 원문의 순차 저장 경로로 보내며, 메모를 모두 지우면
-reflection만 제거한다. 저장에 실패하면 입력을 유지하고 같은 자리에서 재시도할 수 있다.
+읽은 원문 ID는 Workspace에서 현재 쪽과 책별로 유지한다. 책이 없는 기록은 기록별로
+기억한다. 현재 쪽에서 고른 구절, 연결된 구절, 마지막으로 읽은 구절을 순서대로
+확인해 원문을 열고, 목록으로 돌아가면 해당 행을 스크롤한다.
+`NotebookReflection`은 RenderEditable의 글줄과 스크롤을 읽어 이미 저장한 메모를
+그린다. 빈 줄에 손글씨를 놓을 공간이 부족하면 줄 여백에 연필 표시를 둔다.
+메모 입력은 원문에만 있으며 한글 조합이 끝난 변경을 순차 저장한다. 저장에 실패하면
+입력 내용을 유지하고 재시도한다. 메모의 텍스트를 지우면 reflection만 제거한다.
 
 기존 `WritingRecord.source`, `sourceParagraph`, `WritingPage.passages`를 보존한다.
 조회할 때 기존 기록 원문과 쪽의 원문·출처를 새 목록과 함께 표시하고, 같은 본문과
@@ -209,8 +209,7 @@ iOS 본문에서 탭과 길게 누르기는 RenderEditable의 좌표를 기준�
 포커스와 키보드 입력에 사용한다. 짧은 탭의 touchend에서 본문 textarea에 직접
 포커스를 주고, 후속 마우스 클릭을 막아 입력 포커스를 유지한다. 조합 중에는 추가 터치 선택을 적용하지 않는다.
 선택 쪽지는 EditableText의 툴바 앵커에 배치한다. 복사·잘라내기·붙여넣기는 Flutter의
-선택 동작을 사용하며, 느낀 점은 선택한 UTF-16 범위에서 읽은 구절이 원문에서 한 번
-일치할 때 기존 메모 편집을 연다.
+선택 동작을 사용한다.
 
 - lib/data/model.dart: Book, WritingRecord(bookId nullable), WritingPage(recordId, number, text, selection, scroll), Library(activePageId, writing). 버전 1 JSON 및 참조 구조 검증.
 - lib/data/library_controller.dart: 사용자 동작, 변경 스냅샷의 순차 저장, 저장 상태와 재시도. 저장 순서가 역전되지 않도록 Future 체인을 사용한다.

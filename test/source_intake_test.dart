@@ -382,188 +382,88 @@ void main() {
   });
 
   testWidgets(
-    'A pencil reflection is edited and autosaved on the writing paper',
+    'Reflections autosave under the original without editing the writing paper',
     (tester) async {
-      const source = '아침이다. 햇빛이 책장에 천천히 내려앉았다.';
+      const source = '햇빛이 책장에 천천히 내려앉았다.';
       final store = MemoryStore()
         ..data = const Library(
           books: [
             Book(
               id: 'b',
               title: '책',
-              originals: [RegisteredOriginal('o', source)],
+              originals: [
+                RegisteredOriginal('o', source, citation: '첫 원문'),
+                RegisteredOriginal('second', '다른 날의 문장', citation: '둘째 원문'),
+              ],
             ),
           ],
           records: [WritingRecord(id: 'r', bookId: 'b', title: '필사')],
-          pages: [WritingPage(id: 'p', recordId: 'r', number: 1)],
+          pages: [
+            WritingPage(id: 'p', recordId: 'r', number: 1, text: '햇빛이'),
+            WritingPage(id: 'p2', recordId: 'r', number: 2),
+          ],
           activePageId: 'p',
           writing: true,
+          style: WritingStyle(pageMotion: false),
         );
       await open(tester, store, FakeIntake());
-      await tester.enterText(bodyField, '책장에');
-      await tester.pumpAndSettle();
+      await tester.enterText(bodyField, '햇빛이');
       final body = tester.widget<TextField>(bodyField).controller!;
       final before = body.value;
-      final margin = find.byKey(const ValueKey('writing-reflection'));
-      expect(
-        find.descendant(of: margin, matching: find.text('느낀 점')),
-        findsOneWidget,
-      );
-      final editable = tester
-          .state<EditableTextState>(
-            find.descendant(of: bodyField, matching: find.byType(EditableText)),
-          )
-          .renderEditable;
-      double lineBottom(int offset) => editable
-          .localToGlobal(
-            editable
-                .getEndpointsForSelection(
-                  TextSelection.collapsed(
-                    offset: offset,
-                    affinity: TextAffinity.upstream,
-                  ),
-                )
-                .single
-                .point,
-          )
-          .dy;
-      expect(tester.getTopLeft(margin).dy, closeTo(lineBottom(3) + 5, 1));
-      final paperSize = tester.getSize(bodyField);
-      await tester.tap(margin);
+      const note = '오늘도 천천히 걷고 싶다.';
+      final field = find.byKey(const ValueKey('original-reflection-input'));
+      await tester.tap(place);
       await tester.pumpAndSettle();
+      expect(find.text('첫 원문'), findsOneWidget);
+      await tester.tap(find.text('느낀 점 남기기'));
+      await tester.pumpAndSettle();
+      tester.testTextInput.updateEditingValue(
+        const TextEditingValue(
+          text: '하ㄴ',
+          selection: TextSelection.collapsed(offset: 2),
+          composing: TextRange(start: 0, end: 2),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 450));
+      expect(store.data.books.single.originals.first.reflection, isNull);
 
-      final inlineField = find.byKey(
-        const ValueKey('notebook-reflection-input'),
-      );
-      expect(inlineField, findsOneWidget);
-      expect(reading, findsNothing);
-      expect(tester.getSize(bodyField), paperSize);
-      tester.view.physicalSize = const Size(320, 640);
-      tester.view.viewInsets = const FakeViewPadding(bottom: 265);
-      await tester.pumpAndSettle();
-      const composing = TextEditingValue(
-        text: '하ㄴ',
-        selection: TextSelection.collapsed(offset: 2),
-        composing: TextRange(start: 0, end: 2),
-      );
-      tester.testTextInput.updateEditingValue(composing);
-      await tester.pumpAndSettle();
-      expect(store.data.books.single.originals.single.reflection, isNull);
-      expect(
-        tester.widget<TextField>(inlineField).controller!.value,
-        composing,
-      );
-      const note = '오늘은 나도 천천히 걷고 싶다.';
       store.fail = true;
-      await tester.enterText(inlineField, note);
+      await tester.enterText(field, note);
+      await tester.pump(const Duration(milliseconds: 450));
       await tester.pumpAndSettle();
-      final retry = find.byTooltip('느낀 점 저장 재시도');
+      final retry = find.text('느낀 점 저장 실패 · 다시 시도');
       expect(retry, findsOneWidget);
-      expect(tester.widget<TextField>(inlineField).controller!.text, note);
-      expect(store.data.books.single.originals.single.reflection, isNull);
+      expect(tester.widget<TextField>(field).controller!.text, note);
       store.fail = false;
       await tester.tap(retry);
       await tester.pumpAndSettle();
-      expect(retry, findsNothing);
+      expect(store.data.books.single.originals.first.reflection!.text, note);
 
-      tester.view.resetViewInsets();
-      tester.view.physicalSize = const Size(390, 844);
+      await tester.tap(closeIn(reading));
       await tester.pumpAndSettle();
-      await tester.tapAt(tester.getTopLeft(bodyField) + const Offset(-12, 100));
-      await tester.pumpAndSettle();
-      expect(reading, findsNothing);
-      expect(inlineField, findsNothing);
-      expect(tester.widget<TextField>(bodyField).controller, same(body));
       expect(body.value, before);
-      expect(store.data.activePage!.text, '책장에');
-      expect(tester.getSize(bodyField), paperSize);
-      expect(
-        find.descendant(of: margin, matching: find.text(note)),
-        findsOneWidget,
-      );
-      final original = store.data.books.single.originals.single;
-      expect(original.reflection!.text, note);
-      final mark = original.reflection!.mark!;
-      expect(original.text.substring(mark.start, mark.end), '책장에');
+      expect(find.text(note), findsOneWidget);
+      expect(field, findsNothing);
+      expect(find.text('느낀 점 남기기'), findsNothing);
+
       await tester.tap(place);
       await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<Text>(
-              find.descendant(of: reading, matching: find.text(note)),
-            )
-            .style!
-            .fontFamily,
-        'NanumPenScript',
-      );
-      expect(find.text('느낀 점'), findsNothing);
-      await tester.tap(find.text('메모 고치기'));
+      await tester.tap(find.text(note).hitTestable().last);
       await tester.pumpAndSettle();
-      final noteField = find.byKey(const ValueKey('original-reflection-input'));
-      final save = find.widgetWithText(FilledButton, '저장');
-      expect(tester.widget<TextField>(noteField).controller!.text, note);
-      await tester.enterText(noteField, '내일도 한 줄씩.');
-      await tester.tap(save);
+      await tester.enterText(field, '');
+      await tester.tap(find.byTooltip('원문 목록'));
       await tester.pumpAndSettle();
-      expect(
-        store.data.books.single.originals.single.reflection!.text,
-        '내일도 한 줄씩.',
-      );
-      expect(store.data.books.single.originals, hasLength(1));
-      expect(
-        find.descendant(of: margin, matching: find.text('내일도 한 줄씩.')),
-        findsOneWidget,
-      );
-      await tester.tap(margin);
+      expect(store.data.books.single.originals.first.reflection, isNull);
+      await tester.tap(find.text('다른 날의 문장'));
       await tester.pumpAndSettle();
-      expect(
-        tester.widget<TextField>(inlineField).controller!.text,
-        '내일도 한 줄씩.',
-      );
-      await tester.enterText(inlineField, '');
+      await tester.tap(closeIn(reading));
       await tester.pumpAndSettle();
-      expect(store.data.books.single.originals.single.reflection, isNull);
-      await tester.enterText(inlineField, '내일도 한 줄씩.');
+      await tester.tap(place);
       await tester.pumpAndSettle();
-      expect(store.data.activePage!.text, '책장에');
-      await tester.enterText(bodyField, '책장에\n\n새 문장');
+      expect(find.text('둘째 원문'), findsOneWidget);
+      await tester.tap(find.byTooltip('원문 목록'));
       await tester.pumpAndSettle();
-      expect(
-        find.descendant(of: margin, matching: find.text('내일도 한 줄씩.')),
-        findsOneWidget,
-      );
-      expect(tester.getTopLeft(margin).dy, closeTo(lineBottom(3) + 5, 1));
-      expect(tester.getBottomLeft(margin).dy, lessThan(lineBottom(7)));
-
-      await tester.enterText(bodyField, '책장에\n새 문장');
-      await tester.pumpAndSettle();
-      expect(margin, findsOneWidget);
-      expect(
-        find.descendant(of: margin, matching: find.text('내일도 한 줄씩.')),
-        findsNothing,
-      );
-      expect(
-        tester.getTopRight(margin).dx,
-        lessThan(editable.localToGlobal(Offset.zero).dx),
-      );
-
-      final longPage = '책장에\n\n${List.filled(30, '다른 문장을 적는다.').join('\n')}';
-      await tester.enterText(bodyField, longPage);
-      body.selection = const TextSelection.collapsed(offset: 3);
-      await tester.pumpAndSettle();
-      final scroll = tester.widget<TextField>(bodyField).scrollController!;
-      scroll.jumpTo(0);
-      await tester.pumpAndSettle();
-      final originalY = tester.getTopLeft(margin).dy;
-      scroll.jumpTo(16);
-      await tester.pumpAndSettle();
-      expect(tester.getTopLeft(margin).dy, closeTo(originalY - 16, 1));
-      scroll.jumpTo(120);
-      await tester.pumpAndSettle();
-      expect(margin, findsNothing);
-      expect(body.text, longPage);
-      expect(body.selection, const TextSelection.collapsed(offset: 3));
-      expect(tester.takeException(), isNull);
+      expect(find.text('다른 날의 문장').hitTestable(), findsOneWidget);
     },
   );
 
@@ -695,14 +595,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('줄에 붙인 원문'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('메모 남기기'));
+    await tester.tap(find.text('느낀 점 남기기'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('original-reflection-input')),
       '다시 볼 구절.',
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, '저장'));
+    await tester.pump(const Duration(milliseconds: 450));
     await tester.pumpAndSettle();
     final promoted = store.data.records.single.originals.single;
     expect(promoted.reflection!.text, '다시 볼 구절.');
@@ -1239,7 +1139,7 @@ void main() {
       expect(store.data.pages.single.text, isEmpty);
       await tester.enterText(bodyField, '한 문장을');
       await tester.pumpAndSettle();
-      expect(find.text('느낀 점'), findsOneWidget);
+      expect(find.text('느낀 점'), findsNothing);
       expect(store.data.pages.single.text, '한 문장을');
     },
   );

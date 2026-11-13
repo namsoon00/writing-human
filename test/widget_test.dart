@@ -304,19 +304,10 @@ void main() {
     await showMenu(selection);
     expect(tester.getRect(editor), editorRect);
     expect(tester.getRect(menu).right, lessThanOrEqualTo(320));
-    await tester.tap(action('느낀 점'));
-    await tester.pumpAndSettle();
-    final note = find.byKey(const ValueKey('notebook-reflection-input'));
-    await tester.enterText(note, '이 대목을 다시 읽고 싶다.');
-    await tester.pumpAndSettle();
-    await tester.tapAt(tester.getTopRight(editor) + const Offset(12, 130));
-    await tester.pumpAndSettle();
-    final saved = store.data.books.single.originals.single.reflection!;
-    expect(saved.text, '이 대목을 다시 읽고 싶다.');
-    expect(original.substring(saved.mark!.start, saved.mark!.end), '책장에');
+    expect(action('느낀 점'), findsNothing);
+    expect(action('밑칠하기'), findsOneWidget);
     expect(controller.text, prose);
     expect(controller.selection, selection);
-    expect(find.byTooltip('느낀 점 고치기'), findsOneWidget);
   });
 
   testWidgets(

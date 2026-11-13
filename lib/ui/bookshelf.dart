@@ -7,12 +7,15 @@ import '../data/library_controller.dart';
 import '../data/model.dart';
 import 'paper.dart';
 
+const loosePagesTitle = '낱장 모음';
+
 class Bookshelf extends StatelessWidget {
   const Bookshelf({
     super.key,
     required this.controller,
     required this.onOpen,
     required this.onDetails,
+    required this.onLoosePages,
     required this.onWrite,
     required this.query,
     this.scrollController,
@@ -20,7 +23,7 @@ class Bookshelf extends StatelessWidget {
 
   final LibraryController controller;
   final ValueChanged<Book> onOpen, onDetails;
-  final VoidCallback onWrite;
+  final VoidCallback onWrite, onLoosePages;
   final String query;
   final ScrollController? scrollController;
 
@@ -41,13 +44,15 @@ class Bookshelf extends StatelessWidget {
     final recordBooks = {
       for (final record in library.records) record.id: record.bookId,
     };
-    final pageCounts = <String, int>{};
+    final pageCounts = <String?, int>{};
     for (final page in library.pages) {
+      if (!recordBooks.containsKey(page.recordId)) continue;
       final bookId = recordBooks[page.recordId];
-      if (bookId != null) {
-        pageCounts.update(bookId, (count) => count + 1, ifAbsent: () => 1);
-      }
+      pageCounts.update(bookId, (count) => count + 1, ifAbsent: () => 1);
     }
+    final loosePageCount = pageCounts[null] ?? 0;
+    final showLoose = loosePageCount > 0 && loosePagesTitle.contains(term);
+    final shelfCount = books.length + (showLoose ? 1 : 0);
 
     BookCover cover(Book book, double width, {bool thumbnail = false}) =>
         BookCover(
@@ -59,7 +64,7 @@ class Bookshelf extends StatelessWidget {
           bookmarked: !thumbnail && library.activeBook?.id == book.id,
         );
 
-    if (recent == null && books.isEmpty) {
+    if (recent == null && shelfCount == 0) {
       return Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -85,28 +90,41 @@ class Bookshelf extends StatelessWidget {
       );
     }
 
-    Widget openBook(
-      Book book,
+    Widget openCoverSurface(
+      String title,
       Widget child, {
       required Key key,
-      double radius = 6,
+      required VoidCallback onTap,
     }) => Semantics(
-      label: '${book.title} 펼치기',
+      label: '$title 펼치기',
       button: true,
-      onTap: () => onOpen(book),
+      onTap: onTap,
       excludeSemantics: true,
       child: InkWell(
         key: key,
-        borderRadius: BorderRadius.circular(radius),
-        onTap: () => onOpen(book),
+        borderRadius: BorderRadius.circular(6),
+        onTap: onTap,
         child: child,
       ),
     );
 
-    Widget openCover(Book book, double width) => openBook(
-      book,
+    Widget openCover(Book book, double width) => openCoverSurface(
+      book.title,
       cover(book, width),
       key: ValueKey('shelf-book-${book.id}'),
+      onTap: () => onOpen(book),
+    );
+
+    Widget looseCover(double width) => openCoverSurface(
+      loosePagesTitle,
+      BookCover(
+        title: loosePagesTitle,
+        width: width,
+        variant: 1,
+        pageCount: loosePageCount,
+      ),
+      key: const ValueKey('shelf-loose-pages'),
+      onTap: onLoosePages,
     );
 
     Widget details(Book book) => IconButton(
@@ -129,7 +147,7 @@ class Bookshelf extends StatelessWidget {
           controller: scrollController,
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.symmetric(vertical: 14),
-          itemCount: (books.length + columns - 1) ~/ columns + 1,
+          itemCount: (shelfCount + columns - 1) ~/ columns + 1,
           itemBuilder: (context, index) {
             if (index == 0) {
               return Column(
@@ -141,8 +159,8 @@ class Bookshelf extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                           horizontal: padding,
                         ),
-                        child: openBook(
-                          recent,
+                        child: openCoverSurface(
+                          recent.title,
                           Container(
                             decoration: BoxDecoration(
                               color: const Color(0xffeee3d3),
@@ -173,7 +191,7 @@ class Bookshelf extends StatelessWidget {
                             ),
                           ),
                           key: const ValueKey('shelf-recent'),
-                          radius: 6,
+                          onTap: () => onOpen(recent),
                         ),
                       )
                     else ...[
@@ -186,7 +204,7 @@ class Bookshelf extends StatelessWidget {
                       const _WoodShelf(),
                       Center(child: details(recent)),
                     ],
-                  if (books.isNotEmpty)
+                  if (shelfCount > 0)
                     Padding(
                       padding: EdgeInsets.only(
                         left: padding,
@@ -207,7 +225,17 @@ class Bookshelf extends StatelessWidget {
             }
 
             final start = (index - 1) * columns;
-            final row = books.skip(start).take(columns).toList();
+            final slots = [
+              for (
+                var i = start;
+                i < math.min(start + columns, shelfCount);
+                i++
+              )
+                if (showLoose && i == 0)
+                  null
+                else
+                  books[i - (showLoose ? 1 : 0)],
+            ];
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Column(
@@ -216,10 +244,14 @@ class Bookshelf extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: padding),
                     child: Row(
                       children: [
-                        for (final book in row)
+                        for (final book in slots)
                           SizedBox(
                             width: slotWidth,
-                            child: Center(child: openCover(book, coverWidth)),
+                            child: Center(
+                              child: book == null
+                                  ? looseCover(coverWidth)
+                                  : openCover(book, coverWidth),
+                            ),
                           ),
                       ],
                     ),
@@ -229,10 +261,16 @@ class Bookshelf extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: padding),
                     child: Row(
                       children: [
-                        for (final book in row)
+                        for (final book in slots)
                           SizedBox(
                             width: slotWidth,
-                            child: Center(child: details(book)),
+                            child: Center(
+                              child: book == null
+                                  ? const SizedBox(
+                                      height: kMinInteractiveDimension,
+                                    )
+                                  : details(book),
+                            ),
                           ),
                       ],
                     ),

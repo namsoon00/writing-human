@@ -155,6 +155,64 @@ void main() {
     },
   );
 
+  testWidgets('Loose pages share one shelf cover without creating a book', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final store = MemoryStore()
+      ..data = const Library(
+        books: [Book(id: 'book', title: '책에 묶인 글')],
+        records: [
+          WritingRecord(id: 'a', title: '첫 낱장'),
+          WritingRecord(id: 'b', title: '둘째 낱장'),
+          WritingRecord(id: 'bound', bookId: 'book', title: '묶인 기록'),
+        ],
+        pages: [
+          WritingPage(id: 'a2', recordId: 'a', number: 2),
+          WritingPage(id: 'a1', recordId: 'a', number: 1, text: '첫 문장'),
+          WritingPage(id: 'b1', recordId: 'b', number: 1),
+          WritingPage(id: 'inside', recordId: 'bound', number: 1),
+        ],
+        activePageId: 'inside',
+        writing: true,
+        style: WritingStyle(pageMotion: false),
+      );
+    await tester.pumpWidget(WritingHumanApp(store: store));
+    await tester.pumpAndSettle();
+    await shelf(tester);
+    final looseCover = find.byKey(const ValueKey('shelf-loose-pages'));
+    expect(looseCover, findsOneWidget);
+    await tester.tap(looseCover);
+    await tester.pumpAndSettle();
+
+    expect(find.text('낱장 모음'), findsOneWidget);
+    expect(find.text('2편 · 3쪽'), findsOneWidget);
+    expect(find.byKey(const ValueKey('contents-record-bound')), findsNothing);
+    expect(store.writes, 0);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('contents-page-b'))).data,
+      '3',
+    );
+    await tester.tap(find.byKey(const ValueKey('contents-record-a')));
+    await tester.pumpAndSettle();
+    expect(store.data.activePageId, 'a1');
+    expect(store.data.activeRecord!.bookId, isNull);
+
+    await shelf(tester);
+    await tester.tap(looseCover);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, '새 종이'));
+    await tester.pumpAndSettle();
+    await tester.enterText(editor, '새로 쓴 낱장');
+    await tester.pumpAndSettle();
+    expect(store.data.books.single.id, 'book');
+    expect(store.data.activeRecord!.bookId, isNull);
+  });
+
   testWidgets('A full shelf scrolls in rows and searches notebook titles', (
     tester,
   ) async {

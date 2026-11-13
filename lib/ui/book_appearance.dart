@@ -30,7 +30,7 @@ Future<void> showBookAppearance(
 enum _Section {
   materials('표지·내지'),
   ribbon('책갈피'),
-  details('쪽 디테일');
+  details('책 장식');
 
   const _Section(this.label);
   final String label;
@@ -110,14 +110,15 @@ class _BookAppearanceState extends State<BookAppearance> {
               detail == BookDetailKind.indexTab,
       };
       final height = MediaQuery.sizeOf(context).height;
-      final pinPreview = section == _Section.details && height >= 520;
-      final previewWidth = pinPreview ? math.min(390.0, height * .40) : 450.0;
+      final pinPreview = height >= 520;
+      final previewWidth = pinPreview ? math.min(450.0, height * .55) : 450.0;
       final header = Column(
         children: [
           Center(
             child: SizedBox(
               width: previewWidth,
               child: AspectRatio(
+                key: const ValueKey('book-appearance-preview'),
                 aspectRatio: 1.53,
                 child: closed
                     ? Center(

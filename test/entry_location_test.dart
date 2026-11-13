@@ -171,8 +171,14 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('쪽 디테일'));
+      final preview = find.byKey(const ValueKey('book-appearance-preview'));
+      final previewRect = tester.getRect(preview);
+      final ribbonTab = find.text('책갈피');
+      final ribbonRect = tester.getRect(ribbonTab);
+      await tester.tap(find.text('책 장식'));
       await tester.pumpAndSettle();
+      expect(tester.getRect(preview), previewRect);
+      expect(tester.getRect(ribbonTab), ribbonRect);
 
       Finder row(BookDetailKind kind) =>
           find.byKey(ValueKey('book-detail-${kind.name}'));

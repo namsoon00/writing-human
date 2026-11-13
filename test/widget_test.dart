@@ -495,7 +495,7 @@ void main() {
       final editor = find.byKey(const ValueKey('page-text'));
       final controller = tester.widget<TextField>(editor).controller!;
       expect(find.text('Aa'), findsNothing);
-      final writingTools = find.byTooltip('메뉴');
+      final writingTools = find.byTooltip('쓰기 도구');
       expect(writingTools, findsOneWidget);
       await tester.tap(writingTools);
       await tester.pumpAndSettle();
@@ -611,7 +611,7 @@ void main() {
     final controller = tester.widget<TextField>(editor).controller!;
     final source = find.byKey(const ValueKey('writing-originals'));
     final pageNumber = find.byKey(const ValueKey('page-number'));
-    final menu = find.byTooltip('메뉴');
+    final menu = find.byTooltip('쓰기 도구');
     expect(
       tester.getRect(source).right,
       lessThanOrEqualTo(tester.getRect(pageNumber).left),
@@ -643,6 +643,23 @@ void main() {
     expect(store.data.activePageId, pageId);
     expect(tester.widget<TextField>(editor).controller, same(controller));
     expect(controller.text, '쓰고 나서 책으로 묶는 문장');
+
+    await tester.tap(find.byTooltip('쓰기 도구'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('11,172'), findsNothing);
+    final archive = find.text('기록 보관');
+    await tester.ensureVisible(archive);
+    await tester.tap(archive);
+    await tester.pumpAndSettle();
+
+    final sheet = tester.getRect(find.byType(BottomSheet));
+    final last = tester.getRect(find.widgetWithText(ListTile, '이 책 PDF 내보내기'));
+    expect(sheet.height, lessThan(tester.view.physicalSize.height / 2));
+    expect(sheet.bottom, tester.view.physicalSize.height);
+    expect(sheet.bottom - last.bottom, 20);
+    expect(find.text('전체 백업 내보내기'), findsOneWidget);
+    expect(find.text('백업에서 가져오기'), findsOneWidget);
+    expect(find.text('이 필사 텍스트 내보내기'), findsOneWidget);
   });
 
   testWidgets('Saved book originals guide a reopened editor after input', (

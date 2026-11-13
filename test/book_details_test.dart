@@ -418,7 +418,7 @@ void main() {
       await tester.pumpAndSettle();
       tester.view.physicalSize = const Size(844, 390);
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('메뉴'));
+      await tester.tap(find.byTooltip('쓰기 도구'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     },

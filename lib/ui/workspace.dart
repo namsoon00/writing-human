@@ -1651,6 +1651,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         pageCount: targetBook == null
             ? 0
             : c.library.volumePages(bookId: targetBook.id).length,
+        shrinkWrap: true,
       ),
       enableDrag: false,
     );

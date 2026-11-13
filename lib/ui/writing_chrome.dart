@@ -112,7 +112,7 @@ class WritingFooter extends StatelessWidget {
   final bool failed;
   final BookDetailChoice ornament;
 
-  static const _pageSideInset = 72.0;
+  static const _pageSideInset = 88.0;
 
   @override
   Widget build(BuildContext context) => PaperSwipe(
@@ -199,7 +199,7 @@ class WritingFooter extends StatelessWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: _pageSideInset),
               child: Tooltip(
-                message: '메뉴',
+                message: '쓰기 도구',
                 excludeFromSemantics: true,
                 child: TextButton(
                   onPressed: onMenu,
@@ -209,7 +209,7 @@ class WritingFooter extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                   ),
                   child: const Text(
-                    '메뉴',
+                    '쓰기 도구',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 12),
                   ),

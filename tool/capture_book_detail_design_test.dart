@@ -307,7 +307,7 @@ void main() {
     await capture('records');
     await tester.tap(find.byTooltip('닫기'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('메뉴'));
+    await tester.tap(find.byTooltip('쓰기 도구'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('책의 디테일'));
     await tester.pumpAndSettle();

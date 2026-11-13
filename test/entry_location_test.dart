@@ -100,7 +100,7 @@ void main() {
             .text,
         specimen().activePage!.text,
       );
-      await tester.tap(find.byTooltip('메뉴'));
+      await tester.tap(find.byTooltip('쓰기 도구'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('책 꾸미기'));
       await tester.pumpAndSettle();

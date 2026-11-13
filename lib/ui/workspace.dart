@@ -60,6 +60,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   String? _editingPageId;
   ({String pageId, int offset, int request})? _reveal;
   int _revealRequest = 0;
+  ({String pageId, String? bookId, RegisteredOriginal original})? _savedSource;
   ({String pageId, String originalId})? _guided;
   late final SourceIntake _intake = widget.sourceIntake ?? createSourceIntake();
   StreamSubscription<void>? _incomingEvents;
@@ -287,6 +288,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       if (_accountLocked || !_showCover) _coverAnchor = null;
       if (_accountLocked || _reveal?.pageId != page.id) _reveal = null;
       if (_accountLocked || _guided?.pageId != page.id) _guided = null;
+      if (_accountLocked || _savedSource?.pageId != page.id)
+        _savedSource = null;
     });
     if ((widget.sync?.accountMismatch ?? false) ||
         (widget.sync?.signInRequired ?? false)) {
@@ -690,7 +693,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         selectedPage: selectedPage,
         initialPhoto: initialPhoto,
       );
-      if (saved != null) _offerTranscription(owner, selectedPage, saved);
+      if (saved != null) _offerTranscription(selectedPage, saved);
       return;
     }
     _sourceBusy = true;
@@ -755,25 +758,15 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   }
 
   void _offerTranscription(
-    LibraryController owner,
     WritingPage origin,
     ({String? bookId, RegisteredOriginal original}) saved,
   ) {
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(
-        content: const Text('원문을 저장했어요.'),
-        duration: const Duration(seconds: 8),
-        action: SnackBarAction(
-          label: '이 구절 필사하기',
-          onPressed: () {
-            if (!mounted || c != owner || page.id != origin.id) return;
-            unawaited(
-              _startTranscription(saved.original, saved.bookId, origin),
-            );
-          },
-        ),
+    if (page.id != origin.id) return;
+    setState(
+      () => _savedSource = (
+        pageId: origin.id,
+        bookId: saved.bookId,
+        original: saved.original,
       ),
     );
   }
@@ -874,7 +867,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       final available = originals();
       if (bookDetails == null && available.isEmpty) {
         final saved = await register();
-        if (saved != null) _offerTranscription(owner, selectedPage, saved);
+        if (saved != null) _offerTranscription(selectedPage, saved);
       } else {
         final initial = bookDetails == null
             ? matchOriginal(available, selectedPage.text, selectedPage.extent)
@@ -971,7 +964,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         await route.completed;
         if (savedElsewhere case final saved?) {
           if (mounted && c == owner && !_accountLocked) {
-            _offerTranscription(owner, selectedPage, saved);
+            _offerTranscription(selectedPage, saved);
           }
           return;
         }
@@ -1369,6 +1362,37 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         : '이 기기의 이전 글 가져오기',
                     style: const TextStyle(fontSize: 12),
                   ),
+                ),
+              if ((preview ? null : _savedSource) case final saved?)
+                Row(
+                  children: [
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          onPressed: navigationEnabled && c.saveError == null
+                              ? () {
+                                  if (!_canLeaveInput()) return;
+                                  setState(() => _savedSource = null);
+                                  unawaited(
+                                    _startTranscription(
+                                      saved.original,
+                                      saved.bookId,
+                                      currentPage,
+                                    ),
+                                  );
+                                }
+                              : null,
+                          child: const Text('이 구절 필사하기'),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: '필사 안내 닫기',
+                      onPressed: () => setState(() => _savedSource = null),
+                      icon: const Icon(CupertinoIcons.xmark, size: 16),
+                    ),
+                  ],
                 ),
               if (c.saveError != null)
                 Container(

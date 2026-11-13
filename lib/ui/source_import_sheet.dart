@@ -157,7 +157,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   Future<void> _shareHelp() => showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('다른 앱에서 공유'),
+      title: const Text('가져오기 안내'),
       content: Text(
         widget.intake.canUseCamera
             ? '다른 앱에서 문장을 고르고 공유 메뉴의 ‘쓰는 인간’을 누르세요. 앱으로 돌아오면 받은 문장을 확인할 수 있어요.'
@@ -1137,7 +1137,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                               padding: EdgeInsets.zero,
                               minimumSize: const Size(44, 44),
                             ),
-                            child: const Text('다른 앱에서 공유'),
+                            child: const Text('가져오기 안내'),
                           ),
                         FilledButton(
                           key: const ValueKey('source-confirm'),

@@ -222,7 +222,7 @@ void main() {
       expect(input.style.fontFamily, appFontFamily);
       await tester.tap(find.text('취소'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('쓰기 도구'));
+      await tester.tap(find.byTooltip('쓰기 취향'));
       await tester.pumpAndSettle();
       expectTypeface('쓰는 인간체');
       expect(

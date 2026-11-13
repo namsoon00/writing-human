@@ -114,7 +114,7 @@ void main() {
       tester.widget<TextField>(field).style!.fontFamily,
       'WritingHumanDevelopment',
     );
-    await tester.tap(find.byTooltip('쓰기 도구'));
+    await tester.tap(find.byTooltip('쓰기 취향'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('쓰는 인간체'));
     await saved();

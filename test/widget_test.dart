@@ -435,7 +435,7 @@ void main() {
       final editor = find.byKey(const ValueKey('page-text'));
       final controller = tester.widget<TextField>(editor).controller!;
       expect(find.text('Aa'), findsNothing);
-      final writingTools = find.text('쓰기 도구');
+      final writingTools = find.text('쓰기 취향');
       expect(writingTools, findsOneWidget);
       await tester.tap(writingTools);
       await tester.pumpAndSettle();
@@ -549,9 +549,24 @@ void main() {
     await tester.pumpAndSettle();
     final pageId = store.data.activePageId;
     final controller = tester.widget<TextField>(editor).controller!;
-    final tools = find.widgetWithText(TextButton, '쓰기 도구');
+    final tools = find.widgetWithText(TextButton, '쓰기 취향');
     final source = find.byKey(const ValueKey('writing-originals'));
-    expect(tester.getRect(source).left - tester.getRect(tools).right, 12);
+    final pageNumber = find.byKey(const ValueKey('page-number'));
+    final more = find.byTooltip('더 보기');
+    expect(
+      tester.getRect(tools).right,
+      lessThanOrEqualTo(tester.getRect(pageNumber).left),
+    );
+    expect(tester.getCenter(pageNumber).dx, 195);
+    expect(
+      tester.getRect(source).left,
+      greaterThanOrEqualTo(tester.getRect(pageNumber).right),
+    );
+    expect(
+      tester.getRect(source).right,
+      lessThanOrEqualTo(tester.getRect(more).left),
+    );
+    expect(tester.getSize(source).height, greaterThanOrEqualTo(48));
 
     await tester.tap(find.byTooltip('더 보기'));
     await tester.pumpAndSettle();

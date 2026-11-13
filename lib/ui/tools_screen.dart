@@ -68,40 +68,26 @@ class ToolsScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 18),
-                _row(
-                  book == null ? '기본 종이' : '이 책의 내지',
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      for (var i = 0; i < 4; i++)
-                        _swatch(
-                          label: paperNames[i],
-                          color: paperColors[i],
-                          sheet: true,
-                          selected: (book?.paperIndex ?? style.paperIndex) == i,
-                          onTap: () {
-                            if (book == null) {
-                              controller.setStyle(style.copy(paperIndex: i));
-                            } else {
-                              controller.setBookMaterials(
-                                book.id,
-                                paperIndex: i,
-                              );
-                            }
-                          },
-                        ),
-                    ],
-                  ),
-                ),
-                if (book?.paperIndex != null)
-                  TextButton(
-                    onPressed: () => controller.setBookMaterials(
-                      book!.id,
-                      useDefaultPaper: true,
+                if (book == null) ...[
+                  _row(
+                    '기본 종이',
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final (i, name) in paperNames.indexed)
+                          _swatch(
+                            label: name,
+                            color: paperColors[i],
+                            sheet: true,
+                            selected: style.paperIndex == i,
+                            onTap: () =>
+                                controller.setStyle(style.copy(paperIndex: i)),
+                          ),
+                      ],
                     ),
-                    child: const Text('기본 종이 사용'),
                   ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
+                ],
                 _row(
                   '잉크',
                   Row(

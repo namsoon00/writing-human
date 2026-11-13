@@ -11,9 +11,10 @@
 
 ## 책별 꾸밈과 미리보기
 
-`BookAppearance`는 표지·내지·꾸밈 변경값을 화면에 보관하고, 완료할 때
-`LibraryController.saveBookAppearance`가 현재 책 메타데이터에 합쳐 한 번의 저장으로
-보낸다. 쓰기 화면과 책장·목차·원문은 같은 책의 설정을 읽는다.
+`BookAppearance`에서 표지·내지·꾸밈을 고를 때마다
+`LibraryController.saveBookAppearance`가 현재 책 메타데이터에 변경값을 합쳐
+기존 순차 저장 큐에 넣는다. 저장 실패 시 메모리의 최신 설정으로 재시도한다.
+쓰기 화면과 책장·목차·원문은 같은 책의 설정을 읽는다.
 `Book.detailOverrides`에 없는 항목은 기존 `WritingStyle.bookDetails`에서 상속한다.
 SQLite v10은 `books.detail_overrides`에 빈 JSON 객체를 기본값으로 추가한다. 웹·백업·
 동기화에는 선택 필드 `detailOverrides`를 사용한다. 동기화는 책별 꾸밈의 표시·모양·색·위치를

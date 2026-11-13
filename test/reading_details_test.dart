@@ -418,7 +418,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('크림지'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('완료'));
+      await tester.tap(find.byTooltip('뒤로'));
       await tester.pumpAndSettle();
       expect(c.library.books.first.coverIndex, 2);
       expect(c.library.books.first.paperIndex, 3);
@@ -431,7 +431,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('기본 종이 사용'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('완료'));
+      await tester.tap(find.byTooltip('뒤로'));
       await tester.pumpAndSettle();
       expect(c.library.books.first.paperIndex, isNull);
       expect(c.library.books.first.coverIndex, 2);

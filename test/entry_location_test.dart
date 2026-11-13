@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:writing_human/data/library_controller.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/entry_location.dart';
 import 'package:writing_human/main.dart';
 import 'package:writing_human/ui/book_appearance.dart';
 import 'package:writing_human/ui/book_details.dart';
+import 'package:writing_human/ui/paper.dart';
 import 'book_details_test.dart' show specimen;
 import 'widget_test.dart' show MemoryStore;
 
@@ -141,6 +143,112 @@ void main() {
       expect(store.data.style.bookDetails.ribbon.variant, 0);
       expect(store.data.activePage!.text, specimen().activePage!.text);
       expect(find.textContaining('예시'), findsNothing);
+    },
+  );
+  testWidgets(
+    'Book detail rows are discoverable and keep the live preview visible',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final fixture = specimen();
+      final store = MemoryStore()..data = fixture;
+      final controller = LibraryController(store, fixture);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: BookAppearance(
+            controller: controller,
+            book: fixture.books.single,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('쪽 디테일'));
+      await tester.pumpAndSettle();
+
+      Finder row(BookDetailKind kind) =>
+          find.byKey(ValueKey('book-detail-${kind.name}'));
+      Finder options(BookDetailKind kind) =>
+          find.byKey(ValueKey('book-options-${kind.name}'));
+      const order = [
+        BookDetailKind.binding,
+        BookDetailKind.bookplate,
+        BookDetailKind.indexTab,
+        BookDetailKind.pressedFlower,
+        BookDetailKind.sourceSlip,
+        BookDetailKind.pencil,
+        BookDetailKind.ornament,
+        BookDetailKind.recordDivider,
+        BookDetailKind.dateStamp,
+      ];
+      for (final kind in order) {
+        await tester.scrollUntilVisible(row(kind), 90);
+        await Scrollable.ensureVisible(
+          tester.element(row(kind)),
+          alignment: .5,
+        );
+        await tester.pumpAndSettle();
+        expect(row(kind).hitTestable(), findsOneWidget);
+        expect(options(kind), findsNothing);
+      }
+      await tester.drag(find.byType(ListView), const Offset(0, 1300));
+      await tester.pumpAndSettle();
+
+      final bookplate = row(BookDetailKind.bookplate);
+      await Scrollable.ensureVisible(tester.element(bookplate), alignment: .5);
+      await tester.pumpAndSettle();
+      await tester.tap(bookplate);
+      await tester.pumpAndSettle();
+      expect(options(BookDetailKind.bookplate), findsOneWidget);
+      expect(find.byType(BookCover), findsNothing);
+
+      final flower = row(BookDetailKind.pressedFlower);
+      await tester.scrollUntilVisible(flower, 100);
+      await Scrollable.ensureVisible(tester.element(flower), alignment: .5);
+      await tester.pumpAndSettle();
+      await tester.tap(flower);
+      await tester.pumpAndSettle();
+      expect(options(BookDetailKind.bookplate), findsNothing);
+      expect(options(BookDetailKind.pressedFlower), findsOneWidget);
+      expect(
+        tester.getRect(find.byType(BookCover)).bottom,
+        lessThan(tester.getTopLeft(flower).dy),
+      );
+
+      final shade = find.byKey(const ValueKey('detail-pressedFlower-tone-1'));
+      await Scrollable.ensureVisible(tester.element(shade), alignment: .5);
+      await tester.pumpAndSettle();
+      await tester.tap(shade);
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<BookCover>(find.byType(BookCover))
+            .details
+            .pressedFlower
+            .tone,
+        1,
+      );
+      expect(store.data.books.single.detailOverrides, isEmpty);
+      await tester.tap(find.text('완료'));
+      await tester.pumpAndSettle();
+      expect(
+        store
+            .data
+            .books
+            .single
+            .detailOverrides[BookDetailKind.pressedFlower]
+            ?.tone,
+        1,
+      );
+      expect(tester.takeException(), isNull);
     },
   );
 }

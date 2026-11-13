@@ -9,6 +9,7 @@ import 'book_detail_design.dart';
 import 'book_detail_tools.dart';
 import 'book_details.dart';
 import 'paper.dart';
+import 'reading_details.dart';
 
 Future<void> showBookAppearance(
   BuildContext context,
@@ -51,7 +52,7 @@ class BookAppearance extends StatefulWidget {
 
 class _BookAppearanceState extends State<BookAppearance> {
   _Section section = _Section.ribbon;
-  BookDetailKind detail = BookDetailKind.binding;
+  BookDetailKind? detail;
   bool showCover = true;
   int? coverIndex;
   int? paperIndex;
@@ -101,7 +102,6 @@ class _BookAppearanceState extends State<BookAppearance> {
       final pages = controller.library.volumePages(bookId: book.id);
       final page = controller.resumePageForBook(book.id);
       final excerpt = page?.text.trim() ?? '';
-      final kind = section == _Section.ribbon ? BookDetailKind.ribbon : detail;
       final closed = switch (section) {
         _Section.materials => showCover,
         _Section.ribbon => false,
@@ -109,6 +109,80 @@ class _BookAppearanceState extends State<BookAppearance> {
           detail == BookDetailKind.pressedFlower ||
               detail == BookDetailKind.indexTab,
       };
+      final height = MediaQuery.sizeOf(context).height;
+      final pinPreview = section == _Section.details && height >= 520;
+      final previewWidth = pinPreview ? math.min(390.0, height * .40) : 450.0;
+      final header = Column(
+        children: [
+          Center(
+            child: SizedBox(
+              width: previewWidth,
+              child: AspectRatio(
+                aspectRatio: 1.53,
+                child: closed
+                    ? Center(
+                        child: LayoutBuilder(
+                          builder: (_, box) => BookCover(
+                            title: book.title,
+                            width: box.maxHeight / 1.36,
+                            variant: cover,
+                            materialPreview: true,
+                            pageCount: pages.length,
+                            details: details,
+                          ),
+                        ),
+                      )
+                    : _OpenBook(
+                        book: book,
+                        cover: cover,
+                        stock: stock,
+                        details: details,
+                        detail: section == _Section.details ? detail : null,
+                        excerpt: excerpt,
+                        pageCount: pages.length,
+                        pageNumber: page == null
+                            ? null
+                            : pages.indexWhere((p) => p.id == page.id) + 1,
+                      ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: Wrap(
+              spacing: 6,
+              alignment: WrapAlignment.center,
+              children: [
+                for (final item in _Section.values)
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      foregroundColor: section == item ? burgundy : muted,
+                      padding: const EdgeInsets.symmetric(horizontal: 9),
+                      minimumSize: const Size(48, 48),
+                      tapTargetSize: MaterialTapTargetSize.padded,
+                    ),
+                    onPressed: saving
+                        ? null
+                        : () => setState(() => section = item),
+                    child: Semantics(
+                      selected: section == item,
+                      child: Text(
+                        item.label,
+                        style: TextStyle(
+                          decoration: section == item
+                              ? TextDecoration.underline
+                              : null,
+                          decorationColor: burgundy,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: line),
+        ],
+      );
       return PopScope(
         canPop: !saving,
         child: Scaffold(
@@ -131,87 +205,17 @@ class _BookAppearanceState extends State<BookAppearance> {
                 constraints: const BoxConstraints(maxWidth: 560),
                 child: Column(
                   children: [
+                    if (pinPreview)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                        child: header,
+                      ),
                     Expanded(
                       child: ListView(
+                        key: ValueKey(section),
                         padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
                         children: [
-                          Center(
-                            child: SizedBox(
-                              width: 450,
-                              child: AspectRatio(
-                                aspectRatio: 1.53,
-                                child: closed
-                                    ? Center(
-                                        child: LayoutBuilder(
-                                          builder: (_, box) => BookCover(
-                                            title: book.title,
-                                            width: box.maxHeight / 1.36,
-                                            variant: cover,
-                                            materialPreview: true,
-                                            pageCount: pages.length,
-                                            details: details,
-                                          ),
-                                        ),
-                                      )
-                                    : _OpenBook(
-                                        book: book,
-                                        cover: cover,
-                                        stock: stock,
-                                        details: details,
-                                        detail: section == _Section.details
-                                            ? detail
-                                            : null,
-                                        excerpt: excerpt,
-                                        pageCount: pages.length,
-                                        pageNumber: page == null
-                                            ? null
-                                            : pages.indexWhere(
-                                                    (p) => p.id == page.id,
-                                                  ) +
-                                                  1,
-                                      ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Center(
-                            child: Wrap(
-                              spacing: 6,
-                              alignment: WrapAlignment.center,
-                              children: [
-                                for (final item in _Section.values)
-                                  TextButton(
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: section == item
-                                          ? burgundy
-                                          : muted,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 9,
-                                      ),
-                                      minimumSize: const Size(48, 48),
-                                      tapTargetSize:
-                                          MaterialTapTargetSize.padded,
-                                    ),
-                                    onPressed: saving
-                                        ? null
-                                        : () => setState(() => section = item),
-                                    child: Semantics(
-                                      selected: section == item,
-                                      child: Text(
-                                        item.label,
-                                        style: TextStyle(
-                                          decoration: section == item
-                                              ? TextDecoration.underline
-                                              : null,
-                                          decorationColor: burgundy,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          const Divider(height: 1, color: line),
+                          if (!pinPreview) header,
                           const SizedBox(height: 10),
                           if (section == _Section.materials) ...[
                             Row(
@@ -275,42 +279,23 @@ class _BookAppearanceState extends State<BookAppearance> {
                                         ),
                                     ],
                             ),
-                          ] else ...[
-                            if (section == _Section.details)
-                              DropdownButton<BookDetailKind>(
-                                isExpanded: true,
-                                value: detail,
-                                onChanged: saving
-                                    ? null
-                                    : (kind) {
-                                        if (kind != null) {
-                                          setState(() => detail = kind);
-                                        }
-                                      },
-                                items: [
-                                  for (final kind in BookDetailKind.values)
-                                    if (kind != BookDetailKind.ribbon)
-                                      DropdownMenuItem(
-                                        value: kind,
-                                        child: Text(
-                                          BookDetailDesign.of(kind).title,
-                                        ),
-                                      ),
-                                ],
-                              ),
-                            ExcludeFocus(
-                              excluding: saving,
-                              child: IgnorePointer(
-                                ignoring: saving,
-                                child: BookDetailOptions(
-                                  kind: kind,
-                                  choice: details.choice(kind),
-                                  showSpecimen: false,
-                                  onChanged: (value) =>
-                                      setState(() => changes[kind] = value),
-                                ),
-                              ),
-                            ),
+                          ] else if (section == _Section.ribbon)
+                            _options(BookDetailKind.ribbon, details.ribbon)
+                          else ...[
+                            _detailGroup('책의 겉과 첫 장', const [
+                              BookDetailKind.binding,
+                              BookDetailKind.bookplate,
+                              BookDetailKind.indexTab,
+                              BookDetailKind.pressedFlower,
+                            ], details),
+                            const SizedBox(height: 12),
+                            _detailGroup('필사 쪽', const [
+                              BookDetailKind.sourceSlip,
+                              BookDetailKind.pencil,
+                              BookDetailKind.ornament,
+                              BookDetailKind.recordDivider,
+                              BookDetailKind.dateStamp,
+                            ], details),
                           ],
                         ],
                       ),
@@ -353,10 +338,159 @@ class _BookAppearanceState extends State<BookAppearance> {
     },
   );
 
+  Widget _options(BookDetailKind kind, BookDetailChoice choice) => ExcludeFocus(
+    excluding: saving,
+    child: IgnorePointer(
+      ignoring: saving,
+      child: BookDetailOptions(
+        key: ValueKey('book-options-${kind.name}'),
+        kind: kind,
+        choice: choice,
+        showSpecimen: false,
+        onChanged: (value) => setState(() => changes[kind] = value),
+      ),
+    ),
+  );
+
+  Widget _detailGroup(
+    String title,
+    List<BookDetailKind> kinds,
+    BookDetailsStyle details,
+  ) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(4, 8, 4, 6),
+        child: Semantics(
+          header: true,
+          child: Text(
+            title,
+            style: const TextStyle(color: muted, fontSize: 13),
+          ),
+        ),
+      ),
+      for (final kind in kinds) _detailRow(kind, details.choice(kind)),
+    ],
+  );
+
+  Widget _detailRow(BookDetailKind kind, BookDetailChoice choice) {
+    final design = BookDetailDesign.of(kind);
+    final expanded = detail == kind;
+    return Column(
+      children: [
+        Builder(
+          builder: (rowContext) => Semantics(
+            expanded: expanded,
+            child: ListTile(
+              key: ValueKey('book-detail-${kind.name}'),
+              enabled: !saving,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+              minTileHeight: 64,
+              horizontalTitleGap: 12,
+              leading: _DetailSample(kind: kind, choice: choice),
+              title: Text(design.title),
+              subtitle: Text(
+                choice.enabled
+                    ? '${design.variants[choice.variant]} · ${design.tones[choice.tone]}'
+                    : '숨김',
+                style: const TextStyle(color: muted),
+              ),
+              trailing: Icon(
+                expanded
+                    ? CupertinoIcons.chevron_up
+                    : CupertinoIcons.chevron_down,
+                color: muted,
+                size: 14,
+              ),
+              onTap: () {
+                setState(() => detail = expanded ? null : kind);
+                if (!expanded) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (rowContext.mounted && detail == kind) {
+                      Scrollable.ensureVisible(
+                        rowContext,
+                        alignmentPolicy:
+                            ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+                      );
+                    }
+                  });
+                }
+              },
+            ),
+          ),
+        ),
+        if (expanded)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 2, 8, 12),
+            child: _options(kind, choice),
+          ),
+        const Divider(height: 1, color: line),
+      ],
+    );
+  }
+
   void _selectPaper(int? index) => setState(() {
     paperIndex = index;
     paperChanged = true;
   });
+}
+
+class _DetailSample extends StatelessWidget {
+  const _DetailSample({required this.kind, required this.choice});
+
+  final BookDetailKind kind;
+  final BookDetailChoice choice;
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: IgnorePointer(
+      child: ExcludeFocus(
+        child: SizedBox(
+          width: 62,
+          height: 38,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(5),
+              border: Border.all(color: line),
+              color: const Color(0xfff3eadb),
+            ),
+            child: Opacity(
+              opacity: choice.enabled ? 1 : .42,
+              child: MediaQuery.withNoTextScaling(
+                child: Padding(
+                  padding: const EdgeInsets.all(5),
+                  child: switch (kind) {
+                    BookDetailKind.binding => Center(
+                      child: SizedBox(
+                        width: 26,
+                        child: BookBinding(choice: choice.copy(enabled: true)),
+                      ),
+                    ),
+                    BookDetailKind.pressedFlower => Center(
+                      child: PressedFlower(
+                        choice: choice.copy(enabled: true),
+                        size: 26,
+                      ),
+                    ),
+                    _ => FittedBox(
+                      fit: BoxFit.contain,
+                      child: SizedBox(
+                        width: 155,
+                        child: BookDetailPreview(
+                          kind: kind,
+                          choice: choice.copy(enabled: true),
+                        ),
+                      ),
+                    ),
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _OpenBook extends StatelessWidget {
@@ -577,7 +711,8 @@ class _OpenBook extends StatelessWidget {
               },
             ),
           ),
-          if (!left && pageNumber != null)
+          if (!left &&
+              (pageNumber != null || detail == BookDetailKind.ornament))
             Positioned(
               bottom: 4,
               left: 24,
@@ -585,7 +720,7 @@ class _OpenBook extends StatelessWidget {
               child: PageOrnament(
                 choice: details.ornament,
                 child: Text(
-                  '$pageNumber',
+                  '${pageNumber ?? 1}',
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: muted, fontSize: 10),
                 ),

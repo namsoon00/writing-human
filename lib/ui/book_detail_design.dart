@@ -49,7 +49,7 @@ class BookDetailDesign {
       [Color(0xff82796d), brandInk, Color(0xff4c607a), green],
     ),
     BookDetailKind.ornament => const BookDetailDesign(
-      '판면 장식',
+      '쪽수 장식',
       '쪽수 양옆에 숨을 두는 작은 문양',
       ['선과 점', '마름모', '작은 잎'],
       ['브라운', '포도', '올리브', '회청'],

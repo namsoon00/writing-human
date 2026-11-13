@@ -33,6 +33,16 @@ final readingText = find.byKey(const ValueKey('source-reading-text'));
 Finder closeIn(Finder parent) =>
     find.descendant(of: parent, matching: find.byTooltip('닫기'));
 
+Future<void> settleSourceSheets(WidgetTester tester) async {
+  // App callbacks can open or dismiss another route after its first animation.
+  // Advance both transitions before interacting with the underlying paper.
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
+  await tester.pumpAndSettle();
+  await tester.pump(const Duration(milliseconds: 400));
+  await tester.pumpAndSettle();
+}
+
 Future<void> openRegistration(WidgetTester tester) async {
   await tester.tap(place);
   await tester.pumpAndSettle();
@@ -335,9 +345,9 @@ void main() {
     expect(remainder(), ' 천천히 내려앉았다.');
     final before = body.value;
     tester.widget<TextField>(bodyField).focusNode!.unfocus();
-    await tester.pump();
+    await settleSourceSheets(tester);
 
-    await tester.tap(place);
+    await tester.tap(place.hitTestable());
     await tester.pumpAndSettle();
     expect(find.text('12쪽'), findsOneWidget);
     expect(tester.widget<Text>(readingText).textSpan!.toPlainText(), first);
@@ -737,7 +747,8 @@ void main() {
       expect(tester.widget<TextField>(bodyField).controller, same(body));
       expect(body.value, original);
       expect(store.data.activePageId, 'p');
-      await tester.tap(place);
+      await settleSourceSheets(tester);
+      await tester.tap(place.hitTestable());
       await tester.pumpAndSettle();
       await tester.tap(find.text('첫 줄 둘째 줄'));
       await tester.pumpAndSettle();
@@ -1205,8 +1216,8 @@ void main() {
       await openRegistration(tester);
       await tester.enterText(sourceField, '한 문장을 옮겨 쓴다.');
       await tester.tap(confirm);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('이 구절 필사하기'));
+      await settleSourceSheets(tester);
+      await tester.tap(find.text('이 구절 필사하기').hitTestable());
       await tester.pumpAndSettle();
       final field = tester.widget<TextField>(bodyField);
       final painter =

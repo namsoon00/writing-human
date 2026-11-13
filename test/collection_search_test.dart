@@ -151,11 +151,8 @@ void main() {
       expect(store.writes, 0);
 
       final looseSheet = find.byKey(const ValueKey('writing-sheet-r13'));
-      final scrollable = find.descendant(
-        of: sheets,
-        matching: find.byType(Scrollable),
-      );
-      await tester.scrollUntilVisible(looseSheet, -150, scrollable: scrollable);
+      await tester.fling(sheets, const Offset(0, 500), 800);
+      await tester.pumpAndSettle();
       await tester.ensureVisible(looseSheet);
       await tester.tap(looseSheet);
       await tester.pumpAndSettle();

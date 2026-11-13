@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import '../data/model.dart';
+import '../data/original_photo_store.dart';
 import '../source/originals.dart';
 import 'book_details.dart';
 import 'paper.dart';
+import 'original_range_sheet.dart';
 import 'pencil_marks.dart';
 import 'reading_details.dart';
 import 'reflection_ink.dart';
@@ -21,6 +23,7 @@ class SourceReading extends StatefulWidget {
     this.onRegister,
     this.onRetry,
     this.onSaveReflection,
+    this.onSaveRange,
   });
 
   final List<RegisteredOriginal> originals;
@@ -30,6 +33,7 @@ class SourceReading extends StatefulWidget {
   final bool startEditing;
   final VoidCallback? onRegister;
   final VoidCallback? onRetry;
+  final Future<bool> Function(RegisteredOriginal, PencilMark?)? onSaveRange;
   final Future<bool> Function(RegisteredOriginal, OriginalReflection)?
   onSaveReflection;
 
@@ -130,6 +134,65 @@ class _SourceReadingState extends State<SourceReading> {
     });
   }
 
+  Future<void> _changeRange(RegisteredOriginal original) async {
+    final choice = await chooseOriginalRange(
+      context,
+      original.text,
+      current: original.writingRange,
+    );
+    if (!mounted || choice == null || saving) return;
+    setState(() => saving = true);
+    try {
+      final saved = await widget.onSaveRange!(original, choice.range);
+      if (mounted && !saved) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('필사 범위를 저장하지 못했어요.')));
+      }
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  Future<void> _showPhoto(String id) async {
+    final bytes = const OriginalPhotoStore().load(id);
+    await showDialog<void>(
+      context: context,
+      builder: (context) => Dialog.fullscreen(
+        child: Scaffold(
+          appBar: AppBar(title: const Text('원본 사진')),
+          body: FutureBuilder(
+            future: bytes,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final image = snapshot.data;
+              if (image == null) {
+                return Center(
+                  child: Text(
+                    snapshot.hasError ? '사진을 읽지 못했어요.' : '이 기기에 보관된 사진이 없어요.',
+                  ),
+                );
+              }
+              return Center(
+                child: InteractiveViewer(
+                  maxScale: 6,
+                  child: Image.memory(
+                    image,
+                    key: const ValueKey('saved-original-photo'),
+                    semanticLabel: '저장한 원본 사진',
+                    errorBuilder: (_, _, _) => const Text('이 사진을 표시할 수 없어요.'),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final original = widget.originals
@@ -197,6 +260,34 @@ class _SourceReadingState extends State<SourceReading> {
                     ],
                   ),
                   const Divider(),
+                  if (original != null &&
+                      !editing &&
+                      (original.photoId != null || original.isFullPage))
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Wrap(
+                        spacing: 8,
+                        children: [
+                          if (original.photoId case final id?)
+                            TextButton.icon(
+                              onPressed: saving ? null : () => _showPhoto(id),
+                              icon: const Icon(CupertinoIcons.photo, size: 16),
+                              label: const Text('원본 사진'),
+                            ),
+                          if (original.isFullPage && widget.onSaveRange != null)
+                            TextButton(
+                              onPressed: saving
+                                  ? null
+                                  : () => _changeRange(original),
+                              child: Text(
+                                original.writingRange == null
+                                    ? '필사 범위 · 전체 페이지'
+                                    : '필사 범위 · 구간 선택됨',
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   if (widget.onRetry != null && !editing)
                     TextButton(
                       onPressed: widget.onRetry,
@@ -362,9 +453,14 @@ class _OriginalTextState extends State<_OriginalText> {
                 current.start >= mark.end)
         ? current
         : null;
+    final range = widget.original.writingRange;
     final boundaries = {
       from,
       to,
+      if (range != null) ...[
+        range.start.clamp(from, to),
+        range.end.clamp(from, to),
+      ],
       if (mark != null) ...[
         mark.start.clamp(from, to),
         mark.end.clamp(from, to),
@@ -394,6 +490,10 @@ class _OriginalTextState extends State<_OriginalText> {
                       boundaries[i] >= match.start &&
                       boundaries[i] < match.end
                 ? const TextStyle(backgroundColor: Color(0x30a78356))
+                : range != null &&
+                      boundaries[i] >= range.start &&
+                      boundaries[i] < range.end
+                ? const TextStyle(backgroundColor: Color(0x20a78356))
                 : null,
           ),
       ],

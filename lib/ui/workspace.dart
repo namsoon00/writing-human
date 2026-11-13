@@ -622,12 +622,19 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         fresh = false;
         userFresh = false;
       }
-      owner.registerOriginals(
+      final registered = owner.registerOriginal(
         bookId: result.bookId,
         page: selectedPage,
-        passages: result.passages,
+        text: result.text,
         citation: result.citation,
+        photoId: result.photoId,
+        isFullPage: result.isFullPage,
+        writingRange: result.writingRange,
       );
+      if (!registered) {
+        _sourceNotice('원문을 저장하지 못했어요. 다시 시도해 주세요.');
+        return;
+      }
       await owner.settled;
       if (mounted && c == owner && !_accountLocked && owner.saveError != null) {
         _sourceNotice('원문을 저장하지 못했어요. 다시 저장해 주세요.');
@@ -692,14 +699,14 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         if (!owner.library.books.any((book) => book.id == destination)) return;
         owner.registerOriginals(
           bookId: destination,
-          passages: result.passages,
+          passages: [result.text],
           citation: result.citation,
           deliveryId: id,
         );
       } else {
         fresh = false;
         userFresh = false;
-        final text = result.passages.single;
+        final text = result.text;
         owner.saveDraft(
           WritingPage(id: '$id-page', recordId: id, number: 1),
           source: result.citation.isEmpty ? text : '',
@@ -778,6 +785,26 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               startEditing: reflectionMatch != null,
               onRegister: owner.saveError == null ? register : null,
               onRetry: owner.saveError == null ? null : _retrySave,
+              onSaveRange: (original, range) async {
+                if (!mounted ||
+                    c != owner ||
+                    _accountLocked ||
+                    owner.composing) {
+                  return false;
+                }
+                final latest = originals()
+                    .where((item) => item.id == original.id)
+                    .firstOrNull;
+                if (latest == null || latest.text != original.text) {
+                  return false;
+                }
+                return owner.saveOriginalRange(
+                  bookId: bookId,
+                  recordId: selectedPage.recordId,
+                  original: latest,
+                  range: range,
+                );
+              },
               onSaveReflection: (original, reflection) async {
                 if (!mounted ||
                     c != owner ||

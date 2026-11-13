@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:writing_human/data/library_backup.dart';
 import 'package:writing_human/data/model.dart';
+import 'package:writing_human/data/original_photo_store.dart';
 import 'package:writing_human/main.dart';
 import 'package:writing_human/source/source_intake.dart';
 import 'package:writing_human/source/source_scan.dart';
@@ -137,6 +140,40 @@ Future<void> open(
   addTearDown(tester.view.resetViewInsets);
   addTearDown(intake.dispose);
   await tester.pumpWidget(WritingHumanApp(store: store, sourceIntake: intake));
+  await tester.pumpAndSettle();
+}
+
+Future<void> preparePhotoStorage(WidgetTester tester) async {
+  final dir = await tester.runAsync(
+    () => Directory.systemTemp.createTemp('writing-original-'),
+  );
+  const channel = MethodChannel('plugins.flutter.io/path_provider');
+  tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+    channel,
+    (_) async => dir!.path,
+  );
+  addTearDown(() async {
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      channel,
+      null,
+    );
+    await dir!.delete(recursive: true);
+  });
+}
+
+Future<void> saveWithPhoto(WidgetTester tester) async {
+  await tester.runAsync(() async {
+    await tester.tap(confirm);
+    await tester.pump();
+    for (
+      var i = 0;
+      i < 50 && find.byType(SourceImportSheet).evaluate().isNotEmpty;
+      i++
+    ) {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await tester.pump(const Duration(milliseconds: 30));
+    }
+  });
   await tester.pumpAndSettle();
 }
 
@@ -687,6 +724,7 @@ void main() {
   testWidgets(
     'Choose photo paragraphs, correct a character, then save only reviewed text',
     (tester) async {
+      await preparePhotoStorage(tester);
       final store = MemoryStore();
       final intake = FakeIntake();
       await open(tester, store, intake);
@@ -706,8 +744,7 @@ void main() {
       );
       await tester.enterText(sourceField, '둘째 문단입니다.');
       await tester.pumpAndSettle();
-      await tester.tap(confirm);
-      await tester.pumpAndSettle();
+      await saveWithPhoto(tester);
       expect(store.data.records.single.originals.single.text, '둘째 문단입니다.');
       expect(reading, findsNothing);
       expect(store.data.activePage!.text, isEmpty);
@@ -719,8 +756,9 @@ void main() {
   );
 
   testWidgets(
-    'Page review links OCR lines to the photo and saves separate originals',
+    'Page review stores the whole page, selected range, and exact photo bytes',
     (tester) async {
+      await preparePhotoStorage(tester);
       final store = MemoryStore();
       final intake = FakeIntake();
       intake.positioned = SourceScan(
@@ -759,11 +797,44 @@ void main() {
       await tester.ensureVisible(citation);
       await tester.enterText(citation, '12쪽');
       await tester.pumpAndSettle();
-      await tester.tap(confirm);
+      final chooseRange = find.text('필사 범위 · 전체 페이지');
+      await tester.ensureVisible(chooseRange);
+      await tester.tap(chooseRange);
       await tester.pumpAndSettle();
-      final originals = store.data.records.single.originals;
-      expect(originals.map((o) => o.text), ['왼쪽 문단', '오른쪽 문단']);
-      expect(originals.map((o) => o.citation), ['12쪽', '12쪽']);
+      final range = tester.widget<RangeSlider>(
+        find.byKey(const ValueKey('original-line-range')),
+      );
+      range.onChanged!(const RangeValues(1, 1));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('범위 적용'));
+      await tester.pumpAndSettle();
+      await saveWithPhoto(tester);
+      final original = store.data.records.single.originals.single;
+      expect(original.text, '왼쪽 문단\n\n오른쪽 문단');
+      expect(original.citation, '12쪽');
+      expect(original.isFullPage, isTrue);
+      expect(
+        original.text.substring(
+          original.writingRange!.start,
+          original.writingRange!.end,
+        ),
+        '오른쪽 문단',
+      );
+      final bytes = await tester.runAsync(
+        () => const OriginalPhotoStore().load(original.photoId!),
+      );
+      expect(bytes, intake.photo.bytes);
+      expect(matchOriginal([original], '왼쪽', 2), isNull);
+      expect(matchOriginal([original], '오른쪽', 3)?.remainder, ' 문단');
+      final backup = await tester.runAsync(
+        () => LibraryBackup.collect(store.data, DateTime.utc(2026, 11, 13)),
+      );
+      final restored = LibraryBackup.decode(backup!.encode());
+      expect(base64Decode(restored.photos[original.photoId]!), bytes);
+      expect(
+        restored.library.records.single.originals.single.writingRange?.toJson(),
+        original.writingRange?.toJson(),
+      );
       expect(store.data.pages.single.text, isEmpty);
     },
   );
@@ -771,6 +842,7 @@ void main() {
   testWidgets(
     'Paragraph mode selects by photo and re-reads only the selected area',
     (tester) async {
+      await preparePhotoStorage(tester);
       final store = MemoryStore();
       final intake = FakeIntake()..blocks = ['다시 읽은 구절'];
       intake.positioned = SourceScan(
@@ -812,8 +884,7 @@ void main() {
         tester.widget<TextField>(sourceField).controller!.text,
         '다시 읽은 구절',
       );
-      await tester.tap(confirm);
-      await tester.pumpAndSettle();
+      await saveWithPhoto(tester);
       expect(store.data.records.single.originals.single.text, '다시 읽은 구절');
     },
   );

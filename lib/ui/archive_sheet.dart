@@ -79,7 +79,8 @@ class _ArchiveSheetState extends State<ArchiveSheet> {
 
   Future<String?> _backup() async {
     final now = DateTime.now();
-    final bytes = utf8.encode(LibraryBackup(_controller.library, now).encode());
+    final backup = await LibraryBackup.collect(_controller.library, now);
+    final bytes = utf8.encode(backup.encode());
     if (bytes.length > maxBackupBytes) {
       throw const FormatException('백업 파일이 32MB를 넘습니다.');
     }
@@ -133,7 +134,8 @@ class _ArchiveSheetState extends State<ArchiveSheet> {
       builder: (context) => AlertDialog(
         title: const Text('백업에서 가져오기'),
         content: Text(
-          '$date\n${library.books.length}권 · ${library.records.length}편 · ${library.pages.length}쪽\n\n'
+          '$date\n${library.books.length}권 · ${library.records.length}편 · ${library.pages.length}쪽'
+          '${backup.photos.isEmpty ? '' : ' · 사진 ${backup.photos.length}장'}\n\n'
           '지금 기록에 합칩니다. 내용이 다른 기록은 따로 보관합니다.',
         ),
         actions: [
@@ -149,6 +151,12 @@ class _ArchiveSheetState extends State<ArchiveSheet> {
       ),
     );
     if (confirmed != true || !_available) return null;
+    try {
+      await backup.restorePhotos();
+    } catch (_) {
+      throw const FormatException('백업에 담긴 사진을 저장하지 못했어요. 다시 가져와 주세요.');
+    }
+    if (!_available) return null;
     if (!await _controller.restoreBackup(library)) {
       throw const FormatException('가져온 기록을 저장하지 못했어요. 다시 저장해 주세요.');
     }

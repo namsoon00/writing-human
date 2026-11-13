@@ -1,22 +1,58 @@
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:uuid/uuid.dart';
 
 import 'model.dart';
+import 'original_photo_store.dart';
 
 const maxBackupBytes = 32 * 1024 * 1024;
 
 class LibraryBackup {
-  const LibraryBackup(this.library, this.createdAt);
+  const LibraryBackup(this.library, this.createdAt, {this.photos = const {}});
 
   final Library library;
   final DateTime createdAt;
+  final Map<String, String> photos;
+
+  static Set<String> photoIds(Library library) => {
+    for (final book in library.books)
+      for (final original in book.originals) ?original.photoId,
+    for (final record in library.records)
+      for (final original in record.originals) ?original.photoId,
+  };
+
+  static Future<LibraryBackup> collect(
+    Library library,
+    DateTime createdAt,
+  ) async {
+    final photos = <String, String>{};
+    var encodedBytes = 0;
+    for (final id in photoIds(library)) {
+      final bytes = await const OriginalPhotoStore().load(id);
+      if (bytes == null) continue;
+      final encoded = base64Encode(bytes);
+      encodedBytes += encoded.length;
+      if (encodedBytes > maxBackupBytes) {
+        throw const FormatException('사진을 포함한 백업 파일이 32MB를 넘습니다.');
+      }
+      photos[id] = encoded;
+    }
+    return LibraryBackup(library, createdAt, photos: photos);
+  }
+
+  Future<void> restorePhotos() async {
+    for (final entry in photos.entries) {
+      await const OriginalPhotoStore().save(base64Decode(entry.value));
+    }
+  }
 
   String encode() => jsonEncode({
     'format': 'writing-human-backup',
     'version': 1,
     'createdAt': createdAt.toUtc().toIso8601String(),
     'library': library.toCloudJson(),
+    if (photos.isNotEmpty) 'photos': photos,
   });
 
   factory LibraryBackup.decode(String raw) {
@@ -28,9 +64,22 @@ class LibraryBackup {
       final payload = Map<String, dynamic>.of(json['library'] as Json)
         ..remove('sync')
         ..remove('lastBackupAt');
+      final library = Library.decode(jsonEncode(payload));
+      final photos = Map<String, String>.from(json['photos'] as Map? ?? {});
+      final references = photoIds(library);
+      for (final entry in photos.entries) {
+        if (!references.contains(entry.key)) throw const FormatException();
+        final bytes = base64Decode(entry.value);
+        if (bytes.isEmpty ||
+            bytes.length > originalPhotoLimit ||
+            sha256.convert(bytes).toString() != entry.key) {
+          throw const FormatException();
+        }
+      }
       return LibraryBackup(
-        Library.decode(jsonEncode(payload)),
+        library,
         DateTime.parse(json['createdAt'] as String),
+        photos: photos,
       );
     } on TypeError {
       throw const FormatException('백업 파일의 형식이 올바르지 않습니다.');

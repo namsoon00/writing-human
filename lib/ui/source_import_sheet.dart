@@ -4,16 +4,21 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../data/book_detail_style.dart';
+import '../data/model.dart';
+import '../data/original_photo_store.dart';
 import '../source/scan_passage.dart';
 import '../source/source_intake.dart';
 import '../source/source_scan.dart';
 import 'book_details.dart';
 import 'paper.dart';
+import 'original_range_sheet.dart';
 import 'source_scan_preview.dart';
 
 typedef SourceImportResult = ({
-  List<String> passages,
+  String text,
+  bool isFullPage,
+  PencilMark? writingRange,
+  String? photoId,
   String citation,
   String? bookId,
 });
@@ -59,6 +64,10 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   List<(_ScanMode, int, String)> _reviewKeys = const [];
   final _savedReviews = <(_ScanMode, int, String), String>{};
   SourceScan? _scan;
+  SourcePhoto? _originalPhoto;
+  ({String text, PencilMark range})? _range;
+  bool _savingPhoto = false;
+  late final OriginalPhotoStore _photos = const OriginalPhotoStore();
   _ScanMode _mode = _ScanMode.page;
   List<int> _order = [];
   Set<int> _selected = {};
@@ -231,6 +240,8 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     if (scan == null || !mounted) return;
     setState(() {
       _scan = scan;
+      _originalPhoto = photo;
+      _range = null;
       _savedReviews.clear();
       _mode = mode;
       _reread = null;
@@ -360,20 +371,79 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     });
   }
 
-  void _submit() {
-    final passages = _fields
-        .map((c) => normalizeSource(c.text))
-        .where((text) => text.isNotEmpty)
-        .toList();
+  String get _confirmedText => _fields
+      .map((c) => normalizeSource(c.text))
+      .where((text) => text.isNotEmpty)
+      .join('\n\n');
+
+  bool get _isPageReview => _reviewing && _mode == _ScanMode.page;
+
+  Future<void> _pickWritingRange() async {
+    final text = _confirmedText;
+    if (!_editable || text.isEmpty) return;
+    final result = await chooseOriginalRange(
+      context,
+      text,
+      current: _range?.text == text ? _range?.range : null,
+    );
+    if (mounted && result != null && text == _confirmedText) {
+      setState(() {
+        _range = result.range == null
+            ? null
+            : (text: text, range: result.range!);
+        _error = null;
+      });
+    }
+  }
+
+  Future<void> _submit() async {
+    final text = _confirmedText;
     if (!_editable ||
-        passages.isEmpty ||
-        passages.join('\n\n').length > sourceLengthLimit) {
+        text.isEmpty ||
+        text.length > sourceLengthLimit ||
+        _citation.text.trim().length > 500) {
       return;
     }
+    final isFullPage = _isPageReview;
+    if (isFullPage && _range != null && _range!.text != text) {
+      setState(() => _error = '원문이 바뀌었어요. 필사 범위를 다시 정해 주세요.');
+      return;
+    }
+    final photo = _reviewing ? _originalPhoto : null;
+    final citation = _citation.text.trim(), bookId = _bookId;
+    final range = isFullPage ? _range?.range : null;
+    String? photoId;
+    if (photo != null) {
+      FocusScope.of(context).unfocus();
+      setState(() {
+        _busy = true;
+        _savingPhoto = true;
+        _error = null;
+      });
+      try {
+        photoId = await _photos.save(photo.bytes);
+      } catch (_) {
+        if (mounted) {
+          setState(() => _error = '사진을 보관하지 못했어요. 이 화면에서 다시 저장해 주세요.');
+        }
+        return;
+      } finally {
+        if (mounted) {
+          setState(() {
+            _busy = false;
+            _savingPhoto = false;
+          });
+        }
+      }
+    }
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
     Navigator.pop<SourceImportResult>(context, (
-      passages: passages,
-      citation: _citation.text.trim(),
-      bookId: _bookId,
+      text: text,
+      citation: citation,
+      bookId: bookId,
+      isFullPage: isFullPage,
+      writingRange: range,
+      photoId: photoId,
     ));
   }
 
@@ -486,7 +556,11 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
           ),
         ],
       ),
-      Text(pageMode ? '남길 문단을 고르고 읽는 순서를 확인하세요.' : '사진이나 목록에서 원하는 문단을 고르세요.'),
+      Text(
+        pageMode
+            ? '페이지 전체를 읽습니다. 머리글이나 쪽수를 빼고 읽는 순서를 고칠 수 있어요.'
+            : '사진이나 목록에서 원하는 문단을 고르세요.',
+      ),
       const SizedBox(height: 6),
       SourceScanPreview(
         scan: scan,
@@ -660,12 +734,30 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         child: const Text('문단 다시 고르기'),
       ),
     ),
-    if (_editors.length > 1) Text('${_editors.length}개 문단을 각각 원문으로 저장합니다.'),
+    if (_isPageReview) ...[
+      const Text('한 페이지를 원문 하나로 저장합니다.'),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: _editable && _confirmedText.isNotEmpty
+              ? _pickWritingRange
+              : null,
+          icon: const Icon(CupertinoIcons.scope, size: 16),
+          label: Text(switch (_range) {
+            null => '필사 범위 · 전체 페이지',
+            (text: final text, range: _) when text == _confirmedText =>
+              '필사 범위 · 구간 선택됨',
+            _ => '필사 범위 · 다시 선택',
+          }),
+        ),
+      ),
+    ],
+    if (_originalPhoto != null) const Text('원본 사진을 이 기기에 함께 보관합니다.'),
     for (final (index, controller) in _editors.indexed) ...[
       if (_editors.length > 1)
         Padding(
           padding: const EdgeInsets.only(top: 10),
-          child: Text('${index + 1}번째 원문'),
+          child: Text('${index + 1}번째 문단'),
         ),
       _field(controller, index),
       Wrap(
@@ -747,7 +839,9 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                         ),
                         IconButton(
                           tooltip: '닫기',
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: _savingPhoto
+                              ? null
+                              : () => Navigator.pop(context),
                           icon: const Icon(CupertinoIcons.xmark, size: 19),
                         ),
                       ],

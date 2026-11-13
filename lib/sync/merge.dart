@@ -40,7 +40,23 @@ List<RegisteredOriginal> _mergeOriginals(
       ),
       (final a?, final b?) => _mergeReflections(a, b),
     };
-    merged[entry.id] = entry.withReflection(reflection);
+    final range = switch ((entry.isFullPage, incoming.isFullPage)) {
+      (false, _) => incoming.writingRange,
+      (_, false) => entry.writingRange,
+      _
+          when sameData(
+            entry.writingRange?.toJson(),
+            before[entry.id]?.writingRange?.toJson(),
+          ) =>
+        incoming.writingRange,
+      _ => entry.writingRange,
+    };
+    merged[entry.id] = entry.withDetails(
+      reflection: reflection,
+      photoId: incoming.photoId ?? entry.photoId,
+      isFullPage: entry.isFullPage || incoming.isFullPage,
+      writingRange: range,
+    );
   }
   return merged.values.toList();
 }

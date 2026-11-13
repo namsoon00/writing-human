@@ -20,12 +20,16 @@ List<RegisteredOriginal> originalsFor(
   );
   final ids = records.map((record) => record.id).toSet();
   final book = library.books.where((book) => book.id == bookId).firstOrNull;
-  final originals = <(String, String), RegisteredOriginal>{};
+  final originals = <(String, String, String?), RegisteredOriginal>{};
 
   void add(RegisteredOriginal original) {
     if (original.text.trim().isNotEmpty ||
         original.citation.trim().isNotEmpty) {
-      originals.putIfAbsent((original.text, original.citation), () => original);
+      originals.putIfAbsent((
+        original.text,
+        original.citation,
+        original.photoId,
+      ), () => original);
     }
   }
 
@@ -49,15 +53,24 @@ List<RegisteredOriginal> originalsFor(
 }
 
 class OriginalMatch {
-  const OriginalMatch(this.original, this.start, this.end);
+  const OriginalMatch(
+    this.original,
+    this.start,
+    this.end, {
+    this.useWritingRange = false,
+  });
 
   final RegisteredOriginal original;
   final int start, end;
+  final bool useWritingRange;
 
   String get remainder {
     final text = original.text;
     final lineEnd = text.indexOf('\n', end);
-    return text.substring(end, lineEnd < 0 ? null : lineEnd);
+    final limit = useWritingRange
+        ? original.writingRange?.end ?? text.length
+        : text.length;
+    return text.substring(end, lineEnd < 0 ? limit : lineEnd.clamp(end, limit));
   }
 }
 
@@ -86,7 +99,12 @@ OriginalMatch? matchOriginal(
   if (words.isEmpty) return null;
   final singleWord = words.length == 1;
   final needsWordEnd = singleWord && words.single.end == prefix.length;
-  return _findOriginal(originals, prefix, needsWordEnd: needsWordEnd);
+  return _findOriginal(
+    originals,
+    prefix,
+    needsWordEnd: needsWordEnd,
+    useWritingRange: true,
+  );
 }
 
 OriginalMatch? matchSelectedOriginal(
@@ -102,22 +120,30 @@ OriginalMatch? _findOriginal(
   List<RegisteredOriginal> originals,
   String passage, {
   required bool needsWordEnd,
+  bool useWritingRange = false,
 }) {
   OriginalMatch? match;
   for (final original in originals) {
     final source = original.text;
+    final range = useWritingRange ? original.writingRange : null;
+    final limit = range?.end ?? source.length;
     for (
-      var start = source.indexOf(passage);
-      start >= 0;
+      var start = source.indexOf(passage, range?.start ?? 0);
+      start >= 0 && start + passage.length <= limit;
       start = source.indexOf(passage, start + 1)
     ) {
       final end = start + passage.length;
-      if (_isWithinWord(source, start) ||
-          (needsWordEnd && _isWithinWord(source, end))) {
+      if ((start != range?.start && _isWithinWord(source, start)) ||
+          (needsWordEnd && end != limit && _isWithinWord(source, end))) {
         continue;
       }
       if (match != null) return null;
-      match = OriginalMatch(original, start, end);
+      match = OriginalMatch(
+        original,
+        start,
+        end,
+        useWritingRange: useWritingRange,
+      );
     }
   }
   return match;

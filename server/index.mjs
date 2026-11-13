@@ -6,6 +6,13 @@ const object = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const id = v => typeof v === 'string' && v.length > 0 && v.length <= 250;
 const text = (v, max = MAX_BYTES) => typeof v === 'string' && v.length <= max;
 const integer = v => Number.isSafeInteger(v);
+const photoId = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
+const writingRange = (range, original) => object(range) &&
+  integer(range.start) && integer(range.end) && range.start >= 0 &&
+  range.end > range.start && range.end <= original.length &&
+  (original.charCodeAt(range.start) & 0xfc00) !== 0xdc00 &&
+  (original.charCodeAt(range.end) & 0xfc00) !== 0xdc00 &&
+  original.slice(range.start, range.end).trim().length > 0;
 
 const reflection = (value, original) => object(value) && text(value.text) &&
   value.text.trim().length > 0 &&
@@ -17,6 +24,10 @@ const originals = values => Array.isArray(values) &&
   new Set(values.map(value => value?.id)).size === values.length &&
   values.every(value => object(value) && id(value.id) && text(value.text, 50000) &&
     value.text.trim().length > 0 && text(value.citation, 500) &&
+    (!('photoId' in value) || photoId(value.photoId)) &&
+    (!('isFullPage' in value) || typeof value.isFullPage === 'boolean') &&
+    (!('writingRange' in value) ||
+      (value.isFullPage === true && writingRange(value.writingRange, value.text))) &&
     (!('reflection' in value) || reflection(value.reflection, value.text)));
 
 export function validLibrary(l) {

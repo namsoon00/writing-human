@@ -35,19 +35,43 @@ class RegisteredOriginal {
     this.text, {
     this.citation = '',
     this.reflection,
+    this.photoId,
+    this.isFullPage = false,
+    this.writingRange,
   });
 
   final String id, text, citation;
   final OriginalReflection? reflection;
+  final String? photoId;
+  final bool isFullPage;
+  final PencilMark? writingRange;
+
+  RegisteredOriginal withDetails({
+    required OriginalReflection? reflection,
+    required PencilMark? writingRange,
+    String? photoId,
+    bool? isFullPage,
+  }) => RegisteredOriginal(
+    id,
+    text,
+    citation: citation,
+    reflection: reflection,
+    photoId: photoId ?? this.photoId,
+    isFullPage: isFullPage ?? this.isFullPage,
+    writingRange: writingRange,
+  );
 
   RegisteredOriginal withReflection(OriginalReflection? value) =>
-      RegisteredOriginal(id, text, citation: citation, reflection: value);
+      withDetails(reflection: value, writingRange: writingRange);
 
   Json toJson() => {
     'id': id,
     'text': text,
     'citation': citation,
     if (reflection != null) 'reflection': reflection!.toJson(),
+    if (photoId != null) 'photoId': photoId,
+    if (isFullPage) 'isFullPage': true,
+    if (writingRange != null) 'writingRange': writingRange!.toJson(),
   };
 
   factory RegisteredOriginal.fromJson(Json j) => RegisteredOriginal(
@@ -57,6 +81,11 @@ class RegisteredOriginal {
     reflection: j['reflection'] == null
         ? null
         : OriginalReflection.fromJson(j['reflection'] as Json),
+    photoId: j['photoId'] as String?,
+    isFullPage: j['isFullPage'] as bool? ?? false,
+    writingRange: j['writingRange'] == null
+        ? null
+        : PencilMark.fromJson(j['writingRange'] as Json),
   );
 
   static List<RegisteredOriginal> read(Object? value) => [
@@ -73,8 +102,27 @@ class RegisteredOriginal {
             value.text.trim().isNotEmpty &&
             value.text.length <= 50000 &&
             value.citation.length <= 500 &&
+            (value.photoId == null || _photoId.hasMatch(value.photoId!)) &&
+            (value.writingRange == null ||
+                (value.isFullPage &&
+                    validOriginalRange(value.text, value.writingRange!))) &&
             (value.reflection?.isValidFor(value.text) ?? true),
       );
+}
+
+final _photoId = RegExp(r'^[a-f0-9]{64}$');
+
+bool validOriginalPhotoId(String id) => _photoId.hasMatch(id);
+
+bool validOriginalRange(String text, PencilMark range) {
+  bool atCharacterBoundary(int index) =>
+      index == text.length || (text.codeUnitAt(index) & 0xfc00) != 0xdc00;
+  return range.start >= 0 &&
+      range.end > range.start &&
+      range.end <= text.length &&
+      atCharacterBoundary(range.start) &&
+      atCharacterBoundary(range.end) &&
+      text.substring(range.start, range.end).trim().isNotEmpty;
 }
 
 class Book {

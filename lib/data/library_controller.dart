@@ -149,26 +149,33 @@ class LibraryController extends ChangeNotifier {
     );
   }
 
-  void registerOriginal({
+  bool registerOriginal({
     String? bookId,
     WritingPage? page,
     required String text,
     required String citation,
-  }) {
-    registerOriginals(
-      bookId: bookId,
-      page: page,
-      passages: [text],
-      citation: citation,
-    );
-  }
+    String? photoId,
+    bool isFullPage = false,
+    PencilMark? writingRange,
+  }) => registerOriginals(
+    bookId: bookId,
+    page: page,
+    passages: [text],
+    citation: citation,
+    photoId: photoId,
+    isFullPage: isFullPage,
+    writingRange: writingRange,
+  );
 
-  void registerOriginals({
+  bool registerOriginals({
     String? bookId,
     WritingPage? page,
     required List<String> passages,
     required String citation,
     String? deliveryId,
+    String? photoId,
+    bool isFullPage = false,
+    PencilMark? writingRange,
   }) {
     final originals = [
       for (final (index, text) in passages.indexed)
@@ -176,15 +183,20 @@ class LibraryController extends ChangeNotifier {
           index == 0 ? deliveryId ?? _id() : _id(),
           text,
           citation: citation,
+          photoId: photoId,
+          isFullPage: isFullPage,
+          writingRange: writingRange,
         ),
     ];
-    if (originals.isEmpty || !RegisteredOriginal.validList(originals)) return;
+    if (originals.isEmpty || !RegisteredOriginal.validList(originals)) {
+      return false;
+    }
     if (bookId != null) {
       final book = library.books.where((b) => b.id == bookId).firstOrNull;
       if (book == null ||
           (deliveryId != null &&
               book.originals.any((o) => o.id == deliveryId))) {
-        return;
+        return false;
       }
       _publish(
         library.copy(
@@ -196,12 +208,12 @@ class LibraryController extends ChangeNotifier {
           ],
         ),
       );
-      return;
+      return true;
     }
-    if (page == null) return;
+    if (page == null) return false;
     if (!library.records.any((record) => record.id == page.recordId)) {
       saveDraft(page, originals: originals, keepBlank: true);
-      return;
+      return true;
     }
     _publish(
       library.copy(
@@ -213,6 +225,7 @@ class LibraryController extends ChangeNotifier {
         ],
       ),
     );
+    return true;
   }
 
   Future<bool> saveOriginalReflection({
@@ -220,8 +233,34 @@ class LibraryController extends ChangeNotifier {
     required String recordId,
     required RegisteredOriginal original,
     required OriginalReflection reflection,
+  }) => _saveOriginal(
+    bookId: bookId,
+    recordId: recordId,
+    original: original,
+    updated: original.withReflection(reflection),
+  );
+
+  Future<bool> saveOriginalRange({
+    required String? bookId,
+    required String recordId,
+    required RegisteredOriginal original,
+    required PencilMark? range,
+  }) => _saveOriginal(
+    bookId: bookId,
+    recordId: recordId,
+    original: original,
+    updated: original.withDetails(
+      reflection: original.reflection,
+      writingRange: range,
+    ),
+  );
+
+  Future<bool> _saveOriginal({
+    required String? bookId,
+    required String recordId,
+    required RegisteredOriginal original,
+    required RegisteredOriginal updated,
   }) async {
-    final updated = original.withReflection(reflection);
     if (!RegisteredOriginal.validList([updated])) return false;
     final book = library.books.where((book) => book.id == bookId).firstOrNull;
     final records = library.records.where(

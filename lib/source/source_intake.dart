@@ -45,9 +45,6 @@ abstract class SourceIntake {
   Future<SourcePhoto?> pickPhoto({required bool camera}) async {
     final file = await _picker.pickImage(
       source: camera ? ImageSource.camera : ImageSource.gallery,
-      maxWidth: 2400,
-      maxHeight: 2400,
-      imageQuality: 92,
       requestFullMetadata: false,
     );
     return file == null ? null : readPhoto(file);

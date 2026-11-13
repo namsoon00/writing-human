@@ -58,20 +58,43 @@
   <script src="source_ocr.js?v=3"></script>
   <script>
     if (CSS.supports('-webkit-touch-callout', 'none')) {
-      // Preserve the focus Flutter placed on touch release by suppressing the
-      // compatibility mouse click over the notebook body.
-      document.addEventListener('touchend', (event) => {
-        if (event.target.localName !== 'flutter-view' || !event.cancelable) return;
-        const editor = event.target.querySelector(
-          '[flt-semantics-identifier="writing-page-body"] textarea'
-        );
-        if (!editor) return;
-        const {left, right, top, bottom} = editor.getBoundingClientRect();
-        const touch = event.changedTouches[0];
-        if (touch && touch.clientX >= left && touch.clientX < right &&
-            touch.clientY >= top && touch.clientY < bottom) {
-          event.preventDefault();
+      const bodyField = '[flt-semantics-identifier="writing-page-body"] textarea';
+      let tapStart = null;
+      document.addEventListener('touchstart', (event) => {
+        const touch = event.touches[0];
+        tapStart = event.touches.length === 1 && event.target.localName === 'flutter-view'
+          ? {x: touch.clientX, y: touch.clientY, id: touch.identifier, time: event.timeStamp}
+          : null;
+      }, {capture: true, passive: true});
+      document.addEventListener('touchmove', (event) => {
+        const touch = event.touches[0];
+        if (tapStart && (event.touches.length !== 1 ||
+            Math.hypot(touch.clientX - tapStart.x, touch.clientY - tapStart.y) > 10)) {
+          tapStart = null;
         }
+      }, {capture: true, passive: true});
+      document.addEventListener('touchcancel', () => { tapStart = null; }, true);
+
+      document.addEventListener('touchend', (event) => {
+        const start = tapStart;
+        tapStart = null;
+        if (event.target.localName !== 'flutter-view' || !event.cancelable) return;
+        const editor = event.target.querySelector(bodyField);
+        const touch = event.changedTouches[0];
+        if (!editor || !touch) return;
+        const {left, right, top, bottom} = editor.getBoundingClientRect();
+        if (touch.clientX < left || touch.clientX >= right ||
+            touch.clientY < top || touch.clientY >= bottom) return;
+
+        // Focus during the trusted tap so Safari can open its software keyboard.
+        // Flutter still places the caret from the pointer coordinates.
+        if (event.isTrusted && start && start.id === touch.identifier &&
+            event.timeStamp - start.time < 500 &&
+            Math.hypot(touch.clientX - start.x, touch.clientY - start.y) <= 10) {
+          editor.focus({preventScroll: true});
+        }
+        // The compatibility click can blur the field or move its selection.
+        event.preventDefault();
       }, {capture: true, passive: false});
     }
   </script>

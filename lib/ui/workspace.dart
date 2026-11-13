@@ -288,8 +288,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       if (_accountLocked || !_showCover) _coverAnchor = null;
       if (_accountLocked || _reveal?.pageId != page.id) _reveal = null;
       if (_accountLocked || _guided?.pageId != page.id) _guided = null;
-      if (_accountLocked || _savedSource?.pageId != page.id)
+      if (_accountLocked || _savedSource?.pageId != page.id) {
         _savedSource = null;
+      }
     });
     if ((widget.sync?.accountMismatch ?? false) ||
         (widget.sync?.signInRequired ?? false)) {

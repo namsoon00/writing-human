@@ -7,6 +7,10 @@
   종이와 문장 검색 결과를 열어 쪽·선택 영역·스크롤을 확인했다.
 - 390×844의 Flutter 위젯 렌더를 `artifacts/collection-shelf.png`와
   `artifacts/collection-writing.png`에 보관했다. 모바일 실기기 조작은 미검증이다.
+- [GitHub Actions 43339186920](https://github.com/namsoon00/writing-human/actions/runs/43339186920)에서
+  `8cf7d81ddec0f3987d3a7bcdee22b02a1a0c140e`의 검사·빌드·게시가 완료됐다. 배포 소스에서 실행한 로컬 테스트
+  107개도 통과했다. 공개 앱 JS와 번들 서체·잉크 이미지가 로컬 빌드와 일치했다.
+  앱 JS SHA-256은 `b492356fada69d2a9e60e4bad923b29a341436cacaaa5d473ec07fa9d87d0f56`이다. 공개 웹의 직접 조작은 미검증이다.
 
 ## 2026-11-13 · 종이 위에 바로 쓰는 느낀 점
 

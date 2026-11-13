@@ -50,10 +50,13 @@ void main() {
         render.getLocalRectForCaret(TextPosition(offset: offset)).center,
       );
       final menu = find.byKey(const ValueKey('paper-selection-menu'));
+      expect(tester.testTextInput.isVisible, isFalse);
       await tester.tapAt(pointAt(1));
       await tester.pumpAndSettle();
       expect(controller.selection.isCollapsed, isTrue);
       expect(controller.selection.extentOffset, 1);
+      expect(tester.widget<TextField>(field).focusNode!.hasFocus, isTrue);
+      expect(tester.testTextInput.isVisible, isTrue);
       await tester.longPressAt(pointAt(1));
       await tester.pumpAndSettle();
       expect(controller.selection.textInside(sentence), '햇빛이');
@@ -89,6 +92,57 @@ void main() {
     },
     variant: TargetPlatformVariant.only(TargetPlatform.iOS),
   );
+
+  testWidgets(
+    'iOS touch opens and reopens input at the existing caret',
+    (tester) async {
+      await tester.pumpWidget(WritingHumanApp(store: MemoryStore()));
+      await tester.pumpAndSettle();
+      final field = find.byKey(const ValueKey('page-text'));
+      final render = tester
+          .state<EditableTextState>(find.byType(EditableText))
+          .renderEditable;
+      final point = render.localToGlobal(
+        render.getLocalRectForCaret(const TextPosition(offset: 0)).center,
+      );
+      expect(tester.testTextInput.isVisible, isFalse);
+      await tester.tapAt(point);
+      await tester.pumpAndSettle();
+      final input = tester.widget<TextField>(field);
+      expect(input.focusNode!.hasFocus, isTrue);
+      expect(tester.testTextInput.isVisible, isTrue);
+      expect(input.controller!.selection.extentOffset, 0);
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
+      expect(input.focusNode!.hasFocus, isTrue);
+      expect(tester.testTextInput.isVisible, isFalse);
+      await tester.tapAt(point);
+      await tester.pumpAndSettle();
+      expect(tester.testTextInput.isVisible, isTrue);
+      expect(input.controller!.selection.extentOffset, 0);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
+
+  testWidgets('Paper and page number stay centered with uneven side insets', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    tester.view.padding = const FakeViewPadding(left: 44, right: 12);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPadding);
+    await tester.pumpWidget(WritingHumanApp(store: MemoryStore()));
+    await tester.pumpAndSettle();
+    final paper = find.byKey(const ValueKey('page-turn-live'));
+    final body = find.byKey(const ValueKey('page-text'));
+    final number = find.byKey(const ValueKey('page-number'));
+    expect(tester.getCenter(paper).dx, 422);
+    expect(tester.getCenter(body).dx, 422);
+    expect(tester.getCenter(number).dx, 422);
+    expect(tester.getRect(body).left, greaterThanOrEqualTo(44));
+  });
 
   testWidgets('Paper menu follows the selection and opens a unique original', (
     tester,

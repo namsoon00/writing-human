@@ -51,17 +51,20 @@ class PaperBackdrop extends StatelessWidget {
     this.pagesBefore = 0,
     this.pagesAfter = 0,
     this.grainOpacity = .24,
+    this.referencePage = false,
+    this.outsideColor = appPaper,
   });
   final Widget child;
-  final Color color;
+  final Color color, outsideColor;
   final BookDetailChoice binding;
   final int? coverIndex;
   final int pagesBefore, pagesAfter;
   final double grainOpacity;
+  final bool referencePage;
 
   @override
   Widget build(BuildContext context) => ColoredBox(
-    color: appPaper,
+    color: outsideColor,
     child: Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
@@ -74,7 +77,9 @@ class PaperBackdrop extends StatelessWidget {
                   child: RepaintBoundary(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: color,
+                        color: referencePage
+                            ? Color.lerp(color, const Color(0xffd8bc92), .17)
+                            : color,
                         image: paperGrain(color, grainOpacity),
                       ),
                       child: DecoratedBox(
@@ -103,9 +108,23 @@ class PaperBackdrop extends StatelessWidget {
                 top: 0,
                 bottom: 0,
                 left: 0,
-                width: 3,
+                width: 5,
                 child: IgnorePointer(
-                  child: ColoredBox(color: _coverColors[index]),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: _coverColors[index],
+                      image: DecorationImage(
+                        image: AssetImage(_coverAssets[index]),
+                        fit: BoxFit.cover,
+                        opacity: .44,
+                      ),
+                      border: Border(
+                        right: BorderSide(
+                          color: Colors.black.withValues(alpha: .23),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             Positioned.fill(child: BookBinding(choice: binding)),
@@ -115,7 +134,7 @@ class PaperBackdrop extends StatelessWidget {
                   color: color,
                   coverIndex: index,
                   before: pagesBefore,
-                  after: pagesAfter,
+                  after: math.max(1, pagesAfter),
                 ),
               ),
             child,

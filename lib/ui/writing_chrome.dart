@@ -113,64 +113,77 @@ class WritingFooter extends StatelessWidget {
   final BookDetailChoice ornament;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 64 + (MediaQuery.textScalerOf(context).scale(13) - 13) * 2,
-    child: Row(
-      children: [
-        SizedBox(
-          width: 64,
-          child: Tooltip(
-            message: '쓰기 도구',
-            child: TextButton(
-              onPressed: onTools,
-              style: TextButton.styleFrom(
-                foregroundColor: brandInk,
-                minimumSize: const Size(48, 48),
-              ),
-              child: Semantics(
-                label: '쓰기 도구',
-                excludeSemantics: true,
-                child: const CustomPaint(
-                  painter: _Underline(),
-                  child: Padding(
-                    padding: EdgeInsets.only(bottom: 5),
-                    child: Text(
-                      'Aa',
-                      style: TextStyle(
-                        fontFamily: appFontFamily,
-                        fontFamilyFallback: appFontFallback,
-                        fontSize: 21,
+  Widget build(BuildContext context) => PaperSwipe(
+    key: const ValueKey('page-number-swipe'),
+    onTurnStart: onTurnStart,
+    onTurnUpdate: onTurnUpdate,
+    onTurnEnd: onTurnEnd,
+    onTurnCancel: onTurnCancel,
+    onPrevious: onPrevious,
+    onNext: onNext,
+    child: SizedBox(
+      height: 64 + (MediaQuery.textScalerOf(context).scale(13) - 13) * 2,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 56,
+                  child: Tooltip(
+                    message: '쓰기 도구',
+                    child: TextButton(
+                      onPressed: onTools,
+                      style: TextButton.styleFrom(
+                        foregroundColor: brandInk,
+                        minimumSize: const Size(48, 48),
+                      ),
+                      child: Semantics(
+                        label: '쓰기 도구',
+                        excludeSemantics: true,
+                        child: const CustomPaint(
+                          painter: _Underline(),
+                          child: Padding(
+                            padding: EdgeInsets.only(bottom: 5),
+                            child: Text(
+                              'Aa',
+                              style: TextStyle(
+                                fontFamily: appFontFamily,
+                                fontFamilyFallback: appFontFallback,
+                                fontSize: 21,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
+                SizedBox(
+                  width: 52,
+                  child: TextFieldTapRegion(
+                    child: TextButton(
+                      key: const ValueKey('writing-originals'),
+                      onPressed: onSource,
+                      style: TextButton.styleFrom(
+                        foregroundColor: brandInk,
+                        padding: EdgeInsets.zero,
+                      ),
+                      child: const Text('원문', style: TextStyle(fontSize: 12)),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-        SizedBox(
-          width: 60,
-          child: TextFieldTapRegion(
-            child: TextButton(
-              key: const ValueKey('writing-originals'),
-              onPressed: onSource,
-              style: TextButton.styleFrom(
-                foregroundColor: brandInk,
-                padding: EdgeInsets.zero,
-              ),
-              child: const Text('원문', style: TextStyle(fontSize: 12)),
-            ),
-          ),
-        ),
-        Expanded(
-          child: PaperSwipe(
-            key: const ValueKey('page-number-swipe'),
-            onTurnStart: onTurnStart,
-            onTurnUpdate: onTurnUpdate,
-            onTurnEnd: onTurnEnd,
-            onTurnCancel: onTurnCancel,
-            onPrevious: onPrevious,
-            onNext: onNext,
+          Positioned(
+            left: 108,
+            right: 108,
+            top: 0,
+            bottom: 0,
             child: Semantics(
               label: '$pageLabel쪽, 전체 $pageCount쪽',
               onIncrease: onNext,
@@ -217,17 +230,20 @@ class WritingFooter extends StatelessWidget {
               ),
             ),
           ),
-        ),
-        SizedBox(
-          width: 64,
-          child: IconButton(
-            tooltip: '더 보기',
-            onPressed: onMore,
-            color: brandInk,
-            icon: const Icon(CupertinoIcons.ellipsis, size: 23),
+          Align(
+            alignment: Alignment.centerRight,
+            child: SizedBox(
+              width: 64,
+              child: IconButton(
+                tooltip: '더 보기',
+                onPressed: onMore,
+                color: brandInk,
+                icon: const Icon(CupertinoIcons.ellipsis, size: 23),
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     ),
   );
 }

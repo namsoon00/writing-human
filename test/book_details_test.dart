@@ -394,6 +394,11 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('오래 곁에 둘 문장들 상세'));
       await tester.pumpAndSettle();
+      expect(find.byType(Bookplate), findsNothing);
+      await tester.tap(find.byTooltip('책 더 보기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('장서표'));
+      await tester.pumpAndSettle();
       expect(find.byType(Bookplate), findsOneWidget);
       await tester.tap(find.byTooltip('장서표 이름 남기기'));
       await tester.pumpAndSettle();
@@ -407,6 +412,8 @@ void main() {
       tester.view.physicalSize = const Size(320, 640);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
+      await tester.tap(find.text('닫기'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       tester.view.physicalSize = const Size(844, 390);

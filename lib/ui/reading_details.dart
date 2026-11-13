@@ -69,7 +69,7 @@ class BookIndexTab extends StatelessWidget {
   }
 }
 
-/// The cover-edge marker repeats the active tab material at thumbnail size.
+/// The cover-edge marker sits behind the front board with its tip exposed.
 class BookIndexEdge extends StatelessWidget {
   const BookIndexEdge({super.key, required this.choice, required this.width});
   final BookDetailChoice choice;

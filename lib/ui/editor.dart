@@ -278,6 +278,9 @@ class _PageEditorState extends State<PageEditor> {
       from: details.globalPosition,
       cause: SelectionChangedCause.tap,
     );
+    // A tap at the same caret can leave selection unchanged while the
+    // software keyboard is hidden.
+    editor.requestKeyboard();
   }
 
   void _beginSelection(LongPressStartDetails details) {

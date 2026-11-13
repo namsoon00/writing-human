@@ -381,34 +381,46 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('shelf-details-b')));
       await tester.pumpAndSettle();
+      Future<void> choose(String label) async {
+        await tester.tap(find.byTooltip('책 더 보기'));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text(label).last);
+        await tester.tap(find.text(label).last);
+        await tester.pumpAndSettle();
+      }
+
+      expect(find.text('필사 기록'), findsOneWidget);
+      expect(find.byType(BookIndexTab), findsNothing);
+      await choose('다른 책의 목차');
       expect(find.byType(BookIndexTab), findsNWidgets(2));
       final tab = find.byKey(const ValueKey('book-index-b'));
       expect(tester.getSize(tab).height, greaterThanOrEqualTo(48));
+      await tester.tap(find.byKey(const ValueKey('book-index-other')));
+      await tester.pumpAndSettle();
+      expect(find.text('아직 필사 기록이 없어요.'), findsOneWidget);
+      await choose('다른 책의 목차');
       await tester.tap(tab);
       await tester.pumpAndSettle();
+      await choose('장서표');
       expect(find.byType(PressedFlower), findsOneWidget);
-      await tester.ensureVisible(find.text('표지 고르기'));
-      await tester.tap(find.text('표지 고르기'));
+      await tester.tap(find.text('닫기'));
       await tester.pumpAndSettle();
+      await choose('표지 고르기');
       await tester.tap(find.text('푸른 리넨'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('내지 고르기'));
-      await tester.pumpAndSettle();
+      await choose('내지 고르기');
       await tester.tap(find.text('크림지'));
       await tester.pumpAndSettle();
       expect(c.library.books.first.coverIndex, 2);
       expect(c.library.books.first.paperIndex, 3);
       expect(c.library.books.last.coverIndex, isNull);
       expect(c.library.style.paperIndex, initial.style.paperIndex);
-      await tester.tap(find.text('내지 고르기'));
-      await tester.pumpAndSettle();
+      await choose('내지 고르기');
       await tester.tap(find.text('기본 종이 사용'));
       await tester.pumpAndSettle();
       expect(c.library.books.first.paperIndex, isNull);
       expect(c.library.books.first.coverIndex, 2);
-      await tester.ensureVisible(find.byKey(const ValueKey('edit-book-index')));
-      await tester.tap(find.byKey(const ValueKey('edit-book-index')));
-      await tester.pumpAndSettle();
+      await choose('색인 이름 고치기');
       await tester.enterText(
         find.byKey(const ValueKey('book-index-label')),
         '다시 읽기',
@@ -416,8 +428,7 @@ void main() {
       await tester.tap(find.text('취소'));
       await tester.pumpAndSettle();
       expect(c.library.books.first.indexLabel, '');
-      await tester.tap(find.byKey(const ValueKey('edit-book-index')));
-      await tester.pumpAndSettle();
+      await choose('색인 이름 고치기');
       await tester.enterText(
         find.byKey(const ValueKey('book-index-label')),
         '👩‍👩‍👧‍👦' * 24,
@@ -433,18 +444,9 @@ void main() {
       await tester.tap(find.text('저장'));
       await tester.pumpAndSettle();
       expect(c.library.books.first.indexLabel, '다시 읽기');
+      await choose('다른 책의 목차');
       expect(find.text('다시 읽기'), findsOneWidget);
-      final vertical = find
-          .descendant(
-            of: find.byType(CollectionSheet),
-            matching: find.byType(Scrollable),
-          )
-          .last;
-      await tester.scrollUntilVisible(
-        find.byType(RecordDivider),
-        120,
-        scrollable: vertical,
-      );
+      await tester.tap(tab);
       await tester.pumpAndSettle();
       expect(find.byType(RecordDivider), findsOneWidget);
       c.setStyle(
@@ -463,14 +465,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(BookIndexTab), findsNothing);
       expect(c.library.books.first.indexLabel, '다시 읽기');
-      await tester.scrollUntilVisible(
-        find.byKey(const ValueKey('edit-book-index')),
-        -160,
-        scrollable: vertical,
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('edit-book-index')));
-      await tester.pumpAndSettle();
+      await choose('색인 이름 고치기');
       await tester.enterText(
         find.byKey(const ValueKey('book-index-label')),
         '',

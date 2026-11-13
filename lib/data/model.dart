@@ -659,6 +659,20 @@ class Library {
       records.where((r) => r.id == activePage?.recordId).firstOrNull;
   Book? get activeBook =>
       books.where((b) => b.id == activeRecord?.bookId).firstOrNull;
+  List<WritingPage> volumePages({String? bookId, String? recordId}) {
+    final recordIds = bookId == null
+        ? [?recordId]
+        : records.where((record) => record.bookId == bookId).map((r) => r.id);
+    final byRecord = {for (final id in recordIds) id: <WritingPage>[]};
+    for (final page in pages) {
+      byRecord[page.recordId]?.add(page);
+    }
+    return [
+      for (final group in byRecord.values)
+        ...(group..sort((a, b) => a.number.compareTo(b.number))),
+    ];
+  }
+
   Library copy({
     List<Book>? books,
     List<WritingRecord>? records,

@@ -66,6 +66,64 @@ void main() {
     expect(store.data.pages.length, 3);
   });
 
+  testWidgets(
+    'Contents show volume page numbers and open each record at its start',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final store = MemoryStore()
+        ..data = const Library(
+          books: [Book(id: 'book', title: '한 권')],
+          records: [
+            WritingRecord(id: 'a', bookId: 'book', title: '첫 기록'),
+            WritingRecord(id: 'b', bookId: 'book', title: '둘째 기록'),
+            WritingRecord(id: 'other', title: '책 밖의 기록'),
+          ],
+          pages: [
+            WritingPage(id: 'a2', recordId: 'a', number: 2),
+            WritingPage(id: 'b2', recordId: 'b', number: 2),
+            WritingPage(id: 'a1', recordId: 'a', number: 1),
+            WritingPage(id: 'outside', recordId: 'other', number: 1),
+            WritingPage(id: 'b1', recordId: 'b', number: 1, text: '둘째 기록 첫 쪽'),
+          ],
+          activePageId: 'b2',
+          writing: true,
+          style: WritingStyle(pageMotion: false),
+        );
+      await tester.pumpWidget(WritingHumanApp(store: store));
+      await tester.pumpAndSettle();
+      await shelf(tester);
+      await tester.tap(find.byKey(const ValueKey('shelf-details-book')));
+      await tester.pumpAndSettle();
+      final firstNumber = find.byKey(const ValueKey('contents-page-a'));
+      final secondNumber = find.byKey(const ValueKey('contents-page-b'));
+      expect(tester.widget<Text>(firstNumber).data, '1');
+      expect(tester.widget<Text>(secondNumber).data, '3');
+      expect(
+        tester.getTopRight(firstNumber).dx,
+        tester.getTopRight(secondNumber).dx,
+      );
+      expect(
+        tester.getTopLeft(firstNumber).dy,
+        lessThan(tester.getTopLeft(secondNumber).dy),
+      );
+      expect(find.text('책 밖의 기록'), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('contents-record-b')));
+      await tester.pumpAndSettle();
+      expect(store.data.activePageId, 'b1');
+      expect(tester.widget<TextField>(editor).controller!.text, '둘째 기록 첫 쪽');
+      final pageNumber = find.byKey(const ValueKey('page-number'));
+      expect(
+        find.descendant(of: pageNumber, matching: find.text('3')),
+        findsOneWidget,
+      );
+      expect(tester.getCenter(pageNumber).dx, closeTo(195, .5));
+    },
+  );
+
   testWidgets('A full shelf scrolls in rows and searches notebook titles', (
     tester,
   ) async {

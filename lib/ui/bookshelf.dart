@@ -128,7 +128,7 @@ class Bookshelf extends StatelessWidget {
           key: const ValueKey('bookshelf-scroll'),
           controller: scrollController,
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: const EdgeInsets.fromLTRB(padding, 14, padding, 20),
+          padding: const EdgeInsets.symmetric(vertical: 14),
           itemCount: (books.length + columns - 1) ~/ columns + 1,
           itemBuilder: (context, index) {
             if (index == 0) {
@@ -137,42 +137,50 @@ class Bookshelf extends StatelessWidget {
                 children: [
                   if (recent != null)
                     if (compact)
-                      openBook(
-                        recent,
-                        Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xffeee3d3),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          padding: const EdgeInsets.fromLTRB(10, 10, 14, 10),
-                          child: Row(
-                            children: [
-                              cover(recent, 42, thumbnail: true),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  recent.title,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: padding,
+                        ),
+                        child: openBook(
+                          recent,
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xffeee3d3),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            padding: const EdgeInsets.fromLTRB(10, 10, 14, 10),
+                            child: Row(
+                              children: [
+                                cover(recent, 42, thumbnail: true),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    recent.title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Icon(
-                                CupertinoIcons.chevron_right,
-                                size: 16,
-                                color: muted,
-                              ),
-                            ],
+                                const SizedBox(width: 8),
+                                const Icon(
+                                  CupertinoIcons.chevron_right,
+                                  size: 16,
+                                  color: muted,
+                                ),
+                              ],
+                            ),
                           ),
+                          key: const ValueKey('shelf-recent'),
+                          radius: 6,
                         ),
-                        key: const ValueKey('shelf-recent'),
-                        radius: 16,
                       )
                     else ...[
-                      const _ShelfLabel('최근 노트'),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: padding),
+                        child: _ShelfLabel('최근 노트'),
+                      ),
                       const SizedBox(height: 8),
                       Center(child: openCover(recent, featuredWidth)),
                       const _WoodShelf(),
@@ -181,6 +189,8 @@ class Bookshelf extends StatelessWidget {
                   if (books.isNotEmpty)
                     Padding(
                       padding: EdgeInsets.only(
+                        left: padding,
+                        right: padding,
                         top: recent == null ? 0 : 20,
                         bottom: 10,
                       ),
@@ -202,24 +212,30 @@ class Bookshelf extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 8),
               child: Column(
                 children: [
-                  Row(
-                    children: [
-                      for (final book in row)
-                        SizedBox(
-                          width: slotWidth,
-                          child: Center(child: openCover(book, coverWidth)),
-                        ),
-                    ],
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: padding),
+                    child: Row(
+                      children: [
+                        for (final book in row)
+                          SizedBox(
+                            width: slotWidth,
+                            child: Center(child: openCover(book, coverWidth)),
+                          ),
+                      ],
+                    ),
                   ),
                   const _WoodShelf(),
-                  Row(
-                    children: [
-                      for (final book in row)
-                        SizedBox(
-                          width: slotWidth,
-                          child: Center(child: details(book)),
-                        ),
-                    ],
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: padding),
+                    child: Row(
+                      children: [
+                        for (final book in row)
+                          SizedBox(
+                            width: slotWidth,
+                            child: Center(child: details(book)),
+                          ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -253,16 +269,20 @@ class _WoodShelf extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const SizedBox(
-    height: 12,
+    height: 14,
     width: double.infinity,
     child: DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.all(Radius.circular(5)),
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xffa77452), Color(0xff8c5c3d), Color(0xff5e3926)],
-          stops: [0, .32, 1],
+          colors: [
+            Color(0xffb68158),
+            Color(0xffad7650),
+            Color(0xff845434),
+            Color(0xff634028),
+          ],
+          stops: [0, .19, .21, 1],
         ),
         boxShadow: [
           BoxShadow(

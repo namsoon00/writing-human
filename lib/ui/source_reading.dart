@@ -19,6 +19,8 @@ class SourceReading extends StatefulWidget {
     this.match,
     this.style = const WritingStyle(),
     this.coverIndex,
+    this.pagesBefore = 0,
+    this.pagesAfter = 0,
     this.onRegister,
     this.onRetry,
     this.onSaveReflection,
@@ -29,6 +31,7 @@ class SourceReading extends StatefulWidget {
   final OriginalMatch? match;
   final WritingStyle style;
   final int? coverIndex;
+  final int pagesBefore, pagesAfter;
   final VoidCallback? onRegister;
   final VoidCallback? onRetry;
   final Future<bool> Function(RegisteredOriginal, PencilMark?)? onSaveRange;
@@ -194,15 +197,18 @@ class _SourceReadingState extends State<SourceReading> {
       child: SafeArea(
         top: false,
         child: FractionallySizedBox(
-          heightFactor: keyboard > 0 ? .92 : .54,
+          heightFactor: keyboard > 0 ? .92 : .72,
           child: PaperBackdrop(
             key: const ValueKey('source-paper'),
             binding: details.binding,
             color: paperColors[style.paperIndex],
             grainOpacity: paperGrainOpacity[style.paperIndex],
             coverIndex: widget.coverIndex,
+            pagesBefore: widget.pagesBefore,
+            pagesAfter: widget.pagesAfter,
+            referencePage: true,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              padding: const EdgeInsets.fromLTRB(24, 2, 24, 12),
               child: Column(
                 children: [
                   Row(
@@ -458,7 +464,7 @@ class _OriginalTextState extends State<_OriginalText> {
         size: 20,
         color: penColors[style.penIndex],
         useDevelopmentTypeface: style.useDevelopmentTypeface,
-      ),
+      ).copyWith(height: 1.65, letterSpacing: 0),
       children: [
         for (var i = 0; i + 1 < boundaries.length; i++)
           TextSpan(

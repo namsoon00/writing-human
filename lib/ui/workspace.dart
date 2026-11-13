@@ -78,18 +78,10 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   List<WritingPage> get _volumePages {
     final current = page;
     if (fresh) return [current];
-    final bookId = book?.id;
-    final recordIds = bookId == null
-        ? [current.recordId]
-        : c.library.records.where((r) => r.bookId == bookId).map((r) => r.id);
-    final byRecord = {for (final id in recordIds) id: <WritingPage>[]};
-    for (final page in c.library.pages) {
-      byRecord[page.recordId]?.add(page);
-    }
-    final pages = [
-      for (final group in byRecord.values)
-        ...(group..sort((a, b) => a.number.compareTo(b.number))),
-    ];
+    final pages = c.library.volumePages(
+      bookId: book?.id,
+      recordId: current.recordId,
+    );
     return pages.any((p) => p.id == current.id) ? pages : [current];
   }
 
@@ -409,6 +401,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         onNewBook: () {
           _afterSheet(_createBook);
         },
+        onContentsPage: (page) => _afterSheet(() => _openPage(page.id)),
         onBookOriginals: (book) => _showOriginals(bookDetails: book),
         onPassage: (passage) => _afterSheet(() => _openPassage(passage)),
         onArchiveBook: (book) =>
@@ -564,9 +557,10 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     bool allowUnbound = true,
   }) async {
     final books = {for (final book in c.library.books) book.id: book.title};
-    final style = _paperStyle(
-      c.library.books.where((item) => item.id == bookId).firstOrNull,
-    );
+    final targetBook = c.library.books
+        .where((item) => item.id == bookId)
+        .firstOrNull;
+    final style = _paperStyle(targetBook);
     final sharedText = shared?.text.trim() ?? '';
     final link = Uri.tryParse(sharedText);
     final linkOnly =
@@ -580,19 +574,22 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       backgroundColor: paperColors[style.paperIndex],
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       constraints: const BoxConstraints(maxWidth: 600),
-      builder: (_) => SourceImportSheet(
-        intake: _intake,
-        initialText: linkOnly ? '' : sharedText,
-        initialCitation: linkOnly ? sharedText : '',
-        initialPhoto: initialPhoto,
-        choice: style.bookDetails.sourceSlip,
-        paperColor: paperColors[style.paperIndex],
-        grainOpacity: paperGrainOpacity[style.paperIndex],
-        shared: shared != null,
-        registration: shared == null,
-        books: books,
-        bookId: bookId,
-        allowUnbound: allowUnbound,
+      builder: (_) => _insertedPage(
+        SourceImportSheet(
+          intake: _intake,
+          initialText: linkOnly ? '' : sharedText,
+          initialCitation: linkOnly ? sharedText : '',
+          initialPhoto: initialPhoto,
+          choice: style.bookDetails.sourceSlip,
+          paperColor: paperColors[style.paperIndex],
+          grainOpacity: paperGrainOpacity[style.paperIndex],
+          shared: shared != null,
+          registration: shared == null,
+          books: books,
+          bookId: bookId,
+          allowUnbound: allowUnbound,
+        ),
+        forBook: targetBook,
       ),
     );
     final result = await Navigator.of(context).push(route);
@@ -744,6 +741,12 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     final selectedPage = page;
     final selectedBook = bookDetails ?? book;
     final bookId = selectedBook?.id;
+    final volume = bookId == null
+        ? _volumePages
+        : owner.library.volumePages(bookId: bookId);
+    final position = bookDetails == null
+        ? volume.indexWhere((p) => p.id == selectedPage.id)
+        : -1;
     // Web accessibility can move focus to the button before its handler.
     final wasEditing =
         bookDetails == null &&
@@ -785,6 +788,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               coverIndex: selectedBook == null
                   ? null
                   : owner.coverIndexFor(selectedBook),
+              pagesBefore: position < 0 ? 0 : position,
+              pagesAfter: volume.length - position - 1,
               onRegister: owner.saveError == null ? register : null,
               onRetry: owner.saveError == null ? null : _retrySave,
               onSaveRange: (original, range) async {
@@ -889,6 +894,12 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               ),
               for (final b in c.library.books)
                 ListTile(
+                  leading: BookCover(
+                    title: '',
+                    width: 29,
+                    variant: c.coverIndexFor(b),
+                    details: c.library.style.bookDetails,
+                  ),
                   title: Text(b.title),
                   onTap: () => Navigator.pop(context, b.id),
                 ),
@@ -928,13 +939,20 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       showDragHandle: true,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       constraints: const BoxConstraints(maxWidth: 600),
-      builder: (_) => PagesSheet(
-        pages: _volumePages,
-        currentId: selectedId,
-        style: _paperStyle(book),
-        coverTitle: book?.title ?? record?.title ?? '나의 필사',
-        coverVariant: _coverVariant,
-      ),
+      builder: (_) {
+        final pages = _volumePages;
+        return _insertedPage(
+          PagesSheet(
+            pages: pages,
+            currentId: selectedId,
+            style: _paperStyle(book),
+            coverTitle: book?.title ?? record?.title ?? '나의 필사',
+            coverVariant: _coverVariant,
+          ),
+          forBook: book,
+          pageCount: pages.length,
+        );
+      },
     );
     final choice = await Navigator.of(context).push<PageChoice>(route);
     // Let the overview finish closing so the actual paper turn is visible.
@@ -955,76 +973,96 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     }
   }
 
+  Widget _insertedPage(Widget child, {Book? forBook, int pageCount = 0}) {
+    final style = _paperStyle(forBook);
+    return PaperBackdrop(
+      color: paperColors[style.paperIndex],
+      grainOpacity: paperGrainOpacity[style.paperIndex],
+      binding: style.bookDetails.binding,
+      coverIndex: forBook == null ? null : c.coverIndexFor(forBook),
+      pagesAfter: pageCount,
+      child: child,
+    );
+  }
+
   void _more() {
     if (_editorComposing && reflectionFocus.hasFocus) return;
     _blur();
     _sheet(
-      SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(CupertinoIcons.book, size: 20),
-                  title: const Text('책으로 묶기'),
-                  subtitle: book == null ? null : Text(book!.title),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _bind();
-                  },
-                ),
-                if (record != null)
+      _insertedPage(
+        SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 18),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   ListTile(
-                    leading: const Icon(CupertinoIcons.doc_on_doc, size: 20),
-                    title: const Text('페이지'),
+                    leading: const Icon(CupertinoIcons.book, size: 20),
+                    title: const Text('책으로 묶기'),
+                    subtitle: book == null ? null : Text(book!.title),
                     onTap: () {
-                      _afterSheet(_pages);
+                      Navigator.pop(context);
+                      _bind();
                     },
                   ),
-                const ListTile(
-                  leading: Icon(CupertinoIcons.pencil, size: 20, color: muted),
-                  title: Text('연필로 남기는 독서 흔적'),
-                  subtitle: Text(
-                    '본문에서 구절을 선택한 뒤 ‘연필 표시’를 누르세요.\n표시한 구절을 다시 선택하면 지울 수 있어요.',
-                    style: TextStyle(fontSize: 12, height: 1.6, color: muted),
-                  ),
-                ),
-                if (page.writtenOn != null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        const Text(
-                          '기록 시작',
-                          style: TextStyle(fontSize: 11, color: muted),
-                        ),
-                        DateStamp(
-                          date: page.writtenOn!,
-                          choice: c.library.style.bookDetails.dateStamp,
-                        ),
-                      ],
+                  if (record != null)
+                    ListTile(
+                      leading: const Icon(CupertinoIcons.doc_on_doc, size: 20),
+                      title: const Text('페이지'),
+                      onTap: () {
+                        _afterSheet(_pages);
+                      },
+                    ),
+                  const ListTile(
+                    leading: Icon(
+                      CupertinoIcons.pencil,
+                      size: 20,
+                      color: muted,
+                    ),
+                    title: Text('연필로 남기는 독서 흔적'),
+                    subtitle: Text(
+                      '본문에서 구절을 선택한 뒤 ‘연필 표시’를 누르세요.\n표시한 구절을 다시 선택하면 지울 수 있어요.',
+                      style: TextStyle(fontSize: 12, height: 1.6, color: muted),
                     ),
                   ),
-                ListTile(
-                  leading: const Icon(CupertinoIcons.archivebox, size: 20),
-                  title: const Text('기록 보관'),
-                  onTap: () => _afterSheet(_archive),
-                ),
-                ListTile(
-                  leading: const Icon(CupertinoIcons.cloud, size: 20),
-                  title: const Text('기기 동기화'),
-                  onTap: () => _afterSheet(() async => _syncInfo()),
-                ),
-              ],
+                  if (page.writtenOn != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          const Text(
+                            '기록 시작',
+                            style: TextStyle(fontSize: 11, color: muted),
+                          ),
+                          DateStamp(
+                            date: page.writtenOn!,
+                            choice: c.library.style.bookDetails.dateStamp,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ListTile(
+                    leading: const Icon(CupertinoIcons.archivebox, size: 20),
+                    title: const Text('기록 보관'),
+                    onTap: () => _afterSheet(_archive),
+                  ),
+                  ListTile(
+                    leading: const Icon(CupertinoIcons.cloud, size: 20),
+                    title: const Text('기기 동기화'),
+                    onTap: () => _afterSheet(() async => _syncInfo()),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
+        forBook: book,
+        pageCount: _volumePages.length,
       ),
     );
   }
@@ -1183,6 +1221,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     final bookId = record?.bookId ?? (fresh ? draftBookId : null);
     final book = c.library.books.where((b) => b.id == bookId).firstOrNull;
     final style = _paperStyle(book);
+    final safePadding = MediaQuery.paddingOf(context);
+    final sideInset = math.max(safePadding.left, safePadding.right);
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
     final keyboardOverlap = math.max(
       0.0,
@@ -1204,6 +1244,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       pagesBefore: index,
       pagesAfter: count - index - 1,
       child: SafeArea(
+        minimum: EdgeInsets.symmetric(horizontal: sideInset),
         maintainBottomViewPadding: true,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -1479,12 +1520,19 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     if (_accountLocked || !_canLeaveInput()) return;
     _blur();
     final owner = c;
+    final targetBook = selectedBook ?? book;
     await _sheet(
-      ArchiveSheet(
-        controller: owner,
-        canAccess: () => mounted && c == owner && !_accountLocked,
-        record: selectedBook == null ? record : null,
-        book: selectedBook ?? book,
+      _insertedPage(
+        ArchiveSheet(
+          controller: owner,
+          canAccess: () => mounted && c == owner && !_accountLocked,
+          record: selectedBook == null ? record : null,
+          book: targetBook,
+        ),
+        forBook: targetBook,
+        pageCount: targetBook == null
+            ? 0
+            : c.library.volumePages(bookId: targetBook.id).length,
       ),
       enableDrag: false,
     );

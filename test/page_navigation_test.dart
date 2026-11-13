@@ -103,6 +103,35 @@ void main() {
     },
   );
 
+  testWidgets(
+    'The footer turns from its right margin while the keyboard is open',
+    (tester) async {
+      final store = MemoryStore()..data = twoPages();
+      await open(tester, store);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.tap(field);
+      await tester.pumpAndSettle();
+      final controller = tester.widget<TextField>(field).controller!;
+      final initial = controller.value;
+      final footer = tester.getRect(find.byType(WritingFooter));
+      final gesture = await tester.startGesture(
+        Offset(footer.right - 80, footer.center.dy),
+      );
+      await gesture.moveBy(const Offset(-85, 0));
+      await tester.pump();
+      expect(reveal, findsOneWidget);
+      expect(controller.value, initial);
+      expect(store.data.activePageId, 'one');
+      await gesture.moveBy(const Offset(-65, 0));
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(store.data.activePageId, 'two');
+      expect(store.data.pages.first.text, initial.text);
+    },
+  );
+
   testWidgets('A native long press selects text instead of turning the paper', (
     tester,
   ) async {

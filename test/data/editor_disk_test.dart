@@ -150,7 +150,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(ValueKey('shelf-details-$bookId')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('책 이름 변경'));
+    await tester.tap(find.byTooltip('책 더 보기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('책 이름 변경'));
     await tester.pumpAndSettle();
     final titleInput = find.byKey(const ValueKey('book-title-input'));
     expect(

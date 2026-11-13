@@ -32,6 +32,8 @@ class SourceImportSheet extends StatefulWidget {
     required this.initialText,
     required this.choice,
     this.initialPhoto,
+    this.paperColor = paper,
+    this.grainOpacity = .16,
     this.initialCitation = '',
     this.shared = false,
     this.registration = false,
@@ -43,6 +45,8 @@ class SourceImportSheet extends StatefulWidget {
   final SourceIntake intake;
   final String initialText, initialCitation;
   final BookDetailChoice choice;
+  final Color paperColor;
+  final double grainOpacity;
   final SourcePhoto? initialPhoto;
   final bool shared, registration, allowUnbound;
   final Map<String, String> books;
@@ -477,32 +481,95 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     }
   }
 
-  Widget _methodButtons() => Wrap(
+  Widget _importTools() => Wrap(
+    crossAxisAlignment: WrapCrossAlignment.center,
     spacing: 8,
     children: [
       TextButton.icon(
-        onPressed: _editable ? _focus.requestFocus : null,
-        icon: const Icon(CupertinoIcons.pencil),
-        label: const Text('텍스트 넣기'),
+        key: const ValueKey('source-paste'),
+        onPressed: _editable ? _paste : null,
+        icon: const Icon(CupertinoIcons.doc_on_clipboard, size: 17),
+        label: const Text('붙여넣기'),
       ),
-      TextButton.icon(
-        onPressed: _editable ? _shareHelp : null,
-        icon: const Icon(CupertinoIcons.share),
-        label: const Text('다른 앱에서 공유'),
-      ),
-      TextButton.icon(
-        key: const ValueKey('source-photo'),
-        onPressed: _editable ? () => _choosePhoto(_ScanMode.page) : null,
-        icon: const Icon(CupertinoIcons.doc_text_viewfinder),
-        label: const Text('책 한 페이지 인식'),
-      ),
-      TextButton.icon(
-        key: const ValueKey('source-paragraph-photo'),
-        onPressed: _editable ? () => _choosePhoto(_ScanMode.paragraph) : null,
-        icon: const Icon(CupertinoIcons.viewfinder),
-        label: const Text('문단 인식'),
-      ),
+      if (!widget.shared)
+        PopupMenuButton<_ScanMode>(
+          key: const ValueKey('source-photo-menu'),
+          enabled: _editable,
+          onSelected: _choosePhoto,
+          tooltip: '사진에서 가져오기',
+          color: widget.paperColor,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          itemBuilder: (_) => const [
+            PopupMenuItem(
+              key: ValueKey('source-photo'),
+              value: _ScanMode.page,
+              child: Text('책 한 페이지 인식'),
+            ),
+            PopupMenuItem(
+              key: ValueKey('source-paragraph-photo'),
+              value: _ScanMode.paragraph,
+              child: Text('문단 인식'),
+            ),
+          ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(CupertinoIcons.doc_text_viewfinder, size: 17),
+                const SizedBox(width: 7),
+                Flexible(
+                  child: Text(
+                    '사진에서 가져오기',
+                    style: TextStyle(color: _editable ? brandInk : muted),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(CupertinoIcons.chevron_down, size: 12),
+              ],
+            ),
+          ),
+        ),
     ],
+  );
+
+  Widget _metadataRow(String label, Widget field) => LayoutBuilder(
+    builder: (context, constraints) {
+      final caption = Text(
+        label,
+        style: const TextStyle(color: muted, fontSize: 12),
+      );
+      final content = Semantics(label: label, child: field);
+      return DecoratedBox(
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: line)),
+        ),
+        child:
+            constraints.maxWidth < 245 ||
+                MediaQuery.textScalerOf(context).scale(14) > 24
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [const SizedBox(height: 8), caption, content],
+              )
+            : Row(
+                children: [
+                  SizedBox(width: constraints.maxWidth * .37, child: caption),
+                  Expanded(child: content),
+                ],
+              ),
+      );
+    },
+  );
+
+  static const _recordDecoration = InputDecoration(
+    border: InputBorder.none,
+    enabledBorder: InputBorder.none,
+    focusedBorder: UnderlineInputBorder(
+      borderSide: BorderSide(color: brandInk),
+    ),
+    contentPadding: EdgeInsets.symmetric(vertical: 11),
+    filled: false,
   );
 
   String? _blockLabel(ScanParagraph block) {
@@ -676,7 +743,8 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
 
   Widget _field(TextEditingController controller, int index) => SourceSlip(
     choice: widget.choice,
-    compact: true,
+    compact: _reviewing,
+    showCaption: false,
     child: TextField(
       key: index == 0
           ? const ValueKey('source-text')
@@ -687,7 +755,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       maxLines: 8,
       keyboardType: TextInputType.multiline,
       decoration: const InputDecoration(
-        hintText: '옮겨 쓸 구절을 붙여넣거나 적어 주세요.',
+        hintText: '옮겨 쓸 구절을 적어 주세요.',
         border: InputBorder.none,
         contentPadding: EdgeInsets.zero,
         filled: false,
@@ -808,143 +876,180 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     final selectionReady = _mode == _ScanMode.page
         ? _selected.isNotEmpty
         : _paragraph != null;
-    return Padding(
-      padding: EdgeInsets.only(bottom: inset),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: math.min(680, available * .88),
-          child: Column(
-            children: [
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _selecting
-                                ? '문단 고르기'
-                                : _reviewing
-                                ? '원문 확인'
-                                : widget.shared
-                                ? '공유한 원문'
-                                : '원문 등록',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
+    final showShare = !_selecting && !_reviewing && !widget.shared;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: widget.paperColor,
+        image: paperGrain(widget.paperColor, widget.grainOpacity),
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: inset),
+        child: SafeArea(
+          top: false,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: math.min(680, available * .88),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _selecting
+                                  ? '문단 고르기'
+                                  : _reviewing
+                                  ? '원문 확인'
+                                  : widget.shared
+                                  ? '공유한 원문'
+                                  : '원문 등록',
+                              style: const TextStyle(fontSize: 22),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: '닫기',
+                            onPressed: _savingPhoto
+                                ? null
+                                : () => Navigator.pop(context),
+                            icon: const Icon(CupertinoIcons.xmark, size: 19),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (_busy) ...[
+                        const LinearProgressIndicator(),
+                        const SizedBox(height: 10),
+                        Text(
+                          _readingPhoto ? '사진 속 글자를 읽고 있어요' : '원문을 가져오고 있어요',
+                        ),
+                      ],
+                      if (_error case final error?)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Semantics(
+                            liveRegion: true,
+                            child: Text(
+                              error,
+                              style: const TextStyle(color: burgundy),
                             ),
                           ),
                         ),
-                        IconButton(
-                          tooltip: '닫기',
-                          onPressed: _savingPhoto
-                              ? null
-                              : () => Navigator.pop(context),
-                          icon: const Icon(CupertinoIcons.xmark, size: 19),
+                      if (_selecting)
+                        ..._selectionPanel()
+                      else if (_reviewing)
+                        ..._reviewPanel()
+                      else ...[
+                        _field(_text, 0),
+                        const SizedBox(height: 5),
+                        _importTools(),
+                      ],
+                      if (text.length > sourceLengthLimit)
+                        const Text('원문이 너무 길어요. 옮겨 쓸 구절만 남겨 주세요.'),
+                      if (!_selecting &&
+                          (widget.registration || widget.shared)) ...[
+                        const SizedBox(height: 10),
+                        const Divider(height: 1, thickness: 1, color: line),
+                        if (widget.books.isNotEmpty)
+                          _metadataRow(
+                            '보관할 책',
+                            DropdownButtonFormField<String>(
+                              initialValue: _bookId ?? '',
+                              decoration: _recordDecoration,
+                              icon: const Icon(
+                                CupertinoIcons.chevron_down,
+                                size: 15,
+                              ),
+                              dropdownColor: widget.paperColor,
+                              isExpanded: true,
+                              items: [
+                                if (widget.allowUnbound)
+                                  const DropdownMenuItem(
+                                    value: '',
+                                    child: Text('책 없이 보관'),
+                                  ),
+                                for (final book in widget.books.entries)
+                                  DropdownMenuItem(
+                                    value: book.key,
+                                    child: Text(
+                                      book.value,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                              ],
+                              onChanged: _editable
+                                  ? (id) => setState(
+                                      () => _bookId = id == '' ? null : id,
+                                    )
+                                  : null,
+                            ),
+                          ),
+                        _metadataRow(
+                          _reviewing ? '쪽수·출처 (선택)' : '출처 (선택)',
+                          TextField(
+                            key: const ValueKey('original-citation'),
+                            controller: _citation,
+                            decoration: _recordDecoration.copyWith(
+                              hintText: '쪽수나 출처',
+                              errorText: _citation.text.trim().length > 500
+                                  ? '출처를 조금 줄여 주세요.'
+                                  : null,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OverflowBar(
+                      alignment: showShare
+                          ? MainAxisAlignment.spaceBetween
+                          : MainAxisAlignment.end,
+                      overflowAlignment: OverflowBarAlignment.end,
+                      spacing: 8,
+                      children: [
+                        if (showShare)
+                          TextButton(
+                            onPressed: _editable ? _shareHelp : null,
+                            style: TextButton.styleFrom(
+                              foregroundColor: muted,
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(44, 44),
+                            ),
+                            child: const Text('다른 앱에서 공유'),
+                          ),
+                        FilledButton(
+                          key: const ValueKey('source-confirm'),
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size(88, 44),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                          onPressed: _selecting
+                              ? selectionReady && !_busy
+                                    ? _reviewSelection
+                                    : null
+                              : canSubmit
+                              ? _submit
+                              : null,
+                          child: Text(_selecting ? '선택한 문단 확인' : '저장'),
                         ),
                       ],
                     ),
-                    if (!_selecting && !_reviewing && !widget.shared)
-                      _methodButtons(),
-                    if (_busy) ...[
-                      const LinearProgressIndicator(),
-                      const SizedBox(height: 10),
-                      Text(_readingPhoto ? '사진 속 글자를 읽고 있어요' : '원문을 가져오고 있어요'),
-                    ],
-                    if (_error case final error?)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Semantics(
-                          liveRegion: true,
-                          child: Text(
-                            error,
-                            style: const TextStyle(color: burgundy),
-                          ),
-                        ),
-                      ),
-                    if (_selecting)
-                      ..._selectionPanel()
-                    else if (_reviewing)
-                      ..._reviewPanel()
-                    else ...[
-                      _field(_text, 0),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          key: const ValueKey('source-paste'),
-                          onPressed: _editable ? _paste : null,
-                          icon: const Icon(
-                            CupertinoIcons.doc_on_clipboard,
-                            size: 17,
-                          ),
-                          label: const Text('붙여넣기'),
-                        ),
-                      ),
-                    ],
-                    if (text.length > sourceLengthLimit)
-                      const Text('원문이 너무 길어요. 옮겨 쓸 구절만 남겨 주세요.'),
-                    if (!_selecting &&
-                        (widget.registration || widget.shared)) ...[
-                      if (widget.books.isNotEmpty)
-                        DropdownButtonFormField<String>(
-                          initialValue: _bookId ?? '',
-                          decoration: const InputDecoration(labelText: '보관할 책'),
-                          isExpanded: true,
-                          items: [
-                            if (widget.allowUnbound)
-                              const DropdownMenuItem(
-                                value: '',
-                                child: Text('책 없이 보관'),
-                              ),
-                            for (final book in widget.books.entries)
-                              DropdownMenuItem(
-                                value: book.key,
-                                child: Text(
-                                  book.value,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                          ],
-                          onChanged: _editable
-                              ? (id) => setState(
-                                  () => _bookId = id == '' ? null : id,
-                                )
-                              : null,
-                        ),
-                      TextField(
-                        key: const ValueKey('original-citation'),
-                        controller: _citation,
-                        decoration: InputDecoration(
-                          labelText: _reviewing ? '쪽수 또는 출처 (선택)' : '출처 (선택)',
-                          errorText: _citation.text.trim().length > 500
-                              ? '출처를 조금 줄여 주세요.'
-                              : null,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    key: const ValueKey('source-confirm'),
-                    onPressed: _selecting
-                        ? selectionReady && !_busy
-                              ? _reviewSelection
-                              : null
-                        : canSubmit
-                        ? _submit
-                        : null,
-                    child: Text(_selecting ? '선택한 문단 확인' : '저장'),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

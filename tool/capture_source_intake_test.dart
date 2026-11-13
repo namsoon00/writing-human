@@ -10,7 +10,8 @@ import 'package:writing_human/main.dart';
 import 'package:writing_human/source/source_intake.dart';
 import 'package:writing_human/ui/source_reading.dart';
 
-import '../test/source_intake_test.dart' show FakeIntake;
+import '../test/source_intake_test.dart'
+    show FakeIntake, preparePhotoStorage, saveWithPhoto;
 import '../test/widget_test.dart' show MemoryStore;
 
 const paragraphs = [
@@ -55,6 +56,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     final output = Directory('artifacts');
+    await preparePhotoStorage(tester);
     late Uint8List photo;
     await tester.runAsync(() async {
       await output.create(recursive: true);
@@ -130,6 +132,9 @@ void main() {
     await tester.tap(originals);
     await tester.pumpAndSettle();
     await capture('choose');
+    await tester.tap(find.byKey(const ValueKey('source-photo-menu')));
+    await tester.pumpAndSettle();
+    await capture('photo-menu');
     await tester.tap(find.byKey(const ValueKey('source-photo')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('사진 고르기'));
@@ -139,8 +144,7 @@ void main() {
     await tester.tap(confirm);
     await tester.pumpAndSettle();
     await capture('review');
-    await tester.tap(confirm);
-    await tester.pumpAndSettle();
+    await saveWithPhoto(tester);
     expect(
       store.data.records.single.originals.single.text,
       paragraphs.join('\n\n'),

@@ -178,6 +178,8 @@ Future<void> saveWithPhoto(WidgetTester tester) async {
 }
 
 Future<void> takePhoto(WidgetTester tester, {bool settle = true}) async {
+  await tester.tap(find.byKey(const ValueKey('source-photo-menu')));
+  await tester.pumpAndSettle();
   await tester.tap(find.byKey(const ValueKey('source-photo')));
   await tester.pumpAndSettle();
   await tester.tap(find.text('사진 찍기'));
@@ -886,6 +888,8 @@ void main() {
       );
       await open(tester, store, intake);
       await openRegistration(tester);
+      await tester.tap(find.byKey(const ValueKey('source-photo-menu')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('source-paragraph-photo')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('사진 찍기'));

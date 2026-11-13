@@ -373,10 +373,11 @@ class SourceSlip extends StatelessWidget {
     super.key,
     required this.child,
     this.compact = false,
+    this.showCaption = true,
     this.choice = const BookDetailChoice(),
   });
   final Widget child;
-  final bool compact;
+  final bool compact, showCaption;
   final BookDetailChoice choice;
   @override
   Widget build(BuildContext context) => CustomPaint(
@@ -403,7 +404,7 @@ class SourceSlip extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (!compact) ...[
+          if (!compact && showCaption) ...[
             const Text(
               '책 사이에 끼운 메모',
               style: TextStyle(

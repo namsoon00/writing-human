@@ -564,6 +564,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     bool allowUnbound = true,
   }) async {
     final books = {for (final book in c.library.books) book.id: book.title};
+    final style = _paperStyle(
+      c.library.books.where((item) => item.id == bookId).firstOrNull,
+    );
     final sharedText = shared?.text.trim() ?? '';
     final link = Uri.tryParse(sharedText);
     final linkOnly =
@@ -574,6 +577,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     final route = ModalBottomSheetRoute<SourceImportResult>(
       isScrollControlled: true,
       showDragHandle: true,
+      backgroundColor: paperColors[style.paperIndex],
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       constraints: const BoxConstraints(maxWidth: 600),
       builder: (_) => SourceImportSheet(
@@ -581,7 +585,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         initialText: linkOnly ? '' : sharedText,
         initialCitation: linkOnly ? sharedText : '',
         initialPhoto: initialPhoto,
-        choice: c.library.style.bookDetails.sourceSlip,
+        choice: style.bookDetails.sourceSlip,
+        paperColor: paperColors[style.paperIndex],
+        grainOpacity: paperGrainOpacity[style.paperIndex],
         shared: shared != null,
         registration: shared == null,
         books: books,

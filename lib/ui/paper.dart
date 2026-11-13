@@ -75,18 +75,7 @@ class PaperBackdrop extends StatelessWidget {
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: color,
-                        image: DecorationImage(
-                          image: const AssetImage(
-                            'assets/images/cotton-paper.jpg',
-                          ),
-                          repeat: ImageRepeat.repeat,
-                          scale: 2,
-                          opacity: grainOpacity,
-                          colorFilter: ColorFilter.mode(
-                            color,
-                            BlendMode.modulate,
-                          ),
-                        ),
+                        image: paperGrain(color, grainOpacity),
                       ),
                       child: DecoratedBox(
                         decoration: BoxDecoration(
@@ -136,6 +125,14 @@ class PaperBackdrop extends StatelessWidget {
     ),
   );
 }
+
+DecorationImage paperGrain(Color color, double opacity) => DecorationImage(
+  image: const AssetImage('assets/images/cotton-paper.jpg'),
+  repeat: ImageRepeat.repeat,
+  scale: 2,
+  opacity: opacity,
+  colorFilter: ColorFilter.mode(color, BlendMode.modulate),
+);
 
 /// Guides follow the actual text padding, line height and scroll without
 /// changing the editor controller, selection or composing range.

@@ -215,18 +215,21 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     return mounted && c == owner && (page.id != id || wasCover != _coverSide);
   }
 
-  Future<void> _appendPage() => _navigatePage(() async {
-    if (fresh) {
-      // Explicitly adding a page is intent to keep blank pages as well.
-      fresh = false;
-      userFresh = false;
-      c.saveDraft(draft, bookId: draftBookId, keepBlank: true);
-      await c.settled;
-      if (!mounted || c.saveError != null) return;
-    }
-    _coverAnchor = null;
-    c.addPage();
-  });
+  Future<void> _appendPage({bool addAfterDraft = true}) =>
+      _navigatePage(() async {
+        if (fresh) {
+          // Explicitly adding a page is intent to keep blank pages as well.
+          fresh = false;
+          userFresh = false;
+          _coverAnchor = null;
+          c.saveDraft(draft, bookId: draftBookId, keepBlank: true);
+          if (!addAfterDraft) return;
+          await c.settled;
+          if (!mounted || c.saveError != null) return;
+        }
+        _coverAnchor = null;
+        c.addPage();
+      });
   WritingPage _blank() => WritingPage(
     id: const Uuid().v4(),
     recordId: const Uuid().v4(),
@@ -1267,7 +1270,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 compact: compact,
                 bookTitle: book?.title,
                 onCollection: _collection,
-                onNewSheet: () => _newSheet(),
+                onNewSheet: book == null
+                    ? () => _newSheet()
+                    : () => _appendPage(addAfterDraft: false),
               ),
               if (widget.sync != null &&
                   (widget.sync!.hasLegacy || widget.sync!.legacyError))

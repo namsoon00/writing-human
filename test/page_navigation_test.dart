@@ -77,6 +77,60 @@ void expectBoard(
 }
 
 void main() {
+  testWidgets('The notebook plus saves a blank page in the current record', (
+    tester,
+  ) async {
+    final fixture = twoPages();
+    final store = MemoryStore()
+      ..data = fixture.copy(
+        books: const [Book(id: 'book', title: '나의 노트')],
+        records: [fixture.records.single.copy(bookId: 'book')],
+      );
+    await open(tester, store);
+    await tester.tap(find.byTooltip('이 책에 한 쪽 추가'));
+    await tester.pumpAndSettle();
+
+    final saved = store.data;
+    expect(saved.records.length, 1);
+    expect(saved.activeRecord!.bookId, 'book');
+    expect(saved.activePage!.number, 3);
+    expect(saved.activePage!.text, isEmpty);
+    expect(saved.volumePages(bookId: 'book').map((page) => page.number), [
+      1,
+      2,
+      3,
+    ]);
+    expect(saved.pages.first.text, fixture.pages.first.text);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(WritingHumanApp(store: store));
+    await tester.pumpAndSettle();
+    expect(find.text('나의 노트'), findsOneWidget);
+    expect(tester.widget<TextField>(field).controller!.text, isEmpty);
+    expect(store.data.activePageId, saved.activePageId);
+  });
+
+  testWidgets('The notebook plus saves only the first page of an empty book', (
+    tester,
+  ) async {
+    final store = MemoryStore()
+      ..data = const Library(
+        books: [Book(id: 'book', title: '빈 노트')],
+      );
+    await open(tester, store);
+    await tester.tap(find.text('책장'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('빈 노트').last);
+    await tester.pumpAndSettle();
+    expect(store.data.pages, isEmpty);
+    await tester.tap(find.byTooltip('이 책에 한 쪽 추가'));
+    await tester.pumpAndSettle();
+    expect(store.data.activeRecord!.bookId, 'book');
+    expect(store.data.pages.single.number, 1);
+    expect(store.data.pages.single.text, isEmpty);
+  });
+
   testWidgets(
     'Mouse selection stays native while the page number accepts mouse swipes',
     (tester) async {

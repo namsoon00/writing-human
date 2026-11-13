@@ -72,7 +72,7 @@ class WritingHeader extends StatelessWidget {
           alignment: Alignment.centerRight,
           child: IconButton(
             onPressed: onNewSheet,
-            tooltip: '새 종이',
+            tooltip: bookTitle == null ? '새 종이' : '이 책에 한 쪽 추가',
             color: brandInk,
             constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             icon: const Icon(CupertinoIcons.plus, size: 25),

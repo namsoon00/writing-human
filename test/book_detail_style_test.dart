@@ -301,6 +301,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('책의 디테일'));
       await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('detail-binding')), findsNothing);
       await tester.tap(find.byKey(const ValueKey('detail-ribbon-variant-1')));
       await tester.pumpAndSettle();
       expect(c.library.style.bookDetails.ribbon.variant, 1);

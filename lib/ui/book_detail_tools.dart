@@ -60,7 +60,7 @@ class BookDetailTools extends StatelessWidget {
               child: ListView(
                 children: [
                   for (final kind in BookDetailKind.values)
-                    _item(context, kind),
+                    if (kind != BookDetailKind.binding) _item(context, kind),
                 ],
               ),
             ),

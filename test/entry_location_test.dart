@@ -190,9 +190,19 @@ void main() {
           find.byKey(ValueKey('book-detail-${kind.name}'));
       Finder options(BookDetailKind kind) =>
           find.byKey(ValueKey('book-options-${kind.name}'));
+      expect(row(BookDetailKind.binding), findsNothing);
+      expect(
+        find.descendant(
+          of: preview,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is BookBinding && !widget.cover && widget.choice.enabled,
+          ),
+        ),
+        findsOneWidget,
+      );
       const order = [
         BookDetailKind.ribbon,
-        BookDetailKind.binding,
         BookDetailKind.bookplate,
         BookDetailKind.pressedFlower,
         BookDetailKind.sourceSlip,

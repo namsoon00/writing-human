@@ -264,7 +264,6 @@ class _BookAppearanceState extends State<BookAppearance> {
                         ] else ...[
                           _detailGroup('책의 겉과 첫 장', const [
                             BookDetailKind.ribbon,
-                            BookDetailKind.binding,
                             BookDetailKind.bookplate,
                             BookDetailKind.pressedFlower,
                           ], details),
@@ -422,12 +421,6 @@ class _DetailSample extends StatelessWidget {
                         choice: choice.copy(enabled: true),
                         width: 10,
                         height: 25,
-                      ),
-                    ),
-                    BookDetailKind.binding => Center(
-                      child: SizedBox(
-                        width: 26,
-                        child: BookBinding(choice: choice.copy(enabled: true)),
                       ),
                     ),
                     BookDetailKind.pressedFlower => Center(
@@ -628,7 +621,6 @@ class _OpenBook extends StatelessWidget {
                 if (left &&
                     selected != null &&
                     selected != BookDetailKind.ribbon &&
-                    selected != BookDetailKind.binding &&
                     selected != BookDetailKind.ornament) {
                   return Center(
                     child: FittedBox(

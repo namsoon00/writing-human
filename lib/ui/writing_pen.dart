@@ -27,6 +27,7 @@ class WritingPen extends StatefulWidget {
 }
 
 const _inkCaretSize = 14.0;
+const _inkCaretGap = 5.0;
 
 class _WritingPenState extends State<WritingPen>
     with SingleTickerProviderStateMixin {
@@ -168,12 +169,30 @@ class _WritingPenState extends State<WritingPen>
         editable.hasSize &&
         overlay is RenderBox &&
         overlay.hasSize) {
-      final caret = editable.getLocalRectForCaret(value.selection.extent);
-      if (caret.overlaps(Offset.zero & editable.size)) {
+      final position = value.selection.extent;
+      final caret = editable.getLocalRectForCaret(position);
+      final editorBounds = Offset.zero & editable.size;
+      if (caret.overlaps(editorBounds)) {
         final point = overlay.globalToLocal(
           editable.localToGlobal(caret.center),
         );
-        if ((Offset.zero & overlay.size).contains(point)) next = point;
+        final bounds = Offset.zero & overlay.size;
+        if (bounds.contains(point)) {
+          next = point;
+          final line = editable.getLineAtOffset(position);
+          if (line.isValid &&
+              position.offset == line.end &&
+              line.start < line.end) {
+            final distance = _inkCaretSize / 2 + _inkCaretGap;
+            final offset = editable.textDirection == TextDirection.ltr
+                ? distance
+                : -distance;
+            final spaced = point.translate(offset, 0);
+            if (bounds.deflate(_inkCaretSize / 2).contains(spaced)) {
+              next = spaced;
+            }
+          }
+        }
       }
       if (animateInk &&
           newStroke &&

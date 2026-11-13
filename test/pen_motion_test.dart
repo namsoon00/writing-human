@@ -60,7 +60,7 @@ Offset nibPoint(WidgetTester tester) {
   return box.localToGlobal(box.size.center(Offset.zero));
 }
 
-void expectNibAtCaret(WidgetTester tester) {
+void expectNibAtCaret(WidgetTester tester, {bool spaced = false}) {
   expect(_pen, findsOneWidget);
   final editable = tester
       .state<EditableTextState>(find.byType(EditableText))
@@ -68,7 +68,8 @@ void expectNibAtCaret(WidgetTester tester) {
   expect(editable.showCursor.value, isFalse);
   final value = tester.widget<TextField>(_field).controller!.value;
   final expected = editable.localToGlobal(
-    editable.getLocalRectForCaret(value.selection.extent).center,
+    editable.getLocalRectForCaret(value.selection.extent).center +
+        Offset(spaced ? 12 : 0, 0),
   );
   expect((nibPoint(tester) - expected).distance, lessThan(.2));
 }
@@ -104,7 +105,7 @@ void main() {
       final duringStroke = nibPoint(tester);
       expect(find.byKey(const ValueKey('fresh-ink')), findsOneWidget);
       await tester.pumpAndSettle();
-      expectNibAtCaret(tester);
+      expectNibAtCaret(tester, spaced: true);
       expect(duringStroke.dx, greaterThan(first.dx));
       expect(duringStroke, nibPoint(tester));
       expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
@@ -113,10 +114,15 @@ void main() {
       final prose = '한 문장\n${List.filled(4, '천천히 옮겨 쓰는 문장 ').join()}';
       await tester.enterText(_field, prose);
       await tester.pumpAndSettle();
-      expectNibAtCaret(tester);
+      expectNibAtCaret(tester, spaced: true);
       expect(nibPoint(tester).dy, greaterThan(singleLine.dy));
       expect(key.currentState!.saved, prose);
       final controller = tester.widget<TextField>(_field).controller!;
+      controller.selection = TextSelection.collapsed(
+        offset: prose.indexOf('\n'),
+      );
+      await tester.pumpAndSettle();
+      expectNibAtCaret(tester, spaced: true);
       controller.selection = const TextSelection.collapsed(offset: 1);
       await tester.pumpAndSettle();
       expectNibAtCaret(tester);
@@ -163,7 +169,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(controller.value, value);
         expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
-        expectNibAtCaret(tester);
+        expectNibAtCaret(tester, spaced: true);
         final point = nibPoint(tester);
         await tester.pump(const Duration(milliseconds: 60));
         expect(nibPoint(tester), point);
@@ -176,7 +182,7 @@ void main() {
       tester.testTextInput.updateEditingValue(committed);
       await tester.pumpAndSettle();
       expect(controller.value, committed);
-      expectNibAtCaret(tester);
+      expectNibAtCaret(tester, spaced: true);
       controller.selection = const TextSelection(
         baseOffset: 0,
         extentOffset: 2,

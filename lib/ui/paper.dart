@@ -175,9 +175,9 @@ class WritingGuides extends CustomPainter {
 const coverNames = ['밤색 리넨', '아이보리 리넨', '푸른 리넨'];
 const _coverColors = [Color(0xff715344), Color(0xffa38b6f), Color(0xff454d64)];
 const _coverAssets = [
-  'assets/images/linen-cover.png',
-  'assets/images/ivory-linen-cover.png',
-  'assets/images/blue-linen-cover.png',
+  'assets/images/linen-cover.webp',
+  'assets/images/ivory-linen-cover.webp',
+  'assets/images/blue-linen-cover.webp',
 ];
 // The PNGs have transparent margins. Keep the decorations on the linen face.
 const _coverFaceBounds = [
@@ -340,44 +340,56 @@ class BookCover extends StatelessWidget {
           right: width * .14,
           top: 0,
           child: RibbonBookmark(
-            width: width * .13,
-            height: width * .42,
+            width: (width * .09).clamp(5.0, 13.0),
+            height: (width * .25).clamp(14.0, 40.0),
             choice: details.ribbon,
           ),
         ),
-      if (details.pressedFlower.enabled && !back)
-        Positioned(
-          left: width * .12,
-          right: width * .09,
-          bottom: width * .08,
-          child: Align(
-            alignment: flowerAlignment(details.pressedFlower),
-            child: PressedFlower(
-              choice: details.pressedFlower,
-              size: width * .27,
+      if (!back && title.isNotEmpty)
+        Positioned.fromRect(
+          rect: Rect.fromLTRB(
+            face.left + face.width * .13,
+            face.top + face.height * .20,
+            face.right - face.width * .10,
+            face.top + face.height * .65,
+          ),
+          child: LayoutBuilder(
+            builder: (context, box) => Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: SizedBox(
+                  width: box.maxWidth,
+                  child: Text(
+                    title,
+                    maxLines: 3,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: appFontFamily,
+                      fontFamilyFallback: appFontFallback,
+                      fontWeight: FontWeight.w700,
+                      color: light ? ink : const Color(0xffefdbad),
+                      fontSize: width * .125,
+                      height: 1.34,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
-      if (!back)
-        Positioned(
-          left: width * .12,
-          right: width * .09,
-          top: width * .34,
-          child: Text(
-            title,
-            textScaler: width < 80 ? TextScaler.noScaling : null,
-            maxLines: 3,
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: appFontFamily,
-              fontFamilyFallback: appFontFallback,
-              fontWeight: FontWeight.w700,
-              color: light ? ink : const Color(0xffdbc79a),
-              fontSize: width * .125,
-              height: 1.65,
-              letterSpacing: width * .008,
-            ),
+      if (!back && details.pressedFlower.enabled)
+        Positioned.fromRect(
+          rect: Rect.fromLTRB(
+            face.left + face.width * .13,
+            face.top + face.height * .70,
+            face.right - face.width * .10,
+            face.bottom - face.height * .08,
+          ),
+          child: CoverFlower(
+            choice: details.pressedFlower,
+            darkCloth: !light,
+            maxSize: width * .24,
           ),
         ),
     ],

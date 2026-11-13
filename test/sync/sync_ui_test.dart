@@ -119,7 +119,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.runAsync(
         () => precacheImage(
-          const AssetImage('assets/images/linen-cover.png'),
+          const AssetImage('assets/images/linen-cover.webp'),
           boundary.currentContext!,
         ),
       );

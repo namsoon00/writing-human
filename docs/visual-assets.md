@@ -1,5 +1,13 @@
 # 첨부 이미지 기반 UI 소재
 
+## 장식을 분리한 린넨 표지 · 2026-11-13
+
+녹색, 아이보리, 푸른 린넨 세 원본에서 금박 식물 문양을 지웠다. 이미지 생성 도구에
+각 원본을 전달했고, 투명 WebP로 변환해 번들에 넣었다. Flutter에서 압화, 천 책갈피,
+색인 탭과 글자를 그린다.
+
+> Precisely edit the supplied transparent front-facing linen book cover for a production app. Remove only the little metallic gold botanical branch on the lower half of the front panel, seamlessly filling its location with matching neighboring woven linen. Keep the exact original cover color, grain, light, thin rectangular inset border, outline, aspect ratio, rounded corners, scuffs, spine on left, camera angle, dimensions and clear transparent perimeter, with the cover occupying the same bounds. No text, embellishment, plant, symbol or extra element. Return just the same single isolated cover, now blank, on transparent background.
+
 ## 현재 화면 · 종이 한 면 / 2026-11-10
 
 최근 종이 시안을 실제 Flutter 작성 화면에 반영했다. 상단·본문·하단은 같은
@@ -40,7 +48,7 @@ Use case: background-extraction / precise-object-edit. Supporting reference: the
 
 2026-11-09. 내장 ImageGen 도구로 생성했다. 첨부한 브랜드 이미지가 시각 참조이며, 화면 전체를 이미지로 대체하지 않았다. 텍스트·버튼·입력은 실제 Flutter 위젯이다.
 
-- assets/images/linen-cover.png: 녹색 천 표지. 앱에서 책 이름을 별도 렌더링한다.
+- assets/images/linen-cover.webp: 녹색 천 표지. 앱에서 책 이름을 별도 렌더링한다.
 - assets/images/fountain-pen.png: 검정·금색 만년필 투명 이미지. 쉬는 화면의 장식과 입력 중 커서를 따르는 펜에 함께 사용한다. 입력 중에는 펜촉을 커서에 맞추고 몸체를 아래 오른쪽으로 돌린다. 포인터·접근성 트리에서 제외하며 펼친 선택 영역에서는 추적 펜을 숨긴다.
 - 프로젝트 복사본은 화면용 크기로 축소했다. 생성 원본은 Codex generated_images에 유지했다.
 - 초기에는 종이의 미세한 결, 종이 끝, 아이보리·블루 표지를 Flutter CustomPainter로 표현했다. 아래 재료 보강에서 종이와 표지에 실제 래스터 소재를 추가했다.
@@ -51,8 +59,8 @@ Use case: background-extraction / precise-object-edit. Supporting reference: the
 내장 image_gen 도구의 새 소재 4개를 사용했다. 원본은 Codex generated_images에 남기고, 프로젝트 안에 화면용 파일을 복사했다. 이미지 전체를 앱 화면으로 사용하지 않는다. 책장·입력·도구는 실제 Flutter 위젯이다.
 
 - assets/images/cotton-paper.jpg: 1024px 정방형 면지. 종이·바탕·원문 메모에 사용한다. 종이색은 별도 값이며 재료 이미지와 혼합한다.
-- assets/images/ivory-linen-cover.png: 1024px 높이의 투명 아이보리 린넨 표지. 책 이름은 코드로 표시한다.
-- assets/images/blue-linen-cover.png: 1024px 높이의 투명 블루 린넨 표지. 기존 절차적 격자 패턴을 교체했다.
+- assets/images/ivory-linen-cover.webp: 1024px 높이의 투명 아이보리 린넨 표지. 책 이름은 코드로 표시한다.
+- assets/images/blue-linen-cover.webp: 1024px 높이의 투명 블루 린넨 표지. 기존 절차적 격자 패턴을 교체했다.
 - assets/images/sunlit-desk.jpg: 1536×1024 햇빛과 잎 그림자 배경. 넓은 화면에서만 사용하고 모바일 입력 위에 얹지 않는다.
 - 종이 소재는 IgnorePointer/ExcludeSemantics 및 RepaintBoundary로 편집과 분리한다. 타이핑에 따른 움직임은 추가하지 않았다.
 - 작은 이미지와 배경의 전송량을 줄이기 위해 sips로 크기·JPEG 형식을 최적화했다. 기존 녹색 표지와 만년필 원본은 유지했다.

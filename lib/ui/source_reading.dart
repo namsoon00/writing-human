@@ -289,7 +289,10 @@ class _SourceReadingState extends State<SourceReading> {
                             itemCount: widget.originals.length,
                             separatorBuilder: (_, _) =>
                                 details.recordDivider.enabled
-                                ? RecordDivider(choice: details.recordDivider)
+                                ? RecordDivider(
+                                    choice: details.recordDivider,
+                                    compact: true,
+                                  )
                                 : const SizedBox(height: 8),
                             itemBuilder: (context, index) {
                               final item = widget.originals[index];

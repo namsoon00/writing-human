@@ -13,6 +13,7 @@ import 'package:writing_human/ui/book_detail_tools.dart';
 import 'package:writing_human/ui/paper.dart';
 import 'package:writing_human/ui/collection_sheet.dart';
 import 'package:writing_human/ui/reading_details.dart';
+import 'package:writing_human/ui/book_front_cover.dart';
 
 void main() {
   testWidgets('Render ten independent design sheets with shapes and palettes', (
@@ -252,9 +253,9 @@ void main() {
       for (final name in [
         'cotton-paper.jpg',
         'ink-mark-bleed.png',
-        'linen-cover.png',
-        'ivory-linen-cover.png',
-        'blue-linen-cover.png',
+        'linen-cover.webp',
+        'ivory-linen-cover.webp',
+        'blue-linen-cover.webp',
       ]) {
         await precacheImage(
           AssetImage('assets/images/$name'),
@@ -281,17 +282,15 @@ void main() {
     }
 
     await capture('writing');
-    await tester.tap(find.text('새는 알에서 나오려고 투쟁한다. 알은 세계다.'));
+    await tester.tap(find.byKey(const ValueKey('writing-originals')));
     await tester.pumpAndSettle();
     await capture('source');
-    await tester.tap(find.text('취소'));
+    await tester.tap(find.byTooltip('닫기'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('보관함'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('책'));
-    await tester.pumpAndSettle();
     await capture('shelf');
-    await tester.tap(find.byKey(ValueKey('book-index-${book.id}')));
+    await tester.tap(find.byKey(ValueKey('shelf-details-${book.id}')));
     await tester.pumpAndSettle();
     await capture('bookplate');
     await tester.scrollUntilVisible(
@@ -315,6 +314,61 @@ void main() {
     await tester.tap(find.text('책의 디테일'));
     await tester.pumpAndSettle();
     await capture('settings');
+    for (final enabled in [false, true]) {
+      final coverDetails = details.withChoice(
+        BookDetailKind.pressedFlower,
+        BookDetailChoice(enabled: enabled, placement: 2, tone: 1),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(fontFamily: appFontFamily),
+          home: RepaintBoundary(
+            key: key,
+            child: Scaffold(
+              body: Column(
+                children: [
+                  const SizedBox(height: 22),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      for (
+                        var variant = 0;
+                        variant < coverNames.length;
+                        variant++
+                      )
+                        BookCover(
+                          title: variant == 1
+                              ? '첫 문장'
+                              : '오래 곁에 두고 싶은 문장들의 필사 노트',
+                          variant: variant,
+                          width: 106,
+                          bookmarked: variant == 0,
+                          pageCount: 12,
+                          details: coverDetails,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: BookFrontCover(
+                      title: '오래 곁에 두고 싶은 문장들의 필사 노트',
+                      author: '쓰는 사람',
+                      style: WritingStyle(bookDetails: coverDetails),
+                      pageCount: 12,
+                      onOpen: () {},
+                      onCollection: () {},
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await capture(enabled ? 'cover-on' : 'cover-off');
+    }
+
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();
     debugDisableShadows = shadows;

@@ -209,7 +209,9 @@ class _Binding extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (!choice.enabled || size.isEmpty) return;
     final color = BookDetailDesign.color(BookDetailKind.binding, choice);
-    final width = cover ? (size.width * .08).clamp(2.0, 12.0) : 18.0;
+    final width = cover
+        ? (size.width * .045).clamp(2.0, 12.0)
+        : (size.width * .045).clamp(8.0, 18.0);
     final area = Rect.fromLTWH(0, 0, width, size.height);
     canvas.drawRect(
       area,
@@ -254,7 +256,7 @@ class _Binding extends CustomPainter {
         ..strokeWidth = .7
         ..strokeCap = StrokeCap.round;
       final hole = Paint()..color = color.withValues(alpha: .3);
-      final step = cover ? 14.0 : 72.0;
+      final step = cover ? (size.height * .08).clamp(9.0, 28.0) : 72.0;
       final x = cover ? width * .35 : 4.5;
       for (var y = step / 2; y < size.height - 9; y += step) {
         canvas.drawCircle(Offset(x, y), .7, hole);
@@ -293,8 +295,10 @@ class DateStamp extends StatelessWidget {
     super.key,
     required this.date,
     this.choice = const BookDetailChoice(),
+    this.compact = false,
   });
   final String date;
+  final bool compact;
   final BookDetailChoice choice;
   @override
   Widget build(BuildContext context) {
@@ -307,15 +311,15 @@ class DateStamp extends StatelessWidget {
         foregroundPainter: framed ? _StampFrame(choice.variant, color) : null,
         child: Container(
           padding: EdgeInsets.symmetric(
-            horizontal: framed ? 10 : 0,
-            vertical: 6,
+            horizontal: framed ? (compact ? 7 : 10) : 0,
+            vertical: compact ? 3 : 6,
           ),
           color: framed ? color.withValues(alpha: .022) : null,
           child: Text(
-            date.replaceAll('-', ' . '),
+            date.replaceAll('-', compact ? '.' : ' . '),
             style: TextStyle(
               fontSize: 11,
-              letterSpacing: choice.enabled ? .85 : .2,
+              letterSpacing: choice.enabled && !compact ? .85 : .2,
               color: choice.enabled ? color : detailMetadataInk,
               height: 1.4,
             ),
@@ -397,7 +401,9 @@ class SourceSlip extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(
         compact ? 12 : 20,
         compact ? 10 : 20,
-        choice.enabled && choice.variant != 0 ? 30 : (compact ? 12 : 20),
+        choice.enabled && choice.variant != 0
+            ? (compact ? 24 : 30)
+            : (compact ? 12 : 20),
         compact ? 11 : 20,
       ),
       child: Column(
@@ -708,7 +714,7 @@ class _PlateFrame extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final pen = Paint()
-      ..color = color.withValues(alpha: .4)
+      ..color = color.withValues(alpha: .30)
       ..style = PaintingStyle.stroke
       ..strokeWidth = .65;
     if (variant == 0) {
@@ -716,7 +722,7 @@ class _PlateFrame extends CustomPainter {
       canvas.drawRect(
         (Offset.zero & size).deflate(6),
         pen
-          ..color = color.withValues(alpha: .21)
+          ..color = color.withValues(alpha: .16)
           ..strokeWidth = .5,
       );
     } else if (variant == 1) {
@@ -773,27 +779,24 @@ class PageOrnament extends StatelessWidget {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       if (!choice.enabled ||
-          constraints.maxWidth < 110 ||
+          constraints.maxWidth < 96 ||
           MediaQuery.textScalerOf(context).scale(10) > 15) {
         return child;
       }
+      final compact = constraints.maxWidth < 144;
+      final size = Size(compact ? 15 : 23, 12);
+      final gap = SizedBox(width: compact ? 5 : 8);
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           _decoration(
-            CustomPaint(
-              size: const Size(23, 12),
-              painter: _Ornament(choice, false),
-            ),
+            CustomPaint(size: size, painter: _Ornament(choice, false)),
           ),
-          const SizedBox(width: 8),
+          gap,
           Flexible(child: child),
-          const SizedBox(width: 8),
+          gap,
           _decoration(
-            CustomPaint(
-              size: const Size(23, 12),
-              painter: _Ornament(choice, true),
-            ),
+            CustomPaint(size: size, painter: _Ornament(choice, true)),
           ),
         ],
       );
@@ -818,6 +821,7 @@ class _Ornament extends CustomPainter {
       canvas.translate(size.width, 0);
       canvas.scale(-1, 1);
     }
+    canvas.scale(size.width / 23, size.height / 12);
     if (choice.variant == 0) {
       canvas.drawLine(const Offset(1, 6), const Offset(13, 6), pen);
       canvas.drawCircle(

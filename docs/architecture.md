@@ -147,6 +147,11 @@ DemoStore는 명시적으로 주입하는 개발 검증용 fixture로만 남으�
 
 ## 책의 물성과 독서 흔적
 
+린넨 표지의 WebP는 천, 책등, 테두리를 담는다. 작은 표지와 큰 앞표지는 제목과
+압화에 각각 다른 영역을 배정한다. 압화는 같은 선택값으로 그리고 어두운 천에서는
+색의 밝기를 높인다. 현재 책의 책갈피, 날짜인의 간격, 제본 폭, 원문 목록의 구분표와
+쪽수 문양은 각 화면의 크기에 맞춘다.
+
 열 가지 독립 설정은 `data/book_detail_style.dart`의 BookDetailsStyle에 보관한다. 기존 ribbon/bookplate/sourceSlip/pencil/ornament/binding/dateStamp에 indexTab/recordDivider/pressedFlower가 추가됐다. BookDetailChoice의 enabled·variant·tone과 압화에 사용하는 optional placement를 기존 SQLite settings JSON과 웹 라이브러리에 저장한다. 이전 데이터에 새 키가 없으면 기본값을 읽는다. 동기화는 요소별 필드를 따로 병합한다.
 
 `ui/book_detail_design.dart`는 요소별 이름·세 모양·네 색을 정의하고, `ui/book_detail_tools.dart`는 개별 미리보기·표시 스위치·모양/색 칩·해당 요소만 초기화를 제공한다. 설정 진입은 기존 쓰기 취향의 ‘책의 디테일’이다. 장식 숨김은 메타데이터를 지우지 않으며 평문 책 정보·원문·날짜를 유지한다. `paper_palette.dart`와 `ink_mark.dart`를 분리하여 종이 면과 장식이 서로를 가져오는 의존 순환을 제거했다. 자세한 조형·상태·경계는 [독립 설계](book-details-design.md)를 따른다.

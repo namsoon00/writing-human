@@ -43,13 +43,32 @@ class BookFrontCover extends StatelessWidget {
           back: back,
           binding: style.bookDetails.binding,
         ),
-        if (!back) _lettering(lettering),
-        if (!back && style.bookDetails.pressedFlower.enabled)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(32, 0, 32, 144),
-            child: Align(
-              alignment: flowerAlignment(style.bookDetails.pressedFlower),
-              child: PressedFlower(choice: style.bookDetails.pressedFlower),
+        if (!back)
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, box) => Stack(
+                children: [
+                  Positioned(
+                    left: box.maxWidth * .11,
+                    right: box.maxWidth * .11,
+                    top: box.maxHeight * .13,
+                    height: box.maxHeight * .34,
+                    child: _lettering(lettering),
+                  ),
+                  if (style.bookDetails.pressedFlower.enabled)
+                    Positioned(
+                      left: box.maxWidth * .15,
+                      right: box.maxWidth * .12,
+                      top: box.maxHeight * .52,
+                      height: box.maxHeight * .22,
+                      child: CoverFlower(
+                        choice: style.bookDetails.pressedFlower,
+                        darkCloth: !light,
+                        maxSize: (box.maxWidth * .21).clamp(22.0, 84.0),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
       ],
@@ -78,57 +97,54 @@ class BookFrontCover extends StatelessWidget {
     );
   }
 
-  Widget _lettering(Color color) => SafeArea(
-    child: LayoutBuilder(
-      builder: (context, box) {
-        final titleSize = (box.biggest.shortestSide * .105).clamp(24.0, 54.0);
-        final width = math.min(620.0, box.maxWidth * .78);
-        return Align(
-          alignment: const Alignment(0, -.40),
-          child: SizedBox(
-            width: width,
-            height: box.maxHeight * .32,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: SizedBox(
-                width: width,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Semantics(
-                      header: true,
-                      child: Text(
-                        title,
-                        textAlign: TextAlign.center,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: color,
-                          fontSize: titleSize,
-                          fontWeight: FontWeight.w700,
-                          height: 1.35,
-                        ),
+  Widget _lettering(Color color) => LayoutBuilder(
+    builder: (context, box) {
+      final titleSize = (box.maxWidth * .125).clamp(24.0, 54.0);
+      final width = math.min(620.0, box.maxWidth);
+      return Center(
+        child: SizedBox(
+          width: width,
+          height: box.maxHeight,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: SizedBox(
+              width: width,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: titleSize,
+                        fontWeight: FontWeight.w700,
+                        height: 1.35,
                       ),
                     ),
-                    if (author.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Text(
-                          author,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: color, fontSize: 16),
-                        ),
+                  ),
+                  if (author.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Text(
+                        author,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: color, fontSize: 16),
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
             ),
           ),
-        );
-      },
-    ),
+        ),
+      );
+    },
   );
 
   Widget _controls(Color color, bool light) => LayoutBuilder(

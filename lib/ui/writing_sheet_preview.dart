@@ -94,6 +94,7 @@ class WritingSheetPreview extends StatelessWidget {
                               if (notebook != null)
                                 Text(notebook!, style: _metadataStyle),
                               DateStamp(
+                                compact: true,
                                 date: date!,
                                 choice: style.bookDetails.dateStamp,
                               ),

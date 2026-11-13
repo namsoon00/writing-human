@@ -38,7 +38,7 @@ class BookIndexTab extends StatelessWidget {
       constraints: const BoxConstraints(
         minHeight: 48,
         minWidth: 48,
-        maxWidth: 156,
+        maxWidth: 172,
       ),
       child: CustomPaint(
         painter: _Tab(choice.variant, color, selected),
@@ -154,18 +154,23 @@ class _Tab extends CustomPainter {
 
 /// A paper ornament that separates adjacent entries in a list.
 class RecordDivider extends StatelessWidget {
-  const RecordDivider({super.key, this.choice = const BookDetailChoice()});
+  const RecordDivider({
+    super.key,
+    this.choice = const BookDetailChoice(),
+    this.compact = false,
+  });
   final BookDetailChoice choice;
+  final bool compact;
   @override
   Widget build(BuildContext context) => SizedBox(
-    height: 32,
+    height: compact ? 22 : 32,
     child: choice.enabled
         ? ExcludeSemantics(
             child: IgnorePointer(
               child: Center(
                 child: RepaintBoundary(
                   child: CustomPaint(
-                    size: const Size(148, 18),
+                    size: compact ? const Size(112, 14) : const Size(148, 18),
                     painter: _Divider(
                       choice.variant,
                       BookDetailDesign.color(
@@ -238,15 +243,49 @@ Alignment flowerAlignment(BookDetailChoice choice) =>
       _ => Alignment.bottomRight,
     };
 
+/// The cover places this within a band reserved for decoration.
+class CoverFlower extends StatelessWidget {
+  const CoverFlower({
+    super.key,
+    required this.choice,
+    required this.darkCloth,
+    required this.maxSize,
+  });
+
+  final BookDetailChoice choice;
+  final bool darkCloth;
+  final double maxSize;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final size = math.min(
+        maxSize,
+        math.min(box.maxHeight, box.maxWidth / .68),
+      );
+      return Align(
+        alignment: flowerAlignment(choice),
+        child: PressedFlower(
+          choice: choice,
+          size: size,
+          onDarkCloth: darkCloth,
+        ),
+      );
+    },
+  );
+}
+
 /// Static native vector botany, excluded from input and accessibility.
 class PressedFlower extends StatelessWidget {
   const PressedFlower({
     super.key,
     this.choice = const BookDetailChoice(),
     this.size = 64,
+    this.onDarkCloth = false,
   });
   final BookDetailChoice choice;
   final double size;
+  final bool onDarkCloth;
   @override
   Widget build(BuildContext context) => choice.enabled
       ? ExcludeSemantics(
@@ -256,7 +295,19 @@ class PressedFlower extends StatelessWidget {
                 size: Size(size * .68, size),
                 painter: _Botanical(
                   choice.variant,
-                  BookDetailDesign.color(BookDetailKind.pressedFlower, choice),
+                  onDarkCloth
+                      ? Color.lerp(
+                          BookDetailDesign.color(
+                            BookDetailKind.pressedFlower,
+                            choice,
+                          ),
+                          const Color(0xffe9d8aa),
+                          .72,
+                        )!
+                      : BookDetailDesign.color(
+                          BookDetailKind.pressedFlower,
+                          choice,
+                        ),
                 ),
               ),
             ),

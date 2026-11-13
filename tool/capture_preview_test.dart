@@ -63,9 +63,9 @@ void main() {
       await tester.runAsync(() async {
         for (final name in [
           'cotton-paper.jpg',
-          'linen-cover.png',
-          'ivory-linen-cover.png',
-          'blue-linen-cover.png',
+          'linen-cover.webp',
+          'ivory-linen-cover.webp',
+          'blue-linen-cover.webp',
           'fountain-pen.png',
           'ink-mark-bleed.png',
         ]) {

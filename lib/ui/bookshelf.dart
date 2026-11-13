@@ -56,6 +56,7 @@ class Bookshelf extends StatelessWidget {
           variant: controller.coverIndexFor(book),
           details: library.style.bookDetails,
           pageCount: pageCounts[book.id] ?? 0,
+          bookmarked: !thumbnail && library.activeBook?.id == book.id,
         );
 
     if (recent == null && books.isEmpty) {

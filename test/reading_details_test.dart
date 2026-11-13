@@ -9,6 +9,7 @@ import 'package:writing_human/data/sqlite_store.dart';
 import 'package:writing_human/sync/merge.dart';
 import 'package:writing_human/ui/book_detail_tools.dart';
 import 'package:writing_human/ui/book_details.dart';
+import 'package:writing_human/ui/book_front_cover.dart';
 import 'package:writing_human/ui/collection_sheet.dart';
 import 'package:writing_human/ui/paper.dart';
 import 'package:writing_human/ui/reading_details.dart';
@@ -48,6 +49,59 @@ void main() {
       }
     },
   );
+
+  testWidgets('Long titles and removable flowers occupy separate cover areas', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 460);
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    const title = '아주 오래 곁에 두고 싶은 문장을 모아 둔 첫 번째 필사 노트';
+    for (final large in [false, true]) {
+      for (final enabled in [true, false]) {
+        final details = BookDetailsStyle(
+          pressedFlower: BookDetailChoice(enabled: enabled, placement: 2),
+        );
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: large
+                  ? BookFrontCover(
+                      title: title,
+                      author: '길게 적은 기록자의 이름',
+                      style: WritingStyle(bookDetails: details),
+                      pageCount: 22,
+                      onOpen: () {},
+                      onCollection: () {},
+                    )
+                  : Center(
+                      child: BookCover(
+                        title: title,
+                        width: 84,
+                        bookmarked: true,
+                        pageCount: 22,
+                        details: details,
+                      ),
+                    ),
+            ),
+          ),
+        );
+        final flower = find.byType(PressedFlower);
+        expect(flower, enabled ? findsOneWidget : findsNothing);
+        if (enabled) {
+          expect(
+            tester.getRect(find.text(title)).bottom,
+            lessThan(tester.getRect(flower).top),
+          );
+        }
+        expect(tester.takeException(), isNull);
+      }
+    }
+  });
 
   test(
     'Version four file migrates with original writing; index labels and all new choices reopen',

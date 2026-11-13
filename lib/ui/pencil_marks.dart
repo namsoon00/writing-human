@@ -11,9 +11,9 @@ TextStyle pencilUnderlineStyle(BookDetailChoice choice) => TextStyle(
     _ => TextDecorationStyle.solid,
   },
   decorationThickness: switch (choice.variant) {
-    1 => .6,
-    2 => 1.0,
-    _ => .85,
+    1 => .55,
+    2 => .85,
+    _ => .72,
   },
 );
 

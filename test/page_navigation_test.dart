@@ -468,8 +468,7 @@ void main() {
       expect(find.text('책 펼치기'), findsNothing);
       await tester.tap(find.text('책장'));
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('bookshelf-scroll')), findsNothing);
-      expect(find.text('아직 노트가 없어요.'), findsOneWidget);
+      expect(find.byKey(const ValueKey('shelf-loose-pages')), findsOneWidget);
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       expect(cover, findsOneWidget);

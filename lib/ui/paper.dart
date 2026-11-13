@@ -293,12 +293,13 @@ class BookCover extends StatelessWidget {
     this.bookmarked = false,
     this.pageCount = 0,
     this.back = false,
+    this.materialPreview = false,
     this.details = const BookDetailsStyle(),
   });
   final String title;
   final double width;
   final int variant, pageCount;
-  final bool bookmarked, back;
+  final bool bookmarked, back, materialPreview;
   final BookDetailsStyle details;
 
   static double totalWidthFactor(BookDetailsStyle details) =>
@@ -377,11 +378,37 @@ class BookCover extends StatelessWidget {
   Widget _coverArtwork(double width, Rect face, int index, bool light) => Stack(
     fit: StackFit.expand,
     children: [
-      Image.asset(_coverAssets[index], fit: BoxFit.fill),
-      Positioned.fromRect(
-        rect: face.deflate(width * .018),
-        child: BookBinding(choice: details.binding, cover: true),
-      ),
+      if (materialPreview)
+        Positioned.fromRect(
+          rect: face,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(4),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x38604937),
+                  blurRadius: 12,
+                  offset: Offset(3, 5),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: BookCoverMaterial(
+                variant: index,
+                back: false,
+                binding: details.binding,
+              ),
+            ),
+          ),
+        )
+      else ...[
+        Image.asset(_coverAssets[index], fit: BoxFit.fill),
+        Positioned.fromRect(
+          rect: face.deflate(width * .018),
+          child: BookBinding(choice: details.binding, cover: true),
+        ),
+      ],
       if (bookmarked && !back)
         Positioned(
           right: width * .14,

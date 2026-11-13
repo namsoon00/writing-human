@@ -147,6 +147,7 @@ class _BookAppearanceState extends State<BookAppearance> {
                                             title: book.title,
                                             width: box.maxHeight / 1.36,
                                             variant: cover,
+                                            materialPreview: true,
                                             pageCount: pages.length,
                                             details: details,
                                           ),

@@ -109,6 +109,7 @@ flutter:
   assets:
     - assets/images/
     - assets/audio/page-turn.mp3
+    - assets/audio/pen-stroke.wav
     - assets/fonts/WritingHumanDevelopment-info.json
     - assets/fonts/NanumPenScript-OFL.txt
 

@@ -97,7 +97,7 @@ export function validLibrary(l) {
   const s = l.style;
   if (!object(s) || !integer(s.paperIndex) || s.paperIndex < 0 || s.paperIndex > 3 || !integer(s.penIndex) || s.penIndex < 0 || s.penIndex > 2 || !integer(s.fontIndex) || s.fontIndex < 0 || s.fontIndex > 2 || typeof s.guides !== 'boolean' || !Array.isArray(s.favoriteBookIds) || s.favoriteBookIds.some(v => !id(v))) return false;
   if ('useDevelopmentTypeface' in s && typeof s.useDevelopmentTypeface !== 'boolean') return false;
-  if (['pageMotion', 'pageSound'].some(k => k in s && typeof s[k] !== 'boolean')) return false;
+  if (['pageMotion', 'pageSound', 'writingSound'].some(k => k in s && typeof s[k] !== 'boolean')) return false;
   if ('bookDetails' in s && !validBookDetails(s.bookDetails)) return false;
   // Do not let clients smuggle extra secrets or alternate identities into storage.
   const keys = ['version', 'books', 'records', 'pages', 'activePageId', 'bookPositions', 'writing', 'style'];

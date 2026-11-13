@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -9,6 +10,7 @@ import 'notebook_reflection.dart';
 import 'paper.dart';
 import 'paper_selection_menu.dart';
 import 'writing_pen.dart';
+import 'writing_sound.dart';
 import 'pencil_marks.dart';
 import 'transcription_guide.dart';
 import 'editable_geometry.dart';
@@ -47,6 +49,8 @@ class PageEditor extends StatefulWidget {
 class _PageEditorState extends State<PageEditor> {
   late final PencilTextController text;
   late final ScrollController scroll;
+  late TextEditingValue _observedText;
+  WritingSound? _sound;
   final _guideLayout = TextPainter();
   late final focus = widget.focusNode ?? FocusNode();
   bool restoring = true;
@@ -73,7 +77,8 @@ class _PageEditorState extends State<PageEditor> {
       ),
     );
     scroll = ScrollController(initialScrollOffset: p.scroll);
-    text.addListener(_save);
+    _observedText = text.value;
+    text.addListener(_textChanged);
     scroll.addListener(_save);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
@@ -94,6 +99,9 @@ class _PageEditorState extends State<PageEditor> {
     text.annotatedText = widget.page.text;
     text.marks = widget.page.pencilMarks;
     text.choice = widget.style.bookDetails.pencil;
+    if (oldWidget.style.writingSound && !widget.style.writingSound) {
+      _closeSound();
+    }
     if (widget.reveal != null && widget.reveal != oldWidget.reveal) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _reveal();
@@ -134,6 +142,25 @@ class _PageEditorState extends State<PageEditor> {
     _emitEditingState();
     if (mounted) {
       setState(() {});
+    }
+  }
+
+  void _closeSound() {
+    final sound = _sound;
+    _sound = null;
+    if (sound != null) unawaited(sound.dispose());
+  }
+
+  void _textChanged() {
+    final previous = _observedText;
+    final next = _observedText = text.value;
+    _save();
+    if (!restoring &&
+        focus.hasFocus &&
+        widget.style.writingSound &&
+        hasNewWrittenCharacter(previous, next)) {
+      final sound = _sound ??= WritingSound();
+      unawaited(sound.stroke(() => mounted && focus.hasFocus));
     }
   }
 
@@ -335,7 +362,8 @@ class _PageEditorState extends State<PageEditor> {
 
   @override
   void dispose() {
-    text.removeListener(_save);
+    _closeSound();
+    text.removeListener(_textChanged);
     scroll.removeListener(_save);
     text.dispose();
     scroll.dispose();

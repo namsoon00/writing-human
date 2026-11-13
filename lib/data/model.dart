@@ -593,6 +593,7 @@ class WritingStyle {
     this.useDevelopmentTypeface = true,
     this.guides = false,
     this.penMotion = true,
+    this.writingSound = false,
     this.pageMotion = true,
     this.pageSound = false,
     this.favoriteBookIds = const [],
@@ -600,7 +601,7 @@ class WritingStyle {
   });
   final int paperIndex, penIndex, fontIndex;
   final bool guides, penMotion, useDevelopmentTypeface;
-  final bool pageMotion, pageSound;
+  final bool pageMotion, pageSound, writingSound;
   final List<String> favoriteBookIds;
   final BookDetailsStyle bookDetails;
   WritingStyle copy({
@@ -610,6 +611,7 @@ class WritingStyle {
     bool? useDevelopmentTypeface,
     bool? guides,
     bool? penMotion,
+    bool? writingSound,
     bool? pageMotion,
     bool? pageSound,
     List<String>? favoriteBookIds,
@@ -622,6 +624,7 @@ class WritingStyle {
         useDevelopmentTypeface ?? this.useDevelopmentTypeface,
     guides: guides ?? this.guides,
     penMotion: penMotion ?? this.penMotion,
+    writingSound: writingSound ?? this.writingSound,
     pageMotion: pageMotion ?? this.pageMotion,
     pageSound: pageSound ?? this.pageSound,
     favoriteBookIds: favoriteBookIds ?? this.favoriteBookIds,
@@ -635,6 +638,7 @@ class WritingStyle {
     'typefaceDefaultsVersion': 1,
     'guides': guides,
     'penMotion': penMotion,
+    'writingSound': writingSound,
     'pageMotion': pageMotion,
     'pageSound': pageSound,
     'favoriteBookIds': favoriteBookIds,
@@ -663,6 +667,7 @@ class WritingStyle {
           : true,
       guides: j['guides'] as bool? ?? false,
       penMotion: j['penMotion'] as bool? ?? true,
+      writingSound: j['writingSound'] as bool? ?? false,
       pageMotion: j['pageMotion'] as bool? ?? true,
       pageSound: j['pageSound'] as bool? ?? false,
       favoriteBookIds: List<String>.from(j['favoriteBookIds'] as List? ?? []),

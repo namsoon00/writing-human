@@ -156,6 +156,7 @@ void main() {
             final style = original.style.toJson();
             style.remove('pageMotion');
             style.remove('pageSound');
+            style.remove('writingSound');
             final details = style['bookDetails'] as Json;
             for (final kind in [
               BookDetailKind.indexTab,
@@ -219,6 +220,7 @@ void main() {
             bookDetails: details,
             pageMotion: false,
             pageSound: true,
+            writingSound: true,
           ),
         );
         c.registerOriginal(bookId: 'b', text: '책의 원문', citation: '12쪽');
@@ -263,6 +265,7 @@ void main() {
         expect(restored.style.paperIndex, original.style.paperIndex);
         expect(restored.style.pageMotion, isFalse);
         expect(restored.style.pageSound, isTrue);
+        expect(restored.style.writingSound, isTrue);
         expect(restored.pages.single.text, original.pages.single.text);
         expect(
           restored.pages.single.passages.single.toJson(),
@@ -288,6 +291,7 @@ void main() {
         books: [base.books.single.copy(indexLabel: '다시 읽기', coverIndex: 2)],
         style: base.style.copy(
           pageMotion: false,
+          writingSound: true,
           bookDetails: base.style.bookDetails.withChoice(
             BookDetailKind.pressedFlower,
             const BookDetailChoice(placement: 2),
@@ -316,6 +320,7 @@ void main() {
       expect(result.books.single.paperIndex, 3);
       expect(result.style.pageMotion, isFalse);
       expect(result.style.pageSound, isTrue);
+      expect(result.style.writingSound, isTrue);
       expect(result.style.bookDetails.pressedFlower.toJson(), {
         'enabled': true,
         'variant': 1,

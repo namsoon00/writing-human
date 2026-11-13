@@ -1,5 +1,14 @@
 # 구현 구조
 
+## 글씨 쓰는 소리
+
+`PageEditor`는 이전과 현재 입력값을 읽어 확정된 한 글자를 찾는다. 한글 조합
+범위가 다음 글자로 이동할 때에도 확정된 앞 글자만 처리한다. 저장 경로와 별도로
+`WritingSound`가 짧은 합성 펜촉 음원 `assets/audio/pen-stroke.wav`를 재생한다.
+플레이어 한 개로 소리를 내며 빠른 입력에서는 최소 간격을 둔다. 오디오 오류와
+지연은 입력과 저장에 영향을 주지 않는다. `writingSound`는 기본 false인 설정으로
+기존 SQLite·웹 설정과 동기화 병합에서 독립적으로 저장한다.
+
 ## 책별 꾸밈과 미리보기
 
 `BookAppearance`는 표지·내지·꾸밈 변경값을 화면에 보관하고, 완료할 때
@@ -261,7 +270,7 @@ WritingHumanDevelopment + NanumMyeongjo/NanumGothic 대체 체인을 사용한�
 
 WritingStyle은 종이, 펜, 글꼴, 줄 가이드, 즐겨찾기를 독립적으로 보관한다. Library JSON 버전 1의 optional style 필드로 추가했으며 이전 웹 데이터는 기본값으로 읽는다. SQLite 스키마는 버전 2다. app_state.settings와 records.source 컬럼을 ALTER TABLE로 추가하고 기존 테이블·본문·마지막 위치는 삭제하지 않는다. 기록에 source 원문 메모가 추가됐다.
 
-도구 화면은 기존 편집기 위에 표시한다. 선택 변경으로 TextEditingController를 새로 만들거나 본문/selection/composing을 덮어쓰지 않는다. 펜 선택은 잉크빛에 반영되며 종이·글꼴을 바꾸지 않는다. 쓰기 소리는 준비 중이다.
+도구 화면은 기존 편집기 위에 표시한다. 선택 변경으로 TextEditingController를 새로 만들거나 본문/selection/composing을 덮어쓰지 않는다. 펜 선택은 잉크빛에 반영되며 종이·글꼴을 바꾸지 않는다.
 
 ## 입력 위치를 따르는 펜
 

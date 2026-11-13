@@ -116,13 +116,14 @@ test('Book materials and page feedback accept legacy snapshots and validate inde
   library.books = [book];
   assert.equal(validLibrary(library), true);
   Object.assign(book, {coverIndex: 2, paperIndex: 3});
-  Object.assign(library.style, {pageMotion: false, pageSound: true});
+  Object.assign(library.style, {pageMotion: false, pageSound: true, writingSound: true});
   assert.equal(validLibrary(library), true);
   for (const [target, key, invalid] of [
     [book, 'coverIndex', 3],
     [book, 'paperIndex', -1],
     [library.style, 'pageMotion', 1],
     [library.style, 'pageSound', 'true'],
+    [library.style, 'writingSound', 1],
   ]) {
     const valid = target[key];
     target[key] = invalid;

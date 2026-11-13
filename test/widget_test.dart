@@ -448,6 +448,14 @@ void main() {
       await tester.tap(find.widgetWithText(SwitchListTile, '잉크 반응'));
       await tester.pumpAndSettle();
       expect(store.data.style.penMotion, isFalse);
+      final writingSound = find.widgetWithText(SwitchListTile, '글씨 쓰는 소리');
+      await tester.ensureVisible(writingSound);
+      expect(tester.widget<SwitchListTile>(writingSound).value, isFalse);
+      await tester.tap(writingSound);
+      await tester.pumpAndSettle();
+      expect(store.data.style.writingSound, isTrue);
+      expect(store.data.style.pageSound, isFalse);
+      expect(store.data.style.penMotion, isFalse);
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(editor).controller, same(controller));

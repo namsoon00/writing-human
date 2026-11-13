@@ -411,6 +411,11 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
       local.style.penMotion,
       remote.style.penMotion,
     ),
+    writingSound: _field(
+      base.style.writingSound,
+      local.style.writingSound,
+      remote.style.writingSound,
+    ),
     pageMotion: _field(
       base.style.pageMotion,
       local.style.pageMotion,

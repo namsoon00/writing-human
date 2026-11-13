@@ -180,6 +180,15 @@ class ToolsScreen extends StatelessWidget {
                 ),
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
+                  title: const Text('글씨 쓰는 소리', style: TextStyle(fontSize: 14)),
+                  value: style.writingSound,
+                  activeTrackColor: burgundy,
+                  onChanged: (v) => controller.setStyle(
+                    controller.library.style.copy(writingSound: v),
+                  ),
+                ),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
                   title: const Text('종이 넘김 효과', style: TextStyle(fontSize: 14)),
                   value: style.pageMotion,
                   activeTrackColor: burgundy,

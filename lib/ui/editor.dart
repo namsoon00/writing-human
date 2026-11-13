@@ -28,6 +28,7 @@ class PageEditor extends StatefulWidget {
     this.reflectionFocus,
     this.keyboardOverlap = 0,
     this.originals = const [],
+    this.guidedOriginal,
     this.reveal,
   });
   final FocusNode? focusNode;
@@ -37,6 +38,7 @@ class PageEditor extends StatefulWidget {
   final void Function(String, String, int, int, double) onChanged;
   final void Function(String, int, int)? onPencilMark;
   final List<RegisteredOriginal> originals;
+  final RegisteredOriginal? guidedOriginal;
   final Future<bool> Function(RegisteredOriginal, OriginalReflection?)?
   onSaveReflection;
   final FocusNode? reflectionFocus;
@@ -515,6 +517,7 @@ class _PageEditorState extends State<PageEditor> {
                       key: const ValueKey('transcription-guide'),
                       painter: TranscriptionGuidePainter(
                         originals: widget.originals,
+                        guided: widget.guidedOriginal,
                         focus: focus,
                         controller: text,
                         scroll: scroll,
@@ -535,6 +538,7 @@ class _PageEditorState extends State<PageEditor> {
                   child: NotebookReflection(
                     key: _reflectionKey,
                     originals: widget.originals,
+                    guided: widget.guidedOriginal,
                     controller: text,
                     scroll: scroll,
                     fieldKey: fieldRenderKey,

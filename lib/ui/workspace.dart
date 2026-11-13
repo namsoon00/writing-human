@@ -60,6 +60,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   String? _editingPageId;
   ({String pageId, int offset, int request})? _reveal;
   int _revealRequest = 0;
+  ({String pageId, String originalId})? _guided;
   late final SourceIntake _intake = widget.sourceIntake ?? createSourceIntake();
   StreamSubscription<void>? _incomingEvents;
   IncomingSource? _incoming;
@@ -285,6 +286,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       if (fresh && !userFresh && c.library.activePage != null) fresh = false;
       if (_accountLocked || !_showCover) _coverAnchor = null;
       if (_accountLocked || _reveal?.pageId != page.id) _reveal = null;
+      if (_accountLocked || _guided?.pageId != page.id) _guided = null;
     });
     if ((widget.sync?.accountMismatch ?? false) ||
         (widget.sync?.signInRequired ?? false)) {
@@ -611,18 +613,18 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     return result;
   }
 
-  Future<void> _registerOriginal({
+  Future<({String? bookId, RegisteredOriginal original})?> _registerOriginal({
     String? bookId,
     WritingPage? selectedPage,
     SourcePhoto? initialPhoto,
   }) async {
-    if (_sourceBusy || _accountLocked || !_canLeaveInput()) return;
+    if (_sourceBusy || _accountLocked || !_canLeaveInput()) return null;
     final owner = c;
     _sourceBusy = true;
     try {
       await owner.settled;
       if (!mounted || c != owner || _accountLocked || owner.saveError != null) {
-        return;
+        return null;
       }
       final result = await _reviewOriginal(
         initialPhoto: initialPhoto,
@@ -638,7 +640,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           (selectedPage != null && page.id != selectedPage.id) ||
           (result.bookId != null &&
               !owner.library.books.any((book) => book.id == result.bookId))) {
-        return;
+        return null;
       }
       if (result.bookId == null && selectedPage != null && fresh) {
         fresh = false;
@@ -654,14 +656,17 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         writingRange: result.writingRange,
         photoLines: result.photoLines,
       );
-      if (!registered) {
+      if (registered == null) {
         _sourceNotice('원문을 저장하지 못했어요. 다시 시도해 주세요.');
-        return;
+        return null;
       }
       await owner.settled;
-      if (mounted && c == owner && !_accountLocked && owner.saveError != null) {
+      if (!mounted || c != owner || _accountLocked) return null;
+      if (owner.saveError != null) {
         _sourceNotice('원문을 저장하지 못했어요. 다시 저장해 주세요.');
+        return null;
       }
+      return (bookId: result.bookId, original: registered);
     } finally {
       _sourceBusy = false;
     }
@@ -680,11 +685,12 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     final owner = c, selectedPage = page;
     _blur();
     if (shared == null) {
-      await _registerOriginal(
+      final saved = await _registerOriginal(
         bookId: book?.id,
         selectedPage: selectedPage,
         initialPhoto: initialPhoto,
       );
+      if (saved != null) _offerTranscription(owner, selectedPage, saved);
       return;
     }
     _sourceBusy = true;
@@ -748,6 +754,91 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     }
   }
 
+  void _offerTranscription(
+    LibraryController owner,
+    WritingPage origin,
+    ({String? bookId, RegisteredOriginal original}) saved,
+  ) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: const Text('원문을 저장했어요.'),
+        duration: const Duration(seconds: 8),
+        action: SnackBarAction(
+          label: '이 구절 필사하기',
+          onPressed: () {
+            if (!mounted || c != owner || page.id != origin.id) return;
+            unawaited(
+              _startTranscription(saved.original, saved.bookId, origin),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _startTranscription(
+    RegisteredOriginal original,
+    String? bookId,
+    WritingPage origin,
+  ) async {
+    String? target;
+    final owner = c;
+    await _navigatePage(() async {
+      if (bookId != null && !c.library.books.any((item) => item.id == bookId)) {
+        return;
+      }
+      if (bookId == null &&
+          !c.library.records.any((item) => item.id == origin.recordId)) {
+        return;
+      }
+      final source =
+          originalsFor(owner.library, bookId: bookId, recordId: origin.recordId)
+              .where(
+                (item) =>
+                    item.id == original.id ||
+                    (item.text == original.text &&
+                        item.citation == original.citation &&
+                        item.photoId == original.photoId),
+              )
+              .firstOrNull;
+      if (source == null || source.text.trim().isEmpty) return;
+      if (page.text.isEmpty &&
+          (bookId != null
+              ? book?.id == bookId
+              : page.recordId == origin.recordId)) {
+        _coverAnchor = null;
+      } else if (bookId == null) {
+        fresh = false;
+        userFresh = false;
+        _coverAnchor = null;
+        c.addPage(recordId: origin.recordId);
+      } else {
+        _coverAnchor = null;
+        draft = _blank();
+        draftBookId = bookId;
+        fresh = true;
+        userFresh = true;
+      }
+      target = page.id;
+      setState(() => _guided = (pageId: target!, originalId: source.id));
+    }, paperTurn: false);
+    if (target == null ||
+        !mounted ||
+        page.id != target ||
+        c != owner ||
+        _accountLocked ||
+        c.saveError != null) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && c == owner && !_accountLocked && page.id == target) {
+        editorFocus.requestFocus();
+      }
+    });
+  }
+
   Future<void> _showOriginals({Book? bookDetails}) async {
     if (_readingSource || _sourceBusy || _accountLocked || !_canLeaveInput()) {
       return;
@@ -773,76 +864,137 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       bookId: bookId,
       recordId: selectedPage.recordId,
     );
-    Future<void> register() => _registerOriginal(
-      bookId: bookId,
-      selectedPage: bookDetails == null ? selectedPage : null,
-    );
+    Future<({String? bookId, RegisteredOriginal original})?> register() =>
+        _registerOriginal(
+          bookId: bookId,
+          selectedPage: bookDetails == null ? selectedPage : null,
+        );
 
     try {
       final available = originals();
       if (bookDetails == null && available.isEmpty) {
-        await register();
+        final saved = await register();
+        if (saved != null) _offerTranscription(owner, selectedPage, saved);
       } else {
         final initial = bookDetails == null
             ? matchOriginal(available, selectedPage.text, selectedPage.extent)
             : null;
-        final route = ModalBottomSheetRoute<void>(
-          isScrollControlled: true,
-          showDragHandle: true,
-          backgroundColor: referencePaperColor(
-            paperColors[_paperStyle(selectedBook).paperIndex],
-          ),
-          barrierLabel: MaterialLocalizations.of(
-            context,
-          ).modalBarrierDismissLabel,
-          constraints: const BoxConstraints(maxWidth: 600),
-          builder: (_) => ListenableBuilder(
-            listenable: owner,
-            builder: (context, _) => SourceReading(
-              originals: originals(),
-              match: initial,
-              style: _paperStyle(selectedBook),
-              coverIndex: selectedBook == null
-                  ? null
-                  : owner.coverIndexFor(selectedBook),
-              pagesBefore: position < 0 ? 0 : position,
-              pagesAfter: volume.length - position - 1,
-              onRegister: owner.saveError == null ? register : null,
-              onRetry: owner.saveError == null ? null : _retrySave,
-              onSaveRange: (original, range) async {
-                if (!mounted ||
-                    c != owner ||
-                    _accountLocked ||
-                    owner.composing) {
-                  return false;
-                }
-                final latest = originals()
-                    .where((item) => item.id == original.id)
-                    .firstOrNull;
-                if (latest == null || latest.text != original.text) {
-                  return false;
-                }
-                return owner.saveOriginalRange(
-                  bookId: bookId,
-                  recordId: selectedPage.recordId,
-                  original: latest,
-                  range: range,
-                );
-              },
-              onSaveReflection: (original, reflection) => owner.composing
-                  ? Future.value(false)
-                  : _saveReflection(
-                      owner,
-                      bookId,
-                      selectedPage.recordId,
-                      original,
-                      reflection,
+        ({String? bookId, RegisteredOriginal original})? savedElsewhere;
+        final route =
+            ModalBottomSheetRoute<
+              ({RegisteredOriginal? original, Passage? passage})
+            >(
+              isScrollControlled: true,
+              showDragHandle: true,
+              backgroundColor: referencePaperColor(
+                paperColors[_paperStyle(selectedBook).paperIndex],
+              ),
+              barrierLabel: MaterialLocalizations.of(
+                context,
+              ).modalBarrierDismissLabel,
+              constraints: const BoxConstraints(maxWidth: 600),
+              builder: (_) => ListenableBuilder(
+                listenable: owner,
+                builder: (context, _) => SourceReading(
+                  originals: originals(),
+                  match: initial,
+                  style: _paperStyle(selectedBook),
+                  coverIndex: selectedBook == null
+                      ? null
+                      : owner.coverIndexFor(selectedBook),
+                  pagesBefore: position < 0 ? 0 : position,
+                  pagesAfter: volume.length - position - 1,
+                  onRegister: owner.saveError != null
+                      ? null
+                      : () async {
+                          final saved = await register();
+                          if (saved == null) return null;
+                          if (saved.bookId != bookId) {
+                            if (context.mounted &&
+                                ModalRoute.of(context)?.isCurrent == true) {
+                              savedElsewhere = saved;
+                              Navigator.of(context).pop();
+                            }
+                            return null;
+                          }
+                          return saved.original;
+                        },
+                  writingLocations: originalWritingLocations(
+                    originals(),
+                    owner.library.volumePages(
+                      bookId: bookId,
+                      recordId: selectedPage.recordId,
                     ),
-            ),
-          ),
-        );
-        await Navigator.of(context).push(route);
+                  ),
+                  onTranscribe: owner.saveError == null
+                      ? (original) => Navigator.of(
+                          context,
+                        ).pop((original: original, passage: null))
+                      : null,
+                  onOpenWriting: (passage) => Navigator.of(
+                    context,
+                  ).pop((original: null, passage: passage)),
+                  onRetry: owner.saveError == null ? null : _retrySave,
+                  onSaveRange: (original, range) async {
+                    if (!mounted ||
+                        c != owner ||
+                        _accountLocked ||
+                        owner.composing) {
+                      return false;
+                    }
+                    final latest = originals()
+                        .where((item) => item.id == original.id)
+                        .firstOrNull;
+                    if (latest == null || latest.text != original.text) {
+                      return false;
+                    }
+                    return owner.saveOriginalRange(
+                      bookId: bookId,
+                      recordId: selectedPage.recordId,
+                      original: latest,
+                      range: range,
+                    );
+                  },
+                  onSaveReflection: (original, reflection) => owner.composing
+                      ? Future.value(false)
+                      : _saveReflection(
+                          owner,
+                          bookId,
+                          selectedPage.recordId,
+                          original,
+                          reflection,
+                        ),
+                ),
+              ),
+            );
+        final action = await Navigator.of(context).push(route);
         await route.completed;
+        if (savedElsewhere case final saved?) {
+          if (mounted && c == owner && !_accountLocked) {
+            _offerTranscription(owner, selectedPage, saved);
+          }
+          return;
+        }
+        if (action != null && mounted && c == owner && !_accountLocked) {
+          if (action.original case final original?) {
+            if (bookDetails != null) {
+              await _afterSheet(
+                () => _startTranscription(original, bookId, selectedPage),
+              );
+            } else {
+              await _startTranscription(original, bookId, selectedPage);
+            }
+            return;
+          }
+          if (action.passage case final passage?) {
+            if (bookDetails != null) {
+              await _afterSheet(() => _openPassage(passage));
+            } else {
+              await _openPassage(passage);
+            }
+            return;
+          }
+        }
       }
       if (wasEditing &&
           mounted &&
@@ -1275,6 +1427,13 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         style: style,
                         focusNode: editorFocus,
                         originals: originals,
+                        guidedOriginal: _guided?.pageId == currentPage.id
+                            ? originals
+                                  .where(
+                                    (item) => item.id == _guided?.originalId,
+                                  )
+                                  .firstOrNull
+                            : null,
                         keyboardOverlap: keyboardOverlap,
                         reflectionFocus: reflectionFocus,
                         onSaveReflection: (original, reflection) =>

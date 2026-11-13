@@ -19,6 +19,7 @@ class NotebookReflection extends StatefulWidget {
   const NotebookReflection({
     super.key,
     required this.originals,
+    this.guided,
     required this.controller,
     required this.scroll,
     required this.fieldKey,
@@ -30,6 +31,7 @@ class NotebookReflection extends StatefulWidget {
   });
 
   final List<RegisteredOriginal> originals;
+  final RegisteredOriginal? guided;
   final TextEditingController controller;
   final ScrollController scroll;
   final GlobalKey fieldKey;
@@ -269,6 +271,7 @@ class NotebookReflectionState extends State<NotebookReflection> {
             widget.originals,
             value.text,
             caret,
+            guided: widget.guided,
           );
         } else if (!composing &&
             selection.isValid &&

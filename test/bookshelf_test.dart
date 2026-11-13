@@ -105,6 +105,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('shelf-details-book')));
       await tester.pumpAndSettle();
       expect(find.text('2편 · 4쪽'), findsOneWidget);
+      expect(find.text('이어서 쓸 위치 · 4쪽'), findsOneWidget);
       await tester.tap(find.text('이어서 쓰기'));
       await tester.pumpAndSettle();
       expect(store.data.activePageId, 'b2');

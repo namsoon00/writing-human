@@ -101,7 +101,13 @@ class _BookAppearanceState extends State<BookAppearance> {
       }
       final pages = controller.library.volumePages(bookId: book.id);
       final page = controller.resumePageForBook(book.id);
-      final excerpt = page?.text.trim() ?? '';
+      final sample = page?.text.trim().isNotEmpty == true
+          ? page
+          : pages.reversed
+                .where((entry) => entry.text.trim().isNotEmpty)
+                .firstOrNull;
+      final excerpt = sample?.text.trim() ?? '';
+      final writingStyle = controller.styleFor(book);
       final closed = switch (section) {
         _Section.materials => showCover,
         _Section.ribbon => false,
@@ -140,10 +146,11 @@ class _BookAppearanceState extends State<BookAppearance> {
                         details: details,
                         detail: section == _Section.details ? detail : null,
                         excerpt: excerpt,
+                        writingStyle: writingStyle,
                         pageCount: pages.length,
-                        pageNumber: page == null
+                        pageNumber: sample == null
                             ? null
-                            : pages.indexWhere((p) => p.id == page.id) + 1,
+                            : pages.indexWhere((p) => p.id == sample.id) + 1,
                       ),
               ),
             ),
@@ -502,6 +509,7 @@ class _OpenBook extends StatelessWidget {
     required this.details,
     required this.detail,
     required this.excerpt,
+    required this.writingStyle,
     required this.pageCount,
     required this.pageNumber,
   });
@@ -511,6 +519,7 @@ class _OpenBook extends StatelessWidget {
   final BookDetailsStyle details;
   final BookDetailKind? detail;
   final String excerpt;
+  final WritingStyle writingStyle;
   final int pageCount;
   final int? pageNumber;
 
@@ -694,17 +703,22 @@ class _OpenBook extends StatelessWidget {
                     Flexible(
                       child: Text(
                         left ? book.title : excerpt,
-                        maxLines: 3,
+                        maxLines: left ? 3 : 2,
                         overflow: TextOverflow.ellipsis,
                         textAlign: left ? TextAlign.center : TextAlign.start,
-                        style: TextStyle(
-                          color: brandInk,
-                          fontSize: math.min(
-                            left ? 17 : 14,
-                            box.maxWidth / 8.8,
-                          ),
-                          height: 1.65,
-                        ),
+                        style: left
+                            ? TextStyle(
+                                color: brandInk,
+                                fontSize: math.min(17, box.maxWidth / 8.8),
+                                height: 1.65,
+                              )
+                            : writingTextStyle(
+                                writingStyle.fontIndex,
+                                color: penColors[writingStyle.penIndex],
+                                size: math.min(14, box.maxWidth / 8.8),
+                                useDevelopmentTypeface:
+                                    writingStyle.useDevelopmentTypeface,
+                              ),
                       ),
                     ),
                   ],

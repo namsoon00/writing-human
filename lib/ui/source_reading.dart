@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import '../data/model.dart';
+import '../data/library_search.dart';
 import '../data/original_photo_store.dart';
 import '../source/originals.dart';
 import '../source/source_scan.dart';
@@ -24,6 +25,9 @@ class SourceReading extends StatefulWidget {
     this.pagesBefore = 0,
     this.pagesAfter = 0,
     this.onRegister,
+    this.writingLocations = const {},
+    this.onTranscribe,
+    this.onOpenWriting,
     this.onRetry,
     this.onSaveReflection,
     this.onSaveRange,
@@ -34,7 +38,10 @@ class SourceReading extends StatefulWidget {
   final WritingStyle style;
   final int? coverIndex;
   final int pagesBefore, pagesAfter;
-  final VoidCallback? onRegister;
+  final Future<RegisteredOriginal?> Function()? onRegister;
+  final Map<String, ({Passage passage, bool marked})> writingLocations;
+  final ValueChanged<RegisteredOriginal>? onTranscribe;
+  final ValueChanged<Passage>? onOpenWriting;
   final VoidCallback? onRetry;
   final Future<bool> Function(RegisteredOriginal, PencilMark?)? onSaveRange;
   final Future<bool> Function(RegisteredOriginal, OriginalReflection)?
@@ -49,6 +56,31 @@ class _SourceReadingState extends State<SourceReading> {
   final reflectionField = TextEditingController();
   bool editing = false, saving = false, failed = false;
   PencilMark? draftMark;
+  bool markedOnly = false;
+
+  bool _isMarked(RegisteredOriginal item) =>
+      item.reflection?.mark != null ||
+      widget.writingLocations[item.id]?.marked == true;
+
+  Future<void> _register() async {
+    final registered = await widget.onRegister!();
+    if (!mounted || registered == null) return;
+    setState(() {
+      markedOnly = false;
+      selectedId =
+          widget.originals
+              .where(
+                (item) =>
+                    item.id == registered.id ||
+                    (item.text == registered.text &&
+                        item.citation == registered.citation &&
+                        item.photoId == registered.photoId),
+              )
+              .firstOrNull
+              ?.id ??
+          registered.id;
+    });
+  }
 
   @override
   void dispose() {
@@ -209,6 +241,10 @@ class _SourceReadingState extends State<SourceReading> {
         .firstOrNull;
     final match = selectedId == widget.match?.original.id ? widget.match : null;
     final reflection = original?.reflection;
+    final visibleOriginals = markedOnly
+        ? widget.originals.where(_isMarked).toList()
+        : widget.originals;
+    final writing = widget.writingLocations[original?.id]?.passage;
     final mark = editing ? draftMark : reflection?.mark;
     final note = editing || reflection != null
         ? _ReflectionNote(
@@ -261,7 +297,7 @@ class _SourceReadingState extends State<SourceReading> {
                       ),
                       if (widget.onRegister != null && !editing)
                         TextButton(
-                          onPressed: widget.onRegister,
+                          onPressed: _register,
                           child: const Text('원문 등록'),
                         ),
                       IconButton(
@@ -272,6 +308,16 @@ class _SourceReadingState extends State<SourceReading> {
                     ],
                   ),
                   const Divider(),
+                  if (original == null && widget.originals.isNotEmpty)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: FilterChip(
+                        label: const Text('연필 표시만 보기'),
+                        selected: markedOnly,
+                        onSelected: (value) =>
+                            setState(() => markedOnly = value),
+                      ),
+                    ),
                   if (original != null &&
                       !editing &&
                       (original.photoId != null || original.isFullPage))
@@ -316,10 +362,14 @@ class _SourceReadingState extends State<SourceReading> {
                             note: note,
                             editing: editing,
                           )
-                        : widget.originals.isEmpty
-                        ? const Center(child: Text('등록한 원문이 없습니다.'))
+                        : visibleOriginals.isEmpty
+                        ? Center(
+                            child: Text(
+                              markedOnly ? '연필로 표시한 구절이 없어요.' : '등록한 원문이 없습니다.',
+                            ),
+                          )
                         : ListView.separated(
-                            itemCount: widget.originals.length,
+                            itemCount: visibleOriginals.length,
                             separatorBuilder: (_, _) =>
                                 details.recordDivider.enabled
                                 ? RecordDivider(
@@ -328,7 +378,7 @@ class _SourceReadingState extends State<SourceReading> {
                                   )
                                 : const SizedBox(height: 8),
                             itemBuilder: (context, index) {
-                              final item = widget.originals[index];
+                              final item = visibleOriginals[index];
                               return InkWell(
                                 onTap: () =>
                                     setState(() => selectedId = item.id),
@@ -371,6 +421,30 @@ class _SourceReadingState extends State<SourceReading> {
                             },
                           ),
                   ),
+                  if (original != null && !editing)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Wrap(
+                        spacing: 8,
+                        children: [
+                          if (widget.onTranscribe != null &&
+                              original.text.trim().isNotEmpty)
+                            TextButton(
+                              onPressed: saving
+                                  ? null
+                                  : () => widget.onTranscribe!(original),
+                              child: const Text('이 구절 필사하기'),
+                            ),
+                          if (writing != null && widget.onOpenWriting != null)
+                            TextButton(
+                              onPressed: saving
+                                  ? null
+                                  : () => widget.onOpenWriting!(writing),
+                              child: const Text('필사한 쪽 열기'),
+                            ),
+                        ],
+                      ),
+                    ),
                   if (failed && editing)
                     Semantics(
                       liveRegion: true,

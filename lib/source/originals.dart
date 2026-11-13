@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 import '../data/model.dart';
+import '../data/library_search.dart';
 
 RegisteredOriginal _legacyOriginal(String text, [String citation = '']) {
   final digest = sha256.convert(utf8.encode(jsonEncode([text, citation])));
@@ -72,6 +73,69 @@ class OriginalMatch {
         : text.length;
     return text.substring(end, lineEnd < 0 ? limit : lineEnd.clamp(end, limit));
   }
+}
+
+/// Matches only the beginning of the source deliberately opened on an empty page.
+OriginalMatch? matchGuidedOriginal(
+  RegisteredOriginal original,
+  String text,
+  int caret,
+) {
+  if (caret < 0 || caret > text.length) return null;
+  final limit = original.writingRange?.end ?? original.text.length;
+  final rangeStart = original.writingRange?.start ?? 0;
+  final passage = original.text.substring(rangeStart, limit);
+  final start = limit - passage.trimLeft().length;
+  final prefix = text.substring(0, caret);
+  if (!original.text.startsWith(prefix, start) || start + caret > limit) {
+    return null;
+  }
+  return OriginalMatch(original, start, start + caret, useWritingRange: true);
+}
+
+/// Finds the writing behind original notes and pencil marks on copied text.
+Map<String, ({Passage passage, bool marked})> originalWritingLocations(
+  List<RegisteredOriginal> originals,
+  Iterable<WritingPage> pages,
+) {
+  final locations = <String, ({Passage passage, bool marked})>{};
+  for (final page in pages) {
+    // A mark can cover a single word or more than one line.
+    for (final mark in page.pencilMarks) {
+      if (mark.start < 0 ||
+          mark.end > page.text.length ||
+          mark.end <= mark.start) {
+        continue;
+      }
+      final selection = page.text.substring(mark.start, mark.end);
+      var offset = mark.start;
+      for (final line in selection.split('\n')) {
+        final match = matchSelectedOriginal(originals, line);
+        if (match != null) {
+          locations[match.original.id] = (
+            passage: Passage(page, '', line.trim(), offset: offset),
+            marked: true,
+          );
+        }
+        offset += line.length + 1;
+      }
+    }
+    var offset = 0;
+    for (final line in page.text.split('\n')) {
+      final match = matchOriginal(originals, line, line.trimRight().length);
+      if (match != null) {
+        locations.putIfAbsent(
+          match.original.id,
+          () => (
+            passage: Passage(page, '', line.trim(), offset: offset),
+            marked: false,
+          ),
+        );
+      }
+      offset += line.length + 1;
+    }
+  }
+  return locations;
 }
 
 const _wordPattern = r'[\p{L}\p{M}\p{N}]';
@@ -154,9 +218,16 @@ typedef NotebookReflectionMatch = ({OriginalMatch match, int offset});
 NotebookReflectionMatch? reflectionForWriting(
   List<RegisteredOriginal> originals,
   String text,
-  int caret,
-) {
-  final current = matchOriginal(originals, text, caret);
+  int caret, {
+  RegisteredOriginal? guided,
+}) {
+  final explicit = guided == null || caret <= 0
+      ? null
+      : matchGuidedOriginal(guided, text, caret);
+  final current =
+      explicit != null && _wordCharacters.hasMatch(text.substring(0, caret))
+      ? explicit
+      : matchOriginal(originals, text, caret);
   if (current != null) return _notebookAnchor(current, caret);
   if (caret <= 0 ||
       caret > text.length ||

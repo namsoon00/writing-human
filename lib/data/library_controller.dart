@@ -158,7 +158,7 @@ class LibraryController extends ChangeNotifier {
     );
   }
 
-  bool registerOriginal({
+  RegisteredOriginal? registerOriginal({
     String? bookId,
     WritingPage? page,
     required String text,
@@ -167,16 +167,27 @@ class LibraryController extends ChangeNotifier {
     bool isFullPage = false,
     PencilMark? writingRange,
     List<OriginalPhotoLine> photoLines = const [],
-  }) => registerOriginals(
-    bookId: bookId,
-    page: page,
-    passages: [text],
-    citation: citation,
-    photoId: photoId,
-    isFullPage: isFullPage,
-    writingRange: writingRange,
-    photoLines: photoLines,
-  );
+  }) {
+    final id = _id();
+    final registered = registerOriginals(
+      bookId: bookId,
+      page: page,
+      passages: [text],
+      citation: citation,
+      deliveryId: id,
+      photoId: photoId,
+      isFullPage: isFullPage,
+      writingRange: writingRange,
+      photoLines: photoLines,
+    );
+    if (!registered) return null;
+    final originals = bookId != null
+        ? library.books.firstWhere((book) => book.id == bookId).originals
+        : library.records
+              .firstWhere((record) => record.id == page!.recordId)
+              .originals;
+    return originals.last;
+  }
 
   bool registerOriginals({
     String? bookId,
@@ -594,8 +605,11 @@ class LibraryController extends ChangeNotifier {
     }
   }
 
-  void addPage() {
-    final record = library.activeRecord!;
+  void addPage({String? recordId}) {
+    final record = recordId == null
+        ? library.activeRecord
+        : library.records.where((item) => item.id == recordId).firstOrNull;
+    if (record == null) return;
     final page = WritingPage(
       id: _id(),
       recordId: record.id,
@@ -607,7 +621,11 @@ class LibraryController extends ChangeNotifier {
           1,
     );
     _publish(
-      library.copy(pages: [...library.pages, page], activePageId: page.id),
+      library.copy(
+        pages: [...library.pages, page],
+        activePageId: page.id,
+        writing: true,
+      ),
       positionChanged: true,
     );
   }

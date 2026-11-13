@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -346,7 +347,11 @@ void main() {
     await tester.pumpAndSettle();
     await saveOriginal('정오의 종소리가 들렸다.', '60쪽');
     expect(store.data.books.first.originals, hasLength(3));
-    expect(tester.widget<Text>(readingText).textSpan!.toPlainText(), first);
+    expect(
+      tester.widget<Text>(readingText).textSpan!.toPlainText(),
+      '정오의 종소리가 들렸다.',
+    );
+    expect(find.text('이 구절 필사하기'), findsOneWidget);
     await tester.tap(closeIn(reading));
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(bodyField).controller, same(body));
@@ -856,11 +861,16 @@ void main() {
       expect(bytes, intake.photo.bytes);
       expect(matchOriginal([original], '왼쪽', 2), isNull);
       expect(matchOriginal([original], '오른쪽', 3)?.remainder, ' 문단');
-      final backup = await tester.runAsync(
-        () => LibraryBackup.collect(store.data, DateTime.utc(2026, 11, 13)),
-      );
-      final restored = LibraryBackup.decode(backup!.encode());
-      expect(base64Decode(restored.photos[original.photoId]!), bytes);
+      final output = OutputMemoryStream();
+      final restored = await tester.runAsync(() async {
+        await LibraryBackup.write(
+          output,
+          store.data,
+          DateTime.utc(2026, 11, 13),
+        );
+        return LibraryBackup.read(InputMemoryStream(output.getBytes()));
+      });
+      expect(restored!.photoIds, {original.photoId});
       expect(
         restored.library.records.single.originals.single.writingRange?.toJson(),
         original.writingRange?.toJson(),
@@ -1189,6 +1199,82 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'Saved original can be transcribed without pre-filling the page',
+    (tester) async {
+      final store = MemoryStore();
+      await open(tester, store, FakeIntake());
+      await openRegistration(tester);
+      await tester.enterText(sourceField, '한 문장을 옮겨 쓴다.');
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('이 구절 필사하기'));
+      await tester.pumpAndSettle();
+      final field = tester.widget<TextField>(bodyField);
+      final painter =
+          tester
+                  .widget<CustomPaint>(
+                    find.byKey(const ValueKey('transcription-guide')),
+                  )
+                  .painter!
+              as TranscriptionGuidePainter;
+      expect(field.controller!.text, isEmpty);
+      expect(field.focusNode!.hasFocus, isTrue);
+      expect(painter.remainderFor(field.controller!.value), '한 문장을 옮겨 쓴다.');
+      expect(store.data.pages.single.text, isEmpty);
+      await tester.enterText(bodyField, '한 문장을');
+      await tester.pumpAndSettle();
+      expect(find.text('느낀 점'), findsOneWidget);
+      expect(store.data.pages.single.text, '한 문장을');
+    },
+  );
+
+  testWidgets('Pencil filter opens the page containing the marked original', (
+    tester,
+  ) async {
+    final store = MemoryStore()
+      ..data = const Library(
+        books: [
+          Book(
+            id: 'b',
+            title: '문장 수첩',
+            originals: [
+              RegisteredOriginal('marked', '책장에 천천히 내려앉았다.'),
+              RegisteredOriginal('plain', '정오의 종소리가 들렸다.'),
+            ],
+          ),
+        ],
+        records: [WritingRecord(id: 'r', bookId: 'b', title: '필사')],
+        pages: [
+          WritingPage(id: 'p', recordId: 'r', number: 1),
+          WritingPage(
+            id: 'marked-page',
+            recordId: 'r',
+            number: 2,
+            text: '책장에 천천히 내려앉았다.',
+            pencilMarks: [PencilMark(0, 3)],
+          ),
+        ],
+        activePageId: 'p',
+        writing: true,
+      );
+    await open(tester, store, FakeIntake());
+    await tester.tap(place);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('연필 표시만 보기'));
+    await tester.pumpAndSettle();
+    expect(find.text('정오의 종소리가 들렸다.'), findsNothing);
+    await tester.tap(find.text('책장에 천천히 내려앉았다.'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('필사한 쪽 열기'));
+    await tester.pumpAndSettle();
+    expect(store.data.activePageId, 'marked-page');
+    expect(
+      tester.widget<TextField>(bodyField).controller!.text,
+      '책장에 천천히 내려앉았다.',
+    );
+  });
 
   testWidgets('Recovered Android picker photo enters review without saving', (
     tester,

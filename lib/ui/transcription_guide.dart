@@ -9,6 +9,7 @@ import 'editable_geometry.dart';
 class TranscriptionGuidePainter extends CustomPainter {
   TranscriptionGuidePainter({
     required this.originals,
+    this.guided,
     required this.focus,
     required this.controller,
     required this.scroll,
@@ -19,6 +20,7 @@ class TranscriptionGuidePainter extends CustomPainter {
   }) : super(repaint: Listenable.merge([controller, scroll, focus]));
 
   final List<RegisteredOriginal> originals;
+  final RegisteredOriginal? guided;
   final FocusNode focus;
   final TextEditingController controller;
   final ScrollController scroll;
@@ -36,7 +38,12 @@ class TranscriptionGuidePainter extends CustomPainter {
     final isComposing = value.isComposingRangeValid && !composing.isCollapsed;
     if (isComposing && composing.end != value.text.length) return '';
     final committed = isComposing ? composing.start : caret.extentOffset;
-    final match = matchOriginal(originals, value.text, committed);
+    final source = guided;
+    final match =
+        (source == null
+            ? null
+            : matchGuidedOriginal(source, value.text, committed)) ??
+        matchOriginal(originals, value.text, committed);
     if (match == null) return '';
     final skipped = isComposing
         ? composing.textInside(value.text).characters.length
@@ -46,7 +53,9 @@ class TranscriptionGuidePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (!focus.hasFocus) return;
+    if (!focus.hasFocus && (guided == null || controller.text.isNotEmpty)) {
+      return;
+    }
     final value = controller.value;
     final remainder = remainderFor(value);
     if (remainder.isEmpty) return;
@@ -107,6 +116,7 @@ class TranscriptionGuidePainter extends CustomPainter {
   @override
   bool shouldRepaint(TranscriptionGuidePainter oldDelegate) =>
       originals != oldDelegate.originals ||
+      guided != oldDelegate.guided ||
       focus != oldDelegate.focus ||
       style != oldDelegate.style ||
       controller != oldDelegate.controller ||

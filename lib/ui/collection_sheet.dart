@@ -214,7 +214,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
     );
   }
 
-  Widget _contentsHeader(Book? book, String summary, WritingPage? resumePage) {
+  Widget _contentsHeader(Book? book, String summary, int? resumeNumber) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 18, 4, 24),
       child: Column(
@@ -235,7 +235,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 13, height: 1.5, color: muted),
           ),
-          if (book != null && resumePage != null) ...[
+          if (book != null && resumeNumber != null) ...[
             const SizedBox(height: 12),
             FilledButton.icon(
               onPressed: () => widget.onBook(book),
@@ -246,6 +246,12 @@ class _CollectionSheetState extends State<CollectionSheet> {
                 foregroundColor: paper,
                 minimumSize: const Size(0, 48),
               ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '이어서 쓸 위치 · $resumeNumber쪽',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, color: muted),
             ),
           ],
           if (book != null)
@@ -281,6 +287,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
       }
     }
     final resumePage = book == null ? null : c.resumePageForBook(book.id);
+    final resumeIndex = pages.indexWhere((page) => page.id == resumePage?.id);
     final details = c.detailsFor(book);
     return ListView.builder(
       key: book == null
@@ -293,7 +300,12 @@ class _CollectionSheetState extends State<CollectionSheet> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (!showSearch) _contentsHeader(book, summary, resumePage),
+              if (!showSearch)
+                _contentsHeader(
+                  book,
+                  summary,
+                  resumeIndex < 0 ? null : resumeIndex + 1,
+                ),
               const Divider(height: 1, color: line),
               Row(
                 children: [

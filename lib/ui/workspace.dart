@@ -1248,7 +1248,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             recordId: currentPage.recordId,
           );
     final owner = c;
-    return PaperBackdrop(
+    final surface = PaperBackdrop(
       binding: style.bookDetails.binding,
       color: paperColors[style.paperIndex],
       grainOpacity: paperGrainOpacity[style.paperIndex],
@@ -1400,6 +1400,19 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           ),
         ),
       ),
+    );
+    if (preview) return surface;
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      excludeFromSemantics: true,
+      onTap: () {
+        if ((editorFocus.hasFocus || reflectionFocus.hasFocus) &&
+            !_editorComposing &&
+            !c.composing) {
+          _blur();
+        }
+      },
+      child: surface,
     );
   }
 

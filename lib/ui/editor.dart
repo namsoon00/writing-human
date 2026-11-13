@@ -266,15 +266,17 @@ class _PageEditorState extends State<PageEditor> {
     );
   }
 
+  void _dismissKeyboard() {
+    if (_composing) return;
+    widget.reflectionFocus?.unfocus();
+    focus.unfocus();
+  }
+
   Widget _dismissGutter() => TextFieldTapRegion(
     child: GestureDetector(
       behavior: HitTestBehavior.opaque,
       excludeFromSemantics: true,
-      onTap: () {
-        if (_composing) return;
-        widget.reflectionFocus?.unfocus();
-        focus.unfocus();
-      },
+      onTap: _dismissKeyboard,
     ),
   );
 
@@ -300,6 +302,19 @@ class _PageEditorState extends State<PageEditor> {
   void _placeCaret(TapUpDetails details) {
     final editor = _editable;
     if (editor == null || _composing) return;
+    final render = editor.renderEditable;
+    final lastLine = render.getLocalRectForCaret(
+      TextPosition(offset: text.text.length),
+    );
+    final belowLastLine =
+        render.globalToLocal(details.globalPosition).dy >
+        lastLine.bottom +
+            math.max(4.0, (render.preferredLineHeight - lastLine.height) / 2);
+    if (belowLastLine &&
+        (focus.hasFocus || widget.reflectionFocus?.hasFocus == true)) {
+      _dismissKeyboard();
+      return;
+    }
     editor.hideToolbar();
     editor.renderEditable.selectPositionAt(
       from: details.globalPosition,
@@ -348,17 +363,18 @@ class _PageEditorState extends State<PageEditor> {
     if (!_composing) _editable?.showToolbar();
   }
 
-  Widget _preciseTouchSelection() => GestureDetector(
-    // The field still receives hits for scrolling and non-touch input.
-    behavior: HitTestBehavior.translucent,
-    excludeFromSemantics: true,
-    supportedDevices: const {PointerDeviceKind.touch},
-    onTapUp: _placeCaret,
-    onLongPressStart: _beginSelection,
-    onLongPressMoveUpdate: _extendSelection,
-    onLongPressEnd: _showSelectionMenu,
-    onLongPressCancel: () => _holdOrigin = null,
-  );
+  Widget _paperTouchSelection({required bool preciseSelection}) =>
+      GestureDetector(
+        // The field still receives hits for scrolling and non-touch input.
+        behavior: HitTestBehavior.translucent,
+        excludeFromSemantics: true,
+        supportedDevices: const {PointerDeviceKind.touch},
+        onTapUp: _placeCaret,
+        onLongPressStart: preciseSelection ? _beginSelection : null,
+        onLongPressMoveUpdate: preciseSelection ? _extendSelection : null,
+        onLongPressEnd: preciseSelection ? _showSelectionMenu : null,
+        onLongPressCancel: preciseSelection ? () => _holdOrigin = null : null,
+      );
 
   @override
   void dispose() {
@@ -378,6 +394,7 @@ class _PageEditorState extends State<PageEditor> {
   @override
   Widget build(BuildContext context) {
     final style = widget.style;
+    final preciseSelection = defaultTargetPlatform == TargetPlatform.iOS;
     return LayoutBuilder(
       builder: (context, constraints) {
         final padding = writingPagePadding(constraints.biggest);
@@ -469,11 +486,13 @@ class _PageEditorState extends State<PageEditor> {
                   ),
                 ),
               ),
-              if (defaultTargetPlatform == TargetPlatform.iOS)
+              if (preciseSelection || focus.hasFocus || _reflectionFocused)
                 Positioned.fill(
                   left: writingMargins.left,
                   right: writingMargins.right,
-                  child: _preciseTouchSelection(),
+                  child: _paperTouchSelection(
+                    preciseSelection: preciseSelection,
+                  ),
                 ),
               Positioned(
                 top: 0,

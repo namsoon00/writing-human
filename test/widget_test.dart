@@ -137,6 +137,66 @@ void main() {
     variant: TargetPlatformVariant.only(TargetPlatform.iOS),
   );
 
+  testWidgets(
+    'Tapping below the writing or on the title hides input without moving the caret',
+    (tester) async {
+      final store = MemoryStore()
+        ..data = const Library(
+          records: [WritingRecord(id: 'r', title: '필사')],
+          pages: [
+            WritingPage(id: 'p', recordId: 'r', number: 1, text: '한 줄의 글'),
+          ],
+          activePageId: 'p',
+          writing: true,
+        );
+      await tester.pumpWidget(WritingHumanApp(store: store));
+      await tester.pumpAndSettle();
+      final field = find.byKey(const ValueKey('page-text'));
+      final render = tester
+          .state<EditableTextState>(find.byType(EditableText))
+          .renderEditable;
+      final caret = render.localToGlobal(
+        render.getLocalRectForCaret(const TextPosition(offset: 1)).center,
+      );
+      final blank = caret + const Offset(0, 100);
+      await tester.tapAt(caret);
+      await tester.pumpAndSettle();
+      final input = tester.widget<TextField>(field);
+      final before = input.controller!.value;
+      expect(tester.testTextInput.isVisible, isTrue);
+
+      final composing = before.copyWith(
+        composing: const TextRange(start: 0, end: 1),
+      );
+      tester.testTextInput.updateEditingValue(composing);
+      await tester.pumpAndSettle();
+      await tester.tapAt(blank);
+      await tester.pumpAndSettle();
+      expect(input.controller!.value, composing);
+      expect(tester.testTextInput.isVisible, isTrue);
+
+      tester.testTextInput.updateEditingValue(before);
+      await tester.pumpAndSettle();
+      await tester.tapAt(blank);
+      await tester.pumpAndSettle();
+      expect(input.focusNode!.hasFocus, isFalse);
+      expect(tester.testTextInput.isVisible, isFalse);
+      expect(input.controller!.value, before);
+
+      await tester.tapAt(caret);
+      await tester.pumpAndSettle();
+      expect(tester.testTextInput.isVisible, isTrue);
+      await tester.tap(find.byKey(const ValueKey('writing-title')));
+      await tester.pumpAndSettle();
+      expect(input.focusNode!.hasFocus, isFalse);
+      expect(input.controller!.value, before);
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.iOS,
+      TargetPlatform.android,
+    }),
+  );
+
   testWidgets('Paper and page number stay centered with uneven side insets', (
     tester,
   ) async {

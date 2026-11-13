@@ -2,19 +2,16 @@ import 'package:flutter/material.dart';
 import '../data/model.dart';
 import 'book_detail_design.dart';
 
-TextStyle pencilUnderlineStyle(BookDetailChoice choice) => TextStyle(
-  decoration: TextDecoration.underline,
-  decorationColor: BookDetailDesign.color(BookDetailKind.pencil, choice),
-  decorationStyle: switch (choice.variant) {
-    1 => TextDecorationStyle.double,
-    2 => TextDecorationStyle.dotted,
-    _ => TextDecorationStyle.solid,
-  },
-  decorationThickness: switch (choice.variant) {
-    1 => .55,
-    2 => .85,
-    _ => .72,
-  },
+/// Paints the saved range behind the glyphs using Flutter's text layout.
+TextStyle passageWashStyle(BookDetailChoice choice) => TextStyle(
+  backgroundColor: BookDetailDesign.color(BookDetailKind.pencil, choice)
+      .withValues(
+        alpha: switch (choice.variant) {
+          1 => .26,
+          2 => .34,
+          _ => .18,
+        },
+      ),
 );
 
 /// Keeps Flutter's composing underline and the user's annotations in a single
@@ -56,7 +53,7 @@ TextSpan pencilTextSpan({
                           m.start <= boundaries[i] &&
                           m.end >= boundaries[i + 1],
                     )
-              ? pencilUnderlineStyle(choice)
+              ? passageWashStyle(choice)
               : null,
         ),
     ],

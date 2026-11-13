@@ -42,11 +42,11 @@ class BookDetailDesign {
       ],
     ),
     BookDetailKind.pencil => const BookDetailDesign(
-      '연필 흔적',
-      '마음이 머문 구절에 남기는 가는 선',
-      ['가는 밑줄', '겹밑줄', '점선'],
-      ['연필', '브라운', '회청', '올리브'],
-      [Color(0xff82796d), brandInk, Color(0xff4c607a), green],
+      '밑칠',
+      '마음이 머문 구절 뒤에 옅게 남기는 색',
+      ['연하게', '은은하게', '또렷하게'],
+      ['황토', '브라운', '회청', '올리브'],
+      [Color(0xffb8864d), brandInk, Color(0xff4c607a), green],
     ),
     BookDetailKind.ornament => const BookDetailDesign(
       '쪽수 장식',

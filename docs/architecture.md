@@ -79,7 +79,7 @@ SQLite v9에서 두 테이블에 기본값이 빈 목록인 `originals` 컬럼�
 번들에 둔다. [원본 서체와 라이선스](https://github.com/google/fonts/tree/main/ofl/nanumpenscript)
 
 원문 읽기 패널은 `PaperBackdrop`, `SourceSlip`, `RecordDivider`와 필사
-밑줄 스타일을 재사용한다. 책의 내지와 글꼴·펜·책의 디테일 설정을 전달한다.
+밑칠 스타일을 재사용한다. 책의 내지와 글꼴·펜·책의 디테일 설정을 전달한다.
 쓰기 화면은 원문 일치 위치와 저장한 밑줄을 실제 본문의 UTF-16 위치로 연결한다.
 `NotebookReflection`이 배치된 RenderEditable의 줄과 스크롤을 읽어 같은 종이에
 화살표와 손글씨를 그린다. 노트에서 메모를 누르거나 선택 메뉴에서 느낀 점을
@@ -180,7 +180,7 @@ DemoStore는 명시적으로 주입하는 개발 검증용 fixture로만 남으�
 
 Book.owner는 저자와 별개인 장서표 이름이다. WritingPage.writtenOn은 생성 시 기기 현지 날짜의 YYYY-MM-DD이며, 과거 페이지는 null을 유지한다. WritingPage.pencilMarks는 UTF-16 start/end 목록이다. Library JSON 버전 1의 optional 필드로 추가했다. SQLite v4는 books.owner, pages.written_on, pages.pencil_marks를 ALTER TABLE로 추가하고, 데이터·선택·스크롤을 보존한다. 종이·펜·글꼴 설정과 분리된 기록 메타데이터다.
 
-`ui/pencil_marks.dart`의 PencilTextController는 표시 span만 생성한다. composing 밑줄을 함께 표현하며, controller.value·selection·composing을 리스너에서 되쓰지 않는다. 구절 표시/부분 지우기는 LibraryController에서 저장하며 기존 편집기 키와 컨트롤러를 유지한다. 본문 수정은 공통 앞/뒤 문자열의 바깥에 남은 표시를 이동·분할하고, 바뀐 글자의 표시는 제거한다. emoji surrogate pair를 편집 경계에서 분리하지 않는다. 페이지 미리보기·넘김에도 같은 span 표현을 사용한다.
+`ui/pencil_marks.dart`의 PencilTextController는 저장된 범위의 글자 배경에 밑칠을 그리는 span을 생성한다. composing 밑줄은 별도로 표현하며, controller.value·selection·composing을 리스너에서 되쓰지 않는다. 구절 표시/부분 지우기는 LibraryController에서 저장하며 기존 편집기 키와 컨트롤러를 유지한다. 본문 수정은 공통 앞/뒤 문자열의 바깥에 남은 표시를 이동·분할하고, 바뀐 글자의 표시는 제거한다. emoji surrogate pair를 편집 경계에서 분리하지 않는다. 페이지 미리보기·넘김에도 같은 span 표현을 사용한다.
 
 동기화에서는 장서표 이름을 책 제목/저자와 독립적으로 병합한다. 같은 본문 및 한쪽 본문 변경에서는 표시 범위를 대상 본문으로 이동한 뒤 3-way membership으로 병합하고, 본문 충돌 사본에도 날짜와 표시를 복사한다. 서버는 optional 이름·날짜·범위를 검증하며 이전 JSON도 허용한다. 책마다 마지막으로 펼친 쪽은 라이브러리의 선택 필드 `bookPositions`에 저장한다.
 SQLite는 기존 `app_state.settings`에 담고 웹·백업은 라이브러리 JSON에 담는다.

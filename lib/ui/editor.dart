@@ -233,7 +233,7 @@ class _PageEditorState extends State<PageEditor> {
         );
         writingActions.add(
           ContextMenuButtonItem(
-            label: marked ? '연필 표시 지우기' : '연필 표시',
+            label: marked ? '밑칠 지우기' : '밑칠하기',
             onPressed: () {
               if (text.value != value) return;
               state.hideToolbar(false);

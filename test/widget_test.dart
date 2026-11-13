@@ -284,7 +284,7 @@ void main() {
     expect(action('느낀 점'), findsNothing);
     expect(action('복사'), findsOneWidget);
     expect(action('잘라내기'), findsOneWidget);
-    expect(action('연필 표시'), findsOneWidget);
+    expect(action('밑칠하기'), findsOneWidget);
     await tester.tap(action('복사'));
     await tester.pumpAndSettle();
     expect(clipboard, '아침이다');

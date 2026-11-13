@@ -312,7 +312,7 @@ class _SourceReadingState extends State<SourceReading> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: FilterChip(
-                        label: const Text('연필 표시만 보기'),
+                        label: const Text('밑칠한 구절만 보기'),
                         selected: markedOnly,
                         onSelected: (value) =>
                             setState(() => markedOnly = value),
@@ -574,7 +574,7 @@ class _OriginalTextState extends State<_OriginalText> {
                 mark != null &&
                     boundaries[i] >= mark.start &&
                     boundaries[i] < mark.end
-                ? pencilUnderlineStyle(pencil)
+                ? passageWashStyle(pencil)
                 : match != null &&
                       boundaries[i] >= match.start &&
                       boundaries[i] < match.end

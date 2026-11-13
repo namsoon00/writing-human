@@ -326,7 +326,7 @@ void main() {
       store.fail = true;
       tester.state<EditableTextState>(find.byType(EditableText)).showToolbar();
       await tester.pumpAndSettle();
-      await tester.tap(find.text('연필 표시'));
+      await tester.tap(find.text('밑칠하기'));
       await tester.pumpAndSettle();
       expect(controller.value, selected);
       expect(tester.widget<TextField>(field).controller, same(controller));
@@ -339,7 +339,7 @@ void main() {
       ]);
       tester.state<EditableTextState>(find.byType(EditableText)).showToolbar();
       await tester.pumpAndSettle();
-      await tester.tap(find.text('연필 표시 지우기'));
+      await tester.tap(find.text('밑칠 지우기'));
       await tester.pumpAndSettle();
       expect(store.data.activePage!.pencilMarks, isEmpty);
       expect(controller.value, selected);

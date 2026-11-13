@@ -642,12 +642,15 @@ void main() {
       await tester.pumpAndSettle();
       final span = tester.widget<Text>(readingText).textSpan! as TextSpan;
       expect(span.style!.fontFamily, 'NanumGothic');
-      final underlined = span.children!.whereType<TextSpan>().first;
-      expect(underlined.text, '햇빛이');
-      expect(underlined.style!.decorationStyle, TextDecorationStyle.double);
+      final washed = span.children!.whereType<TextSpan>().first;
+      expect(washed.text, '햇빛이');
+      expect(washed.style!.decoration, isNull);
       expect(
-        underlined.style!.decorationColor,
-        BookDetailDesign.color(BookDetailKind.pencil, pencil),
+        washed.style!.backgroundColor,
+        BookDetailDesign.color(
+          BookDetailKind.pencil,
+          pencil,
+        ).withValues(alpha: .26),
       );
       expect(find.text('내일도 읽고 싶다.'), findsOneWidget);
     },
@@ -1273,7 +1276,7 @@ void main() {
     await open(tester, store, FakeIntake());
     await tester.tap(place);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('연필 표시만 보기'));
+    await tester.tap(find.text('밑칠한 구절만 보기'));
     await tester.pumpAndSettle();
     expect(find.text('정오의 종소리가 들렸다.'), findsNothing);
     await tester.tap(find.text('책장에 천천히 내려앉았다.'));

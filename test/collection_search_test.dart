@@ -28,6 +28,7 @@ void main() {
               base: 2,
               extent: 6,
               writtenOn: '2024-01-01',
+              pencilMarks: const [PencilMark(0, 2)],
             ),
           ],
           activePageId: 'p1',
@@ -44,7 +45,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('내 글'));
       await tester.pumpAndSettle();
-      expect(find.text('다시 만난 문장'), findsOneWidget);
+      expect(find.text('다시 만난 문장'), findsNothing);
+      expect(find.byKey(const ValueKey('writing-sheet-r')), findsOneWidget);
       await tester.tap(find.byTooltip('내 글 검색'));
       await tester.pumpAndSettle();
       final search = find.widgetWithText(TextField, '문장, 책, 날짜 찾기');
@@ -65,6 +67,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(store.data.activePageId, 'p2');
+      expect(store.data.activePage!.pencilMarks.single.start, 0);
+      expect(store.data.activePage!.pencilMarks.single.end, 2);
       final field = tester.widget<TextField>(
         find.byKey(const ValueKey('page-text')),
       );

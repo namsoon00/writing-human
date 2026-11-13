@@ -14,12 +14,11 @@ class WritingSheetPreview extends StatelessWidget {
     required this.onOpen,
     this.notebook,
     this.date,
-    this.heading,
   });
 
   final String excerpt;
   final WritingStyle style;
-  final String? notebook, date, heading;
+  final String? notebook, date;
   final VoidCallback onOpen;
 
   @override
@@ -66,13 +65,6 @@ class WritingSheetPreview extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      if (heading != null) ...[
-                        Text(
-                          heading!,
-                          style: const TextStyle(fontSize: 12, color: burgundy),
-                        ),
-                        const SizedBox(height: 8),
-                      ],
                       Text(
                         excerpt,
                         maxLines: 3,

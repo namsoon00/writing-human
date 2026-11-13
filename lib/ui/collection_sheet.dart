@@ -459,10 +459,6 @@ class _CollectionSheetState extends State<CollectionSheet> {
       final topLevel = bookId == null;
       final canSearch = shelf || (records.isNotEmpty && passages != null);
       final searchLabel = shelf ? '노트 검색' : '내 글 검색';
-      final revisit =
-          !books && !searching && bookId == null && widget.onPassage != null
-          ? passages?.revisit(DateTime.now())
-          : null;
       final volume = book == null
           ? const <WritingPage>[]
           : c.library.volumePages(bookId: book.id);
@@ -661,7 +657,6 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     : topLevel
                     ? _writingSheets(
                         records,
-                        revisit: revisit,
                         results: searching
                             ? passages.search(query).toList()
                             : null,
@@ -715,12 +710,8 @@ class _CollectionSheetState extends State<CollectionSheet> {
     },
   );
 
-  Widget _writingSheets(
-    List<WritingRecord> records, {
-    Passage? revisit,
-    List<Passage>? results,
-  }) {
-    final count = results?.length ?? records.length + (revisit == null ? 0 : 1);
+  Widget _writingSheets(List<WritingRecord> records, {List<Passage>? results}) {
+    final count = results?.length ?? records.length;
     if (count == 0) {
       return Center(
         child: Text(
@@ -745,14 +736,13 @@ class _CollectionSheetState extends State<CollectionSheet> {
       }
     }
 
-    Widget passageSheet(Passage passage, {String? heading}) {
+    Widget passageSheet(Passage passage) {
       final book = books[recordBooks[passage.page.recordId]];
       return WritingSheetPreview(
         excerpt: passage.excerpt,
         notebook: book?.title,
         date: passage.page.writtenOn,
         style: c.styleFor(book),
-        heading: heading,
         onOpen: () => widget.onPassage!(passage),
       );
     }
@@ -768,10 +758,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
       separatorBuilder: (_, _) => const SizedBox(height: 18),
       itemBuilder: (context, index) {
         if (results != null) return passageSheet(results[index]);
-        if (revisit != null && index == 0) {
-          return passageSheet(revisit, heading: '다시 만난 문장');
-        }
-        final record = records[index - (revisit == null ? 0 : 1)];
+        final record = records[index];
         final book = books[record.bookId];
         final recordPages = pages[record.id] ?? const [];
         return WritingSheetPreview(
@@ -805,17 +792,11 @@ class _CollectionSheetState extends State<CollectionSheet> {
           itemBuilder: (_, index) => _passageTile(results[index]),
         );
 
-  Widget _passageTile(Passage passage, {bool revisit = false}) => ListTile(
+  Widget _passageTile(Passage passage) => ListTile(
     contentPadding: const EdgeInsets.symmetric(vertical: 8),
-    leading: revisit ? const Icon(CupertinoIcons.bookmark, size: 18) : null,
-    title: Text(
-      revisit ? '다시 만난 문장' : passage.excerpt,
-      maxLines: 3,
-      overflow: TextOverflow.ellipsis,
-    ),
+    title: Text(passage.excerpt, maxLines: 3, overflow: TextOverflow.ellipsis),
     subtitle: Text(
       [
-        if (revisit) passage.excerpt,
         '${passage.label} · ${passage.page.number}쪽',
         ?passage.page.writtenOn,
       ].join('\n'),

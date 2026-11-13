@@ -63,48 +63,6 @@ class LibraryPassages {
       }
     }
   }
-
-  Passage? revisit(DateTime today) {
-    final date = today.toIso8601String().substring(0, 10);
-    final pages =
-        library.pages
-            .where(
-              (p) =>
-                  p.text.trim().isNotEmpty &&
-                  (p.writtenOn == null || p.writtenOn!.compareTo(date) < 0),
-            )
-            .toList()
-          ..sort((a, b) => a.id.compareTo(b.id));
-    if (pages.isEmpty) return null;
-    final preferred = pages
-        .where(
-          (p) =>
-              p.pencilMarks.isNotEmpty ||
-              library.style.favoriteBookIds.contains(
-                _records[p.recordId]?.bookId,
-              ),
-        )
-        .toList();
-    final choices = preferred.isEmpty ? pages : preferred;
-    final day = DateTime.utc(
-      today.year,
-      today.month,
-      today.day,
-    ).difference(DateTime.utc(1970)).inDays;
-    final page = choices[day % choices.length];
-    final mark = page.pencilMarks
-        .where((m) => page.text.substring(m.start, m.end).trim().isNotEmpty)
-        .firstOrNull;
-    final start = mark?.start ?? page.text.indexOf(RegExp(r'\S'));
-    return Passage(
-      page,
-      _label(_records[page.recordId]!),
-      mark == null
-          ? _excerpt(page.text, start, start)
-          : _excerpt(page.text.substring(mark.start, mark.end), 0, 0),
-      offset: start,
-    );
-  }
 }
 
 String _excerpt(String text, int start, int end) {

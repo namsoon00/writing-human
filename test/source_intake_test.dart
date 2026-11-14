@@ -204,6 +204,36 @@ Future<void> takePhoto(WidgetTester tester, {bool settle = true}) async {
 }
 
 void main() {
+  testWidgets('Saved originals open source search from the header', (
+    tester,
+  ) async {
+    final store = MemoryStore()
+      ..data = existing().copy(
+        records: const [
+          WritingRecord(
+            id: 'r',
+            title: '기존 필사',
+            originals: [RegisteredOriginal('original', '저장해 둔 원문')],
+          ),
+        ],
+      );
+    await open(tester, store, FakeIntake());
+    await tester.tap(place);
+    await tester.pumpAndSettle();
+    final shortcut = find.descendant(
+      of: reading,
+      matching: find.byTooltip('시·문장 검색'),
+    );
+    await tester.tap(shortcut);
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextField, '제목, 작가, 기억나는 구절'), findsOneWidget);
+    await tester.tap(find.byTooltip('검색 닫기'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SourceImportSheet), findsOneWidget);
+    expect(find.text('시·문장 검색'), findsOneWidget);
+    expect(store.data.records.single.originals.single.text, '저장해 둔 원문');
+  });
+
   testWidgets('Search imports a source citation and keeps the original draft', (
     tester,
   ) async {

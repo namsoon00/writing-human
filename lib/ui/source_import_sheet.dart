@@ -40,6 +40,7 @@ class SourceImportSheet extends StatefulWidget {
     required this.initialText,
     required this.choice,
     this.initialPhoto,
+    this.startWithSearch = false,
     this.paperColor = paper,
     this.penColor = ink,
     this.grainOpacity = .16,
@@ -57,7 +58,7 @@ class SourceImportSheet extends StatefulWidget {
   final Color paperColor, penColor;
   final double grainOpacity;
   final SourcePhoto? initialPhoto;
-  final bool shared, registration, allowUnbound;
+  final bool shared, registration, allowUnbound, startWithSearch;
   final Map<String, String> books;
   final String? bookId;
 
@@ -108,6 +109,10 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     if (widget.initialPhoto case final photo?) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _read(photo, _ScanMode.page);
+      });
+    } else if (widget.startWithSearch) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _searchSources();
       });
     }
   }
@@ -646,12 +651,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
             ),
           ),
         ),
-      if (!widget.shared)
-        TextButton.icon(
-          onPressed: _editable ? _searchSources : null,
-          icon: const Icon(CupertinoIcons.search, size: 17),
-          label: const Text('시·문장 검색'),
-        ),
     ],
   );
 
@@ -1101,6 +1100,11 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                               style: const TextStyle(fontSize: 22),
                             ),
                           ),
+                          if (!_selecting && !_reviewing && !widget.shared)
+                            TextButton(
+                              onPressed: _editable ? _searchSources : null,
+                              child: const Text('시·문장 검색'),
+                            ),
                           IconButton(
                             tooltip: '닫기',
                             onPressed: _savingPhoto

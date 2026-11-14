@@ -44,7 +44,8 @@ class SourceReading extends StatefulWidget {
   final WritingStyle style;
   final int? coverIndex;
   final int pagesBefore, pagesAfter;
-  final Future<RegisteredOriginal?> Function()? onRegister;
+  final Future<RegisteredOriginal?> Function({bool startWithSearch})?
+  onRegister;
   final Map<String, ({Passage passage, bool marked})> writingLocations;
   final ValueChanged<RegisteredOriginal>? onTranscribe;
   final ValueChanged<Passage>? onOpenWriting;
@@ -112,8 +113,10 @@ class _SourceReadingState extends State<SourceReading> {
     });
   }
 
-  Future<void> _register() async {
-    final registered = await widget.onRegister!();
+  Future<void> _register({bool startWithSearch = false}) async {
+    final registered = await widget.onRegister!(
+      startWithSearch: startWithSearch,
+    );
     if (!mounted || registered == null) return;
     markedOnly = false;
     _open(
@@ -394,11 +397,17 @@ class _SourceReadingState extends State<SourceReading> {
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                         ),
-                        if (widget.onRegister != null && !editing)
+                        if (widget.onRegister != null && !editing) ...[
+                          IconButton(
+                            tooltip: '시·문장 검색',
+                            onPressed: () => _register(startWithSearch: true),
+                            icon: const Icon(CupertinoIcons.search, size: 19),
+                          ),
                           TextButton(
                             onPressed: _register,
                             child: const Text('원문 등록'),
                           ),
+                        ],
                         IconButton(
                           tooltip: '닫기',
                           onPressed: () =>

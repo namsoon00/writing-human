@@ -584,6 +584,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     SourcePhoto? initialPhoto,
     String? bookId,
     bool allowUnbound = true,
+    bool startWithSearch = false,
   }) async {
     final books = {for (final book in c.library.books) book.id: book.title};
     final targetBook = c.library.books
@@ -609,6 +610,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           initialText: linkOnly ? '' : sharedText,
           initialCitation: linkOnly ? sharedText : '',
           initialPhoto: initialPhoto,
+          startWithSearch: startWithSearch,
           choice: style.bookDetails.sourceSlip,
           penColor: penColors[style.penIndex],
           paperColor: paperColors[style.paperIndex],
@@ -631,6 +633,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     String? bookId,
     WritingPage? selectedPage,
     SourcePhoto? initialPhoto,
+    bool startWithSearch = false,
   }) async {
     if (_sourceBusy || _accountLocked || !_canLeaveInput()) return null;
     final owner = c;
@@ -642,6 +645,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       }
       final result = await _reviewOriginal(
         initialPhoto: initialPhoto,
+        startWithSearch: startWithSearch,
         bookId: bookId,
         allowUnbound: selectedPage != null,
       );
@@ -868,11 +872,13 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       bookId: bookId,
       recordId: selectedPage.recordId,
     );
-    Future<({String? bookId, RegisteredOriginal original})?> register() =>
-        _registerOriginal(
-          bookId: bookId,
-          selectedPage: bookDetails == null ? selectedPage : null,
-        );
+    Future<({String? bookId, RegisteredOriginal original})?> register({
+      bool startWithSearch = false,
+    }) => _registerOriginal(
+      startWithSearch: startWithSearch,
+      bookId: bookId,
+      selectedPage: bookDetails == null ? selectedPage : null,
+    );
 
     try {
       final available = originals();
@@ -937,8 +943,10 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                   pagesAfter: volume.length - position - 1,
                   onRegister: owner.saveError != null
                       ? null
-                      : () async {
-                          final saved = await register();
+                      : ({bool startWithSearch = false}) async {
+                          final saved = await register(
+                            startWithSearch: startWithSearch,
+                          );
                           if (saved == null) return null;
                           if (saved.bookId != bookId) {
                             if (context.mounted &&

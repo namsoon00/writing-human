@@ -159,7 +159,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
     );
   }
 
-  Widget _contentsHeader(Book? book, String summary, int? resumeNumber) {
+  Widget _contentsHeader(Book book, String summary, int? resumeNumber) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 18, 4, 24),
       child: Column(
@@ -169,7 +169,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
           Semantics(
             header: true,
             child: Text(
-              book?.title ?? loosePagesTitle,
+              book.title,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 30, height: 1.3, color: ink),
             ),
@@ -180,7 +180,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 13, height: 1.5, color: muted),
           ),
-          if (book != null && resumeNumber != null) ...[
+          if (resumeNumber != null) ...[
             const SizedBox(height: 12),
             FilledButton.icon(
               onPressed: () => widget.onBook(book),
@@ -199,15 +199,14 @@ class _CollectionSheetState extends State<CollectionSheet> {
               style: const TextStyle(fontSize: 12, color: muted),
             ),
           ],
-          if (book != null)
-            TextButton(
-              onPressed: () => showBookAppearance(context, c, book.id),
-              style: TextButton.styleFrom(
-                foregroundColor: brandInk,
-                minimumSize: const Size(0, 48),
-              ),
-              child: const Text('책 꾸미기'),
+          TextButton(
+            onPressed: () => showBookAppearance(context, c, book.id),
+            style: TextButton.styleFrom(
+              foregroundColor: brandInk,
+              minimumSize: const Size(0, 48),
             ),
+            child: const Text('책 꾸미기'),
+          ),
         ],
       ),
     );
@@ -216,7 +215,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
   Widget _contents(
     List<WritingRecord> records,
     List<WritingPage> pages,
-    Book? book,
+    Book book,
     String summary,
   ) {
     final first = <String, ({WritingPage page, int number})>{};
@@ -231,13 +230,11 @@ class _CollectionSheetState extends State<CollectionSheet> {
         );
       }
     }
-    final resumePage = book == null ? null : c.resumePageForBook(book.id);
+    final resumePage = c.resumePageForBook(book.id);
     final resumeIndex = pages.indexWhere((page) => page.id == resumePage?.id);
     final details = c.detailsFor(book);
     return ListView.builder(
-      key: book == null
-          ? const ValueKey('loose-pages-contents')
-          : ValueKey('book-contents-${book.id}'),
+      key: ValueKey('book-contents-${book.id}'),
       padding: const EdgeInsets.fromLTRB(26, 4, 26, 24),
       itemCount: records.length + 1,
       itemBuilder: (_, index) {
@@ -261,7 +258,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     ),
                   ),
                   TextButton.icon(
-                    onPressed: () => widget.onNewSheet(book?.id),
+                    onPressed: () => widget.onNewSheet(book.id),
                     icon: const Icon(CupertinoIcons.plus, size: 16),
                     label: const Text('새 종이'),
                     style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
@@ -314,7 +311,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     children: [
                       Padding(
                         padding: EdgeInsetsDirectional.fromSTEB(
-                          book != null && details.ribbon.enabled ? 26 : 4,
+                          details.ribbon.enabled ? 26 : 4,
                           14,
                           4,
                           14,
@@ -429,9 +426,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
       final searching = passages != null && query.trim().isNotEmpty;
       final canSearch = shelf || (records.isNotEmpty && passages != null);
       final searchLabel = shelf ? '노트 검색' : '내 글 검색';
-      final volume = showingLoosePages
-          ? _loosePages(records)
-          : book == null
+      final volume = book == null
           ? const <WritingPage>[]
           : c.library.volumePages(bookId: book.id);
       final summary =
@@ -519,7 +514,19 @@ class _CollectionSheetState extends State<CollectionSheet> {
                         _bookMenu(book, summary, canSearch),
                       ],
                     ],
-                    if (showingLoosePages) const Spacer(),
+                    if (showingLoosePages)
+                      Expanded(
+                        child: Semantics(
+                          header: true,
+                          child: const Text(
+                            loosePagesTitle,
+                            style: TextStyle(
+                              fontSize: 21,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
                     if (topLevel && canSearch)
                       IconButton(
                         tooltip: showSearch ? '$searchLabel 닫기' : searchLabel,
@@ -569,6 +576,18 @@ class _CollectionSheetState extends State<CollectionSheet> {
                         label: Text(shelf ? '새 노트' : '새 종이'),
                       ),
                     ],
+                  ),
+                ),
+              if (showingLoosePages)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: TextButton.icon(
+                      onPressed: () => widget.onNewSheet(null),
+                      icon: const Icon(CupertinoIcons.plus, size: 15),
+                      label: const Text('새 종이'),
+                    ),
                   ),
                 ),
               if (shelf && showSearch)
@@ -638,7 +657,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                           _clearSearch();
                         }),
                       )
-                    : topLevel
+                    : topLevel || showingLoosePages
                     ? _writingSheets(
                         records,
                         results: searching
@@ -647,7 +666,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                       )
                     : searching
                     ? _results(passages.search(query, bookId: bookId).toList())
-                    : book == null && !showingLoosePages
+                    : book == null
                     ? const SizedBox.shrink()
                     : _contents(records, volume, book, summary),
               ),
@@ -669,7 +688,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
           blocking: widget.showHandle,
           child: Padding(
             padding: EdgeInsets.only(bottom: keyboard),
-            child: book == null && !showingLoosePages
+            child: book == null
                 ? shelf
                       ? DecoratedBox(
                           decoration: const BoxDecoration(
@@ -686,7 +705,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     color: bookPaper,
                     grainOpacity: paperGrainOpacity[paperIndex],
                     binding: c.detailsFor(book).binding,
-                    coverIndex: book == null ? null : c.coverIndexFor(book),
+                    coverIndex: c.coverIndexFor(book),
                     pagesAfter: volume.length,
                     outsideColor: bookPaper,
                     child: sheet,
@@ -696,19 +715,6 @@ class _CollectionSheetState extends State<CollectionSheet> {
       );
     },
   );
-
-  List<WritingPage> _loosePages(List<WritingRecord> records) {
-    final pagesByRecord = {
-      for (final record in records) record.id: <WritingPage>[],
-    };
-    for (final page in c.library.pages) {
-      pagesByRecord[page.recordId]?.add(page);
-    }
-    return [
-      for (final pages in pagesByRecord.values)
-        ...(pages..sort((a, b) => a.number.compareTo(b.number))),
-    ];
-  }
 
   Widget _writingSheets(List<WritingRecord> records, {List<Passage>? results}) {
     final count = results?.length ?? records.length;
@@ -749,9 +755,9 @@ class _CollectionSheetState extends State<CollectionSheet> {
 
     return ListView.separated(
       key: results == null
-          ? const PageStorageKey('writing')
+          ? PageStorageKey(showingLoosePages ? 'loose-writing' : 'writing')
           : ValueKey(query.trim()),
-      controller: results == null ? writingScroll : null,
+      controller: results == null && !showingLoosePages ? writingScroll : null,
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
       itemCount: count,

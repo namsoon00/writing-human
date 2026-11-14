@@ -115,13 +115,11 @@ class Bookshelf extends StatelessWidget {
       onTap: () => onOpen(book),
     );
 
-    Widget looseCover(double width) => openCoverSurface(
+    Widget looseStack(double width) => openCoverSurface(
       loosePagesTitle,
-      BookCover(
-        title: loosePagesTitle,
+      _LoosePaperStack(
         width: width,
-        variant: 1,
-        pageCount: loosePageCount,
+        color: paperColors[library.style.paperIndex],
       ),
       key: const ValueKey('shelf-loose-pages'),
       onTap: onLoosePages,
@@ -249,7 +247,7 @@ class Bookshelf extends StatelessWidget {
                             width: slotWidth,
                             child: Center(
                               child: book == null
-                                  ? looseCover(coverWidth)
+                                  ? looseStack(coverWidth)
                                   : openCover(book, coverWidth),
                             ),
                           ),
@@ -283,6 +281,58 @@ class Bookshelf extends StatelessWidget {
       },
     );
   }
+}
+
+class _LoosePaperStack extends StatelessWidget {
+  const _LoosePaperStack({required this.width, required this.color});
+
+  final double width;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: width,
+    height: width * 1.36,
+    child: Stack(
+      children: [
+        for (var layer = 2; layer >= 0; layer--)
+          Positioned(
+            top: 6.0 + (2 - layer) * 3.0,
+            left: layer * 4.0,
+            right: (2 - layer) * 4.0,
+            bottom: 2.0 + layer * 3.0,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Color.lerp(color, brandInk, layer * .06),
+                border: Border.all(color: line),
+                borderRadius: BorderRadius.circular(2),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x24513a29),
+                    blurRadius: 5,
+                    offset: Offset(1, 2),
+                  ),
+                ],
+              ),
+              child: layer == 0
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(7),
+                        child: Text(
+                          loosePagesTitle,
+                          textAlign: TextAlign.center,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: brandInk, fontSize: 15),
+                        ),
+                      ),
+                    )
+                  : null,
+            ),
+          ),
+      ],
+    ),
+  );
 }
 
 class _ShelfLabel extends StatelessWidget {

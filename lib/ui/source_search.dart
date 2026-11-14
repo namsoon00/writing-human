@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../source/source_intake.dart';
+import '../source/wikisource_preview.dart';
 
 enum _Collection {
   works('위키문헌', 'ko.wikisource.org'),
@@ -76,7 +77,12 @@ enum _Collection {
         prefixes.add(hit);
       }
     }
-    return [...exact, ...prefixes].take(12).toList();
+    return [
+      for (final matches in [exact, prefixes]) ...[
+        ...matches.where((hit) => hit.poem != null),
+        ...matches.where((hit) => hit.poem == null),
+      ],
+    ].take(12).toList();
   }
 }
 
@@ -115,6 +121,9 @@ class _SourceHit {
   final _Collection collection;
   final String title;
   final int id;
+
+  WikisourcePoem? get poem =>
+      collection == _Collection.works ? WikisourcePoem.reviewed[id] : null;
 
   Uri get url => Uri.https(collection.host, '/w/index.php', {'curid': '$id'});
   String get citation {
@@ -155,6 +164,8 @@ class _SourceSearchState extends State<_SourceSearch> {
   bool _loading = false, _pasting = false;
   _SearchMode _mode = _SearchMode.title;
   _SourceHit? _selected;
+  Future<List<String>>? _preview;
+  final _stanzas = <int>{};
   List<(_Collection, List<_SourceHit>?)> _results = const [];
 
   Future<void> _search() async {
@@ -238,11 +249,116 @@ class _SourceSearchState extends State<_SourceSearch> {
     }
   }
 
-  Widget _details(_SourceHit hit) => ListView(
+  void _showHit(_SourceHit hit) {
+    setState(() {
+      _selected = hit;
+      _linkError = null;
+      _stanzas.clear();
+      _preview = hit.poem?.load(_client);
+    });
+  }
+
+  Widget _previewBody(
+    _SourceHit hit,
+    WikisourcePoem poem,
+    Future<List<String>> preview,
+  ) => FutureBuilder<List<String>>(
+    future: preview,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState != ConnectionState.done) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      final stanzas = snapshot.data;
+      if (stanzas == null) {
+        return _details(hit, previewFailed: true);
+      }
+      return Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                Text(
+                  poem.title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                Text('${poem.author} · 위키문헌'),
+                const SizedBox(height: 8),
+                const Text('필사할 연을 골라 주세요.'),
+                for (var index = 0; index < stanzas.length; index++)
+                  CheckboxListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    value: _stanzas.contains(index),
+                    title: Text(stanzas[index]),
+                    onChanged: (selected) => setState(() {
+                      if (selected == true) {
+                        _stanzas.add(index);
+                      } else {
+                        _stanzas.remove(index);
+                      }
+                    }),
+                  ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: () => _open(poem.url),
+                    child: const Text('위키문헌에서 원문 보기'),
+                  ),
+                ),
+                if (_linkError case final error?)
+                  Semantics(liveRegion: true, child: Text(error)),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, (
+                    citation: poem.citation,
+                    text: stanzas.join('\n\n'),
+                  )),
+                  child: const Text('전체 담기'),
+                ),
+                FilledButton(
+                  onPressed: _stanzas.isEmpty
+                      ? null
+                      : () {
+                          final selected = _stanzas.toList()..sort();
+                          Navigator.pop(context, (
+                            citation: poem.citation,
+                            text: selected
+                                .map((index) => stanzas[index])
+                                .join('\n\n'),
+                          ));
+                        },
+                  child: const Text('선택한 구절 담기'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
+  Widget _details(_SourceHit hit, {bool previewFailed = false}) => ListView(
     padding: const EdgeInsets.all(16),
     children: [
       Text(hit.title, style: Theme.of(context).textTheme.titleMedium),
       Text(hit.collection.label),
+      if (previewFailed) ...[
+        const Text('원문 미리보기를 불러오지 못했어요.'),
+        TextButton(
+          onPressed: _pasting ? null : () => _showHit(hit),
+          child: const Text('다시 시도'),
+        ),
+      ],
       const SizedBox(height: 12),
       OutlinedButton.icon(
         onPressed: _pasting ? null : () => _open(hit.url),
@@ -282,6 +398,7 @@ class _SourceSearchState extends State<_SourceSearch> {
   Widget build(BuildContext context) {
     final searched = _searched;
     final selected = _selected;
+    final preview = _preview;
     final hasHits = _results.any((entry) => entry.$2?.isNotEmpty ?? false);
     return Dialog(
       backgroundColor: widget.paperColor,
@@ -302,13 +419,18 @@ class _SourceSearchState extends State<_SourceSearch> {
                           ? null
                           : () => setState(() {
                               _selected = null;
+                              _preview = null;
                               _linkError = null;
                             }),
                       icon: const Icon(CupertinoIcons.chevron_back, size: 18),
                     ),
                   Expanded(
                     child: Text(
-                      selected == null ? '시·문장 검색' : '자료 가져오기',
+                      selected == null
+                          ? '시·문장 검색'
+                          : preview != null
+                          ? '원문 미리보기'
+                          : '자료 가져오기',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleLarge,
@@ -323,7 +445,11 @@ class _SourceSearchState extends State<_SourceSearch> {
               ),
             ),
             if (selected != null)
-              Expanded(child: _details(selected))
+              Expanded(
+                child: preview == null
+                    ? _details(selected)
+                    : _previewBody(selected, selected.poem!, preview),
+              )
             else ...[
               Wrap(
                 spacing: 8,
@@ -412,10 +538,10 @@ class _SourceSearchState extends State<_SourceSearch> {
                                 CupertinoIcons.chevron_right,
                                 size: 15,
                               ),
-                              onTap: () => setState(() {
-                                _selected = hit;
-                                _linkError = null;
-                              }),
+                              subtitle: hit.poem == null
+                                  ? null
+                                  : const Text('원문 미리보기'),
+                              onTap: () => _showHit(hit),
                             ),
                       ],
                     if (searched != null && !_loading)

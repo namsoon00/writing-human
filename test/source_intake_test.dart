@@ -261,7 +261,7 @@ void main() {
                 ]
               else
                 'search': [
-                  if (work) {'title': '서시', 'pageid': 1515},
+                  if (work) {'title': '서시', 'pageid': 1516},
                   if (work) {'title': '바다와 나비', 'pageid': 123},
                   if (work) {'title': '두시언해/서시흥', 'pageid': 124},
                 ],
@@ -322,7 +322,7 @@ void main() {
       final citation = tester.widget<TextField>(
         find.byKey(const ValueKey('original-citation')),
       );
-      expect(citation.controller!.text, contains('curid=1515'));
+      expect(citation.controller!.text, contains('curid=1516'));
       expect(
         tester.widget<TextField>(sourceField).controller!.text,
         '직접 고른 구절',
@@ -363,6 +363,76 @@ void main() {
       );
     }, () => client);
   });
+
+  testWidgets(
+    'Reviewed poem imports only selected stanzas and keeps line breaks',
+    (tester) async {
+      final requests = <Uri>[];
+      final client = MockClient((request) async {
+        requests.add(request.url);
+        final params = request.url.queryParameters;
+        final data = params['action'] == 'parse'
+            ? {
+                'parse': {
+                  'pageid': 1515,
+                  'revid': 387685,
+                  'text':
+                      '<p>머리말</p><div class="poem"><p>첫 연<br>둘째 줄<br><br>'
+                      '고르지 않은 연<br>&nbsp;<br>마지막 연<br>다음 줄</p></div>',
+                  'categories': [
+                    {'category': 'PD-old-70'},
+                  ],
+                },
+              }
+            : {
+                'query': {
+                  'search': [
+                    {'title': '서시', 'pageid': 1515},
+                  ],
+                },
+              };
+        return http.Response.bytes(utf8.encode(jsonEncode(data)), 200);
+      });
+      await http.runWithClient(() async {
+        final store = MemoryStore();
+        await open(tester, store, FakeIntake());
+        await openRegistration(tester);
+        await tester.tap(find.text('시·문장 검색'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.widgetWithText(TextField, '검색어'), '서시');
+        await tester.tap(find.byTooltip('자료 검색'));
+        await tester.pumpAndSettle();
+        expect(requests, hasLength(1));
+        await tester.tap(find.widgetWithText(ListTile, '서시'));
+        await tester.pumpAndSettle();
+        expect(requests.last.queryParameters['oldid'], '387685');
+        expect(find.text('머리말'), findsNothing);
+        expect(find.text('전체 담기'), findsOneWidget);
+        final import = find.widgetWithText(FilledButton, '선택한 구절 담기');
+        expect(tester.widget<FilledButton>(import).onPressed, isNull);
+        await tester.tap(find.widgetWithText(CheckboxListTile, '마지막 연\n다음 줄'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(CheckboxListTile, '첫 연\n둘째 줄'));
+        await tester.pumpAndSettle();
+        await tester.tap(import);
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<TextField>(sourceField).controller!.text,
+          '첫 연\n둘째 줄\n\n마지막 연\n다음 줄',
+        );
+        expect(
+          tester
+              .widget<TextField>(
+                find.byKey(const ValueKey('original-citation')),
+              )
+              .controller!
+              .text,
+          '서시 · 윤동주 · 위키문헌 · https://ko.wikisource.org/w/index.php?oldid=387685',
+        );
+        expect(store.data.records, isEmpty);
+      }, () => client);
+    },
+  );
 
   test('A complete unique word can suggest text before a second word', () {
     const original = RegisteredOriginal('a', '아침이다. 햇빛이 책장에 내려앉았다.');

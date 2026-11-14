@@ -122,7 +122,7 @@ class WritingFooter extends StatelessWidget {
   final bool failed;
   final BookDetailChoice ornament;
 
-  static const _pageSideInset = 88.0;
+  static const _pageSideInset = 104.0;
 
   @override
   Widget build(BuildContext context) => PaperSwipe(

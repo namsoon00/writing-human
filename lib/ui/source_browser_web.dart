@@ -18,6 +18,8 @@ class _SourceBrowser extends StatelessWidget {
 
   final Uri url;
 
+  bool get _canEmbed => url.host != 'search.naver.com';
+
   Future<void> _openNewTab(BuildContext context) async {
     try {
       if (await launchUrl(url, webOnlyWindowName: '_blank')) return;
@@ -39,7 +41,16 @@ class _SourceBrowser extends StatelessWidget {
         icon: const Icon(CupertinoIcons.xmark),
         onPressed: () => Navigator.of(context).pop(),
       ),
-      title: Text(url.host, maxLines: 1, overflow: TextOverflow.ellipsis),
+      title: Text(
+        switch (url.host) {
+          'ko.wikisource.org' => '위키문헌',
+          'ko.wikiquote.org' => '위키인용집',
+          'search.naver.com' => '네이버 검색',
+          _ => url.host,
+        },
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       actions: [
         TextButton.icon(
           icon: const Icon(CupertinoIcons.arrow_up_right, size: 15),
@@ -48,17 +59,28 @@ class _SourceBrowser extends StatelessWidget {
         ),
       ],
     ),
-    body: HtmlElementView.fromTagName(
-      tagName: 'iframe',
-      onElementCreated: (element) {
-        final frame = element as web.HTMLIFrameElement;
-        frame
-          ..title = '${url.host} 원문'
-          ..referrerPolicy = 'no-referrer';
-        frame.setAttribute('sandbox', 'allow-forms allow-scripts');
-        frame.style.border = '0';
-        frame.src = url.toString();
-      },
-    ),
+    body: _canEmbed
+        ? HtmlElementView.fromTagName(
+            tagName: 'iframe',
+            onElementCreated: (element) {
+              final frame = element as web.HTMLIFrameElement;
+              frame
+                ..title = '${url.host} 원문'
+                ..referrerPolicy = 'no-referrer';
+              frame.setAttribute('sandbox', 'allow-forms allow-scripts');
+              frame.style.border = '0';
+              frame.src = url.toString();
+            },
+          )
+        : Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                '네이버 검색 결과는 새 탭에서 볼 수 있어요.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+            ),
+          ),
   );
 }

@@ -226,6 +226,8 @@ void main() {
     );
     await tester.tap(shortcut);
     await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ChoiceChip, '웹 검색'));
+    await tester.pumpAndSettle();
     expect(find.widgetWithText(TextField, '검색어'), findsOneWidget);
     await tester.tap(find.byTooltip('검색 닫기'));
     await tester.pumpAndSettle();
@@ -280,6 +282,8 @@ void main() {
       await tester.ensureVisible(search);
       await tester.tap(search);
       await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, '웹 검색'));
+      await tester.pumpAndSettle();
       await tester.enterText(find.widgetWithText(TextField, '검색어'), '바람');
       expect(requests, isEmpty);
       final input = find.widgetWithText(TextField, '검색어');
@@ -294,7 +298,18 @@ void main() {
         lessThan(tester.getTopLeft(prefix).dy),
       );
       expect(find.text('별 헤는 밤/다른 작품'), findsNothing);
-      expect(find.text('네이버에서 더 찾기'), findsOneWidget);
+      final naver = find.text('네이버에서 더 찾기');
+      await tester.scrollUntilVisible(
+        naver,
+        140,
+        scrollable: find
+            .descendant(
+              of: find.byType(Dialog),
+              matching: find.byType(Scrollable),
+            )
+            .last,
+      );
+      expect(naver, findsOneWidget);
 
       await tester.tap(find.text('작가 이름'));
       await tester.pumpAndSettle();
@@ -313,10 +328,22 @@ void main() {
       expect(requests.last.queryParameters['srsearch'], 'intitle:바람');
       final result = find.widgetWithText(ListTile, '바람');
       expect(result, findsOneWidget);
+      expect(find.text('웹 원문 · 복사 필요'), findsOneWidget);
+      await tester.tap(find.widgetWithText(ChoiceChip, '바로 담기'));
+      await tester.pumpAndSettle();
+      expect(find.text('바로 담을 수 있는 시'), findsOneWidget);
+      expect(result, findsNothing);
+      await tester.tap(find.widgetWithText(ChoiceChip, '웹 검색'));
+      await tester.pumpAndSettle();
+      expect(result, findsOneWidget);
       expect(find.text('바다와 나비'), findsNothing);
       expect(find.text('두시언해/서시흥'), findsNothing);
       await tester.tap(result);
       await tester.pumpAndSettle();
+      expect(
+        find.text('웹에서 원문을 열어 원하는 구절을 복사한 뒤, 돌아와 아래 버튼을 눌러 주세요.'),
+        findsOneWidget,
+      );
       await tester.tap(find.text('출처만 넣기'));
       await tester.pumpAndSettle();
       final citation = tester.widget<TextField>(
@@ -329,6 +356,8 @@ void main() {
       );
       expect(store.data.records, isEmpty);
       await tester.tap(search);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, '웹 검색'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('기억나는 구절'));
       await tester.pumpAndSettle();
@@ -399,6 +428,8 @@ void main() {
         await openRegistration(tester);
         await tester.tap(find.text('시·문장 검색'));
         await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(ChoiceChip, '웹 검색'));
+        await tester.pumpAndSettle();
         await tester.enterText(find.widgetWithText(TextField, '검색어'), '서시');
         await tester.tap(find.byTooltip('자료 검색'));
         await tester.pumpAndSettle();
@@ -465,6 +496,7 @@ void main() {
       await tester.tap(find.text('시·문장 검색'));
       await tester.pumpAndSettle();
       expect(find.text('바로 담을 수 있는 시'), findsOneWidget);
+      expect(find.widgetWithText(TextField, '검색어'), findsNothing);
       expect(requests, isEmpty);
       final poem = find.widgetWithText(ListTile, '산유화');
       await tester.scrollUntilVisible(
@@ -477,6 +509,8 @@ void main() {
             )
             .last,
       );
+      await tester.ensureVisible(poem);
+      await tester.pumpAndSettle();
       await tester.tap(poem);
       await tester.pumpAndSettle();
       expect(requests.single.queryParameters['oldid'], '430577');

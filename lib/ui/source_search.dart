@@ -168,6 +168,7 @@ class _SourceSearchState extends State<_SourceSearch> {
   final _focus = FocusNode();
   String? _searched, _linkError;
   bool _loading = false, _pasting = false;
+  bool _webSearch = false;
   _SearchMode _mode = _SearchMode.title;
   _SourceHit? _selected;
   Future<List<String>>? _preview;
@@ -365,6 +366,10 @@ class _SourceSearchState extends State<_SourceSearch> {
           child: const Text('다시 시도'),
         ),
       ],
+      if (_mode != _SearchMode.author) ...[
+        const SizedBox(height: 12),
+        const Text('웹에서 원문을 열어 원하는 구절을 복사한 뒤, 돌아와 아래 버튼을 눌러 주세요.'),
+      ],
       const SizedBox(height: 12),
       OutlinedButton.icon(
         onPressed: _pasting ? null : () => _open(hit.url),
@@ -420,7 +425,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                 children: [
                   if (selected != null)
                     IconButton(
-                      tooltip: '검색 결과로 돌아가기',
+                      tooltip: _webSearch ? '검색 결과로 돌아가기' : '바로 담기 목록으로 돌아가기',
                       onPressed: _pasting
                           ? null
                           : () => setState(() {
@@ -458,70 +463,159 @@ class _SourceSearchState extends State<_SourceSearch> {
               )
             else ...[
               Wrap(
-                spacing: 8,
                 alignment: WrapAlignment.center,
+                spacing: 8,
                 children: [
-                  for (final mode in _SearchMode.values)
+                  for (final web in [false, true])
                     ChoiceChip(
-                      label: Text(mode.label),
-                      selected: _mode == mode,
-                      onSelected: _loading
-                          ? null
-                          : (_) => setState(() {
-                              _mode = mode;
-                              _searched = null;
-                              _linkError = null;
-                              _results = const [];
-                            }),
+                      label: Text(web ? '웹 검색' : '바로 담기'),
+                      selected: _webSearch == web,
+                      onSelected: (_) {
+                        _focus.unfocus();
+                        setState(() => _webSearch = web);
+                      },
                     ),
                 ],
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
+              if (_webSearch) ...[
+                Wrap(
+                  spacing: 8,
+                  alignment: WrapAlignment.center,
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _query,
-                        focusNode: _focus,
-                        enabled: !_loading,
-                        maxLength: 160,
-                        textInputAction: TextInputAction.search,
-                        onSubmitted: (_) => _search(),
-                        decoration: InputDecoration(
-                          hintText: _mode.hint,
-                          labelText: '검색어',
-                          counterText: '',
-                        ),
+                    for (final mode in _SearchMode.values)
+                      ChoiceChip(
+                        label: Text(mode.label),
+                        selected: _mode == mode,
+                        onSelected: _loading
+                            ? null
+                            : (_) => setState(() {
+                                _mode = mode;
+                                _searched = null;
+                                _linkError = null;
+                                _results = const [];
+                              }),
                       ),
-                    ),
-                    IconButton(
-                      tooltip: '자료 검색',
-                      onPressed: _loading ? null : _search,
-                      icon: const Icon(CupertinoIcons.search, size: 19),
-                    ),
                   ],
                 ),
-              ),
-              if (_loading) const LinearProgressIndicator(),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                  children: [
-                    if (searched == null)
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(
-                          _mode == _SearchMode.title
-                              ? '바로 담을 수 있는 시'
-                              : _mode.help,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _query,
+                          focusNode: _focus,
+                          enabled: !_loading,
+                          maxLength: 160,
+                          textInputAction: TextInputAction.search,
+                          onSubmitted: (_) => _search(),
+                          decoration: InputDecoration(
+                            hintText: _mode.hint,
+                            labelText: '검색어',
+                            counterText: '',
+                          ),
                         ),
-                      )
-                    else if (!_loading &&
-                        !hasHits &&
-                        _results.every((entry) => entry.$2 != null))
-                      const ListTile(title: Text('이 자료에서 찾지 못했어요.')),
-                    if (searched == null && _mode == _SearchMode.title)
+                      ),
+                      IconButton(
+                        tooltip: '자료 검색',
+                        onPressed: _loading ? null : _search,
+                        icon: const Icon(CupertinoIcons.search, size: 19),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_loading) const LinearProgressIndicator(),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: Text(
+                          '‘복사 필요’가 표시된 자료는 웹에서 원문을 열고 원하는 구절을 복사해 주세요.',
+                        ),
+                      ),
+                      if (searched == null)
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Text(_mode.help),
+                        )
+                      else if (!_loading &&
+                          !hasHits &&
+                          _results.every((entry) => entry.$2 != null))
+                        const ListTile(title: Text('이 자료에서 찾지 못했어요.')),
+                      if (_linkError case final error?)
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Semantics(
+                            liveRegion: true,
+                            child: Text(error),
+                          ),
+                        ),
+                      for (final (collection, hits) in _results)
+                        if (hits == null || hits.isNotEmpty) ...[
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+                            child: Semantics(
+                              header: true,
+                              child: Text(
+                                collection.label,
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                            ),
+                          ),
+                          if (hits == null)
+                            const ListTile(title: Text('검색 결과를 가져오지 못했어요.'))
+                          else
+                            for (final hit in hits)
+                              ListTile(
+                                title: Text(hit.title),
+                                trailing: const Icon(
+                                  CupertinoIcons.chevron_right,
+                                  size: 15,
+                                ),
+                                subtitle: hit.poem != null
+                                    ? const Text('원문 미리보기')
+                                    : _mode == _SearchMode.author
+                                    ? null
+                                    : const Text('웹 원문 · 복사 필요'),
+                                onTap: () => _showHit(hit),
+                              ),
+                        ],
+                      if (searched != null && !_loading) ...[
+                        TextButton.icon(
+                          onPressed: () => _open(
+                            Uri.https('search.naver.com', '/search.naver', {
+                              'query': switch (_mode) {
+                                _SearchMode.title => '$searched 원문',
+                                _SearchMode.author => '$searched 작품',
+                                _SearchMode.phrase => '$searched 구절 출처',
+                              },
+                            }),
+                          ),
+                          icon: const Icon(
+                            CupertinoIcons.arrow_up_right,
+                            size: 16,
+                          ),
+                          label: const Text('네이버에서 더 찾기'),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          child: Text('네이버에서 복사한 구절은 원문 등록의 ‘붙여넣기’로 넣을 수 있어요.'),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ] else
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: Text('바로 담을 수 있는 시'),
+                      ),
                       for (final poem in WikisourcePoem.reviewed.values)
                         ListTile(
                           title: Text(poem.title),
@@ -538,59 +632,9 @@ class _SourceSearchState extends State<_SourceSearch> {
                             ),
                           ),
                         ),
-                    if (_linkError case final error?)
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Semantics(liveRegion: true, child: Text(error)),
-                      ),
-                    for (final (collection, hits) in _results)
-                      if (hits == null || hits.isNotEmpty) ...[
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-                          child: Semantics(
-                            header: true,
-                            child: Text(
-                              collection.label,
-                              style: Theme.of(context).textTheme.titleSmall,
-                            ),
-                          ),
-                        ),
-                        if (hits == null)
-                          const ListTile(title: Text('검색 결과를 가져오지 못했어요.'))
-                        else
-                          for (final hit in hits)
-                            ListTile(
-                              title: Text(hit.title),
-                              trailing: const Icon(
-                                CupertinoIcons.chevron_right,
-                                size: 15,
-                              ),
-                              subtitle: hit.poem == null
-                                  ? null
-                                  : const Text('원문 미리보기'),
-                              onTap: () => _showHit(hit),
-                            ),
-                      ],
-                    if (searched != null && !_loading)
-                      TextButton.icon(
-                        onPressed: () => _open(
-                          Uri.https('search.naver.com', '/search.naver', {
-                            'query': switch (_mode) {
-                              _SearchMode.title => '$searched 원문',
-                              _SearchMode.author => '$searched 작품',
-                              _SearchMode.phrase => '$searched 구절 출처',
-                            },
-                          }),
-                        ),
-                        icon: const Icon(
-                          CupertinoIcons.arrow_up_right,
-                          size: 16,
-                        ),
-                        label: const Text('네이버에서 더 찾기'),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
             ],
           ],
         ),

@@ -241,15 +241,30 @@ void main() {
     final client = MockClient((request) async {
       requests.add(request.url);
       final work = request.url.host == 'ko.wikisource.org';
+      final params = request.url.queryParameters;
+      final author = params['list'] == 'prefixsearch';
+      final spacing = params['srsearch'] == 'intitle:별헤는밤';
+
       return http.Response.bytes(
         utf8.encode(
           jsonEncode({
             'query': {
-              'search': [
-                if (work) {'title': '서시', 'pageid': 1515},
-                if (work) {'title': '바다와 나비', 'pageid': 123},
-                if (work) {'title': '두시언해/서시흥', 'pageid': 124},
-              ],
+              if (author)
+                'prefixsearch': [
+                  {'title': '저자:윤동주', 'pageid': 515},
+                ]
+              else if (spacing)
+                'search': [
+                  {'title': '시집/별 헤는 밤의 추억', 'pageid': 122},
+                  {'title': '별 헤는 밤/다른 작품', 'pageid': 123},
+                  {'title': '시집/별 헤는 밤', 'pageid': 124},
+                ]
+              else
+                'search': [
+                  if (work) {'title': '서시', 'pageid': 1515},
+                  if (work) {'title': '바다와 나비', 'pageid': 123},
+                  if (work) {'title': '두시언해/서시흥', 'pageid': 124},
+                ],
             },
           }),
         ),
@@ -267,15 +282,35 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(find.widgetWithText(TextField, '검색어'), '서시');
       expect(requests, isEmpty);
-      await tester.tap(find.byTooltip('자료 검색'));
+      final input = find.widgetWithText(TextField, '검색어');
+      final submit = find.byTooltip('자료 검색');
+      await tester.enterText(input, '별헤는밤');
+      await tester.tap(submit);
       await tester.pumpAndSettle();
-      expect(requests.map((url) => url.host), ['ko.wikisource.org']);
+      final exact = find.widgetWithText(ListTile, '시집/별 헤는 밤');
+      final prefix = find.widgetWithText(ListTile, '시집/별 헤는 밤의 추억');
       expect(
-        requests.every(
-          (url) => url.queryParameters['srsearch'] == 'intitle:"서시"',
-        ),
-        isTrue,
+        tester.getTopLeft(exact).dy,
+        lessThan(tester.getTopLeft(prefix).dy),
       );
+      expect(find.text('별 헤는 밤/다른 작품'), findsNothing);
+      expect(find.text('네이버에서 더 찾기'), findsOneWidget);
+
+      await tester.tap(find.text('작가 이름'));
+      await tester.pumpAndSettle();
+      await tester.enterText(input, '윤동주');
+      await tester.tap(submit);
+      await tester.pumpAndSettle();
+      expect(requests.last.queryParameters['psnamespace'], '100');
+      expect(find.text('저자:윤동주'), findsOneWidget);
+
+      await tester.tap(find.text('작품 제목'));
+      await tester.pumpAndSettle();
+      await tester.enterText(input, '서시');
+      await tester.tap(submit);
+      await tester.pumpAndSettle();
+      expect(requests.last.host, 'ko.wikisource.org');
+      expect(requests.last.queryParameters['srsearch'], 'intitle:서시');
       final result = find.widgetWithText(ListTile, '서시');
       expect(result, findsOneWidget);
       expect(find.text('바다와 나비'), findsNothing);

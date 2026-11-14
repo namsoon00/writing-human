@@ -18,17 +18,27 @@ enum _Collection {
   Future<List<_SourceHit>> search(
     http.Client client,
     String query, {
-    required bool byTitle,
+    required _SearchMode mode,
   }) async {
+    final authors = mode == _SearchMode.author;
+    final module = authors ? 'prefixsearch' : 'search';
     final response = await client
         .get(
           Uri.https(host, '/w/api.php', {
             'action': 'query',
-            'list': 'search',
-            'srsearch': byTitle ? 'intitle:"$query"' : '"$query"',
-            'srnamespace': '0',
-            'srprop': '',
-            'srlimit': '8',
+            'list': module,
+            if (authors) ...{
+              'pssearch': query,
+              'psnamespace': '100',
+              'pslimit': '8',
+            } else ...{
+              'srsearch': mode == _SearchMode.title
+                  ? 'intitle:${_titleQuery(query)}'
+                  : '"$query"',
+              'srnamespace': '0',
+              'srprop': '',
+              'srlimit': mode == _SearchMode.title ? '30' : '8',
+            },
             'format': 'json',
             'origin': '*',
           }),
@@ -39,19 +49,58 @@ enum _Collection {
     }
     final data = jsonDecode(utf8.decode(response.bodyBytes));
     final rows = switch (data) {
-      {'query': {'search': final List rows}} => rows,
+      {'query': final Map query} when query[module] is List =>
+        query[module] as List,
       _ => throw const FormatException('Invalid search response'),
     };
-    return [
-      for (final row in rows)
-        if (row case {'title': final String title, 'pageid': final int id})
-          if (title.trim().isNotEmpty &&
-              id > 0 &&
-              (!byTitle || ' ${_words(title)} '.contains(' ${_words(query)} ')))
-            _SourceHit(this, title, id),
-    ];
+    final hits = <_SourceHit>[];
+    for (final row in rows) {
+      if (row case {
+        'title': final String title,
+        'pageid': final int id,
+      } when title.trim().isNotEmpty && id > 0) {
+        hits.add(_SourceHit(this, title, id));
+      }
+    }
+    if (mode != _SearchMode.title) return hits;
+
+    final compact = _compact(query);
+    // Use the individual work title when the page is inside a collection.
+    final exact = <_SourceHit>[];
+    final prefixes = <_SourceHit>[];
+    for (final hit in hits) {
+      final title = _workTitle(hit.title);
+      if (title == compact) {
+        exact.add(hit);
+      } else if (compact.length >= 3 && title.startsWith(compact)) {
+        prefixes.add(hit);
+      }
+    }
+    return [...exact, ...prefixes].take(12).toList();
   }
 }
+
+enum _SearchMode {
+  title('작품 제목', '작품 제목을 입력하세요', '위키문헌에서 작품의 제목을 찾아요.'),
+  author('작가 이름', '작가 이름을 입력하세요', '위키문헌의 작가 페이지에서 작품 목록을 볼 수 있어요.'),
+  phrase('기억나는 구절', '기억나는 구절을 입력하세요', '위키문헌과 위키인용집에서 같은 구절을 찾아요.');
+
+  const _SearchMode(this.label, this.hint, this.help);
+
+  final String label, hint, help;
+}
+
+String _workTitle(String title) {
+  final leaf = title.split('/').last;
+  return _compact(leaf.replaceFirst(RegExp(r'\s*\([^()]+\)$'), ''));
+}
+
+String _titleQuery(String query) {
+  final compact = _compact(query);
+  return RegExp(r'^[가-힣]+$').hasMatch(compact) ? compact : '"$query"';
+}
+
+String _compact(String value) => _words(value).replaceAll(' ', '');
 
 String _words(String value) => value
     .toLowerCase()
@@ -103,7 +152,8 @@ class _SourceSearchState extends State<_SourceSearch> {
   final _client = http.Client();
   final _focus = FocusNode();
   String? _searched, _linkError;
-  bool _loading = false, _byTitle = true, _pasting = false;
+  bool _loading = false, _pasting = false;
+  _SearchMode _mode = _SearchMode.title;
   _SourceHit? _selected;
   List<(_Collection, List<_SourceHit>?)> _results = const [];
 
@@ -125,14 +175,16 @@ class _SourceSearchState extends State<_SourceSearch> {
       _results = const [];
       _loading = true;
     });
-    final byTitle = _byTitle;
-    final collections = byTitle ? [_Collection.works] : _Collection.values;
+    final mode = _mode;
+    final collections = mode == _SearchMode.phrase
+        ? _Collection.values
+        : [_Collection.works];
     final results = await Future.wait(
       collections.map((collection) async {
         try {
           return (
             collection,
-            await collection.search(_client, query, byTitle: byTitle),
+            await collection.search(_client, query, mode: mode),
           );
         } on Exception {
           return (collection, null);
@@ -195,20 +247,24 @@ class _SourceSearchState extends State<_SourceSearch> {
       OutlinedButton.icon(
         onPressed: _pasting ? null : () => _open(hit.url),
         icon: const Icon(CupertinoIcons.arrow_up_right, size: 16),
-        label: const Text('원문 열기'),
+        label: Text(_mode == _SearchMode.author ? '작품 목록 열기' : '원문 열기'),
       ),
-      const SizedBox(height: 8),
-      FilledButton(
-        onPressed: _pasting ? null : () => _collect(hit),
-        child: const Text('복사한 구절과 출처 넣기'),
-      ),
-      TextButton(
-        onPressed: _pasting
-            ? null
-            : () =>
-                  Navigator.pop(context, (citation: hit.citation, text: null)),
-        child: const Text('출처만 넣기'),
-      ),
+      if (_mode != _SearchMode.author) ...[
+        const SizedBox(height: 8),
+        FilledButton(
+          onPressed: _pasting ? null : () => _collect(hit),
+          child: const Text('복사한 구절과 출처 넣기'),
+        ),
+        TextButton(
+          onPressed: _pasting
+              ? null
+              : () => Navigator.pop(context, (
+                  citation: hit.citation,
+                  text: null,
+                )),
+          child: const Text('출처만 넣기'),
+        ),
+      ],
       if (_linkError case final error?)
         Semantics(liveRegion: true, child: Text(error)),
     ],
@@ -271,15 +327,16 @@ class _SourceSearchState extends State<_SourceSearch> {
             else ...[
               Wrap(
                 spacing: 8,
+                alignment: WrapAlignment.center,
                 children: [
-                  for (final byTitle in [true, false])
+                  for (final mode in _SearchMode.values)
                     ChoiceChip(
-                      label: Text(byTitle ? '작품 제목' : '기억나는 구절'),
-                      selected: _byTitle == byTitle,
+                      label: Text(mode.label),
+                      selected: _mode == mode,
                       onSelected: _loading
                           ? null
                           : (_) => setState(() {
-                              _byTitle = byTitle;
+                              _mode = mode;
                               _searched = null;
                               _linkError = null;
                               _results = const [];
@@ -300,9 +357,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                         textInputAction: TextInputAction.search,
                         onSubmitted: (_) => _search(),
                         decoration: InputDecoration(
-                          hintText: _byTitle
-                              ? '작품 제목을 입력하세요'
-                              : '기억나는 구절을 입력하세요',
+                          hintText: _mode.hint,
                           labelText: '검색어',
                           counterText: '',
                         ),
@@ -324,16 +379,12 @@ class _SourceSearchState extends State<_SourceSearch> {
                     if (searched == null)
                       Padding(
                         padding: const EdgeInsets.all(8),
-                        child: Text(
-                          _byTitle
-                              ? '위키문헌에서 제목이 맞는 작품을 찾아요.'
-                              : '위키문헌과 위키인용집에서 같은 구절을 찾아요.',
-                        ),
+                        child: Text(_mode.help),
                       )
                     else if (!_loading &&
                         !hasHits &&
                         _results.every((entry) => entry.$2 != null))
-                      const ListTile(title: Text('일치하는 자료가 없어요.')),
+                      const ListTile(title: Text('이 자료에서 찾지 못했어요.')),
                     if (_linkError case final error?)
                       Padding(
                         padding: const EdgeInsets.all(8),
@@ -367,11 +418,15 @@ class _SourceSearchState extends State<_SourceSearch> {
                               }),
                             ),
                       ],
-                    if (searched != null && !_loading && !hasHits)
+                    if (searched != null && !_loading)
                       TextButton.icon(
                         onPressed: () => _open(
                           Uri.https('search.naver.com', '/search.naver', {
-                            'query': searched,
+                            'query': switch (_mode) {
+                              _SearchMode.title => '$searched 원문',
+                              _SearchMode.author => '$searched 작품',
+                              _SearchMode.phrase => '$searched 구절 출처',
+                            },
                           }),
                         ),
                         icon: const Icon(

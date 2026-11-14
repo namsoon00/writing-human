@@ -1101,9 +1101,15 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                             ),
                           ),
                           if (!_selecting && !_reviewing && !widget.shared)
-                            TextButton(
-                              onPressed: _editable ? _searchSources : null,
-                              child: const Text('시·문장 검색'),
+                            Flexible(
+                              flex: 2,
+                              child: TextButton(
+                                onPressed: _editable ? _searchSources : null,
+                                child: const Text(
+                                  '시·문장 검색',
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
                             ),
                           IconButton(
                             tooltip: '닫기',

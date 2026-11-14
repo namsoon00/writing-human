@@ -403,9 +403,15 @@ class _SourceReadingState extends State<SourceReading> {
                             onPressed: () => _register(startWithSearch: true),
                             icon: const Icon(CupertinoIcons.search, size: 19),
                           ),
-                          TextButton(
-                            onPressed: _register,
-                            child: const Text('원문 등록'),
+                          Flexible(
+                            flex: 2,
+                            child: TextButton(
+                              onPressed: _register,
+                              child: const Text(
+                                '원문 등록',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
                           ),
                         ],
                         IconButton(

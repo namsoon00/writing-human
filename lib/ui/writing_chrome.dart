@@ -58,15 +58,21 @@ class WritingHeader extends StatelessWidget {
         ),
         Align(
           alignment: Alignment.centerLeft,
-          child: TextButton(
-            key: const ValueKey('open-bookshelf'),
-            onPressed: onCollection,
-            style: TextButton.styleFrom(
-              foregroundColor: brandInk,
-              minimumSize: const Size(68, 48),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 88),
+            child: TextButton(
+              key: const ValueKey('open-bookshelf'),
+              onPressed: onCollection,
+              style: TextButton.styleFrom(
+                minimumSize: const Size(68, 48),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
+              child: const _PaperActionLabel(
+                '책장',
+                CupertinoIcons.book,
+                fontSize: 13,
+              ),
             ),
-            child: const Text('책장', style: TextStyle(fontSize: 13)),
           ),
         ),
         Align(
@@ -74,7 +80,6 @@ class WritingHeader extends StatelessWidget {
           child: IconButton(
             onPressed: onNewSheet,
             tooltip: bookTitle == null ? '새 종이' : '이 책에 한 쪽 추가',
-            color: brandInk,
             constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             icon: const Icon(CupertinoIcons.plus, size: 25),
           ),
@@ -140,11 +145,13 @@ class WritingFooter extends StatelessWidget {
                 key: const ValueKey('writing-originals'),
                 onPressed: onSource,
                 style: TextButton.styleFrom(
-                  foregroundColor: brandInk,
                   minimumSize: const Size(48, 48),
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                 ),
-                child: const Text('원문', style: TextStyle(fontSize: 12)),
+                child: const _PaperActionLabel(
+                  '원문',
+                  CupertinoIcons.doc_plaintext,
+                ),
               ),
             ),
           ),
@@ -208,7 +215,6 @@ class WritingFooter extends StatelessWidget {
                     child: TextFieldTapRegion(
                       child: IconButton(
                         tooltip: '키보드 내리기',
-                        color: brandInk,
                         constraints: const BoxConstraints(
                           minWidth: 48,
                           minHeight: 48,
@@ -229,14 +235,12 @@ class WritingFooter extends StatelessWidget {
                       child: TextButton(
                         onPressed: onMenu,
                         style: TextButton.styleFrom(
-                          foregroundColor: brandInk,
                           minimumSize: const Size(48, 48),
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
                         ),
-                        child: const Text(
+                        child: const _PaperActionLabel(
                           '쓰기 도구',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 12),
+                          CupertinoIcons.slider_horizontal_3,
                         ),
                       ),
                     ),
@@ -245,5 +249,31 @@ class WritingFooter extends StatelessWidget {
         ],
       ),
     ),
+  );
+}
+
+class _PaperActionLabel extends StatelessWidget {
+  const _PaperActionLabel(this.label, this.icon, {this.fontSize = 12});
+
+  final String label;
+  final IconData icon;
+  final double fontSize;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      if (MediaQuery.textScalerOf(context).scale(13) <= 17) ...[
+        Icon(icon, size: 16),
+        const SizedBox(width: 5),
+      ],
+      Flexible(
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: fontSize),
+        ),
+      ),
+    ],
   );
 }

@@ -80,8 +80,6 @@ class Bookshelf extends StatelessWidget {
                 const SizedBox(height: 16),
                 FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: burgundy,
-                    foregroundColor: paper,
                     minimumSize: const Size(48, 48),
                   ),
                   onPressed: onWrite,

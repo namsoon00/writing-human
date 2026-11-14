@@ -156,7 +156,6 @@ class BookDetailOptions extends StatelessWidget {
           contentPadding: EdgeInsets.zero,
           title: const Text('꾸밈 표시', style: TextStyle(fontSize: 13)),
           value: choice.enabled,
-          activeTrackColor: burgundy,
           onChanged: (value) => onChanged(choice.copy(enabled: value)),
         ),
         if (!showSpecimen && kind == BookDetailKind.ribbon) ...[
@@ -217,7 +216,6 @@ class BookDetailOptions extends StatelessWidget {
                     style: const TextStyle(fontSize: 12),
                   ),
                   selected: choice.variant == i,
-                  showCheckmark: false,
                   onSelected: choice.enabled
                       ? (_) => onChanged(choice.copy(variant: i))
                       : null,
@@ -252,7 +250,6 @@ class BookDetailOptions extends StatelessWidget {
                       style: const TextStyle(fontSize: 12),
                     ),
                     selected: choice.tone == i,
-                    showCheckmark: false,
                     onSelected: choice.enabled
                         ? (_) => onChanged(choice.copy(tone: i))
                         : null,
@@ -277,7 +274,6 @@ class BookDetailOptions extends StatelessWidget {
                       style: const TextStyle(fontSize: 12),
                     ),
                     selected: choice.placement == i,
-                    showCheckmark: false,
                     onSelected: choice.enabled
                         ? (_) => onChanged(choice.copy(placement: i))
                         : null,

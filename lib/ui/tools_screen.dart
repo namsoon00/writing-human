@@ -124,12 +124,7 @@ class ToolsScreen extends StatelessWidget {
                       onSelected: (_) => controller.setStyle(
                         style.copy(useDevelopmentTypeface: true),
                       ),
-                      showCheckmark: false,
                       selectedColor: panelSelectedColor(panel),
-                      backgroundColor: panelChipColor(panel),
-                      side: BorderSide(
-                        color: style.useDevelopmentTypeface ? brandInk : line,
-                      ),
                     ),
                     for (var i = 0; i < 3; i++)
                       ChoiceChip(
@@ -149,16 +144,7 @@ class ToolsScreen extends StatelessWidget {
                             useDevelopmentTypeface: false,
                           ),
                         ),
-                        showCheckmark: false,
                         selectedColor: panelSelectedColor(panel),
-                        backgroundColor: panelChipColor(panel),
-                        side: BorderSide(
-                          color:
-                              !style.useDevelopmentTypeface &&
-                                  style.fontIndex == i
-                              ? brandInk
-                              : line,
-                        ),
                       ),
                   ],
                 ),

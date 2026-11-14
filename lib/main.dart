@@ -11,6 +11,7 @@ import 'sync/context_factory.dart';
 import 'sync/coordinator.dart';
 import 'ui/workspace.dart';
 import 'ui/paper.dart';
+import 'ui/control_theme.dart';
 import 'ui/typography.dart';
 
 Future<void> main() async {
@@ -37,44 +38,46 @@ class WritingHumanApp extends StatelessWidget {
       );
     },
     debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      fontFamily: appFontFamily,
-      fontFamilyFallback: appFontFallback,
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: brandInk,
-        surface: paper,
-        primary: brandInk,
-        onSurface: ink,
-      ),
-      scaffoldBackgroundColor: appPaper,
-      textTheme: ThemeData.light().textTheme.apply(
+    theme: withPaperControls(
+      ThemeData(
         fontFamily: appFontFamily,
         fontFamilyFallback: appFontFallback,
-        bodyColor: ink,
-        displayColor: ink,
-      ),
-      inputDecorationTheme: const InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: brandInk,
+          surface: paper,
+          primary: brandInk,
+          onSurface: ink,
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: brandInk),
+        scaffoldBackgroundColor: appPaper,
+        textTheme: ThemeData.light().textTheme.apply(
+          fontFamily: appFontFamily,
+          fontFamilyFallback: appFontFallback,
+          bodyColor: ink,
+          displayColor: ink,
         ),
-      ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: paper,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        inputDecorationTheme: const InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+            borderSide: BorderSide(color: brandInk),
+          ),
         ),
-      ),
-      dialogTheme: const DialogThemeData(
-        backgroundColor: paper,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(22)),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: paper,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+        ),
+        dialogTheme: const DialogThemeData(
+          backgroundColor: paper,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(22)),
+          ),
         ),
       ),
     ),

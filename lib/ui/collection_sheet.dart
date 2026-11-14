@@ -185,11 +185,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
               onPressed: () => widget.onBook(book),
               icon: const Icon(CupertinoIcons.book, size: 16),
               label: const Text('이어서 쓰기'),
-              style: FilledButton.styleFrom(
-                backgroundColor: brandInk,
-                foregroundColor: paper,
-                minimumSize: const Size(0, 48),
-              ),
+              style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
             ),
             const SizedBox(height: 4),
             Text(
@@ -200,10 +196,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
           ],
           TextButton(
             onPressed: () => showBookAppearance(context, c, book.id),
-            style: TextButton.styleFrom(
-              foregroundColor: brandInk,
-              minimumSize: const Size(0, 48),
-            ),
+            style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
             child: const Text('책 꾸미기'),
           ),
         ],

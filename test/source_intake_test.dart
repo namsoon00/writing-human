@@ -876,7 +876,7 @@ void main() {
       expect(sourceCard.stockColor, isNot(Colors.white));
       expect(tester.widget<Text>(find.text(first)).style!.color, ink);
       final filter = tester.widget<FilterChip>(find.byType(FilterChip));
-      expect(filter.backgroundColor, panelChipColor(panel));
+      expect(filter.selectedColor, panelSelectedColor(panel));
       final separators = find.descendant(
         of: reading,
         matching: find.byType(RecordDivider),

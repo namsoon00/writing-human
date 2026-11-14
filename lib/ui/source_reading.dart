@@ -430,10 +430,7 @@ class _SourceReadingState extends State<SourceReading> {
                         alignment: Alignment.centerLeft,
                         child: FilterChip(
                           label: const Text('밑칠한 구절만 보기'),
-                          backgroundColor: panelChipColor(panel),
                           selectedColor: panelSelectedColor(panel),
-                          checkmarkColor: brandInk,
-                          side: BorderSide(color: markedOnly ? brandInk : line),
                           selected: markedOnly,
                           onSelected: (value) =>
                               setState(() => markedOnly = value),

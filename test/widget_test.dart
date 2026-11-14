@@ -578,8 +578,8 @@ void main() {
         final panel = panelPaperColor(paperColors[index]);
         expect(tester.widget<PaperBackdrop>(toolPaper).color, panel);
         expect(
-          tester.widget<ChoiceChip>(chip).backgroundColor,
-          panelChipColor(panel),
+          tester.widget<ChoiceChip>(chip).selectedColor,
+          panelSelectedColor(panel),
         );
         expect(tester.widget<ChoiceChip>(chip).selected, isTrue);
       }

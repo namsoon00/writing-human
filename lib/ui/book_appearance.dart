@@ -145,24 +145,31 @@ class _BookAppearanceState extends State<BookAppearance> {
               alignment: WrapAlignment.center,
               children: [
                 for (final item in _Section.values)
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      foregroundColor: section == item ? burgundy : muted,
-                      padding: const EdgeInsets.symmetric(horizontal: 9),
-                      minimumSize: const Size(48, 48),
-                      tapTargetSize: MaterialTapTargetSize.padded,
-                    ),
-                    onPressed: () => setState(() => section = item),
-                    child: Semantics(
-                      selected: section == item,
-                      child: Text(
-                        item.label,
-                        style: TextStyle(
-                          decoration: section == item
-                              ? TextDecoration.underline
-                              : null,
-                          decorationColor: burgundy,
-                        ),
+                  Semantics(
+                    selected: section == item,
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor: section == item
+                            ? panelSelectedColor(paper)
+                            : null,
+                        padding: const EdgeInsets.symmetric(horizontal: 9),
+                      ),
+                      onPressed: () => setState(() => section = item),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            child: section == item
+                                ? const Icon(
+                                    CupertinoIcons.check_mark,
+                                    size: 14,
+                                  )
+                                : null,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(child: Text(item.label)),
+                        ],
                       ),
                     ),
                   ),
@@ -344,7 +351,6 @@ class _BookAppearanceState extends State<BookAppearance> {
             child: ListTile(
               key: ValueKey('book-detail-${kind.name}'),
               selected: expanded,
-              selectedColor: burgundy,
               contentPadding: const EdgeInsets.symmetric(horizontal: 4),
               minTileHeight: 64,
               horizontalTitleGap: 12,

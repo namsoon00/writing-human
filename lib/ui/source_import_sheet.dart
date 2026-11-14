@@ -629,6 +629,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
           enabled: _editable,
           onSelected: _choosePhoto,
           tooltip: '사진에서 가져오기',
+          borderRadius: BorderRadius.circular(6),
           color: widget.paperColor,
           surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
@@ -644,21 +645,32 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
               child: Text('문단 인식'),
             ),
           ],
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 48),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(CupertinoIcons.doc_text_viewfinder, size: 17),
+                Icon(
+                  CupertinoIcons.doc_text_viewfinder,
+                  size: 17,
+                  color: _editable ? panelSwitchTrack : muted,
+                ),
                 const SizedBox(width: 7),
                 Flexible(
                   child: Text(
                     '사진에서 가져오기',
-                    style: TextStyle(color: _editable ? brandInk : muted),
+                    style: TextStyle(
+                      color: _editable ? panelSwitchTrack : muted,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 6),
-                const Icon(CupertinoIcons.chevron_down, size: 12),
+                Icon(
+                  CupertinoIcons.chevron_down,
+                  size: 12,
+                  color: _editable ? panelSwitchTrack : muted,
+                ),
               ],
             ),
           ),

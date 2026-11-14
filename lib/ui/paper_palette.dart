@@ -27,8 +27,6 @@ const fontNames = ['나눔명조', '나눔명조 Bold', '나눔고딕'];
 /// A quieter sheet for controls, tinted by the current writing paper.
 Color panelPaperColor(Color stock) =>
     Color.lerp(stock, const Color(0xfff5efe3), .72)!;
-Color panelChipColor(Color panel) =>
-    Color.lerp(panel, const Color(0xfffffaf1), .48)!;
 Color panelSelectedColor(Color panel) => Color.lerp(panel, brandInk, .12)!;
 
 const panelSwitchTrack = Color(0xff74503c);

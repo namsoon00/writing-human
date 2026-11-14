@@ -74,11 +74,7 @@ class NewBookDialogState extends State<NewBookDialog> {
         onPressed: () => Navigator.pop(context),
         child: const Text('취소'),
       ),
-      FilledButton(
-        onPressed: submit,
-        style: FilledButton.styleFrom(backgroundColor: green),
-        child: const Text('책 만들고 쓰기'),
-      ),
+      FilledButton(onPressed: submit, child: const Text('책 만들고 쓰기')),
     ],
   );
 }

@@ -1745,7 +1745,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         ? sync.syncNow
                         : sync.context.signIn,
                     style: FilledButton.styleFrom(
-                      backgroundColor: burgundy,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: Text(

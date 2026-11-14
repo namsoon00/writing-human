@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../data/model.dart';
 import '../source/photo_lines.dart';
 import '../source/source_scan.dart';
+import 'editable_geometry.dart';
+import 'pencil_marks.dart';
 import 'source_scan_preview.dart';
 
 typedef OriginalRangeChoice = ({PencilMark? range});
@@ -42,8 +44,28 @@ class _OriginalRangeSheet extends StatefulWidget {
   State<_OriginalRangeSheet> createState() => _OriginalRangeSheetState();
 }
 
+class _OriginalRangeTextController extends TextEditingController {
+  _OriginalRangeTextController(super.value) : super.fromValue();
+
+  @override
+  TextSpan buildTextSpan({
+    required BuildContext context,
+    TextStyle? style,
+    required bool withComposing,
+  }) {
+    final range = PencilMark(selection.start, selection.end);
+    return pencilTextSpan(
+      value: value,
+      style: style,
+      marks: validOriginalRange(text, range) ? [range] : const [],
+    );
+  }
+}
+
 class _OriginalRangeSheetState extends State<_OriginalRangeSheet> {
-  late final _text = TextEditingController.fromValue(
+  final _textKey = GlobalKey();
+  final _scroll = ScrollController();
+  late final _text = _OriginalRangeTextController(
     TextEditingValue(
       text: widget.text,
       selection: TextSelection(
@@ -53,8 +75,6 @@ class _OriginalRangeSheetState extends State<_OriginalRangeSheet> {
     ),
   );
   late final _lines = _lineRanges(widget.text);
-  late int _first = _lineAt(widget.current?.start ?? 0);
-  late int _last = _lineAt((widget.current?.end ?? widget.text.length) - 1);
 
   late bool _showPhoto = widget.photo != null;
   OriginalPhotoLine? _startOnPhoto;
@@ -73,8 +93,6 @@ class _OriginalRangeSheetState extends State<_OriginalRangeSheet> {
         : anchor;
     setState(() {
       _startOnPhoto = anchor == null ? hit : null;
-      _first = _lineAt(first.range.start);
-      _last = _lineAt(last.range.end - 1);
       _text.selection = TextSelection(
         baseOffset: first.range.start,
         extentOffset: last.range.end,
@@ -109,16 +127,46 @@ class _OriginalRangeSheetState extends State<_OriginalRangeSheet> {
     return index < 0 ? _lines.length - 1 : index;
   }
 
-  void _selectLines() {
+  void _selectLines(RangeValues values) {
+    final first = values.start.round();
+    final last = values.end.round();
+    final startMoved = first != _lineAt(_text.selection.start);
     _text.selection = TextSelection(
-      baseOffset: _lines[_first].start,
-      extentOffset: _lines[_last].end,
+      baseOffset: _lines[first].start,
+      extentOffset: _lines[last].end,
     );
+    final offset = startMoved ? _lines[first].start : _lines[last].end;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      final render = findEditable(_textKey.currentContext?.findRenderObject());
+      if (render == null || !render.hasSize) return;
+      final caret = render.getLocalRectForCaret(
+        TextPosition(
+          offset: offset,
+          affinity: startMoved
+              ? TextAffinity.downstream
+              : TextAffinity.upstream,
+        ),
+      );
+      final distance = caret.top < 0
+          ? caret.top
+          : caret.bottom > render.size.height
+          ? caret.bottom - render.size.height
+          : 0.0;
+      if (distance == 0) return;
+      _scroll.jumpTo(
+        (_scroll.offset + distance).clamp(
+          _scroll.position.minScrollExtent,
+          _scroll.position.maxScrollExtent,
+        ),
+      );
+    });
   }
 
   @override
   void dispose() {
     _text.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -157,36 +205,52 @@ class _OriginalRangeSheetState extends State<_OriginalRangeSheet> {
               const Text('시작 줄과 끝 줄을 고르거나, 글에서 원하는 부분을 선택하세요.'),
             if (_lines.length > 1 &&
                 (!_showPhoto || widget.photoLines.isEmpty)) ...[
-              RangeSlider(
-                key: const ValueKey('original-line-range'),
-                values: RangeValues(_first.toDouble(), _last.toDouble()),
-                max: (_lines.length - 1).toDouble(),
-                divisions: _lines.length - 1,
-                semanticFormatterCallback: (value) =>
-                    '${value.round() + 1}번째 줄',
-                onChanged: (value) {
-                  setState(() {
-                    _first = value.start.round();
-                    _last = value.end.round();
-                  });
-                  _selectLines();
+              ValueListenableBuilder(
+                valueListenable: _text,
+                builder: (context, value, _) {
+                  final selection = value.selection;
+                  final first = _lineAt(selection.start);
+                  final last = selection.isCollapsed
+                      ? first
+                      : _lineAt(selection.end - 1);
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      RangeSlider(
+                        key: const ValueKey('original-line-range'),
+                        values: RangeValues(first.toDouble(), last.toDouble()),
+                        max: (_lines.length - 1).toDouble(),
+                        divisions: _lines.length - 1,
+                        semanticFormatterCallback: (value) =>
+                            '${value.round() + 1}번째 줄',
+                        onChanged: _selectLines,
+                      ),
+                      Text('${first + 1}–${last + 1}줄'),
+                    ],
+                  );
                 },
               ),
-              Text('${_first + 1}–${_last + 1}줄'),
             ],
             if (_showPhoto)
               Expanded(child: _photoPreview())
             else
               Expanded(
-                child: TextField(
-                  key: const ValueKey('original-range-text'),
-                  controller: _text,
-                  readOnly: true,
-                  expands: true,
-                  minLines: null,
-                  maxLines: null,
-                  textAlignVertical: TextAlignVertical.top,
-                  decoration: const InputDecoration(border: InputBorder.none),
+                child: TextSelectionTheme(
+                  key: _textKey,
+                  data: TextSelectionTheme.of(
+                    context,
+                  ).copyWith(selectionColor: Colors.transparent),
+                  child: TextField(
+                    key: const ValueKey('original-range-text'),
+                    controller: _text,
+                    scrollController: _scroll,
+                    readOnly: true,
+                    expands: true,
+                    minLines: null,
+                    maxLines: null,
+                    textAlignVertical: TextAlignVertical.top,
+                    decoration: const InputDecoration(border: InputBorder.none),
+                  ),
                 ),
               ),
             ValueListenableBuilder(

@@ -845,6 +845,53 @@ void main() {
       expect(find.textContaining('끝 줄을 누르세요.'), findsOneWidget);
       await tester.tapAt(Offset(rightLine, frame.top + frame.height * .22));
       await tester.pumpAndSettle();
+      final rangeText = find.byKey(const ValueKey('original-range-text'));
+      String highlighted() {
+        final editable = tester.widget<EditableText>(
+          find.descendant(of: rangeText, matching: find.byType(EditableText)),
+        );
+        return editable.controller
+            .buildTextSpan(
+              context: tester.element(rangeText),
+              style: editable.style,
+              withComposing: false,
+            )
+            .children!
+            .whereType<TextSpan>()
+            .where((span) => span.style?.backgroundColor != null)
+            .map((span) => span.text)
+            .join();
+      }
+
+      await tester.tap(find.text('글로 선택'));
+      await tester.pumpAndSettle();
+      final rangeSlider = find.byKey(const ValueKey('original-line-range'));
+      expect(find.text('2–2줄'), findsOneWidget);
+      expect(highlighted(), '오른쪽 문단');
+      tester.widget<RangeSlider>(rangeSlider).onChanged!(
+        const RangeValues(0, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('1–1줄'), findsOneWidget);
+      expect(highlighted(), '왼쪽 문단');
+      tester.widget<RangeSlider>(rangeSlider).onChanged!(
+        const RangeValues(0, 1),
+      );
+      await tester.pumpAndSettle();
+      expect(highlighted(), '왼쪽 문단\n\n오른쪽 문단');
+      final rangeField = tester.widget<TextField>(rangeText);
+      rangeField.controller!.selection = const TextSelection(
+        baseOffset: 7,
+        extentOffset: 10,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('2–2줄'), findsOneWidget);
+      expect(highlighted(), '오른쪽');
+      tester.widget<RangeSlider>(rangeSlider).onChanged!(
+        const RangeValues(1, 1),
+      );
+      await tester.pumpAndSettle();
+      expect(highlighted(), '오른쪽 문단');
       await tester.tap(find.text('범위 적용'));
       await tester.pumpAndSettle();
       await saveWithPhoto(tester);

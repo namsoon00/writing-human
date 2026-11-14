@@ -7,19 +7,66 @@ import 'package:http/http.dart' as http;
 import 'source_intake.dart';
 
 class WikisourcePoem {
-  const WikisourcePoem(this.pageId, this.revisionId, this.title, this.author);
+  const WikisourcePoem(
+    this.pageId,
+    this.revisionId,
+    this.title,
+    this.author, {
+    this.editionIndex,
+  });
 
   // These editions carry a public domain notice on Korean Wikisource.
   // Page and revision IDs identify the specific transcription reviewed.
   static const reviewed = {
-    1508: WikisourcePoem(1508, 430575, '진달래꽃', '김소월'),
+    1508: WikisourcePoem(1508, 430575, '진달래꽃', '김소월', editionIndex: 0),
     1515: WikisourcePoem(1515, 387685, '서시', '윤동주'),
     1866: WikisourcePoem(1866, 387769, '별 헤는 밤', '윤동주'),
     1879: WikisourcePoem(1879, 203679, '초혼', '김소월'),
+    1861: WikisourcePoem(1861, 387749, '자화상', '윤동주'),
+    2718: WikisourcePoem(2718, 387750, '소년', '윤동주'),
+    2719: WikisourcePoem(2719, 387751, '눈 오는 지도', '윤동주'),
+    19215: WikisourcePoem(19215, 387752, '돌아와 보는 밤', '윤동주'),
+    19216: WikisourcePoem(19216, 387756, '새로운 길', '윤동주'),
+    19217: WikisourcePoem(19217, 387757, '간판 없는 거리', '윤동주'),
+    19218: WikisourcePoem(19218, 387758, '태초의 아침', '윤동주'),
+    19219: WikisourcePoem(19219, 387759, '또 태초의 아침', '윤동주'),
+    19220: WikisourcePoem(19220, 387760, '새벽이 올 때까지', '윤동주'),
+    19221: WikisourcePoem(19221, 387761, '무서운 시간', '윤동주'),
+    1862: WikisourcePoem(1862, 387762, '십자가', '윤동주'),
+    1863: WikisourcePoem(1863, 387763, '바람이 불어', '윤동주'),
+    19222: WikisourcePoem(19222, 387764, '슬픈 족속', '윤동주'),
+    1864: WikisourcePoem(1864, 387767, '또 다른 고향', '윤동주'),
+    10238: WikisourcePoem(10238, 387768, '길', '윤동주'),
+    1867: WikisourcePoem(1867, 387804, '참회록', '윤동주'),
+    1522: WikisourcePoem(1522, 430577, '산유화', '김소월', editionIndex: 0),
+    1521: WikisourcePoem(1521, 203761, '엄마야 누나야', '김소월'),
+    1878: WikisourcePoem(1878, 203584, '못 잊어', '김소월'),
+    34903: WikisourcePoem(34903, 430975, '접동새', '김소월', editionIndex: 0),
+    1970: WikisourcePoem(1970, 203684, '가는 길', '김소월'),
+    1717: WikisourcePoem(1717, 203585, '예전엔 미처 몰랐어요', '김소월'),
+    1519: WikisourcePoem(1519, 204518, '금잔디', '김소월'),
+    1523: WikisourcePoem(1523, 203685, '왕십리', '김소월'),
+    1877: WikisourcePoem(1877, 430584, '먼 후일', '김소월', editionIndex: 0),
+    3609: WikisourcePoem(3609, 203568, '풀 따기', '김소월'),
+    1937: WikisourcePoem(1937, 430586, '봄 밤', '김소월', editionIndex: 0),
+    3619: WikisourcePoem(3619, 203690, '삭주구성', '김소월'),
+    3548: WikisourcePoem(3548, 430599, '달맞이', '김소월', editionIndex: 0),
+    3044: WikisourcePoem(
+      3044,
+      430592,
+      '빼앗긴 들에도 봄은 오는가',
+      '이상화',
+      editionIndex: 1,
+    ),
+    3045: WikisourcePoem(3045, 381039, '나의 침실로', '이상화'),
   };
 
   final int pageId, revisionId;
   final String title, author;
+
+  // Parallel transcriptions are alternatives. Unset means the blocks follow
+  // each other, for example when the poem spans several scanned pages.
+  final int? editionIndex;
 
   Uri get url =>
       Uri.https('ko.wikisource.org', '/w/index.php', {'oldid': '$revisionId'});
@@ -58,12 +105,11 @@ class WikisourcePoem {
               (entry) => entry is Map && entry['category'] == 'PD-old-70',
             )) {
       final poems = html.parseFragment(markup).querySelectorAll('.poem');
-      if (poems.isNotEmpty) {
-        // The first column of this edition is the modern transcription.
-        final blocks = pageId == 1508 ? poems.take(1) : poems;
-        final text = blocks.map(_readPoem).join('\n');
+      final index = editionIndex;
+      if (poems.isNotEmpty && (index == null || index < poems.length)) {
+        final blocks = index == null ? poems : [poems[index]];
+        final text = blocks.map((block) => _readPoem(block, title)).join('\n');
         final stanzas = splitSourceParagraphs(text);
-        if (stanzas.first == title) stanzas.removeAt(0);
         if (stanzas.isNotEmpty &&
             stanzas.first.isNotEmpty &&
             stanzas.join('\n\n').length <= sourceLengthLimit) {
@@ -75,7 +121,7 @@ class WikisourcePoem {
   }
 }
 
-String _readPoem(Element poem) {
+String _readPoem(Element poem, String title) {
   final text = StringBuffer();
   void append(Node node) {
     if (node is Text) {
@@ -83,6 +129,10 @@ String _readPoem(Element poem) {
     } else if (node is Element) {
       if (node.localName == 'br') {
         text.writeln();
+        return;
+      }
+      if (node.localName == 'big' &&
+          _withoutPunctuation(node.text) == _withoutPunctuation(title)) {
         return;
       }
       if (['script', 'style', 'sup'].contains(node.localName) ||
@@ -105,3 +155,6 @@ String _readPoem(Element poem) {
       .join('\n')
       .trim();
 }
+
+String _withoutPunctuation(String text) =>
+    text.replaceAll(RegExp(r'[\s,?.!]+'), '');

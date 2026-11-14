@@ -66,6 +66,12 @@ enum _Collection {
     if (mode != _SearchMode.title) return hits;
 
     final compact = _compact(query);
+    final listed = hits.map((hit) => hit.id).toSet();
+    for (final poem in WikisourcePoem.reviewed.values) {
+      if (!listed.contains(poem.pageId) && _compact(poem.title) == compact) {
+        hits.add(_SourceHit(this, poem.title, poem.pageId));
+      }
+    }
     // Use the individual work title when the page is inside a collection.
     final exact = <_SourceHit>[];
     final prefixes = <_SourceHit>[];
@@ -505,12 +511,33 @@ class _SourceSearchState extends State<_SourceSearch> {
                     if (searched == null)
                       Padding(
                         padding: const EdgeInsets.all(8),
-                        child: Text(_mode.help),
+                        child: Text(
+                          _mode == _SearchMode.title
+                              ? '바로 담을 수 있는 시'
+                              : _mode.help,
+                        ),
                       )
                     else if (!_loading &&
                         !hasHits &&
                         _results.every((entry) => entry.$2 != null))
                       const ListTile(title: Text('이 자료에서 찾지 못했어요.')),
+                    if (searched == null && _mode == _SearchMode.title)
+                      for (final poem in WikisourcePoem.reviewed.values)
+                        ListTile(
+                          title: Text(poem.title),
+                          subtitle: Text(poem.author),
+                          trailing: const Icon(
+                            CupertinoIcons.chevron_right,
+                            size: 15,
+                          ),
+                          onTap: () => _showHit(
+                            _SourceHit(
+                              _Collection.works,
+                              poem.title,
+                              poem.pageId,
+                            ),
+                          ),
+                        ),
                     if (_linkError case final error?)
                       Padding(
                         padding: const EdgeInsets.all(8),

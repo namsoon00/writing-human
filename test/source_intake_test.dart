@@ -434,6 +434,63 @@ void main() {
     },
   );
 
+  testWidgets('The collection opens a reviewed edition without a search', (
+    tester,
+  ) async {
+    final requests = <Uri>[];
+    final client = MockClient((request) async {
+      requests.add(request.url);
+      return http.Response.bytes(
+        utf8.encode(
+          jsonEncode({
+            'parse': {
+              'pageid': 1522,
+              'revid': 430577,
+              'categories': [
+                {'category': 'PD-old-70'},
+              ],
+              'text':
+                  '<div class="poem"><p><big>산유화</big><br>첫 줄<br>둘째 줄</p></div>'
+                  '<div class="poem"><p>다른 판본</p></div>',
+            },
+          }),
+        ),
+        200,
+      );
+    });
+    await http.runWithClient(() async {
+      final store = MemoryStore();
+      await open(tester, store, FakeIntake());
+      await openRegistration(tester);
+      await tester.tap(find.text('시·문장 검색'));
+      await tester.pumpAndSettle();
+      expect(find.text('바로 담을 수 있는 시'), findsOneWidget);
+      expect(requests, isEmpty);
+      final poem = find.widgetWithText(ListTile, '산유화');
+      await tester.scrollUntilVisible(
+        poem,
+        230,
+        scrollable: find
+            .descendant(
+              of: find.byType(Dialog),
+              matching: find.byType(Scrollable),
+            )
+            .last,
+      );
+      await tester.tap(poem);
+      await tester.pumpAndSettle();
+      expect(requests.single.queryParameters['oldid'], '430577');
+      expect(find.text('다른 판본'), findsNothing);
+      await tester.tap(find.text('전체 담기'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(sourceField).controller!.text,
+        '첫 줄\n둘째 줄',
+      );
+      expect(store.data.records, isEmpty);
+    }, () => client);
+  });
+
   test('A complete unique word can suggest text before a second word', () {
     const original = RegisteredOriginal('a', '아침이다. 햇빛이 책장에 내려앉았다.');
     const repeated = RegisteredOriginal('b', '햇빛이 창문에 번졌다.');

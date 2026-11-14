@@ -1532,6 +1532,20 @@ void main() {
       expect(painter.remainderFor(field.controller!.value), original);
       expect(painter.layout.computeLineMetrics().length, greaterThan(1));
       expect(store.data.pages.single.text, isEmpty);
+      await tester.enterText(bodyField, '한 문쟝을');
+      await tester.pumpAndSettle();
+      expect(painter.remainderFor(field.controller!.value), ' 옮겨 쓴다.\n$second');
+      expect(store.data.pages.single.text, '한 문쟝을');
+      expect(
+        painter.remainderFor(
+          const TextEditingValue(
+            text: '한 문쟝을 ㅇ',
+            selection: TextSelection.collapsed(offset: 7),
+            composing: TextRange(start: 6, end: 7),
+          ),
+        ),
+        '겨 쓴다.\n$second',
+      );
       await tester.enterText(bodyField, '한 문장을');
       await tester.pumpAndSettle();
       expect(find.text('느낀 점'), findsNothing);
@@ -1540,6 +1554,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(painter.remainderFor(field.controller!.value), second);
       expect(store.data.pages.single.text, '$first\n');
+      const mistyped = '한 문쟝을 옮겨 쓴다.\n';
+      await tester.enterText(bodyField, mistyped);
+      await tester.pumpAndSettle();
+      expect(store.data.pages.single.text, mistyped);
       final saved = store.data;
       expect(
         saved.activePage!.guidedOriginalId,
@@ -1560,7 +1578,7 @@ void main() {
                   )
                   .painter!
               as TranscriptionGuidePainter;
-      expect(reopened.controller!.text, '$first\n');
+      expect(reopened.controller!.text, mistyped);
       expect(reopened.controller!.selection.extentOffset, first.length + 1);
       expect(guide.remainderFor(reopened.controller!.value), second);
       expect(reopened.focusNode!.hasFocus, isFalse);

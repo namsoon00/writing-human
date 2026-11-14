@@ -41,28 +41,28 @@ class TranscriptionGuidePainter extends CustomPainter {
     final isComposing = value.isComposingRangeValid && !composing.isCollapsed;
     if (isComposing && composing.end != value.text.length) return empty;
     final committed = isComposing ? composing.start : caret.extentOffset;
-    final source = guided;
-    final guidedMatch = source == null
-        ? null
-        : matchGuidedOriginal(source, value.text, committed);
-    final match =
-        guidedMatch ?? matchOriginal(originals, value.text, committed);
-    if (match == null) return empty;
     final skipped = isComposing
         ? composing.textInside(value.text).characters.length
         : 0;
-    final remaining = guidedMatch == null
-        ? match.remainder
-        : match.original.text.substring(
-            match.end,
-            match.original.writingRange?.end ?? match.original.text.length,
-          );
+    if (guided case final source?) {
+      final end = source.writingRange?.end ?? source.text.length;
+      final match = matchGuidedOriginal(source, value.text, committed);
+      // Keep the chosen passage after a typo. Use visible characters rather
+      // than UTF-16 units to count how far the writer has moved through it.
+      final remaining = match == null
+          ? source.text
+                .substring(source.writingRange?.start ?? 0, end)
+                .trimLeft()
+                .characters
+                .skip(value.text.substring(0, committed).characters.length)
+          : source.text.substring(match.end, end).characters;
+      return (text: remaining.skip(skipped).take(400).toString(), maxLines: 6);
+    }
+    final match = matchOriginal(originals, value.text, committed);
+    if (match == null) return empty;
     return (
-      text: remaining.characters
-          .skip(skipped)
-          .take(guidedMatch == null ? 120 : 400)
-          .toString(),
-      maxLines: guidedMatch == null ? 1 : 6,
+      text: match.remainder.characters.skip(skipped).take(120).toString(),
+      maxLines: 1,
     );
   }
 

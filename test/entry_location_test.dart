@@ -57,10 +57,14 @@ void main() {
       await tester.tap(find.text('책장'));
       await tester.pumpAndSettle();
       expect(find.textContaining('예시'), findsNothing);
-      expect(find.text('새 종이'), findsOneWidget);
+      expect(find.text('연습장'), findsOneWidget);
       expect(store.writes, 0);
       expect(store.data.records, isEmpty);
-      await tester.tap(find.byTooltip('닫기'));
+      await tester.tap(find.byKey(const ValueKey('shelf-practice-book')));
+      await tester.pumpAndSettle();
+      expect(store.data.records, isEmpty);
+      expect(find.text('목차'), findsNothing);
+      await tester.tap(find.text('새 종이'));
       await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const ValueKey('page-text')),
@@ -68,6 +72,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(store.data.pages.single.text, '내가 쓰는 실제 기록');
+      expect(store.data.activeBook?.title, '연습장');
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();
       await tester.pumpWidget(WritingHumanApp(store: store));

@@ -7,15 +7,13 @@ import '../data/library_controller.dart';
 import '../data/model.dart';
 import 'paper.dart';
 
-const loosePagesTitle = '낱장 모음';
-
 class Bookshelf extends StatelessWidget {
   const Bookshelf({
     super.key,
     required this.controller,
     required this.onOpen,
     required this.onDetails,
-    required this.onLoosePages,
+    required this.onPractice,
     required this.onWrite,
     required this.query,
     this.scrollController,
@@ -23,7 +21,7 @@ class Bookshelf extends StatelessWidget {
 
   final LibraryController controller;
   final ValueChanged<Book> onOpen, onDetails;
-  final VoidCallback onWrite, onLoosePages;
+  final VoidCallback onWrite, onPractice;
   final String query;
   final ScrollController? scrollController;
 
@@ -31,10 +29,17 @@ class Bookshelf extends StatelessWidget {
   Widget build(BuildContext context) {
     final library = controller.library;
     final term = query.trim().toLowerCase();
+    final practice = controller.practiceBook;
+    final notebooks = library.books
+        .where((book) => book.id != practice.id)
+        .toList();
     final recent = term.isEmpty
-        ? library.activeBook ?? library.books.lastOrNull
+        ? notebooks
+                  .where((book) => book.id == library.activeBook?.id)
+                  .firstOrNull ??
+              notebooks.lastOrNull
         : null;
-    final books = library.books
+    final books = notebooks
         .where((book) => book.title.toLowerCase().contains(term))
         .toList();
     final compact = books.length > 3;
@@ -50,9 +55,8 @@ class Bookshelf extends StatelessWidget {
       final bookId = recordBooks[page.recordId];
       pageCounts.update(bookId, (count) => count + 1, ifAbsent: () => 1);
     }
-    final loosePageCount = pageCounts[null] ?? 0;
-    final showLoose = loosePageCount > 0 && loosePagesTitle.contains(term);
-    final shelfCount = books.length + (showLoose ? 1 : 0);
+    final showPractice = practice.title.toLowerCase().contains(term);
+    final shelfCount = books.length + (showPractice ? 1 : 0);
 
     BookCover cover(Book book, double width, {bool thumbnail = false}) =>
         BookCover(
@@ -115,14 +119,17 @@ class Bookshelf extends StatelessWidget {
       onTap: () => onOpen(book),
     );
 
-    Widget looseStack(double width) => openCoverSurface(
-      loosePagesTitle,
-      _LoosePaperStack(
+    Widget practiceCover(double width) => openCoverSurface(
+      practice.title,
+      BookCover(
+        title: practice.title,
         width: width,
-        color: paperColors[library.style.paperIndex],
+        variant: controller.coverIndexFor(practice),
+        details: controller.detailsFor(practice),
+        pageCount: (pageCounts[practice.id] ?? 0) + (pageCounts[null] ?? 0),
       ),
-      key: const ValueKey('shelf-loose-pages'),
-      onTap: onLoosePages,
+      key: const ValueKey('shelf-practice-book'),
+      onTap: onPractice,
     );
 
     Widget details(Book book) => IconButton(
@@ -229,10 +236,10 @@ class Bookshelf extends StatelessWidget {
                 i < math.min(start + columns, shelfCount);
                 i++
               )
-                if (showLoose && i == 0)
+                if (showPractice && i == 0)
                   null
                 else
-                  books[i - (showLoose ? 1 : 0)],
+                  books[i - (showPractice ? 1 : 0)],
             ];
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -247,7 +254,7 @@ class Bookshelf extends StatelessWidget {
                             width: slotWidth,
                             child: Center(
                               child: book == null
-                                  ? looseStack(coverWidth)
+                                  ? practiceCover(coverWidth)
                                   : openCover(book, coverWidth),
                             ),
                           ),
@@ -281,58 +288,6 @@ class Bookshelf extends StatelessWidget {
       },
     );
   }
-}
-
-class _LoosePaperStack extends StatelessWidget {
-  const _LoosePaperStack({required this.width, required this.color});
-
-  final double width;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: width,
-    height: width * 1.36,
-    child: Stack(
-      children: [
-        for (var layer = 2; layer >= 0; layer--)
-          Positioned(
-            top: 6.0 + (2 - layer) * 3.0,
-            left: layer * 4.0,
-            right: (2 - layer) * 4.0,
-            bottom: 2.0 + layer * 3.0,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Color.lerp(color, brandInk, layer * .06),
-                border: Border.all(color: line),
-                borderRadius: BorderRadius.circular(2),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x24513a29),
-                    blurRadius: 5,
-                    offset: Offset(1, 2),
-                  ),
-                ],
-              ),
-              child: layer == 0
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(7),
-                        child: Text(
-                          loosePagesTitle,
-                          textAlign: TextAlign.center,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: brandInk, fontSize: 15),
-                        ),
-                      ),
-                    )
-                  : null,
-            ),
-          ),
-      ],
-    ),
-  );
 }
 
 class _ShelfLabel extends StatelessWidget {

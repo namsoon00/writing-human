@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:writing_human/data/library_controller.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/main.dart';
 import 'package:writing_human/ui/book_details.dart';
@@ -158,7 +159,7 @@ void main() {
   );
 
   testWidgets(
-    'Loose pages use a paper stack and open directly from paper previews',
+    'Practice notebook collects loose records once and uses notebook tools',
     (tester) async {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(390, 844);
@@ -186,39 +187,57 @@ void main() {
       await tester.pumpWidget(WritingHumanApp(store: store));
       await tester.pumpAndSettle();
       await shelf(tester);
-      final looseStack = find.byKey(const ValueKey('shelf-loose-pages'));
-      expect(looseStack, findsOneWidget);
+      final practiceCover = find.byKey(const ValueKey('shelf-practice-book'));
+      expect(practiceCover, findsOneWidget);
       expect(
-        find.descendant(of: looseStack, matching: find.byType(BookCover)),
-        findsNothing,
+        find.descendant(of: practiceCover, matching: find.byType(BookCover)),
+        findsOneWidget,
       );
-      await tester.tap(looseStack);
+      expect(store.writes, 0);
+      await tester.tap(practiceCover);
       await tester.pumpAndSettle();
 
-      expect(find.text('낱장 모음'), findsOneWidget);
+      expect(find.text('연습장'), findsOneWidget);
       expect(find.text('목차'), findsNothing);
       expect(find.text('첫 문장\n둘째 줄'), findsOneWidget);
       expect(find.byKey(const ValueKey('writing-sheet-b')), findsOneWidget);
       expect(find.byKey(const ValueKey('writing-sheet-bound')), findsNothing);
-      expect(store.writes, 0);
+      final id = LibraryController.defaultPracticeBook.id;
+      expect(store.data.books.map((book) => book.id), ['book', id]);
+      expect(store.data.records.map((record) => record.bookId), [
+        id,
+        id,
+        'book',
+      ]);
+      expect(store.data.pages.first.text, '첫 문장\n둘째 줄');
       await tester.tap(find.byKey(const ValueKey('writing-sheet-a')));
       await tester.pumpAndSettle();
       expect(store.data.activePageId, 'a2');
-      expect(store.data.activeRecord!.bookId, isNull);
+      expect(store.data.activeRecord!.bookId, id);
 
       final heading = find.byKey(const ValueKey('writing-title'));
-      expect(tester.widget<Text>(heading).data, '낱장');
-      expect(find.byType(RibbonBookmark), findsNothing);
+      expect(tester.widget<Text>(heading).data, '연습장');
+      await tester.tap(find.byTooltip('쓰기 도구'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('책 꾸미기'));
+      final move = find.text('다른 책으로 옮기기');
+      await tester.ensureVisible(move);
+      await tester.tap(move);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('책에 묶인 글').last);
+      await tester.pumpAndSettle();
+      expect(store.data.activeRecord!.bookId, 'book');
 
       await shelf(tester);
-      await tester.tap(looseStack);
+      await tester.tap(practiceCover);
       await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('writing-sheet-a')), findsNothing);
       await tester.tap(find.widgetWithText(TextButton, '새 종이'));
       await tester.pumpAndSettle();
       await tester.enterText(editor, '새로 쓴 낱장');
       await tester.pumpAndSettle();
-      expect(store.data.books.single.id, 'book');
-      expect(store.data.activeRecord!.bookId, isNull);
+      expect(store.data.books.map((book) => book.id), ['book', id]);
+      expect(store.data.activeRecord!.bookId, id);
     },
   );
 
@@ -250,11 +269,11 @@ void main() {
     expect(find.text('모든 노트'), findsOneWidget);
     expect(
       tester.getTopLeft(cover('b1')).dy,
-      tester.getTopLeft(cover('b3')).dy,
+      tester.getTopLeft(cover('b2')).dy,
     );
     expect(
-      tester.getTopLeft(cover('b4')).dy,
-      greaterThan(tester.getTopLeft(cover('b3')).dy),
+      tester.getTopLeft(cover('b3')).dy,
+      greaterThan(tester.getTopLeft(cover('b2')).dy),
     );
     await tester.scrollUntilVisible(cover('b16'), 235, scrollable: scroll);
     expect(cover('b16'), findsOneWidget);

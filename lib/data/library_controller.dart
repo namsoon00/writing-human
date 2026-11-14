@@ -5,6 +5,41 @@ import 'store.dart';
 import 'library_backup.dart';
 
 class LibraryController extends ChangeNotifier {
+  static const defaultPracticeBook = Book(
+    id: '43f5a710-9efc-4a38-bb13-cec175a96266',
+    title: '연습장',
+  );
+
+  Book get practiceBook =>
+      library.books
+          .where((book) => book.id == defaultPracticeBook.id)
+          .firstOrNull ??
+      defaultPracticeBook;
+
+  Future<bool> openPracticeBook() async {
+    await settled;
+    if (_disposed || saveError != null) return false;
+    final book = practiceBook;
+    final exists = library.books.any((item) => item.id == book.id);
+    if (!exists || library.records.any((record) => record.bookId == null)) {
+      _publish(
+        library.copy(
+          books: exists ? null : [...library.books, book],
+          records: [
+            for (final record in library.records)
+              if (record.bookId == null)
+                record.copy(bookId: book.id)
+              else
+                record,
+          ],
+        ),
+        positionChanged: library.activeRecord?.bookId == null,
+      );
+      await settled;
+    }
+    return !_disposed && saveError == null;
+  }
+
   LibraryController(this.store, Library library)
     : library = library.bookPositions.containsKey(library.activeRecord?.bookId)
           ? library

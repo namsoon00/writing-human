@@ -43,7 +43,6 @@ class _CollectionSheetState extends State<CollectionSheet> {
   bool books = true;
   bool showSearch = false;
   String? bookId;
-  bool showingLoosePages = false;
   String query = '';
   final searchField = TextEditingController();
   final searchFocus = FocusNode(debugLabel: 'collection search');
@@ -407,6 +406,18 @@ class _CollectionSheetState extends State<CollectionSheet> {
     });
   }
 
+  Future<void> _openPractice() async {
+    final controller = c;
+    if (!await controller.openPracticeBook() || !mounted || controller != c) {
+      return;
+    }
+    setState(() {
+      books = false;
+      bookId = controller.practiceBook.id;
+      _clearSearch();
+    });
+  }
+
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: c,
@@ -414,12 +425,16 @@ class _CollectionSheetState extends State<CollectionSheet> {
       final book = c.library.books.where((b) => b.id == bookId).firstOrNull;
       final paperIndex = book?.paperIndex ?? c.library.style.paperIndex;
       final bookPaper = paperColors[paperIndex];
-      final topLevel = bookId == null && !showingLoosePages;
+      final topLevel = bookId == null;
+      final showingPractice =
+          book?.id == LibraryController.defaultPracticeBook.id;
       final records =
-          (topLevel ? c.library.records.reversed : c.library.records)
+          (topLevel || showingPractice
+                  ? c.library.records.reversed
+                  : c.library.records)
               .where((r) => topLevel || r.bookId == bookId)
               .toList();
-      final passages = !books && !showingLoosePages && widget.onPassage != null
+      final passages = !books && widget.onPassage != null
           ? LibraryPassages(c.library)
           : null;
       final shelf = books && topLevel;
@@ -460,7 +475,6 @@ class _CollectionSheetState extends State<CollectionSheet> {
                         tooltip: '모든 책',
                         onPressed: () => setState(() {
                           bookId = null;
-                          showingLoosePages = false;
                           books = true;
                           _clearSearch();
                         }),
@@ -491,7 +505,23 @@ class _CollectionSheetState extends State<CollectionSheet> {
                         ),
                       )
                     else if (book != null) ...[
-                      const Spacer(),
+                      if (showingPractice)
+                        Expanded(
+                          child: Semantics(
+                            header: true,
+                            child: Text(
+                              book.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 21,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        const Spacer(),
                       if (showSearch)
                         IconButton(
                           tooltip: '이 책에서 찾기 닫기',
@@ -514,19 +544,6 @@ class _CollectionSheetState extends State<CollectionSheet> {
                         _bookMenu(book, summary, canSearch),
                       ],
                     ],
-                    if (showingLoosePages)
-                      Expanded(
-                        child: Semantics(
-                          header: true,
-                          child: const Text(
-                            loosePagesTitle,
-                            style: TextStyle(
-                              fontSize: 21,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
                     if (topLevel && canSearch)
                       IconButton(
                         tooltip: showSearch ? '$searchLabel 닫기' : searchLabel,
@@ -578,13 +595,13 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     ],
                   ),
                 ),
-              if (showingLoosePages)
+              if (showingPractice && !showSearch)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Align(
                     alignment: AlignmentDirectional.centerEnd,
                     child: TextButton.icon(
-                      onPressed: () => widget.onNewSheet(null),
+                      onPressed: () => widget.onNewSheet(book!.id),
                       icon: const Icon(CupertinoIcons.plus, size: 15),
                       label: const Text('새 종이'),
                     ),
@@ -646,22 +663,18 @@ class _CollectionSheetState extends State<CollectionSheet> {
                         query: query,
                         onOpen: widget.onBook,
                         onWrite: () => widget.onNewSheet(null),
-                        onLoosePages: () => setState(() {
-                          books = false;
-                          showingLoosePages = true;
-                          _clearSearch();
-                        }),
+                        onPractice: _openPractice,
                         onDetails: (book) => setState(() {
                           books = false;
                           bookId = book.id;
                           _clearSearch();
                         }),
                       )
-                    : topLevel || showingLoosePages
+                    : topLevel || showingPractice
                     ? _writingSheets(
                         records,
                         results: searching
-                            ? passages.search(query).toList()
+                            ? passages.search(query, bookId: bookId).toList()
                             : null,
                       )
                     : searching
@@ -746,7 +759,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
       final book = books[recordBooks[passage.page.recordId]];
       return WritingSheetPreview(
         excerpt: passage.excerpt,
-        notebook: book?.title,
+        notebook: bookId == null ? book?.title : null,
         date: passage.page.writtenOn,
         style: c.styleFor(book),
         onOpen: () => widget.onPassage!(passage),
@@ -755,9 +768,9 @@ class _CollectionSheetState extends State<CollectionSheet> {
 
     return ListView.separated(
       key: results == null
-          ? PageStorageKey(showingLoosePages ? 'loose-writing' : 'writing')
+          ? PageStorageKey(bookId == null ? 'writing' : 'practice-writing')
           : ValueKey(query.trim()),
-      controller: results == null && !showingLoosePages ? writingScroll : null,
+      controller: results == null && bookId == null ? writingScroll : null,
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
       itemCount: count,
@@ -770,7 +783,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
         return WritingSheetPreview(
           key: ValueKey('writing-sheet-${record.id}'),
           excerpt: _firstWriting(recordPages),
-          notebook: book?.title,
+          notebook: bookId == null ? book?.title : null,
           date: recordPages.firstOrNull?.writtenOn,
           style: c.styleFor(book),
           onOpen: () => widget.onRecord(record),

@@ -13,21 +13,31 @@ TextEditingValue input(
 );
 
 void main() {
-  test('Only a newly written character requests a stroke', () {
+  test('Each new letter or syllable requests one stroke', () {
     final cases = [
-      (input('', 0), input('ㅎ', 1, const TextRange(start: 0, end: 1)), false),
+      (input('', 0), input('ㅎ', 1, const TextRange(start: 0, end: 1)), true),
       (
         input('ㅎ', 1, const TextRange(start: 0, end: 1)),
         input('한', 1, const TextRange(start: 0, end: 1)),
         false,
       ),
-      (input('한', 1, const TextRange(start: 0, end: 1)), input('한', 1), true),
+      (input('한', 1, const TextRange(start: 0, end: 1)), input('한', 1), false),
       (
         input('한', 1, const TextRange(start: 0, end: 1)),
         input('한ㄱ', 2, const TextRange(start: 1, end: 2)),
         true,
       ),
       (input('한ㄱ', 2, const TextRange(start: 1, end: 2)), input('한', 1), false),
+      (
+        input('가다', 1),
+        input('가ㄴ다', 2, const TextRange(start: 1, end: 2)),
+        true,
+      ),
+      (
+        input('가ㄴ다', 2, const TextRange(start: 1, end: 2)),
+        input('가나다', 2),
+        false,
+      ),
       (input('가다', 1), input('가나다', 2), true),
       (input('', 0), input('글을 붙여 넣는다', 9), false),
       (input('가', 1), input('가 ', 2), false),

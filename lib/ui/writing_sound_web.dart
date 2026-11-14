@@ -33,6 +33,7 @@ class WritingSound {
   web.AudioBufferSourceNode? _playing;
   double _nextStroke = 0;
   bool _closed = false;
+  ({bool Function() isFocused, DateTime expires})? _pending;
 
   void _activate() {
     try {
@@ -57,6 +58,7 @@ class WritingSound {
   Future<void> _resume(web.AudioContext context) async {
     try {
       await context.resume().toDart;
+      _playPending();
     } catch (error) {
       if (!_closed) debugPrint('Writing audio activation failed: $error');
     }
@@ -73,29 +75,45 @@ class WritingSound {
       final buffer = await context
           .decodeAudioData(Uint8List.fromList(data).buffer.toJS)
           .toDart;
-      if (!_closed) _buffer = buffer;
+      if (!_closed) {
+        _buffer = buffer;
+        _playPending();
+      }
     } catch (error) {
       if (!_closed) debugPrint('Writing audio could not be loaded: $error');
     }
   }
 
   Future<void> stroke(bool Function() isFocused) async {
-    final context = _context;
-    final buffer = _buffer;
-    final gain = _gain;
-    if (_closed ||
-        context == null ||
-        context.state != 'running' ||
-        buffer == null ||
-        gain == null ||
-        !isFocused() ||
-        context.currentTime < _nextStroke) {
+    if (_closed || !isFocused()) return;
+    if (_context?.state != 'running' || _buffer == null) {
+      _pending = (
+        isFocused: isFocused,
+        expires: DateTime.now().add(const Duration(milliseconds: 200)),
+      );
       return;
     }
+    _play();
+  }
+
+  void _playPending() {
+    if (_closed || _context?.state != 'running' || _buffer == null) return;
+    final pending = _pending;
+    _pending = null;
+    if (pending != null &&
+        DateTime.now().isBefore(pending.expires) &&
+        pending.isFocused()) {
+      _play();
+    }
+  }
+
+  void _play() {
+    final context = _context!;
+    if (context.currentTime < _nextStroke) return;
     try {
       final source = context.createBufferSource();
-      source.buffer = buffer;
-      source.connect(gain);
+      source.buffer = _buffer;
+      source.connect(_gain!);
       source.onended = ((web.Event _) {
         source.disconnect();
         if (_playing == source) _playing = null;
@@ -110,6 +128,7 @@ class WritingSound {
 
   Future<void> dispose() async {
     _closed = true;
+    _pending = null;
     for (final event in _activationEvents) {
       web.document.removeEventListener(event, _interaction, true.toJS);
     }

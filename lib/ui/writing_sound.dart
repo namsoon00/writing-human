@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 export 'writing_sound_native.dart'
     if (dart.library.js_interop) 'writing_sound_web.dart';
 
-/// Accept a single visible grapheme at the edit position. A composing range can
-/// move forward when the IME commits one syllable and starts the next.
+/// Play once when a visible letter is inserted or starts composing. As an IME
+/// updates a syllable in place or commits it, that syllable already had a sound.
 bool hasNewWrittenCharacter(TextEditingValue before, TextEditingValue after) {
-  if (before == after ||
+  if (before.text == after.text ||
       !after.selection.isValid ||
       !after.selection.isCollapsed ||
       after.selection.end > after.text.length) {
@@ -17,14 +17,17 @@ bool hasNewWrittenCharacter(TextEditingValue before, TextEditingValue after) {
   final composing = after.isComposingRangeValid && !after.composing.isCollapsed;
   final start = wasComposing ? before.composing.start : before.selection.start;
   final oldEnd = wasComposing ? before.composing.end : before.selection.end;
-  final end = composing ? after.composing.start : after.selection.end;
-  final newEnd = composing ? after.composing.end : end;
+  if (wasComposing &&
+      (!composing || after.composing.start <= before.composing.start)) {
+    return false;
+  }
+  final insertedStart = composing ? after.composing.start : start;
+  final newEnd = composing ? after.composing.end : after.selection.end;
   if (start < 0 ||
       oldEnd > before.text.length ||
-      end <= start ||
-      end - start > 24 ||
-      (!wasComposing && composing) ||
-      (!wasComposing && before.text == after.text)) {
+      insertedStart < start ||
+      newEnd <= insertedStart ||
+      newEnd - insertedStart > 24) {
     return false;
   }
 
@@ -35,6 +38,6 @@ bool hasNewWrittenCharacter(TextEditingValue before, TextEditingValue after) {
       !after.text.endsWith(before.text.substring(oldEnd))) {
     return false;
   }
-  final inserted = after.text.substring(start, end);
+  final inserted = after.text.substring(insertedStart, newEnd);
   return inserted.trim().isNotEmpty && inserted.characters.length == 1;
 }

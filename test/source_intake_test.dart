@@ -1346,7 +1346,7 @@ void main() {
   );
 
   testWidgets(
-    'A saved original guides multiple lines without pre-filling the page',
+    'Save and transcribe restores the chosen guide and typed prefix after reopening',
     (tester) async {
       final store = MemoryStore();
       await open(tester, store, FakeIntake());
@@ -1356,11 +1356,8 @@ void main() {
       const original = '$first\n$second';
       await tester.enterText(sourceField, original);
       await tester.pumpAndSettle();
-      expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
-      await tester.tap(confirm);
+      await tester.tap(find.text('저장하고 필사하기'));
       await settleSourceSheets(tester);
-      await tester.tap(find.text('이 구절 필사하기').hitTestable());
-      await tester.pumpAndSettle();
       final field = tester.widget<TextField>(bodyField);
       final painter =
           tester
@@ -1382,6 +1379,72 @@ void main() {
       await tester.pumpAndSettle();
       expect(painter.remainderFor(field.controller!.value), second);
       expect(store.data.pages.single.text, '$first\n');
+      final saved = store.data;
+      expect(
+        saved.activePage!.guidedOriginalId,
+        saved.records.single.originals.single.id,
+      );
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+      store.data = Library.decode(saved.encode());
+      await tester.pumpWidget(
+        WritingHumanApp(store: store, sourceIntake: FakeIntake()),
+      );
+      await tester.pumpAndSettle();
+      final reopened = tester.widget<TextField>(bodyField);
+      final guide =
+          tester
+                  .widget<CustomPaint>(
+                    find.byKey(const ValueKey('transcription-guide')),
+                  )
+                  .painter!
+              as TranscriptionGuidePainter;
+      expect(reopened.controller!.text, '$first\n');
+      expect(reopened.controller!.selection.extentOffset, first.length + 1);
+      expect(guide.remainderFor(reopened.controller!.value), second);
+      expect(reopened.focusNode!.hasFocus, isFalse);
+    },
+  );
+
+  testWidgets(
+    'Save and transcribe from the original panel preserves the existing page',
+    (tester) async {
+      final store = MemoryStore()
+        ..data = const Library(
+          books: [
+            Book(
+              id: 'b',
+              title: '문장 수첩',
+              originals: [RegisteredOriginal('first', '먼저 저장한 구절')],
+            ),
+          ],
+          records: [WritingRecord(id: 'r', bookId: 'b', title: '필사')],
+          pages: [
+            WritingPage(id: 'p', recordId: 'r', number: 1, text: '이미 쓴 글'),
+          ],
+          activePageId: 'p',
+          writing: true,
+        );
+      await open(tester, store, FakeIntake());
+      await tester.tap(place);
+      await tester.pumpAndSettle();
+      expect(reading, findsOneWidget);
+      await tester.tap(find.text('원문 등록'));
+      await tester.pumpAndSettle();
+      await tester.enterText(sourceField, '새로 옮겨 쓸 구절');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('저장하고 필사하기'));
+      await settleSourceSheets(tester);
+
+      expect(reading, findsNothing);
+      expect(store.data.pages.first.text, '이미 쓴 글');
+      expect(store.data.activePageId, isNot('p'));
+      expect(store.data.activeBook!.id, 'b');
+      expect(store.data.activePage!.text, isEmpty);
+      expect(
+        store.data.activePage!.guidedOriginalId,
+        store.data.activeBook!.originals.last.id,
+      );
     },
   );
 

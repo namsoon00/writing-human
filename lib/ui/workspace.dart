@@ -28,6 +28,12 @@ import 'book_front_cover.dart';
 import 'page_read_preview.dart';
 import 'archive_sheet.dart';
 
+typedef _SavedOriginal = ({
+  String? bookId,
+  RegisteredOriginal original,
+  bool startTranscription,
+});
+
 class Workspace extends StatefulWidget {
   const Workspace({
     super.key,
@@ -64,7 +70,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   final _originalByPage = <String, String>{};
   final _originalByVolume = <({String? bookId, String? recordId}), String>{};
 
-  ({String pageId, String originalId})? _guided;
   late final SourceIntake _intake = widget.sourceIntake ?? createSourceIntake();
   StreamSubscription<void>? _incomingEvents;
   IncomingSource? _incoming;
@@ -296,7 +301,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       }
       if (_accountLocked || !_showCover) _coverAnchor = null;
       if (_accountLocked || _reveal?.pageId != page.id) _reveal = null;
-      if (_accountLocked || _guided?.pageId != page.id) _guided = null;
       if (_accountLocked || _savedSource?.pageId != page.id) {
         _savedSource = null;
       }
@@ -620,6 +624,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           books: books,
           bookId: bookId,
           allowUnbound: allowUnbound,
+          allowTranscription: shared == null,
         ),
         forBook: targetBook,
       ),
@@ -629,7 +634,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     return result;
   }
 
-  Future<({String? bookId, RegisteredOriginal original})?> _registerOriginal({
+  Future<_SavedOriginal?> _registerOriginal({
     String? bookId,
     WritingPage? selectedPage,
     SourcePhoto? initialPhoto,
@@ -684,7 +689,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         _sourceNotice('원문을 저장하지 못했어요. 다시 저장해 주세요.');
         return null;
       }
-      return (bookId: result.bookId, original: registered);
+      return (
+        bookId: result.bookId,
+        original: registered,
+        startTranscription: result.startTranscription,
+      );
     } finally {
       _sourceBusy = false;
     }
@@ -708,7 +717,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         selectedPage: selectedPage,
         initialPhoto: initialPhoto,
       );
-      if (saved != null) _offerTranscription(selectedPage, saved);
+      if (saved != null) await _afterOriginalSave(selectedPage, saved);
       return;
     }
     _sourceBusy = true;
@@ -772,10 +781,21 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     }
   }
 
-  void _offerTranscription(
+  Future<void> _afterOriginalSave(
     WritingPage origin,
-    ({String? bookId, RegisteredOriginal original}) saved,
-  ) {
+    _SavedOriginal saved, {
+    bool fromContents = false,
+  }) async {
+    if (saved.startTranscription) {
+      Future<void> start() =>
+          _startTranscription(saved.original, saved.bookId, origin);
+      if (fromContents) {
+        await _afterSheet(start);
+      } else {
+        await start();
+      }
+      return;
+    }
     if (page.id != origin.id) return;
     setState(
       () => _savedSource = (
@@ -791,6 +811,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     String? bookId,
     WritingPage origin,
   ) async {
+    if (page.id != origin.id) return;
     String? target;
     final owner = c;
     await _navigatePage(() async {
@@ -812,25 +833,38 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               )
               .firstOrNull;
       if (source == null || source.text.trim().isEmpty) return;
-      if (page.text.isEmpty &&
+      if ((page.text.isEmpty || page.guidedOriginalId == source.id) &&
           (bookId != null
               ? book?.id == bookId
               : page.recordId == origin.recordId)) {
         _coverAnchor = null;
+        if (fresh) {
+          fresh = false;
+          userFresh = false;
+          c.saveDraft(
+            draft.withDetails(guidedOriginalId: source.id),
+            bookId: bookId,
+            keepBlank: true,
+          );
+        } else {
+          c.guidePage(page.id, source.id);
+        }
       } else if (bookId == null) {
         fresh = false;
         userFresh = false;
         _coverAnchor = null;
-        c.addPage(recordId: origin.recordId);
+        c.addPage(recordId: origin.recordId, guidedOriginalId: source.id);
       } else {
         _coverAnchor = null;
-        draft = _blank();
-        draftBookId = bookId;
-        fresh = true;
-        userFresh = true;
+        fresh = false;
+        userFresh = false;
+        c.saveDraft(
+          _blank().withDetails(guidedOriginalId: source.id),
+          bookId: bookId,
+          keepBlank: true,
+        );
       }
       target = page.id;
-      setState(() => _guided = (pageId: target!, originalId: source.id));
     }, paperTurn: false);
     if (target == null ||
         !mounted ||
@@ -872,19 +906,21 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       bookId: bookId,
       recordId: selectedPage.recordId,
     );
-    Future<({String? bookId, RegisteredOriginal original})?> register({
-      bool startWithSearch = false,
-    }) => _registerOriginal(
-      startWithSearch: startWithSearch,
-      bookId: bookId,
-      selectedPage: bookDetails == null ? selectedPage : null,
-    );
+    Future<_SavedOriginal?> register({bool startWithSearch = false}) =>
+        _registerOriginal(
+          startWithSearch: startWithSearch,
+          bookId: bookId,
+          selectedPage: bookDetails == null ? selectedPage : null,
+        );
 
     try {
       final available = originals();
       if (bookDetails == null && available.isEmpty) {
         final saved = await register();
-        if (saved != null) _offerTranscription(selectedPage, saved);
+        if (saved != null) {
+          await _afterOriginalSave(selectedPage, saved);
+          if (saved.startTranscription) return;
+        }
       } else {
         final match = bookDetails == null
             ? matchOriginal(available, selectedPage.text, selectedPage.extent)
@@ -898,16 +934,16 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         final pageChoice = bookDetails == null
             ? _originalByPage[selectedPage.id]
             : null;
-        final guided = bookDetails == null && _guided?.pageId == selectedPage.id
-            ? _guided?.originalId
+        final guided = bookDetails == null
+            ? selectedPage.guidedOriginalId
             : null;
         final initialId =
-            availableId(pageChoice) ??
             availableId(guided) ??
+            availableId(pageChoice) ??
             match?.original.id ??
             availableId(_originalByVolume[scope]);
         if (initialId != null) _originalByVolume[scope] = initialId;
-        ({String? bookId, RegisteredOriginal original})? savedElsewhere;
+        _SavedOriginal? savedAfterPanel;
         final route =
             ModalBottomSheetRoute<
               ({RegisteredOriginal? original, Passage? passage})
@@ -948,10 +984,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                             startWithSearch: startWithSearch,
                           );
                           if (saved == null) return null;
-                          if (saved.bookId != bookId) {
+                          if (saved.bookId != bookId ||
+                              saved.startTranscription) {
                             if (context.mounted &&
                                 ModalRoute.of(context)?.isCurrent == true) {
-                              savedElsewhere = saved;
+                              savedAfterPanel = saved;
                               Navigator.of(context).pop();
                             }
                             return null;
@@ -1006,9 +1043,13 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             );
         final action = await Navigator.of(context).push(route);
         await route.completed;
-        if (savedElsewhere case final saved?) {
+        if (savedAfterPanel case final saved?) {
           if (mounted && c == owner && !_accountLocked) {
-            _offerTranscription(selectedPage, saved);
+            await _afterOriginalSave(
+              selectedPage,
+              saved,
+              fromContents: bookDetails != null,
+            );
           }
           return;
         }
@@ -1508,13 +1549,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         style: style,
                         focusNode: editorFocus,
                         originals: originals,
-                        guidedOriginal: _guided?.pageId == currentPage.id
-                            ? originals
-                                  .where(
-                                    (item) => item.id == _guided?.originalId,
-                                  )
-                                  .firstOrNull
-                            : null,
+                        guidedOriginal: originals
+                            .where(
+                              (item) => item.id == currentPage.guidedOriginalId,
+                            )
+                            .firstOrNull,
                         keyboardOverlap: keyboardOverlap,
                         reveal: _reveal?.pageId == currentPage.id
                             ? (

@@ -645,7 +645,23 @@ class LibraryController extends ChangeNotifier {
     }
   }
 
-  void addPage({String? recordId}) {
+  void guidePage(String pageId, String originalId) {
+    final page = library.pages.where((item) => item.id == pageId).firstOrNull;
+    if (page == null || page.guidedOriginalId == originalId) return;
+    _publish(
+      library.copy(
+        pages: [
+          for (final item in library.pages)
+            if (item.id == pageId)
+              item.withDetails(guidedOriginalId: originalId)
+            else
+              item,
+        ],
+      ),
+    );
+  }
+
+  void addPage({String? recordId, String? guidedOriginalId}) {
     final record = recordId == null
         ? library.activeRecord
         : library.records.where((item) => item.id == recordId).firstOrNull;
@@ -653,6 +669,7 @@ class LibraryController extends ChangeNotifier {
     final page = WritingPage(
       id: _id(),
       recordId: record.id,
+      guidedOriginalId: guidedOriginalId,
       writtenOn: _today(),
       number:
           library.pages

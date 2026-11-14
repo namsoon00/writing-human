@@ -27,6 +27,7 @@ typedef SourceImportResult = ({
   String? photoId,
   String citation,
   String? bookId,
+  bool startTranscription,
 });
 
 enum _ScanMode { page, paragraph }
@@ -50,6 +51,7 @@ class SourceImportSheet extends StatefulWidget {
     this.books = const {},
     this.bookId,
     this.allowUnbound = true,
+    this.allowTranscription = false,
   });
 
   final SourceIntake intake;
@@ -59,6 +61,7 @@ class SourceImportSheet extends StatefulWidget {
   final double grainOpacity;
   final SourcePhoto? initialPhoto;
   final bool shared, registration, allowUnbound, startWithSearch;
+  final bool allowTranscription;
   final Map<String, String> books;
   final String? bookId;
 
@@ -522,7 +525,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     }
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit({bool startTranscription = false}) async {
     final text = _confirmedText;
     if (!_editable ||
         text.isEmpty ||
@@ -574,6 +577,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       writingRange: range,
       photoLines: photoLines,
       photoId: photoId,
+      startTranscription: startTranscription,
     ));
   }
 
@@ -1240,6 +1244,13 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                               minimumSize: const Size(44, 44),
                             ),
                             child: const Text('다른 앱에서 공유'),
+                          ),
+                        if (!_selecting && widget.allowTranscription)
+                          TextButton(
+                            onPressed: canSubmit
+                                ? () => _submit(startTranscription: true)
+                                : null,
+                            child: const Text('저장하고 필사하기'),
                           ),
                         FilledButton(
                           key: const ValueKey('source-confirm'),

@@ -233,6 +233,8 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
               'text': p.text,
               'pencilMarks': p.pencilMarks.map((m) => m.toJson()).toList(),
               'writtenOn': p.writtenOn,
+              if (p.guidedOriginalId != null)
+                'guidedOriginalId': p.guidedOriginalId,
               if (p.passages.isNotEmpty)
                 'passages': p.passages.map((entry) => entry.toJson()).toList(),
             },
@@ -265,6 +267,7 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         writtenOn: p.writtenOn,
         pencilMarks: p.pencilMarks,
         passages: p.passages,
+        guidedOriginalId: p.guidedOriginalId,
       );
     }
     copies++;
@@ -309,6 +312,11 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
       pages[l.id] = l;
       continue;
     }
+    final guide = _field(
+      b?.guidedOriginalId,
+      l.guidedOriginalId,
+      r.guidedOriginalId,
+    );
     if (l.text == r.text) {
       final useRemotePosition =
           b != null &&
@@ -320,12 +328,16 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         writtenOn: b?.writtenOn ?? l.writtenOn ?? r.writtenOn,
         pencilMarks: _mergeMarks(b, l, r, l.text),
         passages: _mergePassages(b, l, r, l.text),
+        guidedOriginalId: guide,
+        clearGuide: guide == null,
       );
     } else if (b != null && l.text == b.text) {
       pages[l.id] = r.withDetails(
         writtenOn: b.writtenOn ?? l.writtenOn ?? r.writtenOn,
         pencilMarks: _mergeMarks(b, l, r, r.text),
         passages: _mergePassages(b, l, r, r.text),
+        guidedOriginalId: guide,
+        clearGuide: guide == null,
       );
     } else {
       if (b == null || r.text != b.text) {
@@ -339,6 +351,8 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
               writtenOn: b.writtenOn ?? l.writtenOn ?? r.writtenOn,
               pencilMarks: _mergeMarks(b, l, r, l.text),
               passages: _mergePassages(b, l, r, l.text),
+              guidedOriginalId: guide,
+              clearGuide: guide == null,
             )
           : l;
     }
@@ -368,6 +382,7 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         writtenOn: p.writtenOn,
         pencilMarks: p.pencilMarks,
         passages: p.passages,
+        guidedOriginalId: p.guidedOriginalId,
       ),
   ];
   final allFavorites = {

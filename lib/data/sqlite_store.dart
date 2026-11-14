@@ -18,7 +18,7 @@ class SqliteLibraryStore implements LibraryStore {
     final db = await (factory ?? databaseFactory).openDatabase(
       file,
       options: OpenDatabaseOptions(
-        version: 10,
+        version: 11,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
         onUpgrade: (db, oldVersion, newVersion) async {
           if (oldVersion < 2) {
@@ -78,6 +78,11 @@ class SqliteLibraryStore implements LibraryStore {
               "ALTER TABLE books ADD COLUMN detail_overrides TEXT NOT NULL DEFAULT '{}'",
             );
           }
+          if (oldVersion < 11) {
+            await db.execute(
+              'ALTER TABLE pages ADD COLUMN guided_original_id TEXT',
+            );
+          }
         },
         onCreate: (db, version) async {
           await db.execute(
@@ -87,7 +92,7 @@ class SqliteLibraryStore implements LibraryStore {
             "CREATE TABLE records (id TEXT PRIMARY KEY, book_id TEXT REFERENCES books(id), title TEXT NOT NULL, source TEXT NOT NULL DEFAULT '', source_paragraph INTEGER NOT NULL DEFAULT 0, originals TEXT NOT NULL DEFAULT '[]')",
           );
           await db.execute(
-            "CREATE TABLE pages (id TEXT PRIMARY KEY, record_id TEXT NOT NULL REFERENCES records(id), number INTEGER NOT NULL, text TEXT NOT NULL, selection_base INTEGER NOT NULL, selection_extent INTEGER NOT NULL, scroll REAL NOT NULL, written_on TEXT, pencil_marks TEXT NOT NULL DEFAULT '[]', passages TEXT NOT NULL DEFAULT '[]', UNIQUE(record_id, number))",
+            "CREATE TABLE pages (id TEXT PRIMARY KEY, record_id TEXT NOT NULL REFERENCES records(id), number INTEGER NOT NULL, text TEXT NOT NULL, selection_base INTEGER NOT NULL, selection_extent INTEGER NOT NULL, scroll REAL NOT NULL, written_on TEXT, pencil_marks TEXT NOT NULL DEFAULT '[]', passages TEXT NOT NULL DEFAULT '[]', guided_original_id TEXT, UNIQUE(record_id, number))",
           );
           await db.execute(
             "CREATE TABLE app_state (id INTEGER PRIMARY KEY CHECK(id = 1), active_page_id TEXT REFERENCES pages(id), writing INTEGER NOT NULL, settings TEXT NOT NULL DEFAULT '{}', sync_state TEXT NOT NULL DEFAULT '{}')",
@@ -149,6 +154,7 @@ class SqliteLibraryStore implements LibraryStore {
               extent: j['selection_extent'] as int,
               scroll: (j['scroll'] as num).toDouble(),
               writtenOn: j['written_on'] as String?,
+              guidedOriginalId: j['guided_original_id'] as String?,
               passages: (jsonDecode(j['passages'] as String) as List)
                   .map((entry) => PagePassage.fromJson(entry as Json))
                   .toList(),
@@ -227,6 +233,7 @@ class SqliteLibraryStore implements LibraryStore {
           'selection_extent': p.extent,
           'scroll': p.scroll,
           'written_on': p.writtenOn,
+          'guided_original_id': p.guidedOriginalId,
           'passages': jsonEncode(
             p.passages.map((entry) => entry.toJson()).toList(),
           ),

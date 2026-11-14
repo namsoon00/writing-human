@@ -494,6 +494,7 @@ class WritingPage {
     this.writtenOn,
     this.pencilMarks = const [],
     this.passages = const [],
+    this.guidedOriginalId,
   });
   final String id, recordId, text;
   final int number, base, extent;
@@ -501,6 +502,7 @@ class WritingPage {
   final String? writtenOn;
   final List<PencilMark> pencilMarks;
   final List<PagePassage> passages;
+  final String? guidedOriginalId;
 
   PagePassage? passageAt(int offset) {
     PagePassage? active;
@@ -517,6 +519,8 @@ class WritingPage {
     String? writtenOn,
     List<PencilMark>? pencilMarks,
     List<PagePassage>? passages,
+    String? guidedOriginalId,
+    bool clearGuide = false,
   }) => WritingPage(
     id: id,
     recordId: recordId,
@@ -528,6 +532,9 @@ class WritingPage {
     writtenOn: writtenOn ?? this.writtenOn,
     pencilMarks: pencilMarks ?? this.pencilMarks,
     passages: passages ?? this.passages,
+    guidedOriginalId: clearGuide
+        ? null
+        : guidedOriginalId ?? this.guidedOriginalId,
   );
   WritingPage edited({
     required String text,
@@ -545,6 +552,7 @@ class WritingPage {
     writtenOn: writtenOn,
     pencilMarks: PencilMark.afterEdit(this.text, text, pencilMarks),
     passages: PagePassage.afterEdit(this.text, text, passages),
+    guidedOriginalId: guidedOriginalId,
   );
   Json toJson() => {
     'id': id,
@@ -556,6 +564,7 @@ class WritingPage {
     'scroll': scroll,
     if (writtenOn != null) 'writtenOn': writtenOn,
     'pencilMarks': pencilMarks.map((m) => m.toJson()).toList(),
+    if (guidedOriginalId != null) 'guidedOriginalId': guidedOriginalId,
     if (passages.isNotEmpty)
       'passages': passages.map((entry) => entry.toJson()).toList(),
   };
@@ -568,6 +577,7 @@ class WritingPage {
     extent: j['extent'] as int,
     scroll: (j['scroll'] as num).toDouble(),
     writtenOn: j['writtenOn'] as String?,
+    guidedOriginalId: j['guidedOriginalId'] as String?,
     passages: (j['passages'] as List? ?? [])
         .map((entry) => PagePassage.fromJson(entry as Json))
         .toList(),
@@ -877,6 +887,9 @@ class Library {
           (p) =>
               !recordIds.contains(p.recordId) ||
               p.number < 1 ||
+              (p.guidedOriginalId != null &&
+                  (p.guidedOriginalId!.isEmpty ||
+                      p.guidedOriginalId!.length > 250)) ||
               !p.scroll.isFinite ||
               p.scroll < 0 ||
               (p.writtenOn != null &&

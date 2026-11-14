@@ -29,7 +29,12 @@ void main() {
       final bookId = c.library.books.single.id;
       final first = c.library.activePage!.id;
       c.editPage(first, '첫 번째 문장', 2, 4, 0);
-      c.addPage();
+      final original = c.registerOriginal(
+        bookId: bookId,
+        text: '한글 문장과 emoji 🌿',
+        citation: '',
+      )!;
+      c.addPage(guidedOriginalId: original.id);
       final last = c.library.activePage!.id;
       c.editPage(
         last,
@@ -56,6 +61,7 @@ void main() {
       expect(data.pages.first.text, '');
       expect(data.activePageId, last);
       expect(data.activePage!.text, contains('🌿'));
+      expect(data.activePage!.guidedOriginalId, original.id);
       expect(data.activePage!.base, 3);
       expect(data.activePage!.extent, 8);
       expect(data.activePage!.scroll, 326.5);

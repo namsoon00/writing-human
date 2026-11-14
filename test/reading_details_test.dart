@@ -177,7 +177,7 @@ void main() {
       LibraryController? c;
       try {
         final migrated = await store.load();
-        expect(await store.db.getVersion(), 10);
+        expect(await store.db.getVersion(), 11);
         expect(migrated.encode(), original.encode());
         expect(migrated.pages.single.passages, isEmpty);
         final settings = original.style.toJson();

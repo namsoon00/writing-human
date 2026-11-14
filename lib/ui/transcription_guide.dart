@@ -68,7 +68,7 @@ class TranscriptionGuidePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (!focus.hasFocus && (guided == null || controller.text.isNotEmpty)) {
+    if (!focus.hasFocus && guided == null) {
       return;
     }
     final value = controller.value;

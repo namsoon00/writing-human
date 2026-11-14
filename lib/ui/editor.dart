@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../data/model.dart';
+import '../source/transcription_comparison.dart';
 import 'notebook_reflection.dart';
 import 'paper.dart';
 import 'ink_reveal.dart';
@@ -14,6 +15,7 @@ import 'writing_pen.dart';
 import 'writing_sound.dart';
 import 'pencil_marks.dart';
 import 'transcription_guide.dart';
+import 'transcription_marks.dart';
 import 'editable_geometry.dart';
 
 class PageEditor extends StatefulWidget {
@@ -51,6 +53,13 @@ class _PageEditorState extends State<PageEditor> {
   late TextEditingValue _observedText;
   WritingSound? _sound;
   final _guideLayout = TextPainter();
+  late TranscriptionComparison? _comparison = _compareChosen();
+
+  TranscriptionComparison? _compareChosen() {
+    final source = widget.guidedOriginal;
+    return source == null ? null : TranscriptionComparison(source);
+  }
+
   late final focus = widget.focusNode ?? FocusNode();
   bool restoring = true;
   final fieldRenderKey = GlobalKey();
@@ -97,6 +106,7 @@ class _PageEditorState extends State<PageEditor> {
     text.marks = widget.page.pencilMarks;
     text.choice = widget.style.bookDetails.pencil;
     if (oldWidget.guidedOriginal != widget.guidedOriginal) {
+      _comparison = _compareChosen();
       findEditable(
         fieldRenderKey.currentContext?.findRenderObject(),
       )?.markNeedsLayout();
@@ -350,6 +360,7 @@ class _PageEditorState extends State<PageEditor> {
             : TranscriptionGuidePainter(
                 originals: widget.originals,
                 guided: widget.guidedOriginal,
+                comparison: _comparison,
                 focus: focus,
                 controller: text,
                 scroll: scroll,
@@ -501,6 +512,15 @@ class _PageEditorState extends State<PageEditor> {
                       key: const ValueKey('transcription-guide'),
                       painter: guide,
                     ),
+                  ),
+                ),
+              if (_comparison case final comparison?)
+                Positioned.fill(
+                  child: TranscriptionMarks(
+                    comparison: comparison,
+                    controller: text,
+                    scroll: scroll,
+                    fieldKey: fieldRenderKey,
                   ),
                 ),
               if (widget.originals.any((item) => item.reflection != null))

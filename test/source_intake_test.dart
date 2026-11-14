@@ -14,6 +14,7 @@ import 'package:writing_human/main.dart';
 import 'package:writing_human/source/source_intake.dart';
 import 'package:writing_human/source/source_scan.dart';
 import 'package:writing_human/source/originals.dart';
+import 'package:writing_human/source/transcription_comparison.dart';
 import 'package:writing_human/ui/collection_sheet.dart';
 import 'package:writing_human/ui/book_details.dart';
 import 'package:writing_human/ui/book_detail_design.dart';
@@ -22,6 +23,7 @@ import 'package:writing_human/ui/reading_details.dart';
 import 'package:writing_human/ui/source_import_sheet.dart';
 import 'package:writing_human/ui/source_reading.dart';
 import 'package:writing_human/ui/transcription_guide.dart';
+import 'package:writing_human/ui/transcription_marks.dart';
 
 import 'widget_test.dart' show MemoryStore;
 
@@ -1606,6 +1608,94 @@ void main() {
       expect(reopened.controller!.selection.extentOffset, first.length + 1);
       expect(guide.remainderFor(reopened.controller!.value), second);
       expect(reopened.focusNode!.hasFocus, isFalse);
+    },
+  );
+
+  test(
+    'Transcription comparison resumes after an extra or missing grapheme',
+    () {
+      final comparison = TranscriptionComparison(
+        const RegisteredOriginal('o', '가나다라마바사.'),
+      );
+      expect(comparison.differencesFor('가나다라'), isEmpty);
+      expect(comparison.differencesFor('가낙다라'), [
+        (start: 1, end: 2, expected: '나'),
+      ]);
+      expect(comparison.differencesFor('가😀나다라'), [
+        (start: 1, end: 3, expected: ''),
+      ]);
+      expect(comparison.remainderFor('가😀나다라'), '마바사.');
+      expect(comparison.differencesFor('가다라'), [
+        (start: 1, end: 1, expected: '나'),
+      ]);
+      expect(comparison.remainderFor('가다라'), '마바사.');
+      expect(comparison.differencesFor('가나다라'), isEmpty);
+      expect(comparison.differencesFor('가나다라마바사.'), isEmpty);
+      expect(comparison.differencesFor('가나다라마바사.!'), [
+        (start: 8, end: 9, expected: ''),
+      ]);
+    },
+  );
+
+  testWidgets(
+    'A transcription mark opens the original letter after composition',
+    (tester) async {
+      final store = MemoryStore()
+        ..data = const Library(
+          records: [
+            WritingRecord(
+              id: 'r',
+              title: '필사',
+              originals: [RegisteredOriginal('o', '한 문장을 계속 이어 쓴다.')],
+            ),
+          ],
+          pages: [
+            WritingPage(
+              id: 'p',
+              recordId: 'r',
+              number: 1,
+              guidedOriginalId: 'o',
+            ),
+          ],
+          activePageId: 'p',
+          writing: true,
+        );
+      await open(tester, store, FakeIntake());
+      await tester.tap(bodyField);
+      await tester.pumpAndSettle();
+      const composing = TextEditingValue(
+        text: '한 문쟝',
+        selection: TextSelection.collapsed(offset: 4),
+        composing: TextRange(start: 3, end: 4),
+      );
+      tester.testTextInput.updateEditingValue(composing);
+      await tester.pumpAndSettle();
+      final painting = find.descendant(
+        of: find.byType(TranscriptionMarks),
+        matching: find.byType(CustomPaint),
+      );
+      List<CustomPainterSemantics> marks() => tester
+          .widget<CustomPaint>(painting)
+          .painter!
+          .semanticsBuilder!(tester.getSize(painting));
+      expect(marks(), isEmpty);
+      final field = tester.widget<TextField>(bodyField);
+      expect(field.controller!.value, composing);
+      await tester.enterText(bodyField, '한 문쟝을 계속');
+      await tester.pumpAndSettle();
+      expect(marks(), hasLength(1));
+
+      final target = marks().single.rect.center;
+      await tester.tapAt(tester.getTopLeft(painting) + target);
+      await tester.pumpAndSettle();
+      expect(find.text('원문 글자 ‘장’'), findsOneWidget);
+      expect(field.controller!.text, '한 문쟝을 계속');
+      await tester.tap(find.widgetWithText(TextButton, '닫기'));
+      await tester.pumpAndSettle();
+      await tester.enterText(bodyField, '한 문장을 계속');
+      await tester.pumpAndSettle();
+      expect(marks(), isEmpty);
+      expect(store.data.activePage!.text, '한 문장을 계속');
     },
   );
 

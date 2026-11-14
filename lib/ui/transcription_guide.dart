@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart' show RenderEditable;
 
 import '../data/model.dart';
 import '../source/originals.dart';
+import '../source/transcription_comparison.dart';
 import 'editable_geometry.dart';
 
 /// Draws the next glyphs after the real field's end, in its own paint layer.
@@ -13,6 +14,7 @@ class TranscriptionGuidePainter extends CustomPainter {
   TranscriptionGuidePainter({
     required this.originals,
     this.guided,
+    this.comparison,
     required this.focus,
     required this.controller,
     required this.scroll,
@@ -24,6 +26,7 @@ class TranscriptionGuidePainter extends CustomPainter {
 
   final List<RegisteredOriginal> originals;
   final RegisteredOriginal? guided;
+  final TranscriptionComparison? comparison;
   final FocusNode focus;
   final TextEditingController controller;
   final ScrollController scroll;
@@ -61,16 +64,17 @@ class TranscriptionGuidePainter extends CustomPainter {
     if (guided case final source?) {
       final end = source.writingRange?.end ?? source.text.length;
       final match = matchGuidedOriginal(source, value.text, committed);
-      // Keep the chosen passage after a typo. Use visible characters rather
-      // than UTF-16 units to count how far the writer has moved through it.
-      final remaining = match == null
-          ? source.text
-                .substring(source.writingRange?.start ?? 0, end)
-                .trimLeft()
+      final text = match == null
+          ? (comparison ?? TranscriptionComparison(source)).remainderFor(
+              value.text.substring(0, committed),
+              composingLength: skipped,
+            )
+          : source.text
+                .substring(match.end, end)
                 .characters
-                .skip(value.text.substring(0, committed).characters.length)
-          : source.text.substring(match.end, end).characters;
-      return (text: remaining.skip(skipped).toString(), maxLines: null);
+                .skip(skipped)
+                .toString();
+      return (text: text, maxLines: null);
     }
     final match = matchOriginal(originals, value.text, committed);
     if (match == null) return empty;
@@ -153,6 +157,7 @@ class TranscriptionGuidePainter extends CustomPainter {
   bool shouldRepaint(TranscriptionGuidePainter oldDelegate) =>
       originals != oldDelegate.originals ||
       guided != oldDelegate.guided ||
+      comparison != oldDelegate.comparison ||
       focus != oldDelegate.focus ||
       style != oldDelegate.style ||
       controller != oldDelegate.controller ||

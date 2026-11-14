@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../data/model.dart';
 import 'notebook_reflection.dart';
 import 'paper.dart';
+import 'ink_reveal.dart';
 import 'paper_highlighter.dart';
 import 'paper_selection_menu.dart';
 import 'writing_pen.dart';
@@ -404,44 +405,50 @@ class _PageEditorState extends State<PageEditor> {
                         ).withValues(alpha: .25),
                         selectionHandleColor: penColors[style.penIndex],
                       ),
-                      child: TextField(
-                        key: const ValueKey('page-text'),
+                      child: InkReveal(
                         controller: text,
-                        scrollController: scroll,
-                        focusNode: focus,
-                        // Keep native input/selection, with a separate ink indicator.
-                        showCursor: false,
-                        maxLines: null,
-                        minLines: null,
-                        expands: true,
-                        textAlignVertical: TextAlignVertical.top,
-                        keyboardType: TextInputType.multiline,
-                        textInputAction: TextInputAction.newline,
-                        autocorrect: false,
-                        enableSuggestions: false,
-                        contextMenuBuilder: _selectionMenu,
-                        style: writingTextStyle(
-                          style.fontIndex,
-                          size: 23,
-                          color: penColors[style.penIndex],
-                          useDevelopmentTypeface: style.useDevelopmentTypeface,
-                        ),
-                        cursorColor: brandInk,
-                        cursorWidth: 1.2,
-                        // Keep the native scroll viewport the height of the
-                        // paper, including when the editable has no text.
-                        decoration: hasChosenGuide
-                            ? null
-                            : InputDecoration(
-                                contentPadding: EdgeInsets.only(
-                                  top: visiblePadding.top,
-                                  bottom: visiblePadding.bottom,
+                        focus: focus,
+                        enabled: style.penMotion,
+                        child: TextField(
+                          key: const ValueKey('page-text'),
+                          controller: text,
+                          scrollController: scroll,
+                          focusNode: focus,
+                          // Keep native input/selection, with a separate ink indicator.
+                          showCursor: false,
+                          maxLines: null,
+                          minLines: null,
+                          expands: true,
+                          textAlignVertical: TextAlignVertical.top,
+                          keyboardType: TextInputType.multiline,
+                          textInputAction: TextInputAction.newline,
+                          autocorrect: false,
+                          enableSuggestions: false,
+                          contextMenuBuilder: _selectionMenu,
+                          style: writingTextStyle(
+                            style.fontIndex,
+                            size: 23,
+                            color: penColors[style.penIndex],
+                            useDevelopmentTypeface:
+                                style.useDevelopmentTypeface,
+                          ),
+                          cursorColor: brandInk,
+                          cursorWidth: 1.2,
+                          // Keep the native scroll viewport the height of the
+                          // paper, including when the editable has no text.
+                          decoration: hasChosenGuide
+                              ? null
+                              : InputDecoration(
+                                  contentPadding: EdgeInsets.only(
+                                    top: visiblePadding.top,
+                                    bottom: visiblePadding.bottom,
+                                  ),
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  filled: false,
                                 ),
-                                border: InputBorder.none,
-                                enabledBorder: InputBorder.none,
-                                focusedBorder: InputBorder.none,
-                                filled: false,
-                              ),
+                        ),
                       ),
                     ),
                   ),
@@ -513,7 +520,6 @@ class _PageEditorState extends State<PageEditor> {
                   scroll: scroll,
                   focus: focus,
                   fieldKey: fieldRenderKey,
-                  animateInk: style.penMotion,
                   color: penColors[style.penIndex],
                 ),
               ),

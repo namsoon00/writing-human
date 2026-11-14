@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ShaderMaskLayer;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/data/model.dart';
@@ -74,6 +75,10 @@ void expectStrokeAtCaret(WidgetTester tester) {
   expect(tester.getSize(_stroke).height, closeTo(height, .2));
 }
 
+Iterable<ShaderMaskLayer> _inkLayers(WidgetTester tester) => tester.layers
+    .whereType<ShaderMaskLayer>()
+    .where((layer) => layer.blendMode == BlendMode.dstIn);
+
 void main() {
   Future<GlobalKey<PenHarnessState>> open(
     WidgetTester tester, {
@@ -105,13 +110,38 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 40));
       final duringStroke = strokeCenter(tester);
-      expect(find.byKey(const ValueKey('fresh-ink')), findsOneWidget);
+      final controllerBefore = tester.widget<TextField>(_field).controller!;
+      final input = controllerBefore.value;
+      final editable = tester
+          .state<EditableTextState>(find.byType(EditableText))
+          .renderEditable;
+      final glyphBefore = editable
+          .getBoxesForSelection(
+            const TextSelection(baseOffset: 0, extentOffset: 1),
+          )
+          .single
+          .toRect();
+      expect(_inkLayers(tester), hasLength(1));
       await tester.pumpAndSettle();
       expectStrokeAtCaret(tester);
+      expect(
+        tester.widget<TextField>(_field).controller,
+        same(controllerBefore),
+      );
+      expect(controllerBefore.value, input);
+      expect(
+        editable
+            .getBoxesForSelection(
+              const TextSelection(baseOffset: 0, extentOffset: 1),
+            )
+            .single
+            .toRect(),
+        glyphBefore,
+      );
       expect(tester.getSize(_stroke).width, closeTo(1.2, .001));
       expect(duringStroke.dx, greaterThan(first.dx));
       expect(duringStroke, strokeCenter(tester));
-      expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
+      expect(_inkLayers(tester), isEmpty);
       expect(strokeCenter(tester).dx, greaterThan(first.dx));
       final singleLine = strokeCenter(tester);
       final prose = '한 문장\n${List.filled(4, '천천히 옮겨 쓰는 문장 ').join()}';
@@ -167,7 +197,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(controller.value, value);
-        expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
+        expect(_inkLayers(tester), isEmpty);
         expectStrokeAtCaret(tester);
         final point = strokeCenter(tester);
         await tester.pump(const Duration(milliseconds: 60));
@@ -230,7 +260,7 @@ void main() {
       key.currentState!.change(() => key.currentState!.enabled = false);
       await tester.pumpAndSettle();
       expectStrokeAtCaret(tester);
-      expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
+      expect(_inkLayers(tester), isEmpty);
       expect(
         tester.widget<TextField>(_field).controller,
         same(field.controller),
@@ -241,7 +271,7 @@ void main() {
       });
       await tester.pumpAndSettle();
       expectStrokeAtCaret(tester);
-      expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
+      expect(_inkLayers(tester), isEmpty);
       expect(field.controller!.value, value);
       final typed = value.copyWith(
         text: '${value.text.substring(0, 1)}글${value.text.substring(1)}',
@@ -252,7 +282,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 40));
       expectStrokeAtCaret(tester);
-      expect(find.byKey(const ValueKey('fresh-ink')), findsNothing);
+      expect(_inkLayers(tester), isEmpty);
       expect(field.controller!.value, typed);
       field.focusNode!.unfocus();
       await tester.pumpAndSettle();

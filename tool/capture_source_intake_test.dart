@@ -47,6 +47,10 @@ Future<Uint8List> printedPage() async {
   return bytes;
 }
 
+Iterable<ShaderMaskLayer> _inkLayers(WidgetTester tester) => tester.layers
+    .whereType<ShaderMaskLayer>()
+    .where((layer) => layer.blendMode == BlendMode.dstIn);
+
 void main() {
   testWidgets('Render source placement, photo paragraphs, review and writing', (
     tester,
@@ -161,7 +165,7 @@ void main() {
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 35));
-    expect(find.byKey(const ValueKey('fresh-ink')), findsOneWidget);
+    expect(_inkLayers(tester), hasLength(1));
     expect(
       tester
           .widget<TextField>(find.byKey(const ValueKey('page-text')))

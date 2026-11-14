@@ -85,7 +85,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   CameraPage? _cameraPage;
   bool _fromLiveCamera = false;
   ({String text, PencilMark range})? _range;
-  bool _savingPhoto = false;
+  bool _savingPhoto = false, _startTranscription = false;
   late final OriginalPhotoStore _photos = const OriginalPhotoStore();
   _ScanMode _mode = _ScanMode.page;
   List<int> _order = [];
@@ -1052,12 +1052,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final media = MediaQuery.of(context);
-    final inset = media.viewInsets.bottom;
-    final available = math.max(
-      0.0,
-      media.size.height - inset - media.padding.top,
-    );
     final text = _fields
         .map((c) => normalizeSource(c.text))
         .where((value) => value.isNotEmpty)
@@ -1070,57 +1064,51 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     final selectionReady = _mode == _ScanMode.page
         ? _selected.isNotEmpty
         : _paragraph != null;
-    final showShare = !_selecting && !_reviewing && !widget.shared;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: widget.paperColor,
-        image: paperGrain(widget.paperColor, widget.grainOpacity),
-      ),
-      child: Padding(
-        padding: EdgeInsets.only(bottom: inset),
+    return PopScope(
+      canPop: !_savingPhoto,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: widget.paperColor,
+          image: paperGrain(widget.paperColor, widget.grainOpacity),
+        ),
         child: SafeArea(
-          top: false,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: _selecting
-                  ? available * .92
-                  : math.min(680, available * .88),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+          child: LayoutBuilder(
+            builder: (context, constraints) => Column(
               children: [
-                Flexible(
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 12, 0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _selecting
+                              ? _mode == _ScanMode.page
+                                    ? '페이지 인식 결과'
+                                    : '문단 고르기'
+                              : _reviewing
+                              ? '원문 확인'
+                              : widget.shared
+                              ? '공유한 원문'
+                              : '원문 등록',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 22),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: '닫기',
+                        onPressed: _savingPhoto
+                            ? null
+                            : () => Navigator.pop(context),
+                        icon: const Icon(CupertinoIcons.xmark, size: 19),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
                   child: ListView(
-                    shrinkWrap: true,
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              _selecting
-                                  ? _mode == _ScanMode.page
-                                        ? '페이지 인식 결과'
-                                        : '문단 고르기'
-                                  : _reviewing
-                                  ? '원문 확인'
-                                  : widget.shared
-                                  ? '공유한 원문'
-                                  : '원문 등록',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 22),
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: '닫기',
-                            onPressed: _savingPhoto
-                                ? null
-                                : () => Navigator.pop(context),
-                            icon: const Icon(CupertinoIcons.xmark, size: 19),
-                          ),
-                        ],
-                      ),
                       if (!_selecting && !_reviewing && !widget.shared)
                         Align(
                           alignment: Alignment.centerLeft,
@@ -1151,7 +1139,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                         ),
                       if (_selecting)
                         ..._selectionPanel(
-                          (available * .46).clamp(180.0, 520.0),
+                          (constraints.maxHeight * .46).clamp(180.0, 520.0),
                         )
                       else if (_reviewing)
                         ..._reviewPanel()
@@ -1159,6 +1147,14 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                         _field(_text, 0),
                         const SizedBox(height: 5),
                         _importTools(),
+                        if (!widget.shared)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton(
+                              onPressed: _editable ? _shareHelp : null,
+                              child: const Text('다른 앱에서 공유'),
+                            ),
+                          ),
                       ],
                       if (text.length > sourceLengthLimit)
                         const Text('원문이 너무 길어요. 옮겨 쓸 구절만 남겨 주세요.'),
@@ -1221,61 +1217,51 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                           ),
                         ),
                       ],
+                      if (!_selecting && widget.allowTranscription)
+                        CheckboxListTile(
+                          key: const ValueKey('source-transcribe-after-save'),
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          title: const Text('저장 후 바로 필사하기'),
+                          value: _startTranscription,
+                          onChanged: _editable
+                              ? (checked) => setState(
+                                  () => _startTranscription = checked ?? false,
+                                )
+                              : null,
+                        ),
                     ],
                   ),
                 ),
+                const Divider(height: 1, color: line),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
                   child: SizedBox(
                     width: double.infinity,
-                    child: OverflowBar(
-                      alignment: showShare
-                          ? MainAxisAlignment.spaceBetween
-                          : MainAxisAlignment.end,
-                      overflowAlignment: OverflowBarAlignment.end,
-                      spacing: 8,
-                      children: [
-                        if (showShare)
-                          TextButton(
-                            onPressed: _editable ? _shareHelp : null,
-                            style: TextButton.styleFrom(
-                              foregroundColor: muted,
-                              padding: EdgeInsets.zero,
-                              minimumSize: const Size(44, 44),
-                            ),
-                            child: const Text('다른 앱에서 공유'),
-                          ),
-                        if (!_selecting && widget.allowTranscription)
-                          TextButton(
-                            onPressed: canSubmit
-                                ? () => _submit(startTranscription: true)
-                                : null,
-                            child: const Text('저장하고 필사하기'),
-                          ),
-                        FilledButton(
-                          key: const ValueKey('source-confirm'),
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size(88, 44),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                          ),
-                          onPressed: _selecting
-                              ? selectionReady && !_busy
-                                    ? _reviewSelection
-                                    : null
-                              : canSubmit
-                              ? _submit
-                              : null,
-                          child: Text(
-                            !_selecting
-                                ? '저장'
-                                : _mode == _ScanMode.page
-                                ? '페이지 확인'
-                                : '선택한 구절 확인',
-                          ),
+                    child: FilledButton(
+                      key: const ValueKey('source-confirm'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(0, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                      ],
+                      ),
+                      onPressed: _selecting
+                          ? selectionReady && !_busy
+                                ? _reviewSelection
+                                : null
+                          : canSubmit
+                          ? () =>
+                                _submit(startTranscription: _startTranscription)
+                          : null,
+                      child: Text(
+                        !_selecting
+                            ? '저장'
+                            : _mode == _ScanMode.page
+                            ? '페이지 확인'
+                            : '선택한 구절 확인',
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
                 ),

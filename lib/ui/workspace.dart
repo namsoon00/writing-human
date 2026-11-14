@@ -602,31 +602,30 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         (link.scheme == 'http' || link.scheme == 'https') &&
         link.host.isNotEmpty &&
         !RegExp(r'\s').hasMatch(sharedText);
-    final route = ModalBottomSheetRoute<SourceImportResult>(
-      isScrollControlled: true,
-      showDragHandle: true,
-      backgroundColor: paperColors[style.paperIndex],
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      constraints: const BoxConstraints(maxWidth: 600),
-      builder: (_) => _insertedPage(
-        SourceImportSheet(
-          intake: _intake,
-          initialText: linkOnly ? '' : sharedText,
-          initialCitation: linkOnly ? sharedText : '',
-          initialPhoto: initialPhoto,
-          startWithSearch: startWithSearch,
-          choice: style.bookDetails.sourceSlip,
-          penColor: penColors[style.penIndex],
-          paperColor: paperColors[style.paperIndex],
-          grainOpacity: paperGrainOpacity[style.paperIndex],
-          shared: shared != null,
-          registration: shared == null,
-          books: books,
-          bookId: bookId,
-          allowUnbound: allowUnbound,
-          allowTranscription: shared == null,
+    final route = MaterialPageRoute<SourceImportResult>(
+      fullscreenDialog: true,
+      builder: (_) => Scaffold(
+        backgroundColor: paperColors[style.paperIndex],
+        body: _insertedPage(
+          SourceImportSheet(
+            intake: _intake,
+            initialText: linkOnly ? '' : sharedText,
+            initialCitation: linkOnly ? sharedText : '',
+            initialPhoto: initialPhoto,
+            startWithSearch: startWithSearch,
+            choice: style.bookDetails.sourceSlip,
+            penColor: penColors[style.penIndex],
+            paperColor: paperColors[style.paperIndex],
+            grainOpacity: paperGrainOpacity[style.paperIndex],
+            shared: shared != null,
+            registration: shared == null,
+            books: books,
+            bookId: bookId,
+            allowUnbound: allowUnbound,
+            allowTranscription: shared == null,
+          ),
+          forBook: targetBook,
         ),
-        forBook: targetBook,
       ),
     );
     final result = await Navigator.of(context).push(route);

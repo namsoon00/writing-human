@@ -1472,6 +1472,10 @@ void main() {
       expect(tester.testTextInput.isVisible, isTrue);
       final caret = find.byKey(const ValueKey('writing-caret-stroke'));
       final sheet = find.byType(SourceImportSheet);
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(find.text('저장'), findsOneWidget);
+      expect(tester.getSize(sheet), const Size(320, 640));
+      expect(tester.getBottomLeft(confirm).dy, closeTo(628, 1));
       final sourceCaret = find.descendant(of: sheet, matching: caret);
       expect(sourceCaret, findsOneWidget);
       expect(tester.widget<TextField>(sourceField).showCursor, isFalse);
@@ -1484,6 +1488,7 @@ void main() {
       );
       tester.testTextInput.updateEditingValue(composing);
       await tester.pumpAndSettle();
+      expect(tester.getBottomLeft(confirm).dy, closeTo(358, 1));
       expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
       expect(
         tester.widget<TextField>(sourceField).controller!.value,
@@ -1517,7 +1522,11 @@ void main() {
       const original = '$first\n$second';
       await tester.enterText(sourceField, original);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('저장하고 필사하기'));
+      final start = find.byKey(const ValueKey('source-transcribe-after-save'));
+      await tester.ensureVisible(start);
+      await tester.tap(start);
+      await tester.pumpAndSettle();
+      await tester.tap(confirm);
       await settleSourceSheets(tester);
       final field = tester.widget<TextField>(bodyField);
       final painter =
@@ -1674,7 +1683,11 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(sourceField, '새로 옮겨 쓸 구절');
       await tester.pumpAndSettle();
-      await tester.tap(find.text('저장하고 필사하기'));
+      final start = find.byKey(const ValueKey('source-transcribe-after-save'));
+      await tester.ensureVisible(start);
+      await tester.tap(start);
+      await tester.pumpAndSettle();
+      await tester.tap(confirm);
       await settleSourceSheets(tester);
 
       expect(reading, findsNothing);

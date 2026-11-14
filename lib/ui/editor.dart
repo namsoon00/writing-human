@@ -354,14 +354,13 @@ class _PageEditorState extends State<PageEditor> {
         final visiblePadding = padding.copyWith(
           bottom: overlap > 0 ? 12 : padding.bottom,
         );
-        final hasChosenGuide = widget.guidedOriginal != null;
-        final guide = widget.originals.isEmpty
+        final source = widget.guidedOriginal;
+        final hasChosenGuide = source != null;
+        final guide = source == null
             ? null
             : TranscriptionGuidePainter(
-                originals: widget.originals,
-                guided: widget.guidedOriginal,
-                comparison: _comparison,
-                focus: focus,
+                guided: source,
+                comparison: _comparison!,
                 controller: text,
                 scroll: scroll,
                 fieldKey: fieldRenderKey,

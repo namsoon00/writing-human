@@ -12,22 +12,18 @@ import 'editable_geometry.dart';
 /// The editable's text length, hit testing, selection and IME remain native.
 class TranscriptionGuidePainter extends CustomPainter {
   TranscriptionGuidePainter({
-    required this.originals,
-    this.guided,
-    this.comparison,
-    required this.focus,
+    required this.guided,
+    required this.comparison,
     required this.controller,
     required this.scroll,
     required this.fieldKey,
     required this.style,
     required this.bottomPadding,
     required this.layout,
-  }) : super(repaint: Listenable.merge([controller, scroll, focus]));
+  }) : super(repaint: Listenable.merge([controller, scroll]));
 
-  final List<RegisteredOriginal> originals;
-  final RegisteredOriginal? guided;
-  final TranscriptionComparison? comparison;
-  final FocusNode focus;
+  final RegisteredOriginal guided;
+  final TranscriptionComparison comparison;
   final TextEditingController controller;
   final ScrollController scroll;
   final GlobalKey fieldKey;
@@ -36,56 +32,39 @@ class TranscriptionGuidePainter extends CustomPainter {
   final TextPainter layout;
 
   TextEditingValue? _lastValue;
-  ({String text, int? maxLines})? _lastPreview;
+  String _lastRemainder = '';
 
-  String remainderFor(TextEditingValue value) => _previewFor(value).text;
-
-  ({String text, int? maxLines}) _previewFor(TextEditingValue value) {
-    if (_lastValue == value) return _lastPreview!;
+  String remainderFor(TextEditingValue value) {
+    if (_lastValue == value) return _lastRemainder;
     _lastValue = value;
-    return _lastPreview = _computePreview(value);
+    return _lastRemainder = _computeRemainder(value);
   }
 
-  ({String text, int? maxLines}) _computePreview(TextEditingValue value) {
-    const empty = (text: '', maxLines: 1);
-    final caret = value.selection;
-    if (guided == null &&
-        (!caret.isCollapsed || caret.extentOffset != value.text.length)) {
-      return empty;
-    }
+  String _computeRemainder(TextEditingValue value) {
     final composing = value.composing;
-    final isComposing = value.isComposingRangeValid && !composing.isCollapsed;
-    final composingAtEnd = isComposing && composing.end == value.text.length;
-    if (guided == null && isComposing && !composingAtEnd) return empty;
+    final composingAtEnd =
+        value.isComposingRangeValid &&
+        !composing.isCollapsed &&
+        composing.end == value.text.length;
     final committed = composingAtEnd ? composing.start : value.text.length;
     final skipped = composingAtEnd
         ? composing.textInside(value.text).characters.length
         : 0;
-    if (guided case final source?) {
-      final end = source.writingRange?.end ?? source.text.length;
-      final match = matchGuidedOriginal(source, value.text, committed);
-      final text = match == null
-          ? (comparison ?? TranscriptionComparison(source)).remainderFor(
-              value.text.substring(0, committed),
-              composingLength: skipped,
-            )
-          : source.text
-                .substring(match.end, end)
-                .characters
-                .skip(skipped)
-                .toString();
-      return (text: text, maxLines: null);
-    }
-    final match = matchOriginal(originals, value.text, committed);
-    if (match == null) return empty;
-    return (
-      text: match.remainder.characters.skip(skipped).take(120).toString(),
-      maxLines: 1,
-    );
+    final end = guided.writingRange?.end ?? guided.text.length;
+    final match = matchGuidedOriginal(guided, value.text, committed);
+    return match == null
+        ? comparison.remainderFor(
+            value.text.substring(0, committed),
+            composingLength: skipped,
+          )
+        : guided.text
+              .substring(match.end, end)
+              .characters
+              .skip(skipped)
+              .toString();
   }
 
   double scrollExtent(double pixels) {
-    if (guided == null) return 0;
     final editable = findEditable(fieldKey.currentContext?.findRenderObject());
     if (editable == null || !editable.hasSize) return 0;
     final lineTop = _layoutAtEnd(editable);
@@ -95,7 +74,7 @@ class TranscriptionGuidePainter extends CustomPainter {
 
   double? _layoutAtEnd(RenderEditable editable) {
     final value = controller.value;
-    final (text: remainder, :maxLines) = _previewFor(value);
+    final remainder = remainderFor(value);
     final width = editable.size.width - editable.cursorWidth - 1;
     if (remainder.isEmpty || width <= 0) return null;
     final caret = editable
@@ -117,7 +96,6 @@ class TranscriptionGuidePainter extends CustomPainter {
           TextSpan(text: remainder),
         ],
       )
-      ..maxLines = maxLines
       ..textDirection = editable.textDirection
       ..textScaler = editable.textScaler
       ..locale = editable.locale
@@ -136,7 +114,6 @@ class TranscriptionGuidePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (!focus.hasFocus && guided == null) return;
     final field = fieldKey.currentContext?.findRenderObject();
     final editable = findEditable(field);
     if (field == null || editable == null || !editable.hasSize) return;
@@ -155,10 +132,8 @@ class TranscriptionGuidePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(TranscriptionGuidePainter oldDelegate) =>
-      originals != oldDelegate.originals ||
       guided != oldDelegate.guided ||
       comparison != oldDelegate.comparison ||
-      focus != oldDelegate.focus ||
       style != oldDelegate.style ||
       controller != oldDelegate.controller ||
       scroll != oldDelegate.scroll ||

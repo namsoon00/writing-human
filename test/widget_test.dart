@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/main.dart';
-import 'package:writing_human/ui/transcription_guide.dart';
 import 'package:writing_human/ui/paper.dart';
 import 'package:writing_human/ui/tools_screen.dart';
 import 'package:writing_human/data/model.dart';
@@ -760,9 +759,7 @@ void main() {
     expect(find.text('이 필사 텍스트 내보내기'), findsOneWidget);
   });
 
-  testWidgets('Saved book originals guide a reopened editor after input', (
-    tester,
-  ) async {
+  testWidgets('Saved originals stay available without a guide', (tester) async {
     const source = '먼저 골라 둔 원문\n\n다음에 골라 둔 원문';
     const written = '먼저 골라 둔 원문\n다음에 골라';
     final store = MemoryStore()
@@ -789,13 +786,9 @@ void main() {
     await tester.pumpWidget(WritingHumanApp(store: store));
     await tester.pumpAndSettle();
     final field = tester.widget<TextField>(editor);
-    final overlay = find.byKey(const ValueKey('transcription-guide'));
-    final painter =
-        tester.widget<CustomPaint>(overlay).painter!
-            as TranscriptionGuidePainter;
     expect(field.controller!.text, written);
     expect(field.focusNode!.hasFocus, isFalse);
-    expect(painter.remainderFor(field.controller!.value), ' 둔 원문');
+    expect(find.byKey(const ValueKey('transcription-guide')), findsNothing);
     expect(store.data.books.single.originals.single.text, source);
     await tester.tap(find.byKey(const ValueKey('writing-originals')));
     await tester.pumpAndSettle();

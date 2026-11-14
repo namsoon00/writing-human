@@ -585,9 +585,7 @@ void main() {
     },
   );
 
-  testWidgets('Book originals register once and match in another record', (
-    tester,
-  ) async {
+  testWidgets('Book originals can open from another record', (tester) async {
     const title = '함께 읽는 책';
     const first = '서두를 건너뛰어도 됩니다. 햇빛이 책장에 천천히 내려앉았다.';
     const second = '햇빛이 책장까지 번졌다.';
@@ -660,29 +658,13 @@ void main() {
 
     final overlay = find.byKey(const ValueKey('transcription-guide'));
     final body = tester.widget<TextField>(bodyField).controller!;
-    String remainder() =>
-        (tester.widget<CustomPaint>(overlay).painter!
-                as TranscriptionGuidePainter)
-            .remainderFor(body.value);
-    expect(remainder(), isEmpty);
-    await tester.enterText(bodyField, '햇빛이');
-    await tester.pumpAndSettle();
-    expect(remainder(), isEmpty);
     await tester.enterText(bodyField, '책장에');
     await tester.pumpAndSettle();
-    expect(remainder(), ' 천천히 내려앉았다.');
-    await tester.enterText(bodyField, '햇빛이 책장');
-    await tester.pumpAndSettle();
-    expect(remainder(), isEmpty);
-    await tester.enterText(bodyField, '햇빛이 책장에');
-    await tester.pumpAndSettle();
-    expect(remainder(), ' 천천히 내려앉았다.');
-    await tester.enterText(bodyField, '햇빛이 책장에 다르게');
-    await tester.pumpAndSettle();
-    expect(remainder(), isEmpty);
+    expect(overlay, findsNothing);
     await tester.enterText(bodyField, '내 글을 쓰고\n\n햇빛이 책장에');
     await tester.pumpAndSettle();
-    expect(remainder(), ' 천천히 내려앉았다.');
+    expect(overlay, findsNothing);
+    expect(find.byType(TranscriptionMarks), findsNothing);
     final before = body.value;
     tester.widget<TextField>(bodyField).focusNode!.unfocus();
     await settleSourceSheets(tester);
@@ -1043,7 +1025,7 @@ void main() {
       expect(store.data.activePage!.text, isEmpty);
       expect(tester.widget<TextField>(bodyField).controller, same(body));
       expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isFalse);
-      expect(find.byKey(const ValueKey('transcription-guide')), findsOneWidget);
+      expect(find.byKey(const ValueKey('transcription-guide')), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
@@ -1298,11 +1280,7 @@ void main() {
     await tester.pump();
     expect(tester.widget<TextButton>(place).onPressed, isNull);
     expect(field.controller!.value, composing);
-    final overlay = find.byKey(const ValueKey('transcription-guide'));
-    final painter =
-        tester.widget<CustomPaint>(overlay).painter!
-            as TranscriptionGuidePainter;
-    expect(painter.remainderFor(composing), '천히 내려앉았다.');
+    expect(find.byKey(const ValueKey('transcription-guide')), findsNothing);
 
     const committed = TextEditingValue(
       text: '햇빛이 책장에',

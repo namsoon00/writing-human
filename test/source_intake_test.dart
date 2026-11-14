@@ -226,7 +226,7 @@ void main() {
     );
     await tester.tap(shortcut);
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(TextField, '제목, 작가, 기억나는 구절'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '검색어'), findsOneWidget);
     await tester.tap(find.byTooltip('검색 닫기'));
     await tester.pumpAndSettle();
     expect(find.byType(SourceImportSheet), findsOneWidget);
@@ -247,6 +247,8 @@ void main() {
             'query': {
               'search': [
                 if (work) {'title': '서시', 'pageid': 1515},
+                if (work) {'title': '바다와 나비', 'pageid': 123},
+                if (work) {'title': '두시언해/서시흥', 'pageid': 124},
               ],
             },
           }),
@@ -263,23 +265,23 @@ void main() {
       await tester.ensureVisible(search);
       await tester.tap(search);
       await tester.pumpAndSettle();
-      await tester.enterText(
-        find.widgetWithText(TextField, '제목, 작가, 기억나는 구절'),
-        '윤동주 서시',
-      );
+      await tester.enterText(find.widgetWithText(TextField, '검색어'), '서시');
       expect(requests, isEmpty);
       await tester.tap(find.byTooltip('자료 검색'));
       await tester.pumpAndSettle();
+      expect(requests.map((url) => url.host), ['ko.wikisource.org']);
       expect(
-        requests.map((url) => url.host),
-        containsAll(['ko.wikisource.org', 'ko.wikiquote.org']),
-      );
-      expect(
-        requests.every((url) => url.queryParameters['srsearch'] == '윤동주 서시'),
+        requests.every(
+          (url) => url.queryParameters['srsearch'] == 'intitle:"서시"',
+        ),
         isTrue,
       );
       expect(find.text('서시'), findsOneWidget);
-      await tester.tap(find.text('출처 넣기'));
+      expect(find.text('바다와 나비'), findsNothing);
+      expect(find.text('두시언해/서시흥'), findsNothing);
+      await tester.tap(find.text('서시'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('출처만 넣기'));
       await tester.pumpAndSettle();
       final citation = tester.widget<TextField>(
         find.byKey(const ValueKey('original-citation')),
@@ -290,6 +292,33 @@ void main() {
         '직접 고른 구절',
       );
       expect(store.data.records, isEmpty);
+      await tester.tap(search);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('기억나는 구절'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.widgetWithText(TextField, '검색어'), '하늘을 우러러');
+      await tester.tap(find.byTooltip('자료 검색'));
+      await tester.pumpAndSettle();
+      expect(requests.last.queryParameters['srsearch'], '"하늘을 우러러"');
+      await tester.tap(find.text('서시'));
+      await tester.pumpAndSettle();
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async =>
+            call.method == 'Clipboard.getData' ? {'text': '복사한 구절'} : null,
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      await tester.tap(find.text('복사한 구절과 출처 넣기'));
+      await tester.pumpAndSettle();
+      expect(find.text('입력한 원문을 바꿀까요?'), findsOneWidget);
+      await tester.tap(find.text('바꾸기'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(sourceField).controller!.text, '복사한 구절');
       await tester.tap(confirm);
       await tester.pumpAndSettle();
       expect(

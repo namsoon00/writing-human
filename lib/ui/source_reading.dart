@@ -403,8 +403,10 @@ class _SourceReadingState extends State<SourceReading> {
                             onPressed: () => _register(startWithSearch: true),
                             icon: const Icon(CupertinoIcons.search, size: 19),
                           ),
-                          Flexible(
-                            flex: 2,
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.sizeOf(context).width * .34,
+                            ),
                             child: TextButton(
                               onPressed: _register,
                               child: const Text(

@@ -163,13 +163,18 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   Future<void> _searchSources() async {
     if (!_editable) return;
     FocusScope.of(context).unfocus();
-    final citation = await showSourceSearch(context, widget.paperColor);
-    if (!mounted || citation == null || !_editable) return;
-    if (_citation.text.trim().isNotEmpty && _citation.text != citation) {
+    final choice = await showSourceSearch(context, widget.paperColor);
+    if (!mounted || choice == null || !_editable) return;
+    final (text: text, citation: citation) = choice;
+    final replacesText =
+        text != null && _text.text.trim().isNotEmpty && _text.text != text;
+    final replacesCitation =
+        _citation.text.trim().isNotEmpty && _citation.text != citation;
+    if (replacesText || replacesCitation) {
       final replace = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('입력한 출처를 바꿀까요?'),
+          title: Text(replacesText ? '입력한 원문을 바꿀까요?' : '입력한 출처를 바꿀까요?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -184,6 +189,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       );
       if (!mounted || replace != true || !_editable) return;
     }
+    if (text != null) _text.text = text;
     _citation.text = citation;
   }
 
@@ -1097,20 +1103,11 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                                   : widget.shared
                                   ? '공유한 원문'
                                   : '원문 등록',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontSize: 22),
                             ),
                           ),
-                          if (!_selecting && !_reviewing && !widget.shared)
-                            Flexible(
-                              flex: 2,
-                              child: TextButton(
-                                onPressed: _editable ? _searchSources : null,
-                                child: const Text(
-                                  '시·문장 검색',
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ),
                           IconButton(
                             tooltip: '닫기',
                             onPressed: _savingPhoto
@@ -1120,6 +1117,15 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                           ),
                         ],
                       ),
+                      if (!_selecting && !_reviewing && !widget.shared)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: _editable ? _searchSources : null,
+                            icon: const Icon(CupertinoIcons.search, size: 17),
+                            label: const Text('시·문장 검색'),
+                          ),
+                        ),
                       const SizedBox(height: 12),
                       if (_busy) ...[
                         const LinearProgressIndicator(),

@@ -10,7 +10,7 @@ class WritingSound {
     // Coalesce bursts and keep only one playback in flight.
     if (_disposed ||
         _busy ||
-        (_interval.isRunning && _interval.elapsedMilliseconds < 92)) {
+        (_interval.isRunning && _interval.elapsedMilliseconds < 130)) {
       return;
     }
     _busy = true;
@@ -32,7 +32,7 @@ class WritingSound {
         );
         await player.setReleaseMode(ReleaseMode.stop);
         await player.setVolume(.68);
-        await player.setSource(AssetSource('audio/pen-stroke.wav'));
+        await player.setSource(AssetSource('audio/pencil-stroke.wav'));
       }
       if (!_disposed && isFocused()) await player.resume();
     } catch (error) {

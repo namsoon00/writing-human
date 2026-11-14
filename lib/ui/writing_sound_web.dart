@@ -66,7 +66,7 @@ class WritingSound {
 
   Future<void> _load(web.AudioContext context) async {
     try {
-      final bytes = await rootBundle.load('assets/audio/pen-stroke.wav');
+      final bytes = await rootBundle.load('assets/audio/pencil-stroke.wav');
       if (_closed) return;
       final data = bytes.buffer.asUint8List(
         bytes.offsetInBytes,
@@ -118,7 +118,7 @@ class WritingSound {
         source.disconnect();
         if (_playing == source) _playing = null;
       }).toJS;
-      _nextStroke = context.currentTime + .092;
+      _nextStroke = context.currentTime + .130;
       _playing = source;
       source.start();
     } catch (error) {

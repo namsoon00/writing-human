@@ -162,62 +162,66 @@ class ToolsScreen extends StatelessWidget {
                       ),
                   ],
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 8),
+                _toggle(
+                  panel,
+                  '줄 가이드',
+                  style.guides,
+                  (value) => controller.setStyle(style.copy(guides: value)),
+                ),
                 const Divider(color: line),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('잉크 반응', style: TextStyle(fontSize: 14)),
-                  value: style.penMotion,
-                  activeTrackColor: panelSwitchTrack,
-                  activeThumbColor: panelSwitchThumb,
-                  inactiveThumbColor: muted,
-                  inactiveTrackColor: panelSelectedColor(panel),
-                  onChanged: (v) =>
-                      controller.setStyle(style.copy(penMotion: v)),
+                ExpansionTile(
+                  key: const ValueKey('writing-sound-effects'),
+                  title: const Text('소리와 효과'),
+                  textColor: brandInk,
+                  iconColor: muted,
+                  collapsedTextColor: ink,
+                  collapsedIconColor: muted,
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: const EdgeInsetsDirectional.only(start: 12),
+                  shape: const Border(),
+                  collapsedShape: const Border(),
+                  children: [
+                    _toggle(
+                      panel,
+                      '글씨 쓰는 소리',
+                      style.writingSound,
+                      (value) =>
+                          controller.setStyle(style.copy(writingSound: value)),
+                    ),
+                    _toggle(
+                      panel,
+                      '잉크 반응',
+                      style.penMotion,
+                      (value) =>
+                          controller.setStyle(style.copy(penMotion: value)),
+                    ),
+                    _toggle(
+                      panel,
+                      '종이 넘김 효과',
+                      style.pageMotion,
+                      (value) =>
+                          controller.setStyle(style.copy(pageMotion: value)),
+                    ),
+                    _toggle(
+                      panel,
+                      '종이 넘김 소리',
+                      style.pageSound,
+                      (value) =>
+                          controller.setStyle(style.copy(pageSound: value)),
+                    ),
+                  ],
                 ),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('글씨 쓰는 소리', style: TextStyle(fontSize: 14)),
-                  value: style.writingSound,
-                  activeTrackColor: panelSwitchTrack,
-                  activeThumbColor: panelSwitchThumb,
-                  inactiveThumbColor: muted,
-                  inactiveTrackColor: panelSelectedColor(panel),
-                  onChanged: (v) => controller.setStyle(
-                    controller.library.style.copy(writingSound: v),
+                const Divider(color: line),
+                const Padding(
+                  padding: EdgeInsets.only(top: 8, bottom: 2),
+                  child: Semantics(
+                    header: true,
+                    child: Text(
+                      '책과 기록',
+                      style: TextStyle(fontSize: 13, color: muted),
+                    ),
                   ),
-                ),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('종이 넘김 효과', style: TextStyle(fontSize: 14)),
-                  value: style.pageMotion,
-                  activeTrackColor: panelSwitchTrack,
-                  activeThumbColor: panelSwitchThumb,
-                  inactiveThumbColor: muted,
-                  inactiveTrackColor: panelSelectedColor(panel),
-                  onChanged: (v) =>
-                      controller.setStyle(style.copy(pageMotion: v)),
-                ),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('종이 넘김 소리', style: TextStyle(fontSize: 14)),
-                  value: style.pageSound,
-                  activeTrackColor: panelSwitchTrack,
-                  activeThumbColor: panelSwitchThumb,
-                  inactiveThumbColor: muted,
-                  inactiveTrackColor: panelSelectedColor(panel),
-                  onChanged: (v) =>
-                      controller.setStyle(style.copy(pageSound: v)),
-                ),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('줄 가이드', style: TextStyle(fontSize: 14)),
-                  value: style.guides,
-                  activeTrackColor: panelSwitchTrack,
-                  activeThumbColor: panelSwitchThumb,
-                  inactiveThumbColor: muted,
-                  inactiveTrackColor: panelSelectedColor(panel),
-                  onChanged: (v) => controller.setStyle(style.copy(guides: v)),
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
@@ -249,13 +253,6 @@ class ToolsScreen extends StatelessWidget {
                               BookDetailTools(controller: controller),
                         ),
                 ),
-                if (controller.saveError != null)
-                  TextButton(
-                    onPressed: controller.retrySave,
-                    child: const Text('설정 저장 실패 · 다시 시도'),
-                  ),
-                const SizedBox(height: 16),
-                const Divider(color: line),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(CupertinoIcons.book, size: 20),
@@ -275,12 +272,33 @@ class ToolsScreen extends StatelessWidget {
                     title: const Text('기기 동기화'),
                     onTap: onSync,
                   ),
+                if (controller.saveError != null)
+                  TextButton(
+                    onPressed: controller.retrySave,
+                    child: const Text('설정 저장 실패 · 다시 시도'),
+                  ),
               ],
             ),
           ),
         ),
       );
     },
+  );
+
+  Widget _toggle(
+    Color panel,
+    String label,
+    bool enabled,
+    ValueChanged<bool> onChanged,
+  ) => SwitchListTile.adaptive(
+    contentPadding: EdgeInsets.zero,
+    title: Text(label, style: const TextStyle(fontSize: 14)),
+    value: enabled,
+    activeTrackColor: panelSwitchTrack,
+    activeThumbColor: panelSwitchThumb,
+    inactiveThumbColor: muted,
+    inactiveTrackColor: panelSelectedColor(panel),
+    onChanged: onChanged,
   );
 
   Widget _row(String label, Widget child) => Row(

@@ -586,6 +586,17 @@ void main() {
       expect(store.data.style.paperIndex, 2);
       expect(store.data.style.fontIndex, 2);
       expect(store.data.style.penIndex, 0);
+      expect(find.text('글씨 쓰는 소리'), findsNothing);
+      expect(find.text('책과 기록'), findsOneWidget);
+      final guides = find.widgetWithText(SwitchListTile, '줄 가이드');
+      final effects = find.text('소리와 효과');
+      expect(
+        tester.getTopLeft(guides).dy,
+        lessThan(tester.getTopLeft(effects).dy),
+      );
+      await tester.ensureVisible(effects);
+      await tester.tap(effects);
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('잉크 반응'));
       await tester.tap(find.widgetWithText(SwitchListTile, '잉크 반응'));
       await tester.pumpAndSettle();
@@ -598,6 +609,14 @@ void main() {
       expect(store.data.style.writingSound, isTrue);
       expect(store.data.style.pageSound, isFalse);
       expect(store.data.style.penMotion, isFalse);
+      await tester.ensureVisible(effects);
+      await tester.tap(effects);
+      await tester.pumpAndSettle();
+      expect(writingSound, findsNothing);
+      await tester.tap(effects);
+      await tester.pumpAndSettle();
+      expect(tester.widget<SwitchListTile>(writingSound).value, isTrue);
+      await tester.ensureVisible(find.byTooltip('닫기'));
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(editor).controller, same(controller));

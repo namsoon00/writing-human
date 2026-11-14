@@ -14,6 +14,7 @@ import '../source/source_scan.dart';
 import 'book_details.dart';
 import 'live_source_camera.dart';
 import 'paper.dart';
+import 'poem_search.dart';
 import 'original_range_sheet.dart';
 import 'source_scan_preview.dart';
 import 'writing_pen.dart';
@@ -152,6 +153,36 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _findPoem() async {
+    if (!_editable) return;
+    FocusScope.of(context).unfocus();
+    final poem = await showPoemSearch(context);
+    if (!mounted || poem == null || !_editable) return;
+    if (_text.text.trim().isNotEmpty || _citation.text.trim().isNotEmpty) {
+      final replace = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('작성 중인 원문을 바꿀까요?'),
+          content: const Text('입력한 원문과 출처가 선택한 시와 출처로 바뀝니다.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('바꾸기'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || replace != true || !_editable) return;
+    }
+    _text.text = poem.text;
+    _citation.text = poem.citation;
+    setState(() => _error = null);
   }
 
   Future<void> _shareHelp() => showDialog<void>(
@@ -578,6 +609,12 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         icon: const Icon(CupertinoIcons.doc_on_clipboard, size: 17),
         label: const Text('붙여넣기'),
       ),
+      if (!widget.shared)
+        TextButton.icon(
+          onPressed: _editable ? _findPoem : null,
+          icon: const Icon(CupertinoIcons.search, size: 17),
+          label: const Text('시 검색'),
+        ),
       if (!widget.shared)
         PopupMenuButton<_ScanMode>(
           key: const ValueKey('source-photo-menu'),

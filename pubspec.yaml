@@ -108,6 +108,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/poems/korean.json
     - assets/audio/page-turn.mp3
     - assets/audio/pen-stroke.wav
     - assets/fonts/WritingHumanDevelopment-info.json

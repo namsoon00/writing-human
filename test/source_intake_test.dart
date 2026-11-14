@@ -202,6 +202,37 @@ Future<void> takePhoto(WidgetTester tester, {bool settle = true}) async {
 }
 
 void main() {
+  testWidgets(
+    'Find a poem by its poet and verse, then save it with its source',
+    (tester) async {
+      final store = MemoryStore();
+      await open(tester, store, FakeIntake());
+      await openRegistration(tester);
+      await tester.tap(find.text('시 검색'));
+      await tester.pumpAndSettle();
+      final query = find.byKey(const ValueKey('poem-search-query'));
+      await tester.enterText(query, '이육사 청포도가 익어가는 시절');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('청포도'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('원문에 넣기'));
+      await tester.pumpAndSettle();
+      final draft = tester.widget<TextField>(sourceField).controller!.text;
+      expect(draft, contains('내 고장 칠월은\n청포도가 익어가는 시절\n\n'));
+      expect(store.data.records, isEmpty);
+      final citation = find.byKey(const ValueKey('original-citation'));
+      expect(
+        tester.widget<TextField>(citation).controller!.text,
+        startsWith('이육사 · 청포도 · 위키문헌 https://'),
+      );
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      final original = store.data.records.single.originals.single;
+      expect(original.text, draft);
+      expect(original.citation, contains('Special:PermanentLink/202488'));
+    },
+  );
+
   test('A complete unique word can suggest text before a second word', () {
     const original = RegisteredOriginal('a', '아침이다. 햇빛이 책장에 내려앉았다.');
     const repeated = RegisteredOriginal('b', '햇빛이 창문에 번졌다.');

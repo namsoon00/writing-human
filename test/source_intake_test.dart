@@ -276,10 +276,11 @@ void main() {
         ),
         isTrue,
       );
-      expect(find.text('서시'), findsOneWidget);
+      final result = find.widgetWithText(ListTile, '서시');
+      expect(result, findsOneWidget);
       expect(find.text('바다와 나비'), findsNothing);
       expect(find.text('두시언해/서시흥'), findsNothing);
-      await tester.tap(find.text('서시'));
+      await tester.tap(result);
       await tester.pumpAndSettle();
       await tester.tap(find.text('출처만 넣기'));
       await tester.pumpAndSettle();
@@ -300,7 +301,7 @@ void main() {
       await tester.tap(find.byTooltip('자료 검색'));
       await tester.pumpAndSettle();
       expect(requests.last.queryParameters['srsearch'], '"하늘을 우러러"');
-      await tester.tap(find.text('서시'));
+      await tester.tap(result);
       await tester.pumpAndSettle();
       tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
         SystemChannels.platform,

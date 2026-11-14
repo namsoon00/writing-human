@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../data/library_controller.dart';
@@ -318,6 +319,10 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     final audio = _pageAudio;
     if (audio != null) unawaited(audio.dispose());
     super.dispose();
+  }
+
+  void _dismissWritingKeyboard() {
+    if (!_editorComposing && !c.composing) _blur();
   }
 
   void _blur() {
@@ -1347,6 +1352,13 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       0.0,
       keyboardInset - MediaQuery.viewPaddingOf(context).bottom,
     );
+    // Mobile browsers may shrink the viewport instead of reporting an inset.
+    final mobileWeb =
+        kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.android);
+    final showKeyboardDismiss =
+        !preview && (keyboardInset > 0 || (mobileWeb && editorFocus.hasFocus));
     final originals = preview
         ? const <RegisteredOriginal>[]
         : originalsFor(
@@ -1511,6 +1523,10 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 child: WritingFooter(
                   ornament: style.bookDetails.ornament,
                   onMenu: _menu,
+                  showKeyboardDismiss: showKeyboardDismiss,
+                  onKeyboardDismiss: _editorComposing || c.composing
+                      ? null
+                      : _dismissWritingKeyboard,
                   onSource: navigationEnabled ? _showOriginals : null,
                   failed: c.saveError != null,
                   pageLabel: '${index + 1}',
@@ -1541,9 +1557,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       behavior: HitTestBehavior.translucent,
       excludeFromSemantics: true,
       onTap: () {
-        if (editorFocus.hasFocus && !_editorComposing && !c.composing) {
-          _blur();
-        }
+        if (editorFocus.hasFocus) _dismissWritingKeyboard();
       },
       child: surface,
     );

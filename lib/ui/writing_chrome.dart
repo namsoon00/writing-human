@@ -92,6 +92,8 @@ class WritingFooter extends StatelessWidget {
     this.pageCount = 1,
     this.onPages,
     this.onSource,
+    this.showKeyboardDismiss = false,
+    this.onKeyboardDismiss,
     this.onPrevious,
     this.onNext,
     this.onTurnStart,
@@ -104,6 +106,8 @@ class WritingFooter extends StatelessWidget {
   final String status;
   final VoidCallback onMenu;
   final VoidCallback? onPages, onPrevious, onNext, onSource;
+  final bool showKeyboardDismiss;
+  final VoidCallback? onKeyboardDismiss;
   final String? pageLabel;
   final int pageCount;
   final VoidCallback? onTurnStart, onTurnCancel;
@@ -196,26 +200,42 @@ class WritingFooter extends StatelessWidget {
           ),
           Align(
             alignment: Alignment.centerRight,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: _pageSideInset),
-              child: Tooltip(
-                message: '쓰기 도구',
-                excludeFromSemantics: true,
-                child: TextButton(
-                  onPressed: onMenu,
-                  style: TextButton.styleFrom(
-                    foregroundColor: brandInk,
-                    minimumSize: const Size(48, 48),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: showKeyboardDismiss
+                ? TextFieldTapRegion(
+                    child: IconButton(
+                      tooltip: '키보드 내리기',
+                      color: brandInk,
+                      constraints: const BoxConstraints(
+                        minWidth: 48,
+                        minHeight: 48,
+                      ),
+                      onPressed: onKeyboardDismiss,
+                      icon: const Icon(
+                        CupertinoIcons.keyboard_chevron_compact_down,
+                        size: 22,
+                      ),
+                    ),
+                  )
+                : ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: _pageSideInset),
+                    child: Tooltip(
+                      message: '쓰기 도구',
+                      excludeFromSemantics: true,
+                      child: TextButton(
+                        onPressed: onMenu,
+                        style: TextButton.styleFrom(
+                          foregroundColor: brandInk,
+                          minimumSize: const Size(48, 48),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        child: const Text(
+                          '쓰기 도구',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ),
                   ),
-                  child: const Text(
-                    '쓰기 도구',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12),
-                  ),
-                ),
-              ),
-            ),
           ),
         ],
       ),

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -484,21 +485,41 @@ void main() {
       expect(tester.getTopLeft(editor), editorTop);
       expect(tester.getTopLeft(title), titlePosition);
       expect(tester.getRect(editor).bottom, lessThanOrEqualTo(524));
-      expect(find.text('완료'), findsNothing);
+      final dismiss = find.widgetWithIcon(
+        IconButton,
+        CupertinoIcons.keyboard_chevron_compact_down,
+      );
+      expect(find.text('쓰기 도구'), findsNothing);
+      expect(tester.getRect(dismiss).bottom, lessThanOrEqualTo(524));
+      expect(tester.getSize(dismiss).shortestSide, greaterThanOrEqualTo(48));
       final focused = tester.widget<TextField>(editor);
-      final selection = focused.controller!.selection;
-      await tester.tapAt(editorTop + const Offset(-12, 100));
+      final controller = focused.controller!;
+      final before = controller.value;
+      final composing = before.copyWith(
+        composing: const TextRange(start: 0, end: 1),
+      );
+      tester.testTextInput.updateEditingValue(composing);
+      await tester.pumpAndSettle();
+      expect(tester.widget<IconButton>(dismiss).onPressed, isNull);
+      expect(controller.value, composing);
+      expect(focused.focusNode!.hasFocus, isTrue);
+      tester.testTextInput.updateEditingValue(before);
+      await tester.pumpAndSettle();
+      await tester.tap(dismiss);
       await tester.pumpAndSettle();
       expect(focused.focusNode!.hasFocus, isFalse);
-      expect(focused.controller!.selection, selection);
+      expect(tester.testTextInput.isVisible, isFalse);
+      expect(controller.value, before);
       expect(tester.takeException(), isNull);
       tester.view.viewInsets = const FakeViewPadding();
+      await tester.pumpAndSettle();
+      expect(dismiss, findsNothing);
+      expect(find.text('쓰기 도구'), findsOneWidget);
       tester.view.physicalSize = const Size(844, 390);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       // The paper controls must leave the same live editor usable with
       // enlarged system text and a narrow viewport, including a keyboard.
-      final controller = tester.widget<TextField>(editor).controller!;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       tester.platformDispatcher.textScaleFactorTestValue = 2;
       tester.view.physicalSize = const Size(320, 640);

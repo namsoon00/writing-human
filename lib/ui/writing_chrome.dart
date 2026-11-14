@@ -201,18 +201,22 @@ class WritingFooter extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: showKeyboardDismiss
-                ? TextFieldTapRegion(
-                    child: IconButton(
-                      tooltip: '키보드 내리기',
-                      color: brandInk,
-                      constraints: const BoxConstraints(
-                        minWidth: 48,
-                        minHeight: 48,
-                      ),
-                      onPressed: onKeyboardDismiss,
-                      icon: const Icon(
-                        CupertinoIcons.keyboard_chevron_compact_down,
-                        size: 22,
+                ? Semantics(
+                    identifier: 'writing-keyboard-dismiss',
+                    container: true,
+                    child: TextFieldTapRegion(
+                      child: IconButton(
+                        tooltip: '키보드 내리기',
+                        color: brandInk,
+                        constraints: const BoxConstraints(
+                          minWidth: 48,
+                          minHeight: 48,
+                        ),
+                        onPressed: onKeyboardDismiss,
+                        icon: const Icon(
+                          CupertinoIcons.keyboard_chevron_compact_down,
+                          size: 22,
+                        ),
                       ),
                     ),
                   )

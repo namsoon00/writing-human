@@ -38,6 +38,9 @@
 
     /* On touch screens Flutter handles the paper gestures directly. The
        semantic textarea remains available for keyboard and IME events. */
+    /* Route taps to Flutter even while the keyboard's semantics overlay is up. */
+    .paper-touch-input flutter-view [flt-semantics-identifier="writing-keyboard-dismiss"],
+    .paper-touch-input flutter-view [flt-semantics-identifier="writing-keyboard-dismiss"] *,
     .paper-touch-input flutter-view [flt-semantics-identifier="writing-page-body"],
     .paper-touch-input flutter-view [flt-semantics-identifier="writing-page-body"] textarea {
       pointer-events: none !important;

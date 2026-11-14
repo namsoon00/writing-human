@@ -20,28 +20,28 @@ class PagesSheet extends StatelessWidget {
     required this.style,
     required this.coverTitle,
     required this.coverVariant,
-    required this.canDelete,
-    required this.onDelete,
+    required this.canTrash,
+    required this.onTrash,
   });
   final List<WritingPage> pages;
   final String currentId;
   final WritingStyle style;
   final String? coverTitle;
   final int coverVariant;
-  final bool Function(WritingPage) canDelete;
-  final Future<bool> Function(WritingPage) onDelete;
+  final bool Function(WritingPage) canTrash;
+  final Future<bool> Function(WritingPage) onTrash;
 
-  Future<void> _confirmDelete(
+  Future<void> _confirmTrash(
     BuildContext context,
     WritingPage page,
     int number,
   ) => showDialog<void>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => _DeletePageDialog(
+    builder: (_) => _TrashPageDialog(
       page: page,
       number: number,
-      onDelete: () => onDelete(page),
+      onTrash: () => onTrash(page),
     ),
   );
 
@@ -241,7 +241,7 @@ class PagesSheet extends StatelessWidget {
                                   ),
                                   if (selected)
                                     Positioned(
-                                      right: canDelete(page) ? 48 : 12,
+                                      right: canTrash(page) ? 48 : 12,
                                       top: 0,
                                       child: RibbonBookmark(
                                         width: 10,
@@ -255,7 +255,7 @@ class PagesSheet extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (canDelete(page))
+                      if (canTrash(page))
                         Positioned(
                           top: 0,
                           right: 0,
@@ -268,11 +268,11 @@ class PagesSheet extends StatelessWidget {
                             itemBuilder: (_) => [
                               const PopupMenuItem(
                                 value: true,
-                                child: Text('쪽 삭제'),
+                                child: Text('휴지통으로 이동'),
                               ),
                             ],
                             onSelected: (_) =>
-                                _confirmDelete(context, page, number),
+                                _confirmTrash(context, page, number),
                           ),
                         ),
                     ],
@@ -287,28 +287,28 @@ class PagesSheet extends StatelessWidget {
   }
 }
 
-class _DeletePageDialog extends StatefulWidget {
-  const _DeletePageDialog({
+class _TrashPageDialog extends StatefulWidget {
+  const _TrashPageDialog({
     required this.page,
     required this.number,
-    required this.onDelete,
+    required this.onTrash,
   });
 
   final WritingPage page;
   final int number;
-  final Future<bool> Function() onDelete;
+  final Future<bool> Function() onTrash;
 
   @override
-  State<_DeletePageDialog> createState() => _DeletePageDialogState();
+  State<_TrashPageDialog> createState() => _TrashPageDialogState();
 }
 
-class _DeletePageDialogState extends State<_DeletePageDialog> {
+class _TrashPageDialogState extends State<_TrashPageDialog> {
   bool saving = false;
   bool failed = false;
 
-  Future<void> _delete() async {
+  Future<void> _move() async {
     setState(() => saving = true);
-    final saved = await widget.onDelete();
+    final saved = await widget.onTrash();
     if (!mounted) return;
     if (saved) {
       Navigator.pop(context);
@@ -330,7 +330,7 @@ class _DeletePageDialogState extends State<_DeletePageDialog> {
       canPop: !saving,
       child: AlertDialog(
         scrollable: true,
-        title: Text('${widget.number}쪽을 삭제할까요?'),
+        title: Text('${widget.number}쪽을 휴지통으로 옮길까요?'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -339,8 +339,8 @@ class _DeletePageDialogState extends State<_DeletePageDialog> {
             const SizedBox(height: 12),
             Text(
               failed
-                  ? '삭제하지 못했어요. 쪽은 목록에 남아 있어요.'
-                  : '이 쪽의 글과 밑칠을 지워요. 삭제하면 되돌릴 수 없어요.',
+                  ? '옮기지 못했어요. 쪽은 목록에 남아 있어요.'
+                  : '기록 보관의 휴지통에서 이 쪽을 복원할 수 있어요.',
             ),
           ],
         ),
@@ -350,13 +350,13 @@ class _DeletePageDialogState extends State<_DeletePageDialog> {
             child: const Text('취소'),
           ),
           TextButton(
-            onPressed: saving ? null : _delete,
+            onPressed: saving ? null : _move,
             child: Text(
               saving
-                  ? '삭제 중'
+                  ? '옮기는 중'
                   : failed
                   ? '다시 시도'
-                  : '삭제',
+                  : '이동',
             ),
           ),
         ],

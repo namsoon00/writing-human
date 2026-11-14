@@ -701,7 +701,7 @@ void main() {
   });
 
   testWidgets(
-    'Page menu confirms deletion and retries without losing the page',
+    'Page menu confirms moving to trash and retries without losing the page',
     (tester) async {
       final store = MemoryStore()..data = twoPages();
       await open(tester, store);
@@ -711,9 +711,9 @@ void main() {
       Future<void> prompt() async {
         await tester.tap(find.byTooltip('1쪽 메뉴'));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('쪽 삭제'));
+        await tester.tap(find.text('휴지통으로 이동'));
         await tester.pumpAndSettle();
-        expect(find.text('1쪽을 삭제할까요?'), findsOneWidget);
+        expect(find.text('1쪽을 휴지통으로 옮길까요?'), findsOneWidget);
       }
 
       await prompt();
@@ -722,9 +722,9 @@ void main() {
       expect(store.data.pages.length, 2);
       await prompt();
       store.fail = true;
-      await tester.tap(find.text('삭제'));
+      await tester.tap(find.text('이동'));
       await tester.pumpAndSettle();
-      expect(find.text('삭제하지 못했어요. 쪽은 목록에 남아 있어요.'), findsOneWidget);
+      expect(find.text('옮기지 못했어요. 쪽은 목록에 남아 있어요.'), findsOneWidget);
       expect(store.data.activePageId, 'one');
       expect(store.data.pages.length, 2);
 
@@ -733,11 +733,37 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(AlertDialog), findsNothing);
       expect(find.byTooltip('1쪽 메뉴'), findsNothing);
+      expect(store.data.trashedPages.single.id, 'one');
       expect(store.data.pages.single.id, 'two');
       expect(store.data.activePageId, 'two');
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(field).controller!.text, '둘째 페이지');
+      await tester.tap(find.byTooltip('쓰기 도구'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('기록 보관'));
+      await tester.tap(find.text('기록 보관'));
+      await tester.pumpAndSettle();
+      final trash = find.text('휴지통');
+      await tester.tap(trash);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('휴지통 쪽 메뉴'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('영구 삭제'));
+      await tester.pumpAndSettle();
+      expect(find.text('이 쪽을 영구 삭제할까요?'), findsOneWidget);
+      await tester.tap(find.text('취소'));
+      await tester.pumpAndSettle();
+      expect(store.data.trashedPages.single.id, 'one');
+      await tester.tap(find.byTooltip('휴지통 쪽 메뉴'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('복원'));
+      await tester.pumpAndSettle();
+      expect(store.data.trashedPages, isEmpty);
+      expect(store.data.volumePages(recordId: 'r').map((page) => page.id), [
+        'one',
+        'two',
+      ]);
     },
   );
 

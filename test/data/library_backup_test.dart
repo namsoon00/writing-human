@@ -8,6 +8,29 @@ import 'package:writing_human/data/model.dart';
 import 'package:writing_human/data/sqlite_store.dart';
 
 void main() {
+  test('Backup import keeps trashed pages outside the writing list', () {
+    const backup = Library(
+      records: [WritingRecord(id: 'r', title: '필사')],
+      pages: [WritingPage(id: 'a', recordId: 'r', number: 1)],
+      trashedPages: [
+        WritingPage(id: 'b', recordId: 'r', number: 2, text: '휴지통에 남길 문장'),
+      ],
+    );
+    const current = Library(
+      records: [WritingRecord(id: 'r', title: '기존 필사')],
+      pages: [WritingPage(id: 'a', recordId: 'r', number: 1)],
+    );
+    final imported = mergeBackup(current, Library.decode(backup.encode()));
+    final trash = imported.trashedPages.single;
+    expect(trash.text, '휴지통에 남길 문장');
+    expect(
+      imported.records.singleWhere((r) => r.id == trash.recordId).title,
+      '필사',
+    );
+    expect(imported.pages.any((page) => page.id == trash.id), isFalse);
+    expect(mergeBackup(imported, backup).trashedPages.single.id, trash.id);
+  });
+
   sqfliteFfiInit();
 
   test(

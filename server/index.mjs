@@ -58,6 +58,12 @@ function validBookDetails(details) {
 
 export function validLibrary(l) {
   if (!object(l) || l.version !== 1 || 'sync' in l || !Array.isArray(l.books) || !Array.isArray(l.records) || !Array.isArray(l.pages) || l.books.length > 10000 || l.records.length > 20000 || l.pages.length > 30000 || typeof l.writing !== 'boolean') return false;
+  const trash = 'trashedPages' in l ? l.trashedPages : [];
+  const purged = 'purgedPageIds' in l ? l.purgedPageIds : [];
+  if (!Array.isArray(trash) || l.pages.length + trash.length > 30000 ||
+      !Array.isArray(purged) || purged.length > 30000 || purged.some(v => !id(v))) return false;
+  const ids = new Set(purged);
+  if (ids.size !== purged.length) return false;
   const books = new Set(), records = new Map(), pages = new Map(), numbers = new Set();
   for (const b of l.books) {
     if (!object(b) || !id(b.id) || books.has(b.id) || !text(b.title, 500) || !text(b.author, 500)) return false;
@@ -75,21 +81,24 @@ export function validLibrary(l) {
     if ('originals' in r && !originals(r.originals)) return false;
     records.set(r.id, r.bookId);
   }
-  for (const p of l.pages) {
-    const n = JSON.stringify([p?.recordId, p?.number]);
-    if (!object(p) || !id(p.id) || pages.has(p.id) || !records.has(p.recordId) || !integer(p.number) || p.number < 1 || numbers.has(n) || !text(p.text) || !integer(p.base) || !integer(p.extent) || p.base < -1 || p.extent < -1 || p.base > p.text.length || p.extent > p.text.length || typeof p.scroll !== 'number' || !Number.isFinite(p.scroll) || p.scroll < 0) return false;
-    if ('writtenOn' in p && (typeof p.writtenOn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(p.writtenOn) || !Number.isFinite(Date.parse(p.writtenOn)) || new Date(p.writtenOn).toISOString().slice(0, 10) !== p.writtenOn)) return false;
-    if ('pencilMarks' in p && (!Array.isArray(p.pencilMarks) || p.pencilMarks.length > p.text.length || p.pencilMarks.some(m => !object(m) || !integer(m.start) || !integer(m.end) || m.start < 0 || m.end <= m.start || m.end > p.text.length))) return false;
-    if ('guidedOriginalId' in p && !id(p.guidedOriginalId)) return false;
-    if ('passages' in p && (!Array.isArray(p.passages) ||
-      new Set(p.passages.map(entry => entry?.id)).size !== p.passages.length ||
-      p.passages.some(entry => !object(entry) || !id(entry.id) ||
-        !integer(entry.start) || entry.start < 0 || entry.start > p.text.length ||
-        !text(entry.source) || !text(entry.citation, 500) ||
-        ('continued' in entry && typeof entry.continued !== 'boolean') ||
-        !integer(entry.paragraph) || entry.paragraph < 0 ||
-        !integer(entry.sourceOffset) || entry.sourceOffset < 0 || entry.sourceOffset > entry.source.length))) return false;
-    pages.set(p.id, records.get(p.recordId)); numbers.add(n);
+  for (const [items, active] of [[l.pages, true], [trash, false]]) {
+    for (const p of items) {
+      const n = JSON.stringify([p?.recordId, p?.number]);
+      if (!object(p) || !id(p.id) || ids.has(p.id) || !records.has(p.recordId) || !integer(p.number) || p.number < 1 || numbers.has(n) || !text(p.text) || !integer(p.base) || !integer(p.extent) || p.base < -1 || p.extent < -1 || p.base > p.text.length || p.extent > p.text.length || typeof p.scroll !== 'number' || !Number.isFinite(p.scroll) || p.scroll < 0) return false;
+      if ('writtenOn' in p && (typeof p.writtenOn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(p.writtenOn) || !Number.isFinite(Date.parse(p.writtenOn)) || new Date(p.writtenOn).toISOString().slice(0, 10) !== p.writtenOn)) return false;
+      if ('pencilMarks' in p && (!Array.isArray(p.pencilMarks) || p.pencilMarks.length > p.text.length || p.pencilMarks.some(m => !object(m) || !integer(m.start) || !integer(m.end) || m.start < 0 || m.end <= m.start || m.end > p.text.length))) return false;
+      if ('guidedOriginalId' in p && !id(p.guidedOriginalId)) return false;
+      if ('passages' in p && (!Array.isArray(p.passages) ||
+        new Set(p.passages.map(entry => entry?.id)).size !== p.passages.length ||
+        p.passages.some(entry => !object(entry) || !id(entry.id) ||
+          !integer(entry.start) || entry.start < 0 || entry.start > p.text.length ||
+          !text(entry.source) || !text(entry.citation, 500) ||
+          ('continued' in entry && typeof entry.continued !== 'boolean') ||
+          !integer(entry.paragraph) || entry.paragraph < 0 ||
+          !integer(entry.sourceOffset) || entry.sourceOffset < 0 || entry.sourceOffset > entry.source.length))) return false;
+      ids.add(p.id); numbers.add(n);
+      if (active) pages.set(p.id, records.get(p.recordId));
+    }
   }
   if ((l.activePageId !== null && !pages.has(l.activePageId)) || (l.writing && l.activePageId === null)) return false;
   if ('bookPositions' in l && (!object(l.bookPositions) ||
@@ -101,7 +110,7 @@ export function validLibrary(l) {
   if (['pageMotion', 'pageSound', 'writingSound'].some(k => k in s && typeof s[k] !== 'boolean')) return false;
   if ('bookDetails' in s && !validBookDetails(s.bookDetails)) return false;
   // Do not let clients smuggle extra secrets or alternate identities into storage.
-  const keys = ['version', 'books', 'records', 'pages', 'activePageId', 'bookPositions', 'writing', 'style'];
+  const keys = ['version', 'books', 'records', 'pages', 'trashedPages', 'purgedPageIds', 'activePageId', 'bookPositions', 'writing', 'style'];
   return Object.keys(l).every(k => keys.includes(k));
 }
 

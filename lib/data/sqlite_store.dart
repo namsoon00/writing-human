@@ -164,6 +164,12 @@ class SqliteLibraryStore implements LibraryStore {
             ),
           )
           .toList(),
+      trashedPages: (settings['trashedPages'] as List? ?? [])
+          .map((page) => WritingPage.fromJson(page as Json))
+          .toList(),
+      purgedPageIds: List<String>.from(
+        settings['purgedPageIds'] as List? ?? [],
+      ),
       sync: SyncMetadata.fromJson(
         jsonDecode(state?['sync_state'] as String? ?? '{}') as Json,
       ),
@@ -248,6 +254,12 @@ class SqliteLibraryStore implements LibraryStore {
         'writing': library.writing ? 1 : 0,
         'settings': jsonEncode({
           ...library.style.toJson(),
+          if (library.trashedPages.isNotEmpty)
+            'trashedPages': library.trashedPages
+                .map((page) => page.toJson())
+                .toList(),
+          if (library.purgedPageIds.isNotEmpty)
+            'purgedPageIds': library.purgedPageIds,
           if (library.bookPositions.isNotEmpty)
             'bookPositions': library.bookPositions,
           if (library.lastBackupAt != null)

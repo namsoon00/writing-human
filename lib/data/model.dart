@@ -737,6 +737,8 @@ class Library {
     this.books = const [],
     this.records = const [],
     this.pages = const [],
+    this.trashedPages = const [],
+    this.purgedPageIds = const [],
     this.activePageId,
     this.bookPositions = const {},
     this.writing = false,
@@ -746,7 +748,8 @@ class Library {
   });
   final List<Book> books;
   final List<WritingRecord> records;
-  final List<WritingPage> pages;
+  final List<WritingPage> pages, trashedPages;
+  final List<String> purgedPageIds;
   final String? activePageId;
   final Map<String, String> bookPositions;
   final bool writing;
@@ -777,6 +780,8 @@ class Library {
     List<Book>? books,
     List<WritingRecord>? records,
     List<WritingPage>? pages,
+    List<WritingPage>? trashedPages,
+    List<String>? purgedPageIds,
     String? activePageId,
     Map<String, String>? bookPositions,
     bool? writing,
@@ -788,6 +793,8 @@ class Library {
     books: books ?? this.books,
     records: records ?? this.records,
     pages: pages ?? this.pages,
+    trashedPages: trashedPages ?? this.trashedPages,
+    purgedPageIds: purgedPageIds ?? this.purgedPageIds,
     activePageId: clearActive ? null : activePageId ?? this.activePageId,
     bookPositions: bookPositions ?? this.bookPositions,
     writing: writing ?? this.writing,
@@ -803,6 +810,9 @@ class Library {
     'books': books.map((b) => b.toJson()).toList(),
     'records': records.map((r) => r.toJson()).toList(),
     'pages': pages.map((p) => p.toJson()).toList(),
+    if (trashedPages.isNotEmpty)
+      'trashedPages': trashedPages.map((page) => page.toJson()).toList(),
+    if (purgedPageIds.isNotEmpty) 'purgedPageIds': purgedPageIds,
     'activePageId': activePageId,
     if (bookPositions.isNotEmpty) 'bookPositions': bookPositions,
     'writing': writing,
@@ -824,6 +834,10 @@ class Library {
       pages: (j['pages'] as List)
           .map((v) => WritingPage.fromJson(v as Json))
           .toList(),
+      trashedPages: (j['trashedPages'] as List? ?? [])
+          .map((page) => WritingPage.fromJson(page as Json))
+          .toList(),
+      purgedPageIds: List<String>.from(j['purgedPageIds'] as List? ?? []),
       activePageId: j['activePageId'] as String?,
       bookPositions: Map<String, String>.from(
         j['bookPositions'] as Json? ?? {},
@@ -868,11 +882,18 @@ class Library {
     final bookIds = books.map((b) => b.id).toSet();
     final recordIds = records.map((r) => r.id).toSet();
     final pageIds = pages.map((p) => p.id).toSet();
-    final numbers = pages.map((p) => '${p.recordId}::${p.number}').toSet();
+    final allPages = [...pages, ...trashedPages];
+    final allIds = allPages.map((page) => page.id).toSet();
+    final purged = purgedPageIds.toSet();
+    final numbers = allPages.map((p) => '${p.recordId}::${p.number}').toSet();
     if (bookIds.length != books.length ||
         recordIds.length != records.length ||
-        pageIds.length != pages.length ||
-        numbers.length != pages.length ||
+        allIds.length != allPages.length ||
+        numbers.length != allPages.length ||
+        purged.length != purgedPageIds.length ||
+        purged.any(
+          (id) => id.isEmpty || id.length > 250 || allIds.contains(id),
+        ) ||
         books.any(
           (b) =>
               b.owner.length > 80 || !RegisteredOriginal.validList(b.originals),
@@ -883,7 +904,7 @@ class Library {
               !RegisteredOriginal.validList(r.originals) ||
               (r.bookId != null && !bookIds.contains(r.bookId)),
         ) ||
-        pages.any(
+        allPages.any(
           (p) =>
               !recordIds.contains(p.recordId) ||
               p.number < 1 ||

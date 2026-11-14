@@ -1208,15 +1208,15 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               style: _paperStyle(book),
               coverTitle: book?.title,
               coverVariant: _coverVariant,
-              canDelete: (page) => (pageCounts[page.recordId] ?? 0) > 1,
-              onDelete: (target) async {
+              canTrash: (page) => (pageCounts[page.recordId] ?? 0) > 1,
+              onTrash: (target) async {
                 if (!mounted ||
                     c != owner ||
                     _accountLocked ||
                     !_canLeaveInput()) {
                   return false;
                 }
-                return owner.deletePage(target);
+                return owner.trashPage(target);
               },
             ),
             forBook: book,

@@ -142,8 +142,14 @@ Library mergeBackup(Library current, Library backup) {
 
   final records = {for (final record in current.records) record.id: record};
   final pages = {for (final page in current.pages) page.id: page};
-  final currentGroups = _groupPages(current.pages);
-  final backupGroups = _groupPages(backup.pages);
+  final trash = {for (final page in current.trashedPages) page.id: page};
+  final backupTrashIds = backup.trashedPages.map((page) => page.id).toSet();
+  final purged = current.purgedPageIds.toSet();
+  final currentGroups = _groupPages([
+    ...current.pages,
+    ...current.trashedPages,
+  ]);
+  final backupGroups = _groupPages([...backup.pages, ...backup.trashedPages]);
   final restoredPageIds = <String, String>{};
   for (final record in backup.records) {
     final json = {..._recordContent(record), 'bookId': bookIds[record.bookId]};
@@ -175,15 +181,29 @@ Library mergeBackup(Library current, Library backup) {
           continue;
         }
       } else {
-        if (candidatePages.any((page) => pages.containsKey(page.id))) continue;
+        if (candidatePages.any(
+          (page) =>
+              pages.containsKey(page.id) ||
+              trash.containsKey(page.id) ||
+              purged.contains(page.id),
+        )) {
+          continue;
+        }
         records[id] = candidate;
         currentGroups[id] = candidatePages;
-        for (final page in candidatePages) {
-          pages[page.id] = page;
+        for (var i = 0; i < group.length; i++) {
+          final page = candidatePages[i];
+          if (backupTrashIds.contains(group[i].id)) {
+            trash[page.id] = page;
+          } else {
+            pages[page.id] = page;
+          }
         }
       }
       for (var i = 0; i < group.length; i++) {
-        restoredPageIds[group[i].id] = candidatePages[i].id;
+        if (pages.containsKey(candidatePages[i].id)) {
+          restoredPageIds[group[i].id] = candidatePages[i].id;
+        }
       }
       break;
     }
@@ -194,13 +214,16 @@ Library mergeBackup(Library current, Library backup) {
     books: books.values.toList(),
     records: records.values.toList(),
     pages: pages.values.toList(),
+    trashedPages: trash.values.toList(),
     activePageId: active,
     bookPositions: {
       for (final entry in backup.bookPositions.entries)
         ?bookIds[entry.key]: ?restoredPageIds[entry.value],
       ...current.bookPositions,
     },
-    writing: current.activePageId == null ? backup.writing : current.writing,
+    writing:
+        active != null &&
+        (current.activePageId == null ? backup.writing : current.writing),
     style: current.style.copy(
       favoriteBookIds: [
         ...{

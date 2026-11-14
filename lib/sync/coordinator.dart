@@ -140,6 +140,10 @@ class SyncCoordinator extends ChangeNotifier {
       return local;
     }
     final base = Library.decode(jsonEncode(metadata.baseline));
+    if (base.activePageId != null &&
+        !local.pages.any((page) => page.id == base.activePageId)) {
+      return local;
+    }
     return local.copy(
       activePageId: base.activePageId,
       clearActive: base.activePageId == null,

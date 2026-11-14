@@ -70,7 +70,7 @@ void main() {
     },
   );
 
-  test('Deleting the active page survives SQLite close and reopen', () async {
+  test('Trash and restored page survive SQLite close and reopen', () async {
     final file = '${dir.path}/delete-page.db';
     final store = await SqliteLibraryStore.open(
       file,
@@ -83,12 +83,9 @@ void main() {
     controller.addPage();
     final last = controller.library.activePage!;
     controller.editPage(last.id, '지울 글', 0, 0, 0);
-    expect(await controller.deletePage(last), isFalse);
-    expect(await controller.deletePage(controller.library.activePage!), isTrue);
-    expect(
-      await controller.deletePage(controller.library.activePage!),
-      isFalse,
-    );
+    expect(await controller.trashPage(last), isFalse);
+    expect(await controller.trashPage(controller.library.activePage!), isTrue);
+    expect(await controller.trashPage(controller.library.activePage!), isFalse);
     controller.dispose();
     await store.close();
 
@@ -102,6 +99,22 @@ void main() {
       expect(saved.bookPositions.values.single, first.id);
       expect(saved.pages.single.text, '남길 글');
       expect(saved.pages.single.extent, 3);
+      expect(saved.trashedPages.single.text, '지울 글');
+      final restored = LibraryController(reopened, saved);
+      expect(await restored.changeTrashedPage(last.id, restore: true), isTrue);
+      final withRestoredPage = await reopened.load();
+      expect(
+        withRestoredPage
+            .volumePages(bookId: saved.books.single.id)
+            .map((page) => page.id),
+        [first.id, last.id],
+      );
+      expect(await restored.trashPage(withRestoredPage.pages.last), isTrue);
+      expect(await restored.changeTrashedPage(last.id, restore: false), isTrue);
+      final purged = await reopened.load();
+      expect(purged.trashedPages, isEmpty);
+      expect(purged.purgedPageIds, [last.id]);
+      restored.dispose();
     } finally {
       await reopened.close();
     }

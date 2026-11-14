@@ -27,6 +27,18 @@ test('Book positions must reference a page in the same book', () => {
   }
 });
 
+test('Trash snapshots retain page data without permitting a trashed active position', () => {
+  const library = empty();
+  library.records = [{id: 'r', bookId: null, title: '필사', source: ''}];
+  const page = {id: 'trashed', recordId: 'r', number: 2, text: '문장', base: 0, extent: 2, scroll: 0};
+  library.trashedPages = [page];
+  assert.equal(validLibrary(library), true);
+  assert.equal(validLibrary({...library, activePageId: page.id}), false);
+  assert.equal(validLibrary({...library, pages: [page]}), false);
+  assert.equal(validLibrary({...library, purgedPageIds: [page.id]}), false);
+  assert.equal(validLibrary({...library, trashedPages: [], purgedPageIds: [page.id]}), true);
+});
+
 test('Source paragraph is optional and accepts a nonnegative integer', () => {
   const library = empty();
   const record = {id: 'r', bookId: null, title: '필사', source: '첫째\n\n둘째'};

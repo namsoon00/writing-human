@@ -11,6 +11,7 @@ import '../data/library_controller.dart';
 import '../data/model.dart';
 import '../data/writing_export.dart';
 import 'paper.dart';
+import 'page_trash.dart';
 
 class ArchiveSheet extends StatefulWidget {
   const ArchiveSheet({
@@ -230,6 +231,21 @@ class _ArchiveSheetState extends State<ArchiveSheet> {
                       ),
                     ],
                   ),
+                ),
+                ListTile(
+                  leading: const Icon(CupertinoIcons.trash),
+                  title: const Text('휴지통'),
+                  subtitle: Text('${_controller.library.trashedPages.length}쪽'),
+                  onTap: _busy || !_available
+                      ? null
+                      : () => showDialog<void>(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (_) => PageTrash(
+                            controller: _controller,
+                            canAccess: widget.canAccess,
+                          ),
+                        ),
                 ),
                 ListTile(
                   leading: const Icon(CupertinoIcons.arrow_down_doc),

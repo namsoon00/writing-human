@@ -672,7 +672,7 @@ class LibraryController extends ChangeNotifier {
       guidedOriginalId: guidedOriginalId,
       writtenOn: _today(),
       number:
-          library.pages
+          [...library.pages, ...library.trashedPages]
               .where((p) => p.recordId == record.id)
               .fold<int>(0, (max, p) => p.number > max ? p.number : max) +
           1,
@@ -687,17 +687,12 @@ class LibraryController extends ChangeNotifier {
     );
   }
 
-  static const _pageDeletionError = '쪽을 삭제하지 못했어요. 다시 시도해 주세요.';
+  static const _trashSaveError = '휴지통 변경을 저장하지 못했어요. 다시 시도해 주세요.';
 
-  /// Keep the paper on screen until the store has committed the deletion.
-  Future<bool> deletePage(WritingPage expected) async {
+  /// Keep the paper on screen until the store has committed the move.
+  Future<bool> trashPage(WritingPage expected) async {
     await settled;
-    if (_disposed ||
-        composing ||
-        editorFocused ||
-        (saveError != null && saveError != _pageDeletionError)) {
-      return false;
-    }
+    if (!_canChangeTrash) return false;
     final target = library.pages
         .where((page) => page.id == expected.id)
         .firstOrNull;
@@ -725,6 +720,7 @@ class LibraryController extends ChangeNotifier {
     final next = library
         .copy(
           pages: library.pages.where((page) => page.id != target.id).toList(),
+          trashedPages: [target, ...library.trashedPages],
           activePageId: activeChanged ? neighbor.id : library.activePageId,
           bookPositions: positions,
           sync: activeChanged
@@ -733,6 +729,36 @@ class LibraryController extends ChangeNotifier {
         )
         .rememberActiveBookPosition();
 
+    return _saveTrashChange(next, activeChanged: activeChanged);
+  }
+
+  bool get _canChangeTrash =>
+      !_disposed &&
+      !composing &&
+      !editorFocused &&
+      (saveError == null || saveError == _trashSaveError);
+
+  Future<bool> changeTrashedPage(String id, {required bool restore}) async {
+    await settled;
+    if (!_canChangeTrash) return false;
+    final page = library.trashedPages
+        .where((page) => page.id == id)
+        .firstOrNull;
+    if (page == null) return false;
+    final next = library.copy(
+      pages: restore ? [...library.pages, page] : null,
+      trashedPages: library.trashedPages
+          .where((page) => page.id != id)
+          .toList(),
+      purgedPageIds: restore ? null : [...library.purgedPageIds, id],
+    );
+    return _saveTrashChange(next);
+  }
+
+  Future<bool> _saveTrashChange(
+    Library next, {
+    bool activeChanged = false,
+  }) async {
     final revision = ++_revision;
     var committed = false;
     saving = true;
@@ -749,7 +775,7 @@ class LibraryController extends ChangeNotifier {
         committed = true;
       } catch (_) {
         if (revision == _revision) {
-          saveError = _pageDeletionError;
+          saveError = _trashSaveError;
         }
       } finally {
         if (revision == _revision) saving = false;

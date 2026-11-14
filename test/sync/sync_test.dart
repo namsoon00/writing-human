@@ -59,6 +59,34 @@ class DeviceRemote implements CloudRemote {
 }
 
 void main() {
+  test('Trash, restore and permanent deletion sync across devices', () {
+    const kept = WritingPage(id: 'kept', recordId: 'r', number: 1);
+    const page = WritingPage(
+      id: 'trashed',
+      recordId: 'r',
+      number: 2,
+      text: '본문',
+    );
+    const base = Library(
+      records: [WritingRecord(id: 'r', title: '필사')],
+      pages: [kept, page],
+      activePageId: 'kept',
+      writing: true,
+    );
+    final moved = base.copy(pages: [kept], trashedPages: [page]);
+    final receiving = mergeLibraries(base, base, moved).library;
+    expect(receiving.pages.single.id, kept.id);
+    expect(receiving.trashedPages.single.text, page.text);
+    final restored = mergeLibraries(moved, base, moved).library;
+    expect(restored.pages.map((p) => p.id), [kept.id, page.id]);
+    expect(restored.trashedPages, isEmpty);
+    final gone = moved.copy(trashedPages: [], purgedPageIds: [page.id]);
+    final stale = mergeLibraries(base, moved, gone).library;
+    expect(stale.pages.single.id, kept.id);
+    expect(stale.trashedPages, isEmpty);
+    expect(stale.purgedPageIds, [page.id]);
+  });
+
   test(
     'Page deletion syncs in both directions and preserves concurrent edits',
     () {

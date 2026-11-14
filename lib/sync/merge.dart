@@ -313,9 +313,19 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
     );
   }
 
+  final purgedPageIds = {
+    ...local.purgedPageIds,
+    ...remote.purgedPageIds,
+  }.toList()..sort();
+  final purged = purgedPageIds.toSet();
+  final localTrash = {for (final page in local.trashedPages) page.id: page};
+  final remoteTrash = {for (final page in remote.trashedPages) page.id: page};
+  final baseTrash = {for (final page in base.trashedPages) page.id: page};
   final localPageIds = local.pages.map((page) => page.id).toSet();
   for (final r in remote.pages) {
-    final b = basePages[r.id];
+    final b =
+        basePages[r.id] ??
+        (baseTrash.containsKey(r.id) ? null : localTrash[r.id]);
     if (b != null &&
         !localPageIds.contains(r.id) &&
         sameData(_pageEdit(r), _pageEdit(b))) {
@@ -326,7 +336,9 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
   for (final l in local.pages) {
     final r = pages[l.id], b = basePages[l.id];
     if (r == null) {
-      if (b == null || !sameData(_pageEdit(l), _pageEdit(b))) {
+      final previous =
+          b ?? (baseTrash.containsKey(l.id) ? null : remoteTrash[l.id]);
+      if (previous == null || !sameData(_pageEdit(l), _pageEdit(previous))) {
         pages[l.id] = l;
       }
       continue;
@@ -377,14 +389,29 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
     }
   }
 
-  // Concurrent deletions can otherwise remove the last remaining paper.
+  pages.removeWhere((id, _) => purged.contains(id));
+  final trash = <String, WritingPage>{};
+  for (final id in {...localTrash.keys, ...remoteTrash.keys}) {
+    if (purged.contains(id) || pages.containsKey(id)) continue;
+    final previous = baseTrash[id],
+        here = localTrash[id],
+        there = remoteTrash[id];
+    final item = sameData(here?.toJson(), previous?.toJson())
+        ? there
+        : here ?? there;
+    if (item != null) trash[id] = item;
+  }
+  // Concurrent moves must leave at least one visible page per record.
   final survivingRecords = pages.values.map((page) => page.recordId).toSet();
-  for (final previous in base.pages) {
-    if (survivingRecords.add(previous.recordId)) pages[previous.id] = previous;
+  for (final previous in [...base.pages, ...trash.values]) {
+    if (!purged.contains(previous.id) &&
+        survivingRecords.add(previous.recordId)) {
+      pages[previous.id] = trash.remove(previous.id) ?? previous;
+    }
   }
 
   // Both devices may independently append "page 2". Keep both IDs and bodies.
-  final ordered = pages.values.toList()
+  final ordered = [...pages.values, ...trash.values]
     ..sort((a, b) {
       final record = a.recordId.compareTo(b.recordId);
       if (record != 0) {
@@ -480,13 +507,15 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
     local.activePageId,
     remote.activePageId,
   );
-  if (!normalized.any((p) => p.id == active)) {
-    active = normalized.firstOrNull?.id;
+  if (!normalized.any((p) => p.id == active && !trash.containsKey(p.id))) {
+    active = normalized.where((p) => !trash.containsKey(p.id)).firstOrNull?.id;
   }
   final merged = Library(
     books: books.values.toList()..sort((a, b) => a.id.compareTo(b.id)),
     records: records.values.toList()..sort((a, b) => a.id.compareTo(b.id)),
-    pages: normalized,
+    pages: normalized.where((p) => !trash.containsKey(p.id)).toList(),
+    trashedPages: normalized.where((p) => trash.containsKey(p.id)).toList(),
+    purgedPageIds: purgedPageIds,
     activePageId: active,
     writing:
         active != null && _field(base.writing, local.writing, remote.writing),

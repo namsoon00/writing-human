@@ -213,11 +213,11 @@ class ToolsScreen extends StatelessWidget {
                   ],
                 ),
                 const Divider(color: line),
-                const Padding(
-                  padding: EdgeInsets.only(top: 8, bottom: 2),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 2),
                   child: Semantics(
                     header: true,
-                    child: Text(
+                    child: const Text(
                       '책과 기록',
                       style: TextStyle(fontSize: 13, color: muted),
                     ),

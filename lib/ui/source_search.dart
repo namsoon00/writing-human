@@ -1,11 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
-import '../source/source_intake.dart';
 import '../source/wikisource_preview.dart';
 import 'source_browser.dart';
 
@@ -119,7 +118,7 @@ String _words(String value) => value
     .replaceAll(RegExp(r'[^가-힣ㄱ-ㅎㅏ-ㅣ一-龯a-z0-9]+'), ' ')
     .trim();
 
-typedef SourceSearchChoice = ({String citation, String? text});
+typedef SourceSearchChoice = ({String? citation, String? text});
 
 class _SourceHit {
   const _SourceHit(this.collection, this.title, this.id);
@@ -216,13 +215,17 @@ class _SourceSearchState extends State<_SourceSearch> {
     });
   }
 
-  Future<void> _open(Uri url) async {
-    try {
-      if (await openSourceBrowser(context, url)) return;
-    } on Exception {
-      // Report when the browser could not be opened.
+  Future<void> _open(Uri url, {required String title, String? citation}) async {
+    final excerpt = await openSourceBrowser(
+      context,
+      url: url,
+      title: title,
+      hasCitation: citation != null,
+      launchLabel: kIsWeb ? '새 탭에서 열기' : '웹페이지 열기',
+    );
+    if (mounted && excerpt != null) {
+      Navigator.pop(context, (citation: citation, text: excerpt));
     }
-    if (mounted) setState(() => _linkError = '브라우저를 열지 못했어요.');
   }
 
   Future<void> _collect(_SourceHit hit) async {
@@ -233,17 +236,11 @@ class _SourceSearchState extends State<_SourceSearch> {
     });
     String? error;
     try {
-      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final text = await readSourceExcerpt();
       if (!mounted) return;
-      final text = normalizeSource(data?.text ?? '');
-      if (text.isEmpty) {
-        error = '복사한 구절이 없어요.';
-      } else if (text.length > sourceLengthLimit) {
-        error = '구절이 너무 길어요. 필요한 부분만 복사해 주세요.';
-      } else {
-        Navigator.pop(context, (citation: hit.citation, text: text));
-        return;
-      }
+      Navigator.pop(context, (citation: hit.citation, text: text));
+    } on FormatException catch (exception) {
+      error = exception.message;
     } on Exception {
       error = '붙여넣지 못했어요. 구절을 다시 복사해 주세요.';
     } finally {
@@ -310,7 +307,11 @@ class _SourceSearchState extends State<_SourceSearch> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton(
-                    onPressed: () => _open(poem.url),
+                    onPressed: () => _open(
+                      poem.url,
+                      title: poem.title,
+                      citation: poem.citation,
+                    ),
                     child: const Text('위키문헌에서 원문 보기'),
                   ),
                 ),
@@ -368,11 +369,17 @@ class _SourceSearchState extends State<_SourceSearch> {
       ],
       if (_mode != _SearchMode.author) ...[
         const SizedBox(height: 12),
-        const Text('원문을 열어 원하는 구절을 복사한 뒤, 돌아와 아래 버튼을 눌러 주세요.'),
+        const Text('원문에서 구절을 복사한 뒤 ‘복사한 구절과 출처 담기’를 누르세요.'),
       ],
       const SizedBox(height: 12),
       OutlinedButton.icon(
-        onPressed: _pasting ? null : () => _open(hit.url),
+        onPressed: _pasting
+            ? null
+            : () => _open(
+                hit.url,
+                title: hit.title,
+                citation: _mode == _SearchMode.author ? null : hit.citation,
+              ),
         icon: const Icon(CupertinoIcons.globe, size: 16),
         label: Text(_mode == _SearchMode.author ? '작품 목록 열기' : '원문 열기'),
       ),
@@ -592,13 +599,14 @@ class _SourceSearchState extends State<_SourceSearch> {
                                 _SearchMode.phrase => '$searched 구절 출처',
                               },
                             }),
+                            title: '네이버 검색',
                           ),
                           icon: const Icon(CupertinoIcons.globe, size: 16),
                           label: const Text('네이버에서 더 찾기'),
                         ),
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Text('네이버에서 복사한 구절은 원문 등록의 ‘붙여넣기’로 넣을 수 있어요.'),
+                          child: Text('네이버에서 구절을 복사한 뒤 ‘복사한 구절 담기’를 누르세요.'),
                         ),
                       ],
                     ],

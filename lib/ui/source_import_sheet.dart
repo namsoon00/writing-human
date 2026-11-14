@@ -172,7 +172,9 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     final replacesText =
         text != null && _text.text.trim().isNotEmpty && _text.text != text;
     final replacesCitation =
-        _citation.text.trim().isNotEmpty && _citation.text != citation;
+        citation != null &&
+        _citation.text.trim().isNotEmpty &&
+        _citation.text != citation;
     if (replacesText || replacesCitation) {
       final replace = await showDialog<bool>(
         context: context,
@@ -193,7 +195,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       if (!mounted || replace != true || !_editable) return;
     }
     if (text != null) _text.text = text;
-    _citation.text = citation;
+    if (citation != null) _citation.text = citation;
   }
 
   Future<void> _shareHelp() => showDialog<void>(

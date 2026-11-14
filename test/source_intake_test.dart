@@ -341,7 +341,7 @@ void main() {
       await tester.tap(result);
       await tester.pumpAndSettle();
       expect(
-        find.text('원문을 열어 원하는 구절을 복사한 뒤, 돌아와 아래 버튼을 눌러 주세요.'),
+        find.text('원문에서 구절을 복사한 뒤 ‘복사한 구절과 출처 담기’를 누르세요.'),
         findsOneWidget,
       );
       await tester.tap(find.text('출처만 넣기'));
@@ -367,10 +367,15 @@ void main() {
       expect(requests.last.queryParameters['srsearch'], '"하늘을 우러러"');
       await tester.tap(result);
       await tester.pumpAndSettle();
+      String? clipboard;
+      int clipboardReads = 0;
       tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
         SystemChannels.platform,
-        (call) async =>
-            call.method == 'Clipboard.getData' ? {'text': '복사한 구절'} : null,
+        (call) async {
+          if (call.method != 'Clipboard.getData') return null;
+          clipboardReads++;
+          return clipboard == null ? null : {'text': clipboard};
+        },
       );
       addTearDown(
         () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
@@ -378,8 +383,18 @@ void main() {
           null,
         ),
       );
-      await tester.tap(find.text('복사한 구절과 출처 넣기'));
+      await tester.tap(find.text('원문 열기'));
       await tester.pumpAndSettle();
+      expect(find.byTooltip('원문 브라우저 닫기'), findsOneWidget);
+      expect(clipboardReads, 0);
+      final collect = find.text('복사한 구절과 출처 담기');
+      await tester.tap(collect);
+      await tester.pumpAndSettle();
+      expect(find.text('복사한 구절이 없어요.'), findsOneWidget);
+      clipboard = '복사한 구절';
+      await tester.tap(collect);
+      await tester.pumpAndSettle();
+      expect(clipboardReads, 2);
       expect(find.text('입력한 원문을 바꿀까요?'), findsOneWidget);
       await tester.tap(find.text('바꾸기'));
       await tester.pumpAndSettle();

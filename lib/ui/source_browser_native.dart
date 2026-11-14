@@ -1,7 +1,12 @@
 import 'package:flutter/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-Future<bool> openSourceBrowser(BuildContext context, Uri url) => launchUrl(
+const openOnEntry = true;
+const collectionInstructions = '웹페이지에서 원하는 구절을 복사한 뒤, 이 화면으로 돌아와 담으세요.';
+
+Widget? embeddedSourcePage(Uri url) => null;
+
+Future<bool> launchSourcePage(Uri url) => launchUrl(
   url,
   mode: LaunchMode.inAppBrowserView,
   browserConfiguration: const BrowserConfiguration(showTitle: true),

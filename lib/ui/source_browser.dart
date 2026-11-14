@@ -1,2 +1,171 @@
-export 'source_browser_native.dart'
-    if (dart.library.js_interop) 'source_browser_web.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../source/source_intake.dart';
+import 'source_browser_native.dart'
+    if (dart.library.js_interop) 'source_browser_web.dart'
+    as browser;
+
+Future<String> readSourceExcerpt() async {
+  final data = await Clipboard.getData(Clipboard.kTextPlain);
+  final text = normalizeSource(data?.text ?? '');
+  if (text.isEmpty) throw const FormatException('복사한 구절이 없어요.');
+  if (text.length > sourceLengthLimit) {
+    throw const FormatException('구절이 너무 길어요. 필요한 부분만 복사해 주세요.');
+  }
+  return text;
+}
+
+Future<String?> openSourceBrowser(
+  BuildContext context, {
+  required Uri url,
+  required String title,
+  required String launchLabel,
+  required bool hasCitation,
+}) => Navigator.of(context).push<String>(
+  MaterialPageRoute<String>(
+    fullscreenDialog: true,
+    builder: (_) => _SourceBrowser(
+      url: url,
+      title: title,
+      launchLabel: launchLabel,
+      hasCitation: hasCitation,
+    ),
+  ),
+);
+
+class _SourceBrowser extends StatefulWidget {
+  const _SourceBrowser({
+    required this.url,
+    required this.title,
+    required this.launchLabel,
+    required this.hasCitation,
+  });
+
+  final Uri url;
+  final String title, launchLabel;
+  final bool hasCitation;
+
+  @override
+  State<_SourceBrowser> createState() => _SourceBrowserState();
+}
+
+class _SourceBrowserState extends State<_SourceBrowser> {
+  bool _readingClipboard = false, _opening = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    if (browser.openOnEntry) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && ModalRoute.isCurrentOf(context) == true) _launch();
+      });
+    }
+  }
+
+  Future<void> _launch() async {
+    if (_opening) return;
+    setState(() {
+      _opening = true;
+      _error = null;
+    });
+    var opened = false;
+    try {
+      opened = await browser.launchSourcePage(widget.url);
+    } on Exception {
+      // The source can still be collected from the clipboard.
+    }
+    if (!mounted) return;
+    setState(() {
+      _opening = false;
+      if (!opened) _error = '브라우저를 열지 못했어요.';
+    });
+  }
+
+  Future<void> _collect() async {
+    if (_readingClipboard) return;
+    setState(() {
+      _readingClipboard = true;
+      _error = null;
+    });
+    try {
+      final excerpt = await readSourceExcerpt();
+      if (mounted && ModalRoute.isCurrentOf(context) == true) {
+        Navigator.pop(context, excerpt);
+      }
+    } on FormatException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } on Exception {
+      if (mounted) setState(() => _error = '붙여넣지 못했어요. 구절을 다시 복사해 주세요.');
+    } finally {
+      if (mounted) setState(() => _readingClipboard = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final page = browser.embeddedSourcePage(widget.url);
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          tooltip: '원문 브라우저 닫기',
+          icon: const Icon(CupertinoIcons.xmark),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+        actions: [
+          if (page != null)
+            TextButton(
+              onPressed: _opening ? null : _launch,
+              child: Text(widget.launchLabel),
+            ),
+        ],
+      ),
+      body:
+          page ??
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(widget.url.host),
+                  const SizedBox(height: 12),
+                  Text(
+                    browser.collectionInstructions,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: _opening ? null : _launch,
+                    icon: const Icon(CupertinoIcons.globe, size: 17),
+                    label: Text(widget.launchLabel),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_error case final error?)
+              Semantics(
+                liveRegion: true,
+                child: Text(error, textAlign: TextAlign.center),
+              ),
+            FilledButton.icon(
+              onPressed: _readingClipboard ? null : _collect,
+              icon: const Icon(CupertinoIcons.doc_on_clipboard, size: 17),
+              label: Text(widget.hasCitation ? '복사한 구절과 출처 담기' : '복사한 구절 담기'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

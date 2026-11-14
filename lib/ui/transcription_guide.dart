@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderEditable;
 
 import '../data/model.dart';
 import '../source/originals.dart';
@@ -29,19 +32,30 @@ class TranscriptionGuidePainter extends CustomPainter {
   final double bottomPadding;
   final TextPainter layout;
 
+  TextEditingValue? _lastValue;
+  ({String text, int? maxLines})? _lastPreview;
+
   String remainderFor(TextEditingValue value) => _previewFor(value).text;
 
-  ({String text, int maxLines}) _previewFor(TextEditingValue value) {
+  ({String text, int? maxLines}) _previewFor(TextEditingValue value) {
+    if (_lastValue == value) return _lastPreview!;
+    _lastValue = value;
+    return _lastPreview = _computePreview(value);
+  }
+
+  ({String text, int? maxLines}) _computePreview(TextEditingValue value) {
     const empty = (text: '', maxLines: 1);
     final caret = value.selection;
-    if (!caret.isCollapsed || caret.extentOffset != value.text.length) {
+    if (guided == null &&
+        (!caret.isCollapsed || caret.extentOffset != value.text.length)) {
       return empty;
     }
     final composing = value.composing;
     final isComposing = value.isComposingRangeValid && !composing.isCollapsed;
-    if (isComposing && composing.end != value.text.length) return empty;
-    final committed = isComposing ? composing.start : caret.extentOffset;
-    final skipped = isComposing
+    final composingAtEnd = isComposing && composing.end == value.text.length;
+    if (guided == null && isComposing && !composingAtEnd) return empty;
+    final committed = composingAtEnd ? composing.start : value.text.length;
+    final skipped = composingAtEnd
         ? composing.textInside(value.text).characters.length
         : 0;
     if (guided case final source?) {
@@ -56,7 +70,7 @@ class TranscriptionGuidePainter extends CustomPainter {
                 .characters
                 .skip(value.text.substring(0, committed).characters.length)
           : source.text.substring(match.end, end).characters;
-      return (text: remaining.skip(skipped).take(400).toString(), maxLines: 6);
+      return (text: remaining.skip(skipped).toString(), maxLines: null);
     }
     final match = matchOriginal(originals, value.text, committed);
     if (match == null) return empty;
@@ -66,33 +80,26 @@ class TranscriptionGuidePainter extends CustomPainter {
     );
   }
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (!focus.hasFocus && guided == null) {
-      return;
-    }
+  double scrollExtent(double pixels) {
+    if (guided == null) return 0;
+    final editable = findEditable(fieldKey.currentContext?.findRenderObject());
+    if (editable == null || !editable.hasSize) return 0;
+    final lineTop = _layoutAtEnd(editable);
+    if (lineTop == null) return 0;
+    return lineTop + pixels + layout.height - editable.size.height;
+  }
+
+  double? _layoutAtEnd(RenderEditable editable) {
     final value = controller.value;
     final (text: remainder, :maxLines) = _previewFor(value);
-    if (remainder.isEmpty) return;
-    final field = fieldKey.currentContext?.findRenderObject();
-    final editable = findEditable(field);
-    if (field == null || editable == null || !editable.hasSize) return;
-
+    final width = editable.size.width - editable.cursorWidth - 1;
+    if (remainder.isEmpty || width <= 0) return null;
     final caret = editable
         .getEndpointsForSelection(
           TextSelection.collapsed(offset: value.text.length),
         )
         .single
         .point;
-    final lineTop = caret.dy - editable.preferredLineHeight;
-    final transform = editable.getTransformTo(field);
-    final origin = MatrixUtils.transformPoint(transform, Offset.zero);
-    // The field may only lay out as many lines as the user has entered. The
-    // guide can continue through the blank paper below those lines.
-    final visibleHeight = size.height - origin.dy - bottomPadding;
-    if (visibleHeight <= 0) return;
-    final width = editable.size.width - editable.cursorWidth - 1;
-    if (width <= 0) return;
     final occupied =
         (editable.textDirection == TextDirection.ltr
                 ? caret.dx
@@ -120,7 +127,21 @@ class TranscriptionGuidePainter extends CustomPainter {
           ),
       ])
       ..layout(maxWidth: width);
-    if (lineTop >= visibleHeight) return;
+    return caret.dy - editable.preferredLineHeight;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (!focus.hasFocus && guided == null) return;
+    final field = fieldKey.currentContext?.findRenderObject();
+    final editable = findEditable(field);
+    if (field == null || editable == null || !editable.hasSize) return;
+    final lineTop = _layoutAtEnd(editable);
+    if (lineTop == null) return;
+    final transform = editable.getTransformTo(field);
+    final origin = MatrixUtils.transformPoint(transform, Offset.zero);
+    final visibleHeight = size.height - origin.dy - bottomPadding;
+    if (visibleHeight <= 0 || lineTop >= visibleHeight) return;
     canvas.save();
     canvas.transform(transform.storage);
     canvas.clipRect(Rect.fromLTWH(0, 0, editable.size.width, visibleHeight));
@@ -138,4 +159,47 @@ class TranscriptionGuidePainter extends CustomPainter {
       scroll != oldDelegate.scroll ||
       fieldKey != oldDelegate.fieldKey ||
       bottomPadding != oldDelegate.bottomPadding;
+}
+
+/// Adds the painted guide to the native editable's scrollable range.
+class TranscriptionScrollController extends ScrollController {
+  TranscriptionScrollController({required super.initialScrollOffset});
+
+  TranscriptionGuidePainter? guide;
+
+  @override
+  ScrollPosition createScrollPosition(
+    ScrollPhysics physics,
+    ScrollContext context,
+    ScrollPosition? oldPosition,
+  ) => _TranscriptionScrollPosition(
+    controller: this,
+    physics: physics,
+    context: context,
+    initialPixels: initialScrollOffset,
+    keepScrollOffset: keepScrollOffset,
+    oldPosition: oldPosition,
+  );
+}
+
+class _TranscriptionScrollPosition extends ScrollPositionWithSingleContext {
+  _TranscriptionScrollPosition({
+    required this.controller,
+    required super.physics,
+    required super.context,
+    required super.initialPixels,
+    required super.keepScrollOffset,
+    super.oldPosition,
+  });
+
+  final TranscriptionScrollController controller;
+
+  @override
+  bool applyContentDimensions(double minScrollExtent, double maxScrollExtent) {
+    final guideExtent = controller.guide?.scrollExtent(pixels) ?? 0;
+    return super.applyContentDimensions(
+      minScrollExtent,
+      math.max(maxScrollExtent, guideExtent),
+    );
+  }
 }

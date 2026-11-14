@@ -46,7 +46,7 @@ class PageEditor extends StatefulWidget {
 
 class _PageEditorState extends State<PageEditor> {
   late final PencilTextController text;
-  late final ScrollController scroll;
+  late final TranscriptionScrollController scroll;
   late TextEditingValue _observedText;
   WritingSound? _sound;
   final _guideLayout = TextPainter();
@@ -71,7 +71,7 @@ class _PageEditorState extends State<PageEditor> {
         ),
       ),
     );
-    scroll = ScrollController(initialScrollOffset: p.scroll);
+    scroll = TranscriptionScrollController(initialScrollOffset: p.scroll);
     if (widget.style.writingSound) _sound = WritingSound();
     _observedText = text.value;
     text.addListener(_textChanged);
@@ -95,6 +95,11 @@ class _PageEditorState extends State<PageEditor> {
     text.annotatedText = widget.page.text;
     text.marks = widget.page.pencilMarks;
     text.choice = widget.style.bookDetails.pencil;
+    if (oldWidget.guidedOriginal != widget.guidedOriginal) {
+      findEditable(
+        fieldRenderKey.currentContext?.findRenderObject(),
+      )?.markNeedsLayout();
+    }
     if (oldWidget.style.writingSound != widget.style.writingSound) {
       if (widget.style.writingSound) {
         _sound = WritingSound();
@@ -152,6 +157,13 @@ class _PageEditorState extends State<PageEditor> {
   void _textChanged() {
     final previous = _observedText;
     final next = _observedText = text.value;
+    if (widget.guidedOriginal != null &&
+        previous.text == next.text &&
+        previous.composing != next.composing) {
+      findEditable(
+        fieldRenderKey.currentContext?.findRenderObject(),
+      )?.markNeedsLayout();
+    }
     _save();
     final sound = _sound;
     if (sound != null &&
@@ -331,11 +343,31 @@ class _PageEditorState extends State<PageEditor> {
         final visiblePadding = padding.copyWith(
           bottom: overlap > 0 ? 12 : padding.bottom,
         );
+        final hasChosenGuide = widget.guidedOriginal != null;
+        final guide = widget.originals.isEmpty
+            ? null
+            : TranscriptionGuidePainter(
+                originals: widget.originals,
+                guided: widget.guidedOriginal,
+                focus: focus,
+                controller: text,
+                scroll: scroll,
+                fieldKey: fieldRenderKey,
+                bottomPadding: visiblePadding.bottom,
+                layout: _guideLayout,
+                style: writingTextStyle(
+                  style.fontIndex,
+                  color: const Color(0xff8b8273).withValues(alpha: .58),
+                  useDevelopmentTypeface: style.useDevelopmentTypeface,
+                ),
+              );
+        scroll.guide = guide;
         return Padding(
           padding: EdgeInsets.only(
             bottom: math.min(overlap, constraints.maxHeight),
           ),
           child: Stack(
+            fit: hasChosenGuide ? StackFit.expand : StackFit.loose,
             children: [
               if (style.guides)
                 Positioned.fill(
@@ -362,7 +394,7 @@ class _PageEditorState extends State<PageEditor> {
               RepaintBoundary(
                 key: fieldRenderKey,
                 child: Padding(
-                  padding: writingMargins,
+                  padding: hasChosenGuide ? visiblePadding : writingMargins,
                   child: Semantics(
                     identifier: 'writing-page-body',
                     child: TextSelectionTheme(
@@ -396,16 +428,20 @@ class _PageEditorState extends State<PageEditor> {
                         ),
                         cursorColor: brandInk,
                         cursorWidth: 1.2,
-                        decoration: InputDecoration(
-                          contentPadding: EdgeInsets.only(
-                            top: visiblePadding.top,
-                            bottom: visiblePadding.bottom,
-                          ),
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          filled: false,
-                        ),
+                        // Keep the native scroll viewport the height of the
+                        // paper, including when the editable has no text.
+                        decoration: hasChosenGuide
+                            ? null
+                            : InputDecoration(
+                                contentPadding: EdgeInsets.only(
+                                  top: visiblePadding.top,
+                                  bottom: visiblePadding.bottom,
+                                ),
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                filled: false,
+                              ),
                       ),
                     ),
                   ),
@@ -451,26 +487,12 @@ class _PageEditorState extends State<PageEditor> {
                 width: padding.right,
                 child: _dismissGutter(),
               ),
-              if (widget.originals.isNotEmpty)
+              if (guide != null)
                 Positioned.fill(
                   child: IgnorePointer(
                     child: CustomPaint(
                       key: const ValueKey('transcription-guide'),
-                      painter: TranscriptionGuidePainter(
-                        originals: widget.originals,
-                        guided: widget.guidedOriginal,
-                        focus: focus,
-                        controller: text,
-                        scroll: scroll,
-                        fieldKey: fieldRenderKey,
-                        bottomPadding: visiblePadding.bottom,
-                        layout: _guideLayout,
-                        style: writingTextStyle(
-                          style.fontIndex,
-                          color: const Color(0xff8b8273).withValues(alpha: .58),
-                          useDevelopmentTypeface: style.useDevelopmentTypeface,
-                        ),
-                      ),
+                      painter: guide,
                     ),
                   ),
                 ),

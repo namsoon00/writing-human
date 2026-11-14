@@ -1585,6 +1585,68 @@ void main() {
     },
   );
 
+  testWidgets('A long chosen original scrolls beyond the written text', (
+    tester,
+  ) async {
+    final source = List.filled(32, '긴 원문을 한 줄씩 천천히 읽어 보는 문장입니다.').join('\n');
+    final store = MemoryStore()
+      ..data = Library(
+        records: [
+          WritingRecord(
+            id: 'r',
+            title: '필사',
+            originals: [RegisteredOriginal('source', source)],
+          ),
+        ],
+        pages: const [
+          WritingPage(
+            id: 'p',
+            recordId: 'r',
+            number: 1,
+            guidedOriginalId: 'source',
+          ),
+        ],
+        activePageId: 'p',
+        writing: true,
+      );
+    await open(tester, store, FakeIntake());
+    final field = tester.widget<TextField>(bodyField);
+    final scroll = field.scrollController!;
+    final painter =
+        tester
+                .widget<CustomPaint>(
+                  find.byKey(const ValueKey('transcription-guide')),
+                )
+                .painter!
+            as TranscriptionGuidePainter;
+    expect(source.length, greaterThan(400));
+    expect(painter.remainderFor(field.controller!.value), source);
+    expect(painter.layout.computeLineMetrics().length, greaterThan(6));
+    expect(scroll.position.maxScrollExtent, greaterThan(500));
+    final initialValue = field.controller!.value;
+    final start = tester.getTopLeft(bodyField) + const Offset(160, 360);
+    final drag = await tester.startGesture(start);
+    await drag.moveBy(const Offset(0, -60));
+    await tester.pump(const Duration(milliseconds: 100));
+    await drag.moveBy(const Offset(0, -290));
+    await tester.pump(const Duration(milliseconds: 100));
+    await drag.up();
+    await tester.pumpAndSettle();
+    expect(scroll.offset, greaterThan(200));
+    expect(field.controller!.value, initialValue);
+    expect(store.data.activePage!.text, isEmpty);
+    final savedOffset = store.data.activePage!.scroll;
+    expect(savedOffset, closeTo(scroll.offset, 1));
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+    await open(tester, store, FakeIntake());
+    final reopened = tester.widget<TextField>(bodyField);
+    expect(reopened.scrollController!.offset, closeTo(savedOffset, 1));
+    expect(reopened.controller!.value, initialValue);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'Save and transcribe from the original panel preserves the existing page',
     (tester) async {

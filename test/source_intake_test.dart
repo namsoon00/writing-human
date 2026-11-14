@@ -1137,12 +1137,15 @@ void main() {
   );
 
   testWidgets(
-    'Saved original can be transcribed without pre-filling the page',
+    'A saved original guides multiple lines without pre-filling the page',
     (tester) async {
       final store = MemoryStore();
       await open(tester, store, FakeIntake());
       await openRegistration(tester);
-      await tester.enterText(sourceField, '한 문장을 옮겨 쓴다.');
+      const first = '한 문장을 옮겨 쓴다.';
+      const second = '그다음 문장을 읽는다.';
+      const original = '$first\n$second';
+      await tester.enterText(sourceField, original);
       await tester.pumpAndSettle();
       expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
       await tester.tap(confirm);
@@ -1159,12 +1162,17 @@ void main() {
               as TranscriptionGuidePainter;
       expect(field.controller!.text, isEmpty);
       expect(field.focusNode!.hasFocus, isTrue);
-      expect(painter.remainderFor(field.controller!.value), '한 문장을 옮겨 쓴다.');
+      expect(painter.remainderFor(field.controller!.value), original);
+      expect(painter.layout.computeLineMetrics().length, greaterThan(1));
       expect(store.data.pages.single.text, isEmpty);
       await tester.enterText(bodyField, '한 문장을');
       await tester.pumpAndSettle();
       expect(find.text('느낀 점'), findsNothing);
       expect(store.data.pages.single.text, '한 문장을');
+      await tester.enterText(bodyField, '$first\n');
+      await tester.pumpAndSettle();
+      expect(painter.remainderFor(field.controller!.value), second);
+      expect(store.data.pages.single.text, '$first\n');
     },
   );
 

@@ -29,26 +29,41 @@ class TranscriptionGuidePainter extends CustomPainter {
   final double bottomPadding;
   final TextPainter layout;
 
-  String remainderFor(TextEditingValue value) {
+  String remainderFor(TextEditingValue value) => _previewFor(value).text;
+
+  ({String text, int maxLines}) _previewFor(TextEditingValue value) {
+    const empty = (text: '', maxLines: 1);
     final caret = value.selection;
     if (!caret.isCollapsed || caret.extentOffset != value.text.length) {
-      return '';
+      return empty;
     }
     final composing = value.composing;
     final isComposing = value.isComposingRangeValid && !composing.isCollapsed;
-    if (isComposing && composing.end != value.text.length) return '';
+    if (isComposing && composing.end != value.text.length) return empty;
     final committed = isComposing ? composing.start : caret.extentOffset;
     final source = guided;
+    final guidedMatch = source == null
+        ? null
+        : matchGuidedOriginal(source, value.text, committed);
     final match =
-        (source == null
-            ? null
-            : matchGuidedOriginal(source, value.text, committed)) ??
-        matchOriginal(originals, value.text, committed);
-    if (match == null) return '';
+        guidedMatch ?? matchOriginal(originals, value.text, committed);
+    if (match == null) return empty;
     final skipped = isComposing
         ? composing.textInside(value.text).characters.length
         : 0;
-    return match.remainder.characters.skip(skipped).take(120).toString();
+    final remaining = guidedMatch == null
+        ? match.remainder
+        : match.original.text.substring(
+            match.end,
+            match.original.writingRange?.end ?? match.original.text.length,
+          );
+    return (
+      text: remaining.characters
+          .skip(skipped)
+          .take(guidedMatch == null ? 120 : 400)
+          .toString(),
+      maxLines: guidedMatch == null ? 1 : 6,
+    );
   }
 
   @override
@@ -57,7 +72,7 @@ class TranscriptionGuidePainter extends CustomPainter {
       return;
     }
     final value = controller.value;
-    final remainder = remainderFor(value);
+    final (text: remainder, :maxLines) = _previewFor(value);
     if (remainder.isEmpty) return;
     final field = fieldKey.currentContext?.findRenderObject();
     final editable = findEditable(field);
@@ -91,7 +106,7 @@ class TranscriptionGuidePainter extends CustomPainter {
           TextSpan(text: remainder),
         ],
       )
-      ..maxLines = 1
+      ..maxLines = maxLines
       ..textDirection = editable.textDirection
       ..textScaler = editable.textScaler
       ..locale = editable.locale

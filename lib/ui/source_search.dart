@@ -4,10 +4,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
 
 import '../source/source_intake.dart';
 import '../source/wikisource_preview.dart';
+import 'source_browser.dart';
 
 enum _Collection {
   works('위키문헌', 'ko.wikisource.org'),
@@ -218,9 +218,9 @@ class _SourceSearchState extends State<_SourceSearch> {
 
   Future<void> _open(Uri url) async {
     try {
-      if (await launchUrl(url, mode: LaunchMode.externalApplication)) return;
+      if (await openSourceBrowser(context, url)) return;
     } on Exception {
-      // Report when the platform cannot hand off to a browser.
+      // Report when the browser could not be opened.
     }
     if (mounted) setState(() => _linkError = '브라우저를 열지 못했어요.');
   }
@@ -368,12 +368,12 @@ class _SourceSearchState extends State<_SourceSearch> {
       ],
       if (_mode != _SearchMode.author) ...[
         const SizedBox(height: 12),
-        const Text('웹에서 원문을 열어 원하는 구절을 복사한 뒤, 돌아와 아래 버튼을 눌러 주세요.'),
+        const Text('원문을 열어 원하는 구절을 복사한 뒤, 돌아와 아래 버튼을 눌러 주세요.'),
       ],
       const SizedBox(height: 12),
       OutlinedButton.icon(
         onPressed: _pasting ? null : () => _open(hit.url),
-        icon: const Icon(CupertinoIcons.arrow_up_right, size: 16),
+        icon: const Icon(CupertinoIcons.globe, size: 16),
         label: Text(_mode == _SearchMode.author ? '작품 목록 열기' : '원문 열기'),
       ),
       if (_mode != _SearchMode.author) ...[
@@ -593,10 +593,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                               },
                             }),
                           ),
-                          icon: const Icon(
-                            CupertinoIcons.arrow_up_right,
-                            size: 16,
-                          ),
+                          icon: const Icon(CupertinoIcons.globe, size: 16),
                           label: const Text('네이버에서 더 찾기'),
                         ),
                         const Padding(

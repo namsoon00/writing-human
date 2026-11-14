@@ -341,7 +341,7 @@ void main() {
       await tester.tap(result);
       await tester.pumpAndSettle();
       expect(
-        find.text('웹에서 원문을 열어 원하는 구절을 복사한 뒤, 돌아와 아래 버튼을 눌러 주세요.'),
+        find.text('원문을 열어 원하는 구절을 복사한 뒤, 돌아와 아래 버튼을 눌러 주세요.'),
         findsOneWidget,
       );
       await tester.tap(find.text('출처만 넣기'));

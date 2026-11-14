@@ -1786,6 +1786,16 @@ void main() {
       expect(reading, findsOneWidget);
       await tester.tap(find.text('원문 등록'));
       await tester.pumpAndSettle();
+      final registration = find.byType(SourceImportSheet);
+      expect(
+        find.ancestor(of: registration, matching: find.byType(PaperBackdrop)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: registration, matching: find.byType(FilledButton)),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(CheckboxListTile, '바로 필사하기'), findsOneWidget);
       await tester.enterText(sourceField, '새로 옮겨 쓸 구절');
       await tester.pumpAndSettle();
       final start = find.byKey(const ValueKey('source-transcribe-after-save'));

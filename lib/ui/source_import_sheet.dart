@@ -1224,7 +1224,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                           key: const ValueKey('source-transcribe-after-save'),
                           contentPadding: EdgeInsets.zero,
                           controlAffinity: ListTileControlAffinity.leading,
-                          title: const Text('저장 후 바로 필사하기'),
+                          title: const Text('바로 필사하기'),
                           value: _startTranscription,
                           onChanged: _editable
                               ? (checked) => setState(
@@ -1235,7 +1235,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                     ],
                   ),
                 ),
-                const Divider(height: 1, color: line),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
                   child: SizedBox(

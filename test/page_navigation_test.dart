@@ -14,8 +14,11 @@ final reveal = find.byKey(const ValueKey('page-turn-reveal'));
 final cover = find.byKey(const ValueKey('book-front-cover'));
 final overlay = find.byKey(const ValueKey('page-turn-overlay'));
 
-Library twoPages() => Library(
-  records: const [WritingRecord(id: 'r', title: '두 쪽 필사')],
+Library twoPages({bool bound = false}) => Library(
+  books: [if (bound) const Book(id: 'book', title: '한 권의 책')],
+  records: [
+    WritingRecord(id: 'r', title: '두 쪽 필사', bookId: bound ? 'book' : null),
+  ],
   pages: [
     WritingPage(
       id: 'one',
@@ -328,7 +331,7 @@ void main() {
   testWidgets('The first sheet peels back to a cover without a saved page', (
     tester,
   ) async {
-    final store = MemoryStore()..data = twoPages();
+    final store = MemoryStore()..data = twoPages(bound: true);
     await open(tester, store);
     final writes = store.writes;
     final live = tester.widget<TextField>(field).controller!;
@@ -400,7 +403,8 @@ void main() {
   testWidgets(
     'The back cover closes on its spine and reopens the same editor',
     (tester) async {
-      final store = MemoryStore()..data = twoPages().copy(activePageId: 'two');
+      final store = MemoryStore()
+        ..data = twoPages(bound: true).copy(activePageId: 'two');
       await open(tester, store);
       final back = find.byKey(const ValueKey('book-back-cover'));
       final live = tester.widget<TextField>(field).controller!;
@@ -460,7 +464,7 @@ void main() {
   testWidgets(
     'Tapping the front cover turns the board with reduced motion support',
     (tester) async {
-      final store = MemoryStore()..data = twoPages();
+      final store = MemoryStore()..data = twoPages(bound: true);
       await open(tester, store);
       await previousSheet(tester);
       await tester.pumpAndSettle();
@@ -468,7 +472,7 @@ void main() {
       expect(find.text('책 펼치기'), findsNothing);
       await tester.tap(find.text('책장'));
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('shelf-loose-pages')), findsOneWidget);
+      expect(find.byKey(const ValueKey('shelf-book-book')), findsOneWidget);
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       expect(cover, findsOneWidget);
@@ -512,7 +516,7 @@ void main() {
   testWidgets(
     'The rear cover closes over the centered editor on wide screens',
     (tester) async {
-      final store = MemoryStore()..data = twoPages();
+      final store = MemoryStore()..data = twoPages(bound: true);
       await open(tester, store);
       const viewport = Size(1440, 900);
       tester.view.physicalSize = viewport;
@@ -602,12 +606,9 @@ void main() {
       await open(tester, store);
       await previousSheet(tester);
       await tester.pumpAndSettle();
-      expect(cover, findsOneWidget);
-      await tester.fling(cover, const Offset(140, 0), 800);
-      await tester.pumpAndSettle();
-      expect(cover, findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('open-front-cover')));
-      await tester.pumpAndSettle();
+      expect(cover, findsNothing);
+      expect(store.data.activePageId, 'one');
+      expect(store.data.pages.length, 2);
       await tester.drag(field, const Offset(0, -180));
       await tester.pumpAndSettle();
       expect(store.data.activePageId, 'one');
@@ -635,10 +636,7 @@ void main() {
         const Duration(seconds: 1),
       );
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('book-back-cover')), findsOneWidget);
-      expect(store.data.pages.length, 2);
-      await tester.tap(find.text('한 쪽 더'));
-      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('book-back-cover')), findsNothing);
       expect(store.data.pages.length, 3);
       expect(store.data.activePage!.text, isEmpty);
     },
@@ -710,7 +708,8 @@ void main() {
     await tester.tap(find.text('2'));
     await tester.pumpAndSettle();
     expect(find.byType(PagesSheet), findsOneWidget);
-    expect(find.text('표지'), findsOneWidget);
+    expect(find.text('표지'), findsNothing);
+    expect(find.text('뒷표지'), findsNothing);
     expect(find.text('1쪽'), findsOneWidget);
     expect(find.text('2쪽 · 현재'), findsOneWidget);
     await tester.tap(find.text('1쪽'));

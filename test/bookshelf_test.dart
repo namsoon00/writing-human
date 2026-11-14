@@ -206,6 +206,10 @@ void main() {
       expect(store.data.activePageId, 'a2');
       expect(store.data.activeRecord!.bookId, isNull);
 
+      final heading = find.byKey(const ValueKey('writing-title'));
+      expect(tester.widget<Text>(heading).data, '낱장');
+      expect(find.byType(RibbonBookmark), findsNothing);
+
       await shelf(tester);
       await tester.tap(looseStack);
       await tester.pumpAndSettle();

@@ -49,7 +49,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   AudioPlayer? _pageAudio;
   String? _coverAnchor;
   bool _coverAtBack = false;
-  bool get _showCover => _coverAnchor == page.id;
+  bool get _showCover => book != null && _coverAnchor == page.id;
   int get _coverSide => _showCover ? (_coverAtBack ? 1 : -1) : 0;
   late WritingPage draft = _blank();
   late bool fresh = c.library.pages.isEmpty;
@@ -181,6 +181,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   });
 
   Future<void> _openCover({bool back = false}) => _navigatePage(() async {
+    if (book == null) return;
     final target = back ? _volumePages.last : _volumePages.first;
     if (target.id != page.id) c.openPage(target.id);
     setState(() {
@@ -201,9 +202,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     if (index < 0) return;
     final target = index + step;
     if (target < 0) {
-      await _openCover();
+      if (book != null) await _openCover();
     } else if (target >= pages.length) {
-      if (fresh) {
+      if (fresh || book == null) {
         await _appendPage();
       } else {
         await _openCover(back: true);
@@ -1147,7 +1148,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             pages: pages,
             currentId: selectedId,
             style: _paperStyle(book),
-            coverTitle: book?.title ?? record?.title ?? '나의 필사',
+            coverTitle: book?.title,
             coverVariant: _coverVariant,
           ),
           forBook: book,
@@ -1184,7 +1185,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     return PaperBackdrop(
       color: paperColors[style.paperIndex],
       grainOpacity: paperGrainOpacity[style.paperIndex],
-      binding: style.bookDetails.binding,
+      binding: forBook == null
+          ? const BookDetailChoice(enabled: false)
+          : style.bookDetails.binding,
       coverIndex: forBook == null ? null : c.coverIndexFor(forBook),
       pagesAfter: pageCount,
       shrinkWrap: shrinkWrap,
@@ -1241,6 +1244,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     final pages = _volumePages;
     final index = pages.indexWhere((p) => p.id == current.id);
     final showingCover = _showCover;
+    final hasBook = book != null;
     final navigationEnabled =
         !_pageNavigationBusy &&
         !_editorComposing &&
@@ -1258,8 +1262,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           navigationEnabled: !preview && navigationEnabled,
         );
     Widget cover({bool back = false}) => BookFrontCover(
-      title: book?.title ?? record?.title ?? '나의 필사',
-      author: book?.author ?? '',
+      title: book!.title,
+      author: book!.author,
       variant: _coverVariant,
       style: _paperStyle(book),
       pageCount: pages.length,
@@ -1288,25 +1292,27 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         isCover: showingCover,
         isBackCover: showingCover && _coverAtBack,
         coverSurface: showingCover ? cover(back: _coverAtBack) : null,
-        previousIsCover: !showingCover && index == 0,
-        nextIsCover: !showingCover && !fresh && index == pages.length - 1,
+        previousIsCover: hasBook && !showingCover && index == 0,
+        nextIsCover:
+            hasBook && !showingCover && !fresh && index == pages.length - 1,
         editing: c.editorFocused,
         composing: _editorComposing || c.composing,
         onTurn: _commitTurn,
         previous: showingCover
             ? (_coverAtBack ? paper(current, index) : null)
             : index == 0
-            ? cover()
+            ? (hasBook ? cover() : null)
             : paper(pages[index - 1], index - 1),
         next: showingCover
             ? (_coverAtBack ? null : paper(current, index))
-            : !fresh && index == pages.length - 1
+            : hasBook && !fresh && index == pages.length - 1
             ? cover(back: true)
             : paper(nextPage, index + 1),
         child: PaperSwipe(
           key: const ValueKey('paper-swipe'),
           touchOnly: !showingCover,
-          onPrevious: canSwipe && (!showingCover || _coverAtBack)
+          onPrevious:
+              canSwipe && (showingCover ? _coverAtBack : hasBook || index > 0)
               ? () => _stepPage(-1)
               : null,
           onNext: canSwipe && (!showingCover || !_coverAtBack)
@@ -1367,7 +1373,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             recordId: currentPage.recordId,
           );
     final surface = PaperBackdrop(
-      binding: style.bookDetails.binding,
+      binding: book == null
+          ? const BookDetailChoice(enabled: false)
+          : style.bookDetails.binding,
       color: paperColors[style.paperIndex],
       grainOpacity: paperGrainOpacity[style.paperIndex],
       coverIndex: book == null ? null : c.coverIndexFor(book),
@@ -1383,10 +1391,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             children: [
               WritingHeader(
                 ribbon: style.bookDetails.ribbon,
-                bookmarked: record != null,
+                bookmarked: book != null && record != null,
                 useDevelopmentTypeface: c.library.style.useDevelopmentTypeface,
                 compact: compact,
                 bookTitle: book?.title,
+                loosePage: book == null && record != null,
                 onCollection: _collection,
                 onNewSheet: book == null
                     ? () => _newSheet()
@@ -1532,7 +1541,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                   pageLabel: '${index + 1}',
                   pageCount: count,
                   onPages: navigationEnabled ? _pages : null,
-                  onPrevious: navigationEnabled ? () => _stepPage(-1) : null,
+                  onPrevious: navigationEnabled && (book != null || index > 0)
+                      ? () => _stepPage(-1)
+                      : null,
                   onNext: navigationEnabled ? () => _stepPage(1) : null,
                   onTurnStart: _pageTurn.start,
                   onTurnUpdate: _pageTurn.update,

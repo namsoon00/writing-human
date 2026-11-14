@@ -13,6 +13,7 @@ class WritingHeader extends StatelessWidget {
     required this.onCollection,
     required this.onNewSheet,
     this.bookTitle,
+    this.loosePage = false,
     this.compact = false,
     this.useDevelopmentTypeface = true,
     this.bookmarked = false,
@@ -21,7 +22,7 @@ class WritingHeader extends StatelessWidget {
   final VoidCallback onCollection, onNewSheet;
   final String? bookTitle;
   final bool compact, useDevelopmentTypeface;
-  final bool bookmarked;
+  final bool bookmarked, loosePage;
   final BookDetailChoice ribbon;
 
   @override
@@ -41,7 +42,7 @@ class WritingHeader extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 88),
           child: Text(
-            bookTitle ?? '쓰는 인간',
+            bookTitle ?? (loosePage ? '낱장' : '쓰는 인간'),
             key: const ValueKey('writing-title'),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

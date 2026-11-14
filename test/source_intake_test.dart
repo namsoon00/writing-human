@@ -261,7 +261,7 @@ void main() {
                 ]
               else
                 'search': [
-                  if (work) {'title': '서시', 'pageid': 1516},
+                  if (work) {'title': '바람', 'pageid': 1516},
                   if (work) {'title': '바다와 나비', 'pageid': 123},
                   if (work) {'title': '두시언해/서시흥', 'pageid': 124},
                 ],
@@ -280,7 +280,7 @@ void main() {
       await tester.ensureVisible(search);
       await tester.tap(search);
       await tester.pumpAndSettle();
-      await tester.enterText(find.widgetWithText(TextField, '검색어'), '서시');
+      await tester.enterText(find.widgetWithText(TextField, '검색어'), '바람');
       expect(requests, isEmpty);
       final input = find.widgetWithText(TextField, '검색어');
       final submit = find.byTooltip('자료 검색');
@@ -306,12 +306,12 @@ void main() {
 
       await tester.tap(find.text('작품 제목'));
       await tester.pumpAndSettle();
-      await tester.enterText(input, '서시');
+      await tester.enterText(input, '바람');
       await tester.tap(submit);
       await tester.pumpAndSettle();
       expect(requests.last.host, 'ko.wikisource.org');
-      expect(requests.last.queryParameters['srsearch'], 'intitle:서시');
-      final result = find.widgetWithText(ListTile, '서시');
+      expect(requests.last.queryParameters['srsearch'], 'intitle:바람');
+      final result = find.widgetWithText(ListTile, '바람');
       expect(result, findsOneWidget);
       expect(find.text('바다와 나비'), findsNothing);
       expect(find.text('두시언해/서시흥'), findsNothing);

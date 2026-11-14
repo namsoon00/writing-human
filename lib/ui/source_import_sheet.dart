@@ -16,6 +16,7 @@ import 'live_source_camera.dart';
 import 'paper.dart';
 import 'original_range_sheet.dart';
 import 'source_scan_preview.dart';
+import 'source_search.dart';
 import 'writing_pen.dart';
 
 typedef SourceImportResult = ({
@@ -152,6 +153,33 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _searchSources() async {
+    if (!_editable) return;
+    FocusScope.of(context).unfocus();
+    final citation = await showSourceSearch(context, widget.paperColor);
+    if (!mounted || citation == null || !_editable) return;
+    if (_citation.text.trim().isNotEmpty && _citation.text != citation) {
+      final replace = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('입력한 출처를 바꿀까요?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('바꾸기'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || replace != true || !_editable) return;
+    }
+    _citation.text = citation;
   }
 
   Future<void> _shareHelp() => showDialog<void>(
@@ -617,6 +645,12 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
               ],
             ),
           ),
+        ),
+      if (!widget.shared)
+        TextButton.icon(
+          onPressed: _editable ? _searchSources : null,
+          icon: const Icon(CupertinoIcons.search, size: 17),
+          label: const Text('시·문장 검색'),
         ),
     ],
   );

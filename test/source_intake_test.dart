@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:writing_human/data/library_backup.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/data/original_photo_store.dart';
@@ -202,6 +204,71 @@ Future<void> takePhoto(WidgetTester tester, {bool settle = true}) async {
 }
 
 void main() {
+  testWidgets('Search imports a source citation and keeps the original draft', (
+    tester,
+  ) async {
+    final requests = <Uri>[];
+    final client = MockClient((request) async {
+      requests.add(request.url);
+      final work = request.url.host == 'ko.wikisource.org';
+      return http.Response.bytes(
+        utf8.encode(
+          jsonEncode({
+            'query': {
+              'search': [
+                if (work) {'title': '서시', 'pageid': 1515},
+              ],
+            },
+          }),
+        ),
+        200,
+      );
+    });
+    await http.runWithClient(() async {
+      final store = MemoryStore();
+      await open(tester, store, FakeIntake());
+      await openRegistration(tester);
+      await tester.enterText(sourceField, '직접 고른 구절');
+      final search = find.text('시·문장 검색');
+      await tester.ensureVisible(search);
+      await tester.tap(search);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, '제목, 작가, 기억나는 구절'),
+        '윤동주 서시',
+      );
+      expect(requests, isEmpty);
+      await tester.tap(find.byTooltip('자료 검색'));
+      await tester.pumpAndSettle();
+      expect(
+        requests.map((url) => url.host),
+        containsAll(['ko.wikisource.org', 'ko.wikiquote.org']),
+      );
+      expect(
+        requests.every((url) => url.queryParameters['srsearch'] == '윤동주 서시'),
+        isTrue,
+      );
+      expect(find.text('서시'), findsOneWidget);
+      await tester.tap(find.text('출처 넣기'));
+      await tester.pumpAndSettle();
+      final citation = tester.widget<TextField>(
+        find.byKey(const ValueKey('original-citation')),
+      );
+      expect(citation.controller!.text, contains('curid=1515'));
+      expect(
+        tester.widget<TextField>(sourceField).controller!.text,
+        '직접 고른 구절',
+      );
+      expect(store.data.records, isEmpty);
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      expect(
+        store.data.records.single.originals.single.citation,
+        contains('위키문헌'),
+      );
+    }, () => client);
+  });
+
   test('A complete unique word can suggest text before a second word', () {
     const original = RegisteredOriginal('a', '아침이다. 햇빛이 책장에 내려앉았다.');
     const repeated = RegisteredOriginal('b', '햇빛이 창문에 번졌다.');

@@ -1182,7 +1182,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   Future<void> _pages() async {
     if (_pageNavigationBusy || !_canLeaveInput()) return;
     _blur();
-    final selectedId = page.id;
     final owner = c;
     final route = ModalBottomSheetRoute<PageChoice>(
       isScrollControlled: true,
@@ -1190,29 +1189,46 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       backgroundColor: paperColors[_paperStyle(book).paperIndex],
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       constraints: const BoxConstraints(maxWidth: 600),
-      builder: (_) {
-        final pages = _volumePages;
-        return _insertedPage(
-          PagesSheet(
-            pages: pages,
-            currentId: selectedId,
-            style: _paperStyle(book),
-            coverTitle: book?.title,
-            coverVariant: _coverVariant,
-          ),
-          forBook: book,
-          pageCount: pages.length,
-        );
-      },
+      builder: (_) => AnimatedBuilder(
+        animation: owner,
+        builder: (_, _) {
+          final pages = _volumePages;
+          final pageCounts = <String, int>{};
+          for (final page in owner.library.pages) {
+            pageCounts.update(
+              page.recordId,
+              (count) => count + 1,
+              ifAbsent: () => 1,
+            );
+          }
+          return _insertedPage(
+            PagesSheet(
+              pages: pages,
+              currentId: page.id,
+              style: _paperStyle(book),
+              coverTitle: book?.title,
+              coverVariant: _coverVariant,
+              canDelete: (page) => (pageCounts[page.recordId] ?? 0) > 1,
+              onDelete: (target) async {
+                if (!mounted ||
+                    c != owner ||
+                    _accountLocked ||
+                    !_canLeaveInput()) {
+                  return false;
+                }
+                return owner.deletePage(target);
+              },
+            ),
+            forBook: book,
+            pageCount: pages.length,
+          );
+        },
+      ),
     );
     final choice = await Navigator.of(context).push<PageChoice>(route);
     // Let the overview finish closing so the actual paper turn is visible.
     await route.completed;
-    if (!mounted ||
-        c != owner ||
-        _accountLocked ||
-        choice == null ||
-        page.id != selectedId) {
+    if (!mounted || c != owner || _accountLocked || choice == null) {
       return;
     }
     if (choice.append) {

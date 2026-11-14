@@ -255,6 +255,9 @@ class SqliteLibraryStore implements LibraryStore {
         }),
         'sync_state': jsonEncode(library.sync.toJson()),
       });
+      // Omitted pages still have their temporary negative number. Delete them
+      // only after app_state points at a surviving page.
+      await txn.delete('pages', where: 'number < 0');
     });
   }
 

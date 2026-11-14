@@ -20,12 +20,31 @@ class PagesSheet extends StatelessWidget {
     required this.style,
     required this.coverTitle,
     required this.coverVariant,
+    required this.canDelete,
+    required this.onDelete,
   });
   final List<WritingPage> pages;
   final String currentId;
   final WritingStyle style;
   final String? coverTitle;
   final int coverVariant;
+  final bool Function(WritingPage) canDelete;
+  final Future<bool> Function(WritingPage) onDelete;
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WritingPage page,
+    int number,
+  ) => showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => _DeletePageDialog(
+      page: page,
+      number: number,
+      onDelete: () => onDelete(page),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final title = coverTitle;
@@ -145,98 +164,202 @@ class PagesSheet extends StatelessWidget {
                   final excerpt = String.fromCharCodes(
                     page.text.runes.take(360),
                   );
-                  return Semantics(
-                    selected: selected,
-                    label: '$number쪽${selected ? ', 현재 페이지' : ''}',
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () => Navigator.pop(context, (
-                        pageId: page.id,
-                        append: false,
-                        cover: false,
-                        backCover: false,
-                      )),
-                      child: ExcludeSemantics(
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: paperColors[style.paperIndex],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: selected ? brandInk : line,
-                              width: selected ? 1.5 : 1,
-                            ),
-                          ),
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  children: [
-                                    Expanded(
-                                      child: ClipRect(
-                                        child: Align(
-                                          alignment: Alignment.topLeft,
-                                          child: Text.rich(
-                                            pencilTextSpan(
-                                              choice: style.bookDetails.pencil,
-                                              value: TextEditingValue(
-                                                text: excerpt.isEmpty
-                                                    ? '빈 종이'
-                                                    : excerpt,
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Semantics(
+                        selected: selected,
+                        label: '$number쪽${selected ? ', 현재 페이지' : ''}',
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => Navigator.pop(context, (
+                            pageId: page.id,
+                            append: false,
+                            cover: false,
+                            backCover: false,
+                          )),
+                          child: ExcludeSemantics(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: paperColors[style.paperIndex],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: selected ? brandInk : line,
+                                  width: selected ? 1.5 : 1,
+                                ),
+                              ),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Column(
+                                      children: [
+                                        Expanded(
+                                          child: ClipRect(
+                                            child: Align(
+                                              alignment: Alignment.topLeft,
+                                              child: Text.rich(
+                                                pencilTextSpan(
+                                                  choice:
+                                                      style.bookDetails.pencil,
+                                                  value: TextEditingValue(
+                                                    text: excerpt.isEmpty
+                                                        ? '빈 종이'
+                                                        : excerpt,
+                                                  ),
+                                                  marks: page.pencilMarks,
+                                                ),
+                                                maxLines: 8,
+                                                overflow: TextOverflow.clip,
+                                                style: writingTextStyle(
+                                                  style.fontIndex,
+                                                  size: 12,
+                                                  color: excerpt.isEmpty
+                                                      ? muted
+                                                      : ink,
+                                                  useDevelopmentTypeface: style
+                                                      .useDevelopmentTypeface,
+                                                ),
                                               ),
-                                              marks: page.pencilMarks,
-                                            ),
-                                            maxLines: 8,
-                                            overflow: TextOverflow.clip,
-                                            style: writingTextStyle(
-                                              style.fontIndex,
-                                              size: 12,
-                                              color: excerpt.isEmpty
-                                                  ? muted
-                                                  : ink,
-                                              useDevelopmentTypeface:
-                                                  style.useDevelopmentTypeface,
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    PageOrnament(
-                                      choice: style.bookDetails.ornament,
-                                      child: Text(
-                                        '$number쪽${selected ? ' · 현재' : ''}',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: brandInk,
+                                        const SizedBox(height: 8),
+                                        PageOrnament(
+                                          choice: style.bookDetails.ornament,
+                                          child: Text(
+                                            '$number쪽${selected ? ' · 현재' : ''}',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: brandInk,
+                                            ),
+                                          ),
                                         ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (selected)
+                                    Positioned(
+                                      right: canDelete(page) ? 48 : 12,
+                                      top: 0,
+                                      child: RibbonBookmark(
+                                        width: 10,
+                                        height: 25,
+                                        choice: style.bookDetails.ribbon,
                                       ),
                                     ),
-                                  ],
-                                ),
+                                ],
                               ),
-                              if (selected)
-                                Positioned(
-                                  right: 12,
-                                  top: 0,
-                                  child: RibbonBookmark(
-                                    width: 10,
-                                    height: 25,
-                                    choice: style.bookDetails.ribbon,
-                                  ),
-                                ),
-                            ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                      if (canDelete(page))
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: PopupMenuButton<bool>(
+                            tooltip: '$number쪽 메뉴',
+                            icon: const Icon(
+                              CupertinoIcons.ellipsis,
+                              color: brandInk,
+                            ),
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(
+                                value: true,
+                                child: Text('쪽 삭제'),
+                              ),
+                            ],
+                            onSelected: (_) =>
+                                _confirmDelete(context, page, number),
+                          ),
+                        ),
+                    ],
                   );
                 },
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _DeletePageDialog extends StatefulWidget {
+  const _DeletePageDialog({
+    required this.page,
+    required this.number,
+    required this.onDelete,
+  });
+
+  final WritingPage page;
+  final int number;
+  final Future<bool> Function() onDelete;
+
+  @override
+  State<_DeletePageDialog> createState() => _DeletePageDialogState();
+}
+
+class _DeletePageDialogState extends State<_DeletePageDialog> {
+  bool saving = false;
+  bool failed = false;
+
+  Future<void> _delete() async {
+    setState(() => saving = true);
+    final saved = await widget.onDelete();
+    if (!mounted) return;
+    if (saved) {
+      Navigator.pop(context);
+    } else {
+      setState(() {
+        saving = false;
+        failed = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = widget.page.text.trimLeft();
+    final end = text.indexOf('\n');
+    final firstLine = end < 0 ? text : text.substring(0, end);
+    final excerpt = firstLine.isEmpty ? '빈 종이' : firstLine;
+    return PopScope(
+      canPop: !saving,
+      child: AlertDialog(
+        scrollable: true,
+        title: Text('${widget.number}쪽을 삭제할까요?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(excerpt, maxLines: 2, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 12),
+            Text(
+              failed
+                  ? '삭제하지 못했어요. 쪽은 목록에 남아 있어요.'
+                  : '이 쪽의 글과 밑칠을 지워요. 삭제하면 되돌릴 수 없어요.',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: saving ? null : () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: saving ? null : _delete,
+            child: Text(
+              saving
+                  ? '삭제 중'
+                  : failed
+                  ? '다시 시도'
+                  : '삭제',
+            ),
+          ),
+        ],
       ),
     );
   }

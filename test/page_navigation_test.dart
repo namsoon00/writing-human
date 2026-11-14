@@ -700,6 +700,47 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'Page menu confirms deletion and retries without losing the page',
+    (tester) async {
+      final store = MemoryStore()..data = twoPages();
+      await open(tester, store);
+      await tester.tap(find.byKey(const ValueKey('page-number')));
+      await tester.pumpAndSettle();
+
+      Future<void> prompt() async {
+        await tester.tap(find.byTooltip('1쪽 메뉴'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('쪽 삭제'));
+        await tester.pumpAndSettle();
+        expect(find.text('1쪽을 삭제할까요?'), findsOneWidget);
+      }
+
+      await prompt();
+      await tester.tap(find.text('취소'));
+      await tester.pumpAndSettle();
+      expect(store.data.pages.length, 2);
+      await prompt();
+      store.fail = true;
+      await tester.tap(find.text('삭제'));
+      await tester.pumpAndSettle();
+      expect(find.text('삭제하지 못했어요. 쪽은 목록에 남아 있어요.'), findsOneWidget);
+      expect(store.data.activePageId, 'one');
+      expect(store.data.pages.length, 2);
+
+      store.fail = false;
+      await tester.tap(find.text('다시 시도'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byTooltip('1쪽 메뉴'), findsNothing);
+      expect(store.data.pages.single.id, 'two');
+      expect(store.data.activePageId, 'two');
+      await tester.tap(find.byTooltip('닫기'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(field).controller!.text, '둘째 페이지');
+    },
+  );
+
   testWidgets('Overview shows paper previews and switches only after closing', (
     tester,
   ) async {

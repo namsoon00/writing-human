@@ -70,6 +70,43 @@ void main() {
     },
   );
 
+  test('Deleting the active page survives SQLite close and reopen', () async {
+    final file = '${dir.path}/delete-page.db';
+    final store = await SqliteLibraryStore.open(
+      file,
+      factory: databaseFactoryFfi,
+    );
+    final controller = LibraryController(store, await store.load());
+    controller.createBook('책', '');
+    final first = controller.library.activePage!;
+    controller.editPage(first.id, '남길 글', 1, 3, 0);
+    controller.addPage();
+    final last = controller.library.activePage!;
+    controller.editPage(last.id, '지울 글', 0, 0, 0);
+    expect(await controller.deletePage(last), isFalse);
+    expect(await controller.deletePage(controller.library.activePage!), isTrue);
+    expect(
+      await controller.deletePage(controller.library.activePage!),
+      isFalse,
+    );
+    controller.dispose();
+    await store.close();
+
+    final reopened = await SqliteLibraryStore.open(
+      file,
+      factory: databaseFactoryFfi,
+    );
+    try {
+      final saved = await reopened.load();
+      expect(saved.activePageId, first.id);
+      expect(saved.bookPositions.values.single, first.id);
+      expect(saved.pages.single.text, '남길 글');
+      expect(saved.pages.single.extent, 3);
+    } finally {
+      await reopened.close();
+    }
+  });
+
   test('Each book position survives a real SQLite close and reopen', () async {
     final file = '${dir.path}/book-positions.db';
     final store = await SqliteLibraryStore.open(

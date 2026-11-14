@@ -59,6 +59,54 @@ class DeviceRemote implements CloudRemote {
 }
 
 void main() {
+  test(
+    'Page deletion syncs in both directions and preserves concurrent edits',
+    () {
+      const kept = WritingPage(id: 'kept', recordId: 'r', number: 1);
+      const target = WritingPage(
+        id: 'target',
+        recordId: 'r',
+        number: 2,
+        text: '본문',
+      );
+      const base = Library(
+        records: [WritingRecord(id: 'r', title: '필사')],
+        pages: [kept, target],
+        activePageId: 'kept',
+        writing: true,
+      );
+      final deleted = base.copy(pages: [kept]);
+      final movedCaret = base.copy(
+        pages: [
+          kept,
+          target.edited(text: target.text, base: 1, extent: 1, scroll: 0),
+        ],
+      );
+      final edited = base.copy(
+        pages: [
+          kept,
+          target.edited(text: '수정한 본문', base: 0, extent: 0, scroll: 0),
+        ],
+      );
+      for (final (left, right) in [
+        (deleted, movedCaret),
+        (movedCaret, deleted),
+      ]) {
+        expect(
+          mergeLibraries(base, left, right).library.pages.single.id,
+          'kept',
+        );
+      }
+      for (final (left, right) in [(deleted, edited), (edited, deleted)]) {
+        final merged = mergeLibraries(base, left, right).library;
+        expect(
+          merged.pages.singleWhere((page) => page.id == 'target').text,
+          '수정한 본문',
+        );
+      }
+    },
+  );
+
   test('Concurrent changes to different book positions both survive', () {
     const base = Library(
       books: [

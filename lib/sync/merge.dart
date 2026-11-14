@@ -11,6 +11,13 @@ Json? _recordContent(WritingRecord? record) => record?.toJson()
   ?..remove('sourceParagraph')
   ..remove('originals');
 
+// Renumbering or moving the caret does not conflict with an explicit delete.
+Json _pageEdit(WritingPage page) => page.toJson()
+  ..remove('number')
+  ..remove('base')
+  ..remove('extent')
+  ..remove('scroll');
+
 List<RegisteredOriginal> _mergeOriginals(
   List<RegisteredOriginal> base,
   List<RegisteredOriginal> local,
@@ -306,10 +313,22 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
     );
   }
 
+  final localPageIds = local.pages.map((page) => page.id).toSet();
+  for (final r in remote.pages) {
+    final b = basePages[r.id];
+    if (b != null &&
+        !localPageIds.contains(r.id) &&
+        sameData(_pageEdit(r), _pageEdit(b))) {
+      pages.remove(r.id);
+    }
+  }
+
   for (final l in local.pages) {
     final r = pages[l.id], b = basePages[l.id];
     if (r == null) {
-      pages[l.id] = l;
+      if (b == null || !sameData(_pageEdit(l), _pageEdit(b))) {
+        pages[l.id] = l;
+      }
       continue;
     }
     final guide = _field(
@@ -356,6 +375,12 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
             )
           : l;
     }
+  }
+
+  // Concurrent deletions can otherwise remove the last remaining paper.
+  final survivingRecords = pages.values.map((page) => page.recordId).toSet();
+  for (final previous in base.pages) {
+    if (survivingRecords.add(previous.recordId)) pages[previous.id] = previous;
   }
 
   // Both devices may independently append "page 2". Keep both IDs and bodies.

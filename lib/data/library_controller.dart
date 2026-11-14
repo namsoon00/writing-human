@@ -687,6 +687,80 @@ class LibraryController extends ChangeNotifier {
     );
   }
 
+  static const _pageDeletionError = '쪽을 삭제하지 못했어요. 다시 시도해 주세요.';
+
+  /// Keep the paper on screen until the store has committed the deletion.
+  Future<bool> deletePage(WritingPage expected) async {
+    await settled;
+    if (_disposed ||
+        composing ||
+        editorFocused ||
+        (saveError != null && saveError != _pageDeletionError)) {
+      return false;
+    }
+    final target = library.pages
+        .where((page) => page.id == expected.id)
+        .firstOrNull;
+    if (target == null ||
+        target.text != expected.text ||
+        target.recordId != expected.recordId ||
+        library.pages.where((page) => page.recordId == target.recordId).length <
+            2) {
+      return false;
+    }
+    final record = library.records.firstWhere(
+      (record) => record.id == target.recordId,
+    );
+    final volume = library.volumePages(
+      bookId: record.bookId,
+      recordId: record.id,
+    );
+    final index = volume.indexWhere((page) => page.id == target.id);
+    final neighbor = volume[index + (index + 1 < volume.length ? 1 : -1)];
+    final activeChanged = library.activePageId == target.id;
+    final positions = {...library.bookPositions};
+    if (record.bookId case final bookId? when positions[bookId] == target.id) {
+      positions[bookId] = neighbor.id;
+    }
+    final next = library
+        .copy(
+          pages: library.pages.where((page) => page.id != target.id).toList(),
+          activePageId: activeChanged ? neighbor.id : library.activePageId,
+          bookPositions: positions,
+          sync: activeChanged
+              ? library.sync.copy(positionDirty: true)
+              : library.sync,
+        )
+        .rememberActiveBookPosition();
+
+    final revision = ++_revision;
+    var committed = false;
+    saving = true;
+    _tail = _tail.then((_) async {
+      try {
+        if (revision != _revision) return;
+        await store.save(next);
+        // A newer publish queues its own snapshot and supersedes this one.
+        if (revision != _revision) return;
+        library = next;
+        saveError = null;
+        localGeneration++;
+        if (activeChanged) positionGeneration++;
+        committed = true;
+      } catch (_) {
+        if (revision == _revision) {
+          saveError = _pageDeletionError;
+        }
+      } finally {
+        if (revision == _revision) saving = false;
+        if (!_disposed) notifyListeners();
+      }
+    });
+    notifyListeners();
+    await settled;
+    return committed;
+  }
+
   void bindRecord(String recordId, String bookId) {
     _publish(
       library.copy(

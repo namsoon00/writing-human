@@ -192,7 +192,8 @@ class SyncCoordinator extends ChangeNotifier {
         );
         var next = result.library;
         final preview =
-            controller.localGeneration > 0 && local.activePage != null
+            controller.localGeneration > 0 &&
+                next.pages.any((page) => page.id == local.activePageId)
             ? next.copy(
                 activePageId: local.activePageId,
                 writing: local.writing,
@@ -217,6 +218,8 @@ class SyncCoordinator extends ChangeNotifier {
         }
         // Rebase edits made while the request was in flight; never replace them
         // with the earlier snapshot that was just acknowledged by the server.
+        await controller.settled;
+        if (disposed) return;
         final latest = controller.library;
         final rebased = mergeLibraries(
           projected,
@@ -224,7 +227,8 @@ class SyncCoordinator extends ChangeNotifier {
           accepted.library!,
         );
         var applied = rebased.library;
-        if (controller.localGeneration > 0 && latest.activePage != null) {
+        if (controller.localGeneration > 0 &&
+            applied.pages.any((page) => page.id == latest.activePageId)) {
           applied = applied.copy(
             activePageId: latest.activePageId,
             writing: latest.writing,

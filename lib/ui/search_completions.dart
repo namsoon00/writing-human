@@ -1,6 +1,21 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../data/library_search.dart';
+
+String? searchQueryThroughCaret(TextEditingValue value) {
+  final selection = value.selection;
+  final caret = selection.extentOffset;
+  if (!selection.isValid ||
+      !selection.isCollapsed ||
+      caret > value.text.length ||
+      (value.isComposingRangeValid && !value.composing.isCollapsed)) {
+    return null;
+  }
+  final query = value.text.substring(0, caret);
+  return searchWordPrefix(query).isEmpty ? null : query;
+}
+
 class SearchCompletions extends StatelessWidget {
   const SearchCompletions({
     super.key,
@@ -20,13 +35,15 @@ class SearchCompletions extends StatelessWidget {
     listenable: Listenable.merge([controller, focusNode]),
     builder: (context, _) {
       final value = controller.value;
-      final query = value.text.trim();
-      if (!focusNode.hasFocus ||
-          query.isEmpty ||
-          (value.isComposingRangeValid && !value.composing.isCollapsed)) {
-        return const SizedBox.shrink();
-      }
-      final suggestions = options(query).take(5).toList();
+      final query = searchQueryThroughCaret(value);
+      if (!focusNode.hasFocus || query == null) return const SizedBox.shrink();
+      final start = query.length - searchWordPrefix(query).length;
+      final suffix = value.text.substring(query.length);
+      final end = query.length + searchWordSuffixLength(suffix);
+      final currentWord = value.text.substring(start, end).toLowerCase();
+      final suggestions = options(
+        query,
+      ).where((word) => word.toLowerCase() != currentWord).take(5).toList();
       if (suggestions.isEmpty) return const SizedBox.shrink();
       return LayoutBuilder(
         builder: (context, constraints) {
@@ -55,14 +72,19 @@ class SearchCompletions extends StatelessWidget {
                       ),
                     ),
                     onPressed: () {
+                      final text = value.text.replaceRange(
+                        start,
+                        end,
+                        suggestion,
+                      );
                       controller.value = TextEditingValue(
-                        text: suggestion,
+                        text: text,
                         selection: TextSelection.collapsed(
-                          offset: suggestion.length,
+                          offset: start + suggestion.length,
                         ),
                       );
                       focusNode.unfocus();
-                      onSelected(suggestion);
+                      onSelected(text);
                     },
                   );
                 },

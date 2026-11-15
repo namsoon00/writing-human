@@ -105,34 +105,40 @@ String searchExcerpt(String text, int start, int end) {
   return '${from == 0 ? '' : '…'}${text.substring(from, to).trim()}${to == text.length ? '' : '…'}';
 }
 
-/// Suggest terms that occur in searchable fields without changing their spelling.
+const _wordCharacters = r'\p{L}\p{M}\p{N}';
+final _wordBeforeCursor = RegExp(
+  r'[' + _wordCharacters + r']+$',
+  unicode: true,
+);
+final _wordAfterCursor = RegExp('^[$_wordCharacters]+', unicode: true);
+
+String searchWordPrefix(String query) =>
+    _wordBeforeCursor.stringMatch(query) ?? '';
+
+int searchWordSuffixLength(String text) =>
+    _wordAfterCursor.matchAsPrefix(text)?.end ?? 0;
+
+/// Suggest a single longer word, using the earlier query to narrow the match.
 Iterable<String> searchCompletions(
   String query,
   Iterable<String> fields,
 ) sync* {
-  final term = query.trim();
-  if (term.isEmpty) return;
-  final match = RegExp(RegExp.escape(term), caseSensitive: false);
-  final seen = {term.toLowerCase()};
+  final prefix = searchWordPrefix(query);
+  if (prefix.isEmpty) return;
+  final earlier = query.substring(0, query.length - prefix.length).trimLeft();
+  final match = RegExp(
+    '(?:^|[^$_wordCharacters])${RegExp.escape(earlier)}'
+    '(${RegExp.escape(prefix)}[$_wordCharacters]+)',
+    caseSensitive: false,
+    unicode: true,
+  );
+  final seen = <String>{};
   for (final field in fields) {
-    final hit = match.firstMatch(field);
-    if (hit == null) continue;
-    final lineStart = field.lastIndexOf('\n', hit.start) + 1;
-    final nextLine = field.indexOf('\n', hit.end);
-    final lineEnd = nextLine < 0 ? field.length : nextLine;
-    final line = field.substring(lineStart, lineEnd).trim();
-    final completion = line.characters.length <= 48
-        ? line
-        : field
-              .substring(hit.start, lineEnd)
-              .characters
-              .take(48)
-              .toString()
-              .trim();
-    if (completion.length >= term.length &&
-        seen.add(completion.toLowerCase())) {
-      yield completion;
-      if (seen.length == 6) return;
+    for (final hit in match.allMatches(field)) {
+      final word = hit[1]!;
+      if (word.characters.length <= 48 && seen.add(word.toLowerCase())) {
+        yield word;
+      }
     }
   }
 }

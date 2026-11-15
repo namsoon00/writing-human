@@ -70,20 +70,12 @@ enum _Collection {
     if (data case {'query': final Map results} when results[module] is List) {
       final rows = results[module] as List;
       if (phrase) {
-        final prefix = RegExp.escape(query.replaceAll(RegExp(r'\s+'), ' '));
-        final continuation = RegExp(
-          '$prefix'
-          r'[^\s.,…!?]*(?: +[^\s.,…!?]+){0,2}',
-          caseSensitive: false,
-        );
         return [
           for (final row in rows)
             if (row case {'snippet': final String markup})
-              ?continuation.stringMatch(
-                (html.parseFragment(markup).text ?? '').replaceAll(
-                  RegExp(r'\s+'),
-                  ' ',
-                ),
+              (html.parseFragment(markup).text ?? '').replaceAll(
+                RegExp(r'\s+'),
+                ' ',
               ),
         ];
       }
@@ -260,7 +252,7 @@ class _SourceSearchState extends State<_SourceSearch> {
   Timer? _completionDelay;
   (_SearchMode, String)? _completionQuery;
   int _completionVersion = 0;
-  List<String> _remoteCompletions = const [];
+  List<String> _remoteSearchText = const [];
 
   @override
   void initState() {
@@ -270,21 +262,21 @@ class _SourceSearchState extends State<_SourceSearch> {
   }
 
   void _queueCompletions() {
-    final value = _query.value;
-    final query = value.text.trim();
-    final canComplete =
+    final query = searchQueryThroughCaret(_query.value)?.trimLeft();
+    final next =
         _webSearch &&
-        _focus.hasFocus &&
-        !_loading &&
-        _words(query).characters.length >= 2 &&
-        !(value.isComposingRangeValid && !value.composing.isCollapsed);
-    final next = canComplete ? (_mode, query) : null;
+            _focus.hasFocus &&
+            !_loading &&
+            query != null &&
+            _words(query).characters.length >= 2
+        ? (_mode, query)
+        : null;
     if (_completionQuery == next) return;
     _completionDelay?.cancel();
     _completionQuery = next;
     final version = ++_completionVersion;
-    if (_remoteCompletions.isNotEmpty) {
-      setState(() => _remoteCompletions = const []);
+    if (_remoteSearchText.isNotEmpty) {
+      setState(() => _remoteSearchText = const []);
     }
     if (next != null) {
       _completionDelay = Timer(const Duration(milliseconds: 350), () async {
@@ -303,14 +295,14 @@ class _SourceSearchState extends State<_SourceSearch> {
         );
         if (mounted && _completionVersion == version) {
           setState(
-            () => _remoteCompletions = results.expand((rows) => rows).toList(),
+            () => _remoteSearchText = results.expand((rows) => rows).toList(),
           );
         }
       });
     }
   }
 
-  Iterable<String> _completions(String query) sync* {
+  Iterable<String> _completions(String query) {
     final terms = switch (_mode) {
       _SearchMode.title => WikisourcePoem.reviewed.values.map(
         (poem) => poem.title,
@@ -320,15 +312,7 @@ class _SourceSearchState extends State<_SourceSearch> {
       ),
       _SearchMode.phrase => const <String>[],
     };
-    final seen = {query.toLowerCase(), ''};
-    for (final option in [
-      ...searchCompletions(query, terms),
-      ..._remoteCompletions,
-    ]) {
-      if (option.characters.length <= 160 && seen.add(option.toLowerCase())) {
-        yield option;
-      }
-    }
+    return searchCompletions(query, [...terms, ..._remoteSearchText]);
   }
 
   Future<void> _search() async {

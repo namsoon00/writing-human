@@ -65,15 +65,15 @@ void main() {
       tester.testTextInput.enterText('빈');
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('search-completions')), findsNothing);
-      tester.testTextInput.enterText('마지막에서');
+      tester.testTextInput.enterText('마지막에');
       await tester.pumpAndSettle();
       final completion = find.descendant(
         of: find.byKey(const ValueKey('search-completions')),
-        matching: find.text('마지막에서 찾은 문장'),
+        matching: find.text('마지막에서'),
       );
       await tester.tap(completion);
       await tester.pumpAndSettle();
-      expect(tester.widget<TextField>(search).controller!.text, '마지막에서 찾은 문장');
+      expect(tester.widget<TextField>(search).controller!.text, '마지막에서');
       final result = find.textContaining('마지막에서 찾은 문장').last;
       await tester.tap(result);
       tester.view.resetViewInsets();

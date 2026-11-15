@@ -238,7 +238,7 @@ void main() {
     final candidates = find.byKey(const ValueKey('search-completions'));
     final candidate = find.descendant(
       of: candidates,
-      matching: find.text('봄날의 편지'),
+      matching: find.text('봄날의'),
     );
     await tester.enterText(input, '봄날');
     await tester.pumpAndSettle();
@@ -261,22 +261,43 @@ void main() {
     expect(controller.selection.isCollapsed, isTrue);
     expect(controller.selection.baseOffset, 2);
     expect(candidate, findsOneWidget);
+    expect(
+      find.descendant(of: candidates, matching: find.text('봄날의 편지')),
+      findsNothing,
+    );
     expect(find.text('눈 내리는 저녁'), findsNothing);
     expect(find.byType(SourceImportSheet), findsNothing);
     await tester.tap(candidate);
     await tester.pumpAndSettle();
     final field = tester.widget<TextField>(input);
-    expect(field.controller!.text, '봄날의 편지');
+    expect(field.controller!.text, '봄날의');
     expect(field.focusNode!.hasFocus, isFalse);
     await tester.tap(find.byKey(const ValueKey('spring')));
     await tester.pumpAndSettle();
     expect(find.byTooltip('원문 목록'), findsOneWidget);
     await tester.tap(find.byTooltip('원문 목록'));
     await tester.pumpAndSettle();
-    expect(tester.widget<TextField>(input).controller!.text, '봄날의 편지');
+    expect(tester.widget<TextField>(input).controller!.text, '봄날의');
 
-    await tester.enterText(input, '잔디 사이');
+    await tester.enterText(input, '잔디 ');
     await tester.pumpAndSettle();
+    expect(candidates, findsNothing);
+    await tester.enterText(input, '잔디 사x 꽃이');
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: '잔디 사x 꽃이',
+        selection: TextSelection.collapsed(offset: 4),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final middleWord = find.descendant(
+      of: candidates,
+      matching: find.text('사이에'),
+    );
+    expect(middleWord, findsOneWidget);
+    await tester.tap(middleWord);
+    await tester.pumpAndSettle();
+    expect(controller.text, '잔디 사이에 꽃이');
     expect(find.byKey(const ValueKey('winter')), findsNothing);
     expect(find.text('봄날의 편지 · 기록자'), findsOneWidget);
     await tester.enterText(input, '없는 원문');
@@ -302,13 +323,13 @@ void main() {
         {'pssearch': '윤동'} => (
           'prefixsearch',
           [
-            {'title': '저자:윤동주', 'pageid': 1},
+            {'title': '저자:윤동렬', 'pageid': 1},
           ],
         ),
         {'srsearch': 'intitle:바람*'} => (
           'search',
           [
-            {'title': '바람 부는 날', 'pageid': 1},
+            {'title': '바람결', 'pageid': 1},
           ],
         ),
         {'srsearch': '"하늘을" 우러*'} => (
@@ -361,20 +382,21 @@ void main() {
       Finder option(String title) =>
           find.descendant(of: suggestions, matching: find.text(title));
       expect(requests.last.queryParameters['psnamespace'], '100');
-      expect(option('윤동주'), findsOneWidget);
+      expect(option('윤동렬'), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 550));
-      expect(option('바람 부는 날'), findsNothing);
+      expect(option('바람결'), findsNothing);
+      expect(option('윤동렬'), findsOneWidget);
 
       await tester.tap(find.text('기억나는 구절'));
       await tester.enterText(input, '하늘을 우러');
       await tester.pump(const Duration(milliseconds: 360));
       await tester.pumpAndSettle();
-      final phrase = option('하늘을 우러러 한 점');
+      final phrase = option('우러러');
       expect(phrase, findsOneWidget);
       await tester.tap(phrase);
       await tester.pumpAndSettle();
-      expect(controller.text, '하늘을 우러러 한 점');
-      expect(requests.last.queryParameters['srsearch'], '"하늘을 우러러 한 점"');
+      expect(controller.text, '하늘을 우러러');
+      expect(requests.last.queryParameters['srsearch'], '"하늘을 우러러"');
     }, () => client);
   });
 

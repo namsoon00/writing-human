@@ -26,6 +26,7 @@ import 'page_turn.dart';
 import 'paper_swipe.dart';
 import 'pages_sheet.dart';
 import 'book_front_cover.dart';
+import 'book_details.dart';
 import 'page_read_preview.dart';
 import 'archive_sheet.dart';
 
@@ -34,6 +35,8 @@ typedef _SavedOriginal = ({
   RegisteredOriginal original,
   bool startTranscription,
 });
+
+enum _BookLeaf { frontCover, bookplate, backCover }
 
 class Workspace extends StatefulWidget {
   const Workspace({
@@ -54,10 +57,16 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   final editorFocus = FocusNode();
   final _pageTurn = PageTurnController();
   AudioPlayer? _pageAudio;
-  String? _coverAnchor;
-  bool _coverAtBack = false;
-  bool get _showCover => book != null && _coverAnchor == page.id;
-  int get _coverSide => _showCover ? (_coverAtBack ? 1 : -1) : 0;
+  ({String bookId, String anchor, _BookLeaf leaf})? _bookLeaf;
+  Book? get _leafBook {
+    final target = _bookLeaf;
+    if (target == null || target.anchor != page.id) return null;
+    return c.library.books
+        .where((book) => book.id == target.bookId)
+        .firstOrNull;
+  }
+
+  _BookLeaf? get _visibleLeaf => _leafBook == null ? null : _bookLeaf?.leaf;
   late WritingPage draft = _blank();
   late bool fresh = c.library.pages.isEmpty;
   bool userFresh = false;
@@ -112,7 +121,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   }) async {
     if (_pageNavigationBusy || _accountLocked || !_canLeaveInput()) return;
     final owner = c, origin = page.id;
-    final wasCover = _coverSide;
+    final previousLeaf = _visibleLeaf;
     _blur();
     setState(() => _pageNavigationBusy = true);
     try {
@@ -130,7 +139,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       if (!paperTurn &&
           mounted &&
           c == owner &&
-          (page.id != origin || wasCover != _coverSide)) {
+          (page.id != origin || previousLeaf != _visibleLeaf)) {
         setState(() => _directPageChange++);
       }
       await owner.settled;
@@ -140,7 +149,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           !_accountLocked &&
           owner.saveError == null &&
           c.library.style.pageSound &&
-          (page.id != origin || wasCover != _coverSide)) {
+          (page.id != origin || previousLeaf != _visibleLeaf)) {
         unawaited(_playPageSound());
       }
     } finally {
@@ -169,12 +178,12 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
 
   Future<void> _openPage(String id, {bool paperTurn = true}) =>
       _navigatePage(() async {
-        if (page.id == id && _showCover) {
-          setState(() => _coverAnchor = null);
+        if (page.id == id && _visibleLeaf != null) {
+          setState(() => _bookLeaf = null);
           return;
         }
         if (!c.library.pages.any((p) => p.id == id) || page.id == id) return;
-        _coverAnchor = null;
+        _bookLeaf = null;
         fresh = false;
         userFresh = false;
         c.openPage(id);
@@ -187,7 +196,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         if (target == null) return;
         final offset = passage.offset;
         setState(() {
-          _coverAnchor = null;
+          _bookLeaf = null;
           fresh = false;
           userFresh = false;
           _reveal = offset != null && target.text == passage.page.text
@@ -199,19 +208,65 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
 
   Future<void> _openCover({bool back = false, bool paperTurn = true}) =>
       _navigatePage(() async {
-        if (book == null) return;
-        final target = back ? _volumePages.last : _volumePages.first;
-        if (target.id != page.id) c.openPage(target.id);
-        setState(() {
-          _coverAnchor = target.id;
-          _coverAtBack = back;
-        });
+        final currentBook = book;
+        if (currentBook == null) return;
+        if (back && _volumePages.last.id != page.id) {
+          c.openPage(_volumePages.last.id);
+        }
+        _showBookLeaf(
+          currentBook,
+          back ? _BookLeaf.backCover : _BookLeaf.frontCover,
+        );
       }, paperTurn: paperTurn);
 
+  void _showBookLeaf(Book book, _BookLeaf leaf) {
+    setState(() => _bookLeaf = (bookId: book.id, anchor: page.id, leaf: leaf));
+  }
+
+  Future<void> _openBookFromStart(Book book) async {
+    final first = c.library.volumePages(bookId: book.id).firstOrNull;
+    if (first == null) {
+      await _newSheet(book.id);
+    } else {
+      await _openPage(first.id);
+    }
+  }
+
+  Future<void> _resumeBook(Book book, {bool paperTurn = true}) async {
+    if (!c.library.books.any((entry) => entry.id == book.id)) return;
+    final target = c.resumePageForBook(book.id);
+    if (target == null) {
+      await _newSheet(book.id);
+    } else {
+      await _openPage(target.id, paperTurn: paperTurn);
+    }
+  }
+
   Future<void> _stepPage(int step) async {
-    if (_showCover) {
-      if ((_coverAtBack && step < 0) || (!_coverAtBack && step > 0)) {
-        await _openPage(page.id);
+    final leafBook = _leafBook;
+    if (leafBook != null) {
+      switch (_visibleLeaf) {
+        case _BookLeaf.frontCover:
+          if (step < 0) return;
+          if (c.detailsFor(leafBook).bookplate.enabled) {
+            await _navigatePage(() async {
+              _showBookLeaf(leafBook, _BookLeaf.bookplate);
+            });
+          } else {
+            await _openBookFromStart(leafBook);
+          }
+        case _BookLeaf.bookplate:
+          if (step < 0) {
+            await _navigatePage(() async {
+              _showBookLeaf(leafBook, _BookLeaf.frontCover);
+            });
+          } else {
+            await _openBookFromStart(leafBook);
+          }
+        case _BookLeaf.backCover:
+          if (step < 0) await _openPage(page.id);
+        case null:
+          break;
       }
       return;
     }
@@ -220,7 +275,16 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     if (index < 0) return;
     final target = index + step;
     if (target < 0) {
-      if (book != null) await _openCover();
+      final currentBook = book;
+      if (currentBook != null) {
+        if (c.detailsFor(currentBook).bookplate.enabled) {
+          await _navigatePage(() async {
+            _showBookLeaf(currentBook, _BookLeaf.bookplate);
+          });
+        } else {
+          await _openCover();
+        }
+      }
     } else if (target >= pages.length) {
       if (fresh || book == null) {
         await _appendPage();
@@ -233,9 +297,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   }
 
   Future<bool> _commitTurn(bool forward) async {
-    final owner = c, id = page.id, wasCover = _coverSide;
+    final owner = c, id = page.id, previousLeaf = _visibleLeaf;
     await _stepPage(forward ? 1 : -1);
-    return mounted && c == owner && (page.id != id || wasCover != _coverSide);
+    return mounted &&
+        c == owner &&
+        (page.id != id || previousLeaf != _visibleLeaf);
   }
 
   Future<void> _appendPage({
@@ -246,13 +312,13 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       // Explicitly adding a page is intent to keep blank pages as well.
       fresh = false;
       userFresh = false;
-      _coverAnchor = null;
+      _bookLeaf = null;
       c.saveDraft(draft, bookId: draftBookId, keepBlank: true);
       if (!addAfterDraft) return;
       await c.settled;
       if (!mounted || c.saveError != null) return;
     }
-    _coverAnchor = null;
+    _bookLeaf = null;
     c.addPage();
   }, paperTurn: paperTurn);
   WritingPage _blank() => WritingPage(
@@ -297,7 +363,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       _editingPageId = null;
       _originalByPage.clear();
       _originalByVolume.clear();
-      _coverAnchor = null;
+      _bookLeaf = null;
       _reveal = null;
       fresh = c.library.pages.isEmpty;
       userFresh = false;
@@ -314,7 +380,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         _originalByPage.clear();
         _originalByVolume.clear();
       }
-      if (_accountLocked || !_showCover) _coverAnchor = null;
+      if (_accountLocked || _leafBook == null) _bookLeaf = null;
       if (_accountLocked || _reveal?.pageId != page.id) _reveal = null;
       if (_accountLocked || _savedSource?.pageId != page.id) {
         _savedSource = null;
@@ -371,7 +437,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
 
   Future<void> _newSheet([String? bookId]) => _navigatePage(() async {
     setState(() {
-      _coverAnchor = null;
+      _bookLeaf = null;
       draft = _blank();
       draftBookId = bookId;
       fresh = true;
@@ -429,15 +495,15 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     _openPanel(
       CollectionSheet(
         controller: c,
-        onBook: (book) => _openFromCollection(() async {
-          if (!c.library.books.any((entry) => entry.id == book.id)) return;
-          final target = c.resumePageForBook(book.id);
-          if (target == null) {
-            await _newSheet(book.id);
-          } else {
-            await _openPage(target.id, paperTurn: false);
-          }
-        }),
+        onBook: (book) => _openFromCollection(
+          () => _navigatePage(() async {
+            if (c.library.books.any((entry) => entry.id == book.id)) {
+              _showBookLeaf(book, _BookLeaf.frontCover);
+            }
+          }, paperTurn: false),
+        ),
+        onResumeBook: (book) =>
+            _openFromCollection(() => _resumeBook(book, paperTurn: false)),
         onRecord: (r) {
           final pages = c.library.pages.where((p) => p.recordId == r.id);
           if (pages.isEmpty) return;
@@ -473,7 +539,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       builder: (_) => const NewBookDialog(),
     );
     if (values != null && mounted) {
-      _coverAnchor = null;
+      _bookLeaf = null;
       fresh = false;
       userFresh = false;
       c.createBook(values.$1, values.$2);
@@ -860,7 +926,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           (bookId != null
               ? book?.id == bookId
               : page.recordId == origin.recordId)) {
-        _coverAnchor = null;
+        _bookLeaf = null;
         if (fresh) {
           fresh = false;
           userFresh = false;
@@ -875,10 +941,10 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       } else if (bookId == null) {
         fresh = false;
         userFresh = false;
-        _coverAnchor = null;
+        _bookLeaf = null;
         c.addPage(recordId: origin.recordId, guidedOriginalId: source.id);
       } else {
-        _coverAnchor = null;
+        _bookLeaf = null;
         fresh = false;
         userFresh = false;
         c.saveDraft(
@@ -1277,8 +1343,17 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     final current = page;
     final pages = _volumePages;
     final index = pages.indexWhere((p) => p.id == current.id);
-    final showingCover = _showCover;
-    final hasBook = book != null;
+    final leaf = _visibleLeaf;
+    final showingLeaf = leaf != null;
+    final showingCover = showingLeaf && leaf != _BookLeaf.bookplate;
+    final showingBack = leaf == _BookLeaf.backCover;
+    final displayBook = _leafBook ?? book;
+    final hasBook = displayBook != null;
+    final hasBookplate =
+        displayBook != null && c.detailsFor(displayBook).bookplate.enabled;
+    final displayPages = displayBook?.id == book?.id && !fresh
+        ? pages
+        : (hasBook ? c.library.volumePages(bookId: displayBook.id) : pages);
     final navigationEnabled =
         !_pageNavigationBusy &&
         !_editorComposing &&
@@ -1295,17 +1370,48 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           preview: preview,
           navigationEnabled: !preview && navigationEnabled,
         );
+    Widget firstPaper() => _paperSurface(
+      displayPages.firstOrNull ??
+          const WritingPage(
+            id: 'first-paper-preview',
+            recordId: 'first-paper-preview',
+            number: 1,
+          ),
+      0,
+      math.max(displayPages.length, 1),
+      compact,
+      preview: true,
+      navigationEnabled: false,
+      previewBook: displayBook,
+    );
     Widget cover({bool back = false}) => BookFrontCover(
-      title: book!.title,
-      author: book!.author,
-      variant: _coverVariant,
-      style: _paperStyle(book),
-      pageCount: pages.length,
+      title: displayBook!.title,
+      author: displayBook.author,
+      variant: c.coverIndexFor(displayBook),
+      style: _paperStyle(displayBook),
+      pageCount: displayPages.length,
       back: back,
       onOpen: () => _stepPage(back ? -1 : 1),
+      onResume: !back && displayPages.isNotEmpty
+          ? () => _resumeBook(displayBook)
+          : null,
       onAppend: back ? _appendPage : null,
       onCollection: _collection,
     );
+    Widget bookplate() => _insideBookplate(displayBook!, displayPages);
+    final previous = switch (leaf) {
+      _BookLeaf.frontCover => null,
+      _BookLeaf.bookplate => cover(),
+      _BookLeaf.backCover => paper(current, index),
+      null =>
+        index != 0
+            ? paper(pages[index - 1], index - 1)
+            : hasBookplate
+            ? bookplate()
+            : hasBook
+            ? cover()
+            : null,
+    };
     final nextPage = index + 1 < pages.length
         ? pages[index + 1]
         : WritingPage(
@@ -1322,37 +1428,45 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         directPageChange: _directPageChange,
         page: current,
         style: _paperStyle(book),
-        scopeId: book?.id ?? current.recordId,
-        position: showingCover ? (_coverAtBack ? pages.length : -1) : index,
+        scopeId: displayBook?.id ?? current.recordId,
+        position: switch (leaf) {
+          _BookLeaf.frontCover => -2,
+          _BookLeaf.bookplate => -1,
+          _BookLeaf.backCover => pages.length,
+          null => index,
+        },
         isCover: showingCover,
-        isBackCover: showingCover && _coverAtBack,
-        coverSurface: showingCover ? cover(back: _coverAtBack) : null,
-        previousIsCover: hasBook && !showingCover && index == 0,
+        isBackCover: showingBack,
+        coverSurface: showingCover ? cover(back: showingBack) : null,
+        previousIsCover:
+            leaf == _BookLeaf.bookplate ||
+            (leaf == null && hasBook && !hasBookplate && index == 0),
         nextIsCover:
-            hasBook && !showingCover && !fresh && index == pages.length - 1,
+            hasBook && !showingLeaf && !fresh && index == pages.length - 1,
         editing: c.editorFocused,
         composing: _editorComposing || c.composing,
         onTurn: _commitTurn,
-        previous: showingCover
-            ? (_coverAtBack ? paper(current, index) : null)
-            : index == 0
-            ? (hasBook ? cover() : null)
-            : paper(pages[index - 1], index - 1),
-        next: showingCover
-            ? (_coverAtBack ? null : paper(current, index))
-            : hasBook && !fresh && index == pages.length - 1
-            ? cover(back: true)
-            : paper(nextPage, index + 1),
+        previous: previous,
+        next: switch (leaf) {
+          _BookLeaf.frontCover => hasBookplate ? bookplate() : firstPaper(),
+          _BookLeaf.bookplate => firstPaper(),
+          _BookLeaf.backCover => null,
+          null =>
+            hasBook && !fresh && index == pages.length - 1
+                ? cover(back: true)
+                : paper(nextPage, index + 1),
+        },
         child: PaperSwipe(
           key: const ValueKey('paper-swipe'),
-          touchOnly: !showingCover,
+          touchOnly: !showingLeaf,
           onPrevious:
-              canSwipe && (showingCover ? _coverAtBack : hasBook || index > 0)
+              canSwipe &&
+                  (showingLeaf
+                      ? leaf != _BookLeaf.frontCover
+                      : hasBook || index > 0)
               ? () => _stepPage(-1)
               : null,
-          onNext: canSwipe && (!showingCover || !_coverAtBack)
-              ? () => _stepPage(1)
-              : null,
+          onNext: canSwipe && !showingBack ? () => _stepPage(1) : null,
           onTurnOrigin: (origin) => _pageTurn.start(origin: origin),
           onTurnUpdate: _pageTurn.update,
           onTurnEnd: _pageTurn.end,
@@ -1361,15 +1475,90 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             fit: StackFit.expand,
             children: [
               Offstage(
-                offstage: showingCover,
+                offstage: showingLeaf,
                 child: paper(current, index, preview: false),
               ),
-              if (showingCover) cover(back: _coverAtBack),
+              if (showingCover) cover(back: showingBack),
+              if (leaf == _BookLeaf.bookplate) bookplate(),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _insideBookplate(Book book, List<WritingPage> pages) {
+    final style = _paperStyle(book);
+    final recordCount = pages.map((page) => page.recordId).toSet().length;
+    return PaperBackdrop(
+      key: const ValueKey('inside-bookplate'),
+      color: paperColors[style.paperIndex],
+      grainOpacity: paperGrainOpacity[style.paperIndex],
+      binding: style.bookDetails.binding,
+      coverIndex: c.coverIndexFor(book),
+      pagesAfter: pages.length,
+      child: SafeArea(
+        child: Column(
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: TextButton(
+                  key: const ValueKey('open-bookshelf'),
+                  onPressed: _collection,
+                  child: const Text('책장'),
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                children: [
+                  Bookplate(
+                    title: book.title,
+                    owner: book.owner,
+                    summary: '$recordCount편 · ${pages.length}쪽',
+                    stockColor: paperColors[style.paperIndex],
+                    choice: style.bookDetails.bookplate,
+                    flower: style.bookDetails.pressedFlower,
+                    onOwner: () => _editBookOwner(book),
+                  ),
+                ],
+              ),
+            ),
+            OverflowBar(
+              alignment: MainAxisAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: () => _stepPage(-1),
+                  child: const Text('앞표지'),
+                ),
+                TextButton(
+                  onPressed: () => _stepPage(1),
+                  child: Text(pages.isEmpty ? '첫 쪽 쓰기' : '첫 쪽 펼치기'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editBookOwner(Book book) async {
+    final controller = c;
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => BookOwnerDialog(owner: book.owner),
+    );
+    if (name != null && mounted && c == controller && !_accountLocked) {
+      c.setBookOwner(book.id, name);
+    }
   }
 
   Widget _paperSurface(
@@ -1379,12 +1568,14 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     bool compact, {
     required bool preview,
     required bool navigationEnabled,
+    Book? previewBook,
   }) {
     final record = c.library.records
         .where((r) => r.id == currentPage.recordId)
         .firstOrNull;
     final bookId = record?.bookId ?? (fresh ? draftBookId : null);
-    final book = c.library.books.where((b) => b.id == bookId).firstOrNull;
+    final book =
+        previewBook ?? c.library.books.where((b) => b.id == bookId).firstOrNull;
     final style = _paperStyle(book);
     final safePadding = MediaQuery.paddingOf(context);
     final sideInset = math.max(safePadding.left, safePadding.right);

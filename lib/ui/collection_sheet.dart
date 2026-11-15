@@ -20,6 +20,7 @@ class CollectionSheet extends StatefulWidget {
     required this.controller,
     required this.onRecord,
     required this.onBook,
+    this.onResumeBook,
     required this.onNewSheet,
     required this.onNewBook,
     this.onPassage,
@@ -30,6 +31,7 @@ class CollectionSheet extends StatefulWidget {
   final LibraryController controller;
   final ValueChanged<WritingRecord> onRecord;
   final ValueChanged<Book> onBook;
+  final ValueChanged<Book>? onResumeBook;
   final ValueChanged<String?> onNewSheet;
   final VoidCallback onNewBook;
   final ValueChanged<Passage>? onPassage;
@@ -188,7 +190,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
           if (resumeNumber != null) ...[
             const SizedBox(height: 12),
             FilledButton.icon(
-              onPressed: () => widget.onBook(book),
+              onPressed: () => (widget.onResumeBook ?? widget.onBook)(book),
               icon: const Icon(CupertinoIcons.book, size: 16),
               label: const Text('이어서 쓰기'),
               style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),

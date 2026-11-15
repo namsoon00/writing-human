@@ -14,6 +14,7 @@ import 'package:writing_human/ui/writing_chrome.dart';
 final field = find.byKey(const ValueKey('page-text'));
 final reveal = find.byKey(const ValueKey('page-turn-reveal'));
 final cover = find.byKey(const ValueKey('book-front-cover'));
+final bookplate = find.byKey(const ValueKey('inside-bookplate'));
 final overlay = find.byKey(const ValueKey('page-turn-overlay'));
 
 class _PageSaveGate extends MemoryStore {
@@ -137,6 +138,14 @@ void main() {
     await tester.tap(find.text('책장'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('빈 노트').last);
+    await tester.pumpAndSettle();
+    expect(store.data.pages, isEmpty);
+    expect(find.text('이어서 쓰기'), findsNothing);
+    await tester.tap(find.text('책 펼치기'));
+    await tester.pumpAndSettle();
+    expect(bookplate, findsOneWidget);
+    expect(store.data.pages, isEmpty);
+    await tester.tap(find.text('첫 쪽 쓰기'));
     await tester.pumpAndSettle();
     expect(store.data.pages, isEmpty);
     await tester.tap(find.byTooltip('이 책에 한 쪽 추가'));
@@ -340,7 +349,7 @@ void main() {
     expect(overlay, findsNothing);
   });
 
-  testWidgets('The first sheet peels back to a cover without a saved page', (
+  testWidgets('The front cover and bookplate turn without creating pages', (
     tester,
   ) async {
     final store = MemoryStore()..data = twoPages(bound: true);
@@ -350,25 +359,30 @@ void main() {
     final gesture = await tester.startGesture(tester.getCenter(field));
     await gesture.moveBy(const Offset(165, 0));
     await tester.pump();
-    expect(find.descendant(of: reveal, matching: cover), findsOneWidget);
-    expectBoard(tester, cover, back: false, edgeX: 165);
+    expect(find.descendant(of: reveal, matching: bookplate), findsOneWidget);
     expect(store.writes, writes);
     await gesture.up();
     await tester.pumpAndSettle();
     expect(reveal, findsNothing);
-    expect(cover, findsOneWidget);
+    expect(bookplate, findsOneWidget);
     expect(field, findsNothing);
+    await tester.tap(find.text('앞표지'));
+    await tester.pumpAndSettle();
+    expect(cover, findsOneWidget);
     expect(store.data.activePageId, 'one');
     expect(store.data.pages.length, 2);
     expect(store.writes, writes);
     final reopen = await tester.startGesture(tester.getCenter(cover));
     await reopen.moveBy(const Offset(-170, 0));
     await tester.pump();
-    expect(find.byKey(const ValueKey('page-preview-text:one')), findsOneWidget);
+    expect(find.descendant(of: reveal, matching: bookplate), findsOneWidget);
     expectBoard(tester, cover, back: false, edgeX: 220);
     await reopen.up();
     await tester.pumpAndSettle();
     expect(cover, findsNothing);
+    expect(bookplate, findsOneWidget);
+    await tester.tap(find.text('첫 쪽 펼치기'));
+    await tester.pumpAndSettle();
     expect(tester.widget<TextField>(field).controller, same(live));
     expect(live.selection, const TextSelection(baseOffset: 2, extentOffset: 6));
     expect(tester.widget<TextField>(field).scrollController!.offset, 180);
@@ -401,8 +415,13 @@ void main() {
     expect(store.data.activePageId, 'a1');
     await previousSheet(tester);
     await tester.pumpAndSettle();
+    expect(bookplate, findsOneWidget);
+    await tester.tap(find.text('앞표지'));
+    await tester.pumpAndSettle();
     expect(find.text('지은이'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('open-front-cover')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('첫 쪽 펼치기'));
     await tester.pumpAndSettle();
     expect(store.data.activePageId, 'a1');
     await nextSheet(tester);
@@ -480,8 +499,10 @@ void main() {
       await open(tester, store);
       await previousSheet(tester);
       await tester.pumpAndSettle();
+      await tester.tap(find.text('앞표지'));
+      await tester.pumpAndSettle();
       expect(cover, findsOneWidget);
-      expect(find.text('책 펼치기'), findsNothing);
+      expect(find.text('책 펼치기'), findsOneWidget);
       await tester.tap(find.text('책장'));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('shelf-book-book')), findsOneWidget);
@@ -497,6 +518,9 @@ void main() {
         ),
         findsOneWidget,
       );
+      await tester.pumpAndSettle();
+      expect(bookplate, findsOneWidget);
+      await tester.tap(find.text('첫 쪽 펼치기'));
       await tester.pumpAndSettle();
       expect(store.data.activePageId, 'one');
       expect(store.data.pages.length, 2);
@@ -542,9 +566,13 @@ void main() {
 
       await previousSheet(tester);
       await tester.pumpAndSettle();
+      await tester.tap(find.text('앞표지'));
+      await tester.pumpAndSettle();
       expect(tester.getRect(material), Offset.zero & viewport);
       expect(tester.getTopLeft(find.text('책장')).dy, greaterThan(28));
       await tester.tap(find.byKey(const ValueKey('open-front-cover')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('첫 쪽 펼치기'));
       await tester.pumpAndSettle();
       expect(tester.getSize(surface).width, 760);
       expect(tester.widget<TextField>(field).controller, same(editor));

@@ -18,13 +18,14 @@ class BookFrontCover extends StatelessWidget {
     this.variant = 0,
     this.back = false,
     this.onAppend,
+    this.onResume,
   });
   final String title, author;
   final WritingStyle style;
   final int pageCount, variant;
   final VoidCallback onOpen, onCollection;
   final bool back;
-  final VoidCallback? onAppend;
+  final VoidCallback? onAppend, onResume;
 
   @override
   Widget build(BuildContext context) {
@@ -80,9 +81,7 @@ class BookFrontCover extends StatelessWidget {
       children: [
         motion?.transformArtwork(artwork, back: back) ?? artwork,
         if (!back && motion?.enabled != true)
-          Semantics(
-            label: '책 펼치기',
-            button: true,
+          ExcludeSemantics(
             child: Material(
               type: MaterialType.transparency,
               child: InkWell(
@@ -188,6 +187,22 @@ class BookFrontCover extends StatelessWidget {
           ),
           const Spacer(),
           Text('$pageCount쪽', style: TextStyle(color: color, fontSize: 13)),
+          if (!back) ...[
+            const SizedBox(height: 10),
+            TextButton(
+              style: button,
+              onPressed: onOpen,
+              child: const Text('책 펼치기'),
+            ),
+          ],
+          if (!back && onResume != null) ...[
+            const SizedBox(height: 10),
+            TextButton(
+              style: button,
+              onPressed: onResume,
+              child: const Text('이어서 쓰기'),
+            ),
+          ],
           if (back) ...[
             const SizedBox(height: 10),
             TextButton(
@@ -209,7 +224,8 @@ class BookFrontCover extends StatelessWidget {
       );
       final scale = MediaQuery.textScalerOf(context);
       final minHeight =
-          (back ? (onAppend == null ? 3 : 4) : 2) * (scale.scale(14) + 34);
+          (back ? (onAppend == null ? 3 : 4) : (onResume == null ? 3 : 4)) *
+          (scale.scale(14) + 34);
       if (box.maxHeight >= minHeight) return controls;
       return SingleChildScrollView(
         child: SizedBox(height: minHeight, child: controls),

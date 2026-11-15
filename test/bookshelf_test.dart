@@ -22,62 +22,74 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('Notebook covers resume each book after the app reopens', (
-    tester,
-  ) async {
-    final store = MemoryStore()
-      ..data = const Library(
-        books: [
-          Book(id: 'a', title: '첫 노트'),
-          Book(id: 'b', title: '다른 노트'),
-        ],
-        records: [
-          WritingRecord(id: 'a1', bookId: 'a', title: '필사'),
-          WritingRecord(id: 'b1', bookId: 'b', title: '필사'),
-        ],
-        pages: [
-          WritingPage(id: 'one', recordId: 'a1', number: 1, text: '첫 쪽'),
-          WritingPage(id: 'two', recordId: 'a1', number: 2, text: '둘째 쪽'),
-          WritingPage(id: 'other', recordId: 'b1', number: 1, text: '다른 글'),
-        ],
-        activePageId: 'one',
-        writing: true,
-        style: WritingStyle(pageMotion: false),
-      );
-    await tester.pumpWidget(WritingHumanApp(store: store));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'Opening covers preserves the last writing position of each book',
+    (tester) async {
+      final store = MemoryStore()
+        ..data = const Library(
+          books: [
+            Book(id: 'a', title: '첫 노트'),
+            Book(id: 'b', title: '다른 노트'),
+          ],
+          records: [
+            WritingRecord(id: 'a1', bookId: 'a', title: '필사'),
+            WritingRecord(id: 'b1', bookId: 'b', title: '필사'),
+          ],
+          pages: [
+            WritingPage(id: 'one', recordId: 'a1', number: 1, text: '첫 쪽'),
+            WritingPage(id: 'two', recordId: 'a1', number: 2, text: '둘째 쪽'),
+            WritingPage(id: 'other', recordId: 'b1', number: 1, text: '다른 글'),
+          ],
+          activePageId: 'two',
+          writing: true,
+          style: WritingStyle(pageMotion: false),
+        );
+      await tester.pumpWidget(WritingHumanApp(store: store));
+      await tester.pumpAndSettle();
 
-    await shelf(tester);
-    final writes = store.writes;
-    await tester.tap(cover('a'));
-    await tester.pumpAndSettle();
-    expect(store.data.activePageId, 'one');
-    expect(store.writes, writes);
+      await shelf(tester);
+      final writes = store.writes;
+      await tester.tap(cover('a'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('책 펼치기'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('inside-bookplate')), findsOneWidget);
+      expect(store.data.activePageId, 'two');
+      expect(store.writes, writes);
 
-    await shelf(tester);
-    await tester.scrollUntilVisible(cover('b'), 200, scrollable: scroll);
-    await Scrollable.ensureVisible(tester.element(cover('b')), alignment: .5);
-    await tester.pumpAndSettle();
-    await tester.tap(cover('b'));
-    await tester.pumpAndSettle();
-    expect(store.data.activePageId, 'other');
+      await shelf(tester);
+      await tester.scrollUntilVisible(cover('b'), 200, scrollable: scroll);
+      await Scrollable.ensureVisible(tester.element(cover('b')), alignment: .5);
+      await tester.pumpAndSettle();
+      await tester.tap(cover('b'));
+      await tester.pumpAndSettle();
+      expect(store.data.activePageId, 'two');
+      await tester.tap(find.text('책 펼치기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('첫 쪽 펼치기'));
+      await tester.pumpAndSettle();
+      expect(store.data.activePageId, 'other');
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpAndSettle();
-    store.data = Library.decode(store.data.encode());
-    await tester.pumpWidget(WritingHumanApp(store: store));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      store.data = Library.decode(store.data.encode());
+      await tester.pumpWidget(WritingHumanApp(store: store));
+      await tester.pumpAndSettle();
 
-    await shelf(tester);
-    await tester.scrollUntilVisible(cover('a'), 200, scrollable: scroll);
-    await Scrollable.ensureVisible(tester.element(cover('a')), alignment: .5);
-    await tester.pumpAndSettle();
-    await tester.tap(cover('a'));
-    await tester.pumpAndSettle();
-    expect(store.data.activePageId, 'one');
-    expect(tester.widget<TextField>(editor).controller!.text, '첫 쪽');
-    expect(store.data.pages.length, 3);
-  });
+      await shelf(tester);
+      await tester.scrollUntilVisible(cover('a'), 200, scrollable: scroll);
+      await Scrollable.ensureVisible(tester.element(cover('a')), alignment: .5);
+      await tester.pumpAndSettle();
+      await tester.tap(cover('a'));
+      await tester.pumpAndSettle();
+      expect(store.data.activePageId, 'other');
+      await tester.tap(find.text('이어서 쓰기'));
+      await tester.pumpAndSettle();
+      expect(store.data.activePageId, 'two');
+      expect(tester.widget<TextField>(editor).controller!.text, '둘째 쪽');
+      expect(store.data.pages.length, 3);
+    },
+  );
 
   testWidgets(
     'Contents show volume page numbers and open each record at its start',

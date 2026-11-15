@@ -261,6 +261,9 @@ void main() {
     );
     expect(tester.widget<TextField>(field).scrollController!.offset, 710);
     await turn(160);
+    expect(find.byKey(const ValueKey('inside-bookplate')), findsOneWidget);
+    await tester.tap(find.text('앞표지'));
+    await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('book-front-cover')), findsOneWidget);
     await tester.runAsync(() async {
       final stored = await store.load();
@@ -269,6 +272,8 @@ void main() {
       expect(stored.activePage!.text, body);
     });
     await tester.tap(find.byKey(const ValueKey('open-front-cover')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('첫 쪽 펼치기'));
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(field).controller!.text, body);
     expect(tester.takeException(), isNull);

@@ -206,26 +206,51 @@ void main() {
         ),
         findsOneWidget,
       );
-      const order = [
+      const bookDecorations = [
         BookDetailKind.ribbon,
         BookDetailKind.bookplate,
         BookDetailKind.pressedFlower,
+      ];
+      const pageDecorations = [
         BookDetailKind.sourceSlip,
         BookDetailKind.pencil,
         BookDetailKind.ornament,
         BookDetailKind.recordDivider,
         BookDetailKind.dateStamp,
       ];
-      for (final kind in order) {
-        await tester.scrollUntilVisible(row(kind), 90);
-        await Scrollable.ensureVisible(
-          tester.element(row(kind)),
-          alignment: .5,
-        );
-        await tester.pumpAndSettle();
-        expect(row(kind).hitTestable(), findsOneWidget);
-        expect(options(kind), findsNothing);
+      Future<void> expectRows(List<BookDetailKind> kinds) async {
+        for (final kind in kinds) {
+          await tester.scrollUntilVisible(row(kind), 90);
+          await Scrollable.ensureVisible(
+            tester.element(row(kind)),
+            alignment: .5,
+          );
+          await tester.pumpAndSettle();
+          expect(row(kind).hitTestable(), findsOneWidget);
+          expect(options(kind), findsNothing);
+        }
       }
+
+      await expectRows(bookDecorations);
+      expect(row(BookDetailKind.sourceSlip), findsNothing);
+      await tester.tap(find.text('쪽 장식'));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(preview), previewRect);
+      expect(row(BookDetailKind.ribbon), findsNothing);
+      await expectRows(pageDecorations);
+      final dateStamp = row(BookDetailKind.dateStamp);
+      await tester.tap(dateStamp);
+      await tester.pumpAndSettle();
+      expect(options(BookDetailKind.dateStamp), findsOneWidget);
+      expect(tester.getRect(preview), previewRect);
+      await tester.tap(find.text('책 장식'));
+      await tester.pumpAndSettle();
+      expect(options(BookDetailKind.dateStamp), findsNothing);
+      await tester.tap(find.text('쪽 장식'));
+      await tester.pumpAndSettle();
+      expect(options(BookDetailKind.dateStamp), findsOneWidget);
+      await tester.tap(find.text('책 장식'));
+      await tester.pumpAndSettle();
       await tester.drag(find.byType(ListView), const Offset(0, 1300));
       await tester.pumpAndSettle();
 

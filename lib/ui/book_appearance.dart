@@ -29,10 +29,22 @@ Future<void> showBookAppearance(
 
 enum _Section {
   materials('표지·내지'),
-  details('책 장식');
+  book('책 장식', [
+    BookDetailKind.ribbon,
+    BookDetailKind.bookplate,
+    BookDetailKind.pressedFlower,
+  ]),
+  page('쪽 장식', [
+    BookDetailKind.sourceSlip,
+    BookDetailKind.pencil,
+    BookDetailKind.ornament,
+    BookDetailKind.recordDivider,
+    BookDetailKind.dateStamp,
+  ]);
 
-  const _Section(this.label);
+  const _Section(this.label, [this.kinds = const []]);
   final String label;
+  final List<BookDetailKind> kinds;
 }
 
 class BookAppearance extends StatefulWidget {
@@ -51,7 +63,8 @@ class BookAppearance extends StatefulWidget {
 
 class _BookAppearanceState extends State<BookAppearance> {
   _Section section = _Section.materials;
-  BookDetailKind? detail;
+  final _detailsBySection = <_Section, BookDetailKind?>{};
+  BookDetailKind? get detail => _detailsBySection[section];
   bool showCover = true;
   LibraryController get controller => widget.controller;
 
@@ -94,10 +107,9 @@ class _BookAppearanceState extends State<BookAppearance> {
                 .firstOrNull;
       final excerpt = sample?.text.trim() ?? '';
       final writingStyle = controller.styleFor(book);
-      final closed = switch (section) {
-        _Section.materials => showCover,
-        _Section.details => detail == BookDetailKind.pressedFlower,
-      };
+      final closed = section == _Section.materials
+          ? showCover
+          : detail == BookDetailKind.pressedFlower;
       final height = MediaQuery.sizeOf(context).height;
       final pinPreview = height >= 520;
       final previewWidth = pinPreview ? math.min(450.0, height * .55) : 450.0;
@@ -127,7 +139,7 @@ class _BookAppearanceState extends State<BookAppearance> {
                         cover: cover,
                         stock: stock,
                         details: details,
-                        detail: section == _Section.details ? detail : null,
+                        detail: detail,
                         excerpt: excerpt,
                         writingStyle: writingStyle,
                         pageCount: pages.length,
@@ -206,7 +218,7 @@ class _BookAppearanceState extends State<BookAppearance> {
                     ),
                   Expanded(
                     child: ListView(
-                      key: ValueKey(section),
+                      key: PageStorageKey(section),
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
                       children: [
                         if (!pinPreview) header,
@@ -268,21 +280,9 @@ class _BookAppearanceState extends State<BookAppearance> {
                                 ),
                             ],
                           ),
-                        ] else ...[
-                          _detailGroup('책의 겉과 첫 장', const [
-                            BookDetailKind.ribbon,
-                            BookDetailKind.bookplate,
-                            BookDetailKind.pressedFlower,
-                          ], details),
-                          const SizedBox(height: 12),
-                          _detailGroup('필사 쪽', const [
-                            BookDetailKind.sourceSlip,
-                            BookDetailKind.pencil,
-                            BookDetailKind.ornament,
-                            BookDetailKind.recordDivider,
-                            BookDetailKind.dateStamp,
-                          ], details),
-                        ],
+                        ] else
+                          for (final kind in section.kinds)
+                            _detailRow(kind, details.choice(kind)),
                       ],
                     ),
                   ),
@@ -319,27 +319,6 @@ class _BookAppearanceState extends State<BookAppearance> {
         onChanged: (value) => _save(changes: {kind: value}),
       );
 
-  Widget _detailGroup(
-    String title,
-    List<BookDetailKind> kinds,
-    BookDetailsStyle details,
-  ) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(4, 8, 4, 6),
-        child: Semantics(
-          header: true,
-          child: Text(
-            title,
-            style: const TextStyle(color: muted, fontSize: 13),
-          ),
-        ),
-      ),
-      for (final kind in kinds) _detailRow(kind, details.choice(kind)),
-    ],
-  );
-
   Widget _detailRow(BookDetailKind kind, BookDetailChoice choice) {
     final design = BookDetailDesign.of(kind);
     final expanded = detail == kind;
@@ -370,7 +349,9 @@ class _BookAppearanceState extends State<BookAppearance> {
                 size: 14,
               ),
               onTap: () {
-                setState(() => detail = expanded ? null : kind);
+                setState(
+                  () => _detailsBySection[section] = expanded ? null : kind,
+                );
                 if (!expanded) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (rowContext.mounted && detail == kind) {

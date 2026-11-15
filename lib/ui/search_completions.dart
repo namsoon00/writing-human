@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class SearchCompletions extends StatelessWidget {
@@ -36,14 +37,13 @@ class SearchCompletions extends StatelessWidget {
               height: 48,
               child: ListView.separated(
                 key: const ValueKey('search-completions'),
-                padding: const EdgeInsets.symmetric(horizontal: 4),
                 scrollDirection: Axis.horizontal,
                 itemCount: suggestions.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 4),
                 itemBuilder: (context, index) {
                   final suggestion = suggestions[index];
                   return TextButton.icon(
-                    icon: const Icon(Icons.north_west, size: 14),
+                    icon: const Icon(CupertinoIcons.arrow_up_left, size: 13),
                     label: ConstrainedBox(
                       constraints: BoxConstraints(
                         maxWidth: (constraints.maxWidth - 60).clamp(0.0, 260.0),

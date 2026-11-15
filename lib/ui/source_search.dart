@@ -12,6 +12,7 @@ import '../data/library_search.dart';
 import '../source/wikisource_preview.dart';
 import 'source_browser.dart';
 import 'paper_panel.dart';
+import 'paper_search_field.dart';
 import 'search_completions.dart';
 
 enum _Collection {
@@ -670,18 +671,15 @@ class _SourceSearchState extends State<_SourceSearch> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: TextField(
+                        child: PaperSearchField(
                           controller: _query,
                           focusNode: _focus,
                           enabled: !_loading,
                           maxLength: 160,
-                          textInputAction: TextInputAction.search,
+                          hint: _mode.hint,
+                          label: '검색어',
+                          showIcon: false,
                           onSubmitted: (_) => _search(),
-                          decoration: InputDecoration(
-                            hintText: _mode.hint,
-                            labelText: '검색어',
-                            counterText: '',
-                          ),
                         ),
                       ),
                       IconButton(

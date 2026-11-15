@@ -5,6 +5,7 @@ import '../data/library_search.dart';
 import '../data/model.dart';
 import 'paper.dart';
 import 'paper_panel.dart';
+import 'paper_search_field.dart';
 import 'search_completions.dart';
 import 'book_details.dart';
 import 'book_appearance.dart';
@@ -584,28 +585,13 @@ class _CollectionSheetState extends State<CollectionSheet> {
             Padding(
               key: shelf ? null : const ValueKey('collection-search'),
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
-              child: TextField(
-                key: shelf ? const ValueKey('shelf-title-search') : null,
+              child: PaperSearchField(
+                fieldKey: shelf ? const ValueKey('shelf-title-search') : null,
                 controller: searchField,
                 focusNode: searchFocus,
                 autofocus: true,
-                textInputAction: TextInputAction.search,
+                hint: shelf ? '노트 제목 찾기' : '문장, 책, 날짜 찾기',
                 onSubmitted: (_) => searchFocus.unfocus(),
-                decoration: InputDecoration(
-                  hintText: shelf ? '노트 제목 찾기' : '문장, 책, 날짜 찾기',
-                  prefixIcon: const Icon(CupertinoIcons.search, size: 17),
-                  isDense: true,
-                  enabledBorder: book == null
-                      ? null
-                      : const UnderlineInputBorder(
-                          borderSide: BorderSide(color: line),
-                        ),
-                  focusedBorder: book == null
-                      ? null
-                      : const UnderlineInputBorder(
-                          borderSide: BorderSide(color: brandInk),
-                        ),
-                ),
                 onChanged: (value) => setState(() => query = value),
               ),
             ),

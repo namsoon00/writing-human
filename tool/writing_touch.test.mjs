@@ -11,14 +11,25 @@ const bridge = scripts.map((match) => match[1]).find((script) =>
 assert.ok(bridge);
 
 function simulate({x = 100, move = 0, duration = 80, control, composing = false,
-  isTrusted = true, canceled = false, replaceEditor = false} = {}) {
+  isTrusted = true, canceled = false, replaceEditor = false,
+  search = false, alreadyFocused = false, disabled = false} = {}) {
   const handlers = new Map();
   vm.runInNewContext(bridge, {
-    CSS: {supports: () => true},
-    document: {addEventListener: (name, callback) => handlers.set(name, callback)},
+    matchMedia: () => ({matches: true}),
+    CSS: {supports: () => false},
+    document: {
+      documentElement: {classList: {add() {}}},
+      addEventListener: (name, callback) => handlers.set(name, callback),
+    },
   });
   const result = {focused: false, prevented: false};
   const editor = {
+    localName: search ? 'input' : 'textarea',
+    disabled,
+    matches(selector) {
+      assert.equal(selector, ':focus');
+      return alreadyFocused;
+    },
     focus(options) {
       assert.equal(options.preventScroll, true);
       result.focused = true;
@@ -26,7 +37,21 @@ function simulate({x = 100, move = 0, duration = 80, control, composing = false,
     getBoundingClientRect: () => ({left: 38, right: 352, top: 100, bottom: 600}),
   };
   let currentEditor = editor;
-  const view = {localName: 'flutter-view', querySelector: () => currentEditor};
+  const field = {querySelector: () => currentEditor};
+  const behind = {
+    querySelector: () => ({
+      ...editor,
+      getBoundingClientRect: () => ({left: 0, right: 0, top: 0, bottom: 0}),
+    }),
+  };
+  const view = {
+    localName: 'flutter-view',
+    querySelectorAll(selector) {
+      assert.match(selector, /writing-page-body/);
+      assert.match(selector, /paper-search-input/);
+      return search ? [behind, field] : [field];
+    },
+  };
   const path = [control ?? {localName: 'flt-glass-pane'}, view];
   const touch = (delta) => ({clientX: x + delta, clientY: 180, identifier: 1});
   handlers.get('touchstart')({composedPath: () => path, touches: [touch(0)], timeStamp: 0});
@@ -74,4 +99,16 @@ test('canceled or untrusted touches and replaced inputs are ignored', () => {
   for (const input of [{canceled: true}, {isTrusted: false}, {replaceEditor: true}]) {
     assert.deepEqual(simulate(input), {focused: false, prevented: false});
   }
+});
+
+test('touch search focuses its keyboard and leaves caret placement to Flutter', () => {
+  assert.deepEqual(simulate({search: true}), {focused: true, prevented: true});
+  assert.deepEqual(
+    simulate({search: true, alreadyFocused: true}),
+    {focused: false, prevented: true},
+  );
+  assert.deepEqual(
+    simulate({search: true, disabled: true}),
+    {focused: false, prevented: false},
+  );
 });

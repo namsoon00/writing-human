@@ -36,13 +36,14 @@
        Leave pan arbitration to the editor and paper recognizers. */
     flutter-view [flt-semantics-identifier="writing-page-body"] textarea { touch-action: none; }
 
-    /* On touch screens Flutter handles the paper gestures directly. The
-       semantic textarea remains available for keyboard and IME events. */
-    /* Route taps to Flutter even while the keyboard's semantics overlay is up. */
+    /* Flutter positions the caret from the painted glyphs on touch screens.
+       Its semantic inputs stay focusable for the keyboard and assistive tools. */
     .paper-touch-input flutter-view [flt-semantics-identifier="writing-keyboard-dismiss"],
     .paper-touch-input flutter-view [flt-semantics-identifier="writing-keyboard-dismiss"] *,
     .paper-touch-input flutter-view [flt-semantics-identifier="writing-page-body"],
-    .paper-touch-input flutter-view [flt-semantics-identifier="writing-page-body"] textarea {
+    .paper-touch-input flutter-view [flt-semantics-identifier="writing-page-body"] textarea,
+    .paper-touch-input flutter-view [flt-semantics-identifier="paper-search-input"],
+    .paper-touch-input flutter-view [flt-semantics-identifier="paper-search-input"] input {
       pointer-events: none !important;
     }
   </style>
@@ -61,7 +62,8 @@
     if (matchMedia('(any-pointer: coarse)').matches ||
         CSS.supports('-webkit-touch-callout', 'none')) {
       document.documentElement.classList.add('paper-touch-input');
-      const body = '[flt-semantics-identifier="writing-page-body"]';
+      const fieldSelector = '[flt-semantics-identifier="writing-page-body"], ' +
+          '[flt-semantics-identifier="paper-search-input"]';
       // Match Flutter's default touch slop and long-press timeout.
       const touchSlop = 18;
       const longPressMs = 500;
@@ -78,18 +80,22 @@
         const path = event.composedPath();
         const view = path.find(node => node.localName === 'flutter-view');
         if (!view || !touch) return null;
-        // A semantic control above the paper keeps its own touch behavior.
+        // A separate semantic control retains its own tap behavior.
         const control = path.find(node => node.localName === 'flt-semantics');
-        if (control && !control.closest(body)) return null;
-        const editor = view.querySelector(`${body} textarea`);
-        if (!editor || editor.disabled) return null;
+        const controlField = control?.closest(fieldSelector);
+        if (control && !controlField) return null;
         const editable = path.find(node =>
           node.localName === 'input' || node.localName === 'textarea' ||
           node.isContentEditable);
-        if (editable && editable !== editor) return null;
-        const {left, right, top, bottom} = editor.getBoundingClientRect();
-        return touch.clientX >= left && touch.clientX < right &&
-          touch.clientY >= top && touch.clientY < bottom ? editor : null;
+        for (const field of view.querySelectorAll(fieldSelector)) {
+          if (controlField && field !== controlField) continue;
+          const editor = field.querySelector('input, textarea');
+          if (!editor || editor.disabled || (editable && editable !== editor)) continue;
+          const {left, right, top, bottom} = editor.getBoundingClientRect();
+          if (touch.clientX >= left && touch.clientX < right &&
+              touch.clientY >= top && touch.clientY < bottom) return editor;
+        }
+        return null;
       }
 
       document.addEventListener('touchstart', (event) => {
@@ -127,7 +133,9 @@
             event.timeStamp - start.time < longPressMs &&
             Math.hypot(touch.clientX - start.x, touch.clientY - start.y) <= touchSlop) {
           // Focus within the trusted tap so mobile browsers can open the keyboard.
-          start.editor.focus({preventScroll: true});
+          if (!start.editor.matches(':focus')) {
+            start.editor.focus({preventScroll: true});
+          }
         }
         // A compatibility click can blur the editor or disturb Flutter selection.
         event.preventDefault();

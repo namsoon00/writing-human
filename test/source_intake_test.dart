@@ -242,6 +242,24 @@ void main() {
     );
     await tester.enterText(input, '봄날');
     await tester.pumpAndSettle();
+    final editable = find.descendant(
+      of: input,
+      matching: find.byType(EditableText),
+    );
+    final bounds = tester.getRect(editable);
+    final controller = tester.widget<TextField>(input).controller!;
+    expect(
+      tester.widget<TextField>(input).decoration!.focusedBorder,
+      isA<UnderlineInputBorder>(),
+    );
+    await tester.tapAt(Offset(bounds.left + 1, bounds.center.dy));
+    await tester.pumpAndSettle();
+    expect(controller.selection.isCollapsed, isTrue);
+    expect(controller.selection.baseOffset, 0);
+    await tester.tapAt(Offset(bounds.right - 12, bounds.center.dy));
+    await tester.pumpAndSettle();
+    expect(controller.selection.isCollapsed, isTrue);
+    expect(controller.selection.baseOffset, 2);
     expect(candidate, findsOneWidget);
     expect(find.text('눈 내리는 저녁'), findsNothing);
     expect(find.byType(SourceImportSheet), findsNothing);

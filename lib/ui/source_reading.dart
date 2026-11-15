@@ -12,6 +12,7 @@ import '../source/source_scan.dart';
 import 'book_details.dart';
 import 'paper.dart';
 import 'paper_panel.dart';
+import 'paper_search_field.dart';
 import 'original_range_sheet.dart';
 import 'pencil_marks.dart';
 import 'reading_details.dart';
@@ -426,12 +427,9 @@ class _SourceReadingState extends State<SourceReading> {
                     IconButton(
                       tooltip: searching ? '원문 검색 닫기' : '저장된 원문 검색',
                       onPressed: () => _toggleSearch(searching),
-                      icon: Icon(
-                        searching
-                            ? CupertinoIcons.xmark_circle
-                            : CupertinoIcons.search,
-                        size: 19,
-                      ),
+                      isSelected: searching,
+                      selectedIcon: const Icon(CupertinoIcons.search, size: 19),
+                      icon: const Icon(CupertinoIcons.search, size: 19),
                     ),
                   if (widget.onRegister != null && !editing)
                     ConstrainedBox(
@@ -450,20 +448,15 @@ class _SourceReadingState extends State<SourceReading> {
                   ),
                 ],
               ),
-              const Divider(),
+              if (!searching) const Divider(),
               if (searching)
-                TextField(
-                  key: const ValueKey('saved-original-search'),
+                PaperSearchField(
+                  fieldKey: const ValueKey('saved-original-search'),
                   controller: searchField,
                   focusNode: searchFocus,
-                  textInputAction: TextInputAction.search,
+                  hint: '원문 내용이나 출처 찾기',
                   onSubmitted: (_) => searchFocus.unfocus(),
                   onChanged: (value) => setState(() => query = value),
-                  decoration: const InputDecoration(
-                    hintText: '원문 내용이나 출처 찾기',
-                    prefixIcon: Icon(CupertinoIcons.search, size: 17),
-                    isDense: true,
-                  ),
                 ),
               if (searching)
                 Flexible(
@@ -482,11 +475,20 @@ class _SourceReadingState extends State<SourceReading> {
                   alignment: Alignment.centerLeft,
                   child: FilterChip(
                     label: const Text('밑칠한 구절만 보기'),
+                    avatar: markedOnly
+                        ? null
+                        : const Icon(
+                            CupertinoIcons.line_horizontal_3_decrease,
+                            size: 15,
+                          ),
+                    backgroundColor: Colors.transparent,
                     selectedColor: panelSelectedColor(panel),
                     selected: markedOnly,
                     onSelected: (value) => setState(() => markedOnly = value),
                   ),
                 ),
+              if (original == null && widget.originals.isNotEmpty)
+                const SizedBox(height: 4),
               if (original != null &&
                   !editing &&
                   (original.photoId != null || original.isFullPage))

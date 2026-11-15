@@ -385,6 +385,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(field).controller, same(live));
     expect(live.selection, const TextSelection(baseOffset: 2, extentOffset: 6));
+    expect(tester.widget<TextField>(field).scrollController!.offset, 0);
+    expect(store.data.activePage!.scroll, 180);
+    expect(store.writes, writes);
+
+    await previousSheet(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('앞표지'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('이어서 쓰기'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(field).controller, same(live));
     expect(tester.widget<TextField>(field).scrollController!.offset, 180);
     expect(store.writes, writes);
   });

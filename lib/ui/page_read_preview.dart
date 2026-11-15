@@ -5,15 +5,22 @@ import 'pencil_marks.dart';
 
 /// A painted neighbour, never another editor or a source of save events.
 class PageReadPreview extends StatefulWidget {
-  const PageReadPreview({super.key, required this.page, required this.style});
+  const PageReadPreview({
+    super.key,
+    required this.page,
+    required this.style,
+    this.fromTop = false,
+  });
   final WritingPage page;
   final WritingStyle style;
+  final bool fromTop;
   @override
   State<PageReadPreview> createState() => _PageReadPreviewState();
 }
 
 class _PageReadPreviewState extends State<PageReadPreview> {
-  late final scroll = ScrollController(initialScrollOffset: widget.page.scroll);
+  double get _offset => widget.fromTop ? 0 : widget.page.scroll;
+  late final scroll = ScrollController(initialScrollOffset: _offset);
   @override
   void dispose() {
     scroll.dispose();
@@ -38,7 +45,7 @@ class _PageReadPreviewState extends State<PageReadPreview> {
                     right: padding.right,
                     lineHeight:
                         MediaQuery.textScalerOf(context).scale(23) * 1.8,
-                    scroll: widget.page.scroll,
+                    scroll: _offset,
                   ),
                 ),
               ),

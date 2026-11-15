@@ -78,6 +78,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   String? _editingPageId;
   ({String pageId, int offset, int request})? _reveal;
   int _revealRequest = 0;
+  ({String pageId, int request})? _firstPageView;
+  int _firstPageRequest = 0;
   ({String pageId, String? bookId, RegisteredOriginal original})? _savedSource;
   final _originalByPage = <String, String>{};
   final _originalByVolume = <({String? bookId, String? recordId}), String>{};
@@ -176,18 +178,30 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _openPage(String id, {bool paperTurn = true}) =>
-      _navigatePage(() async {
-        if (page.id == id && _visibleLeaf != null) {
-          setState(() => _bookLeaf = null);
-          return;
-        }
-        if (!c.library.pages.any((p) => p.id == id) || page.id == id) return;
-        _bookLeaf = null;
-        fresh = false;
-        userFresh = false;
-        c.openPage(id);
-      }, paperTurn: paperTurn);
+  Future<void> _openPage(
+    String id, {
+    bool paperTurn = true,
+    bool startAtTop = false,
+  }) => _navigatePage(() async {
+    if (!c.library.pages.any((p) => p.id == id)) return;
+    final samePage = page.id == id;
+    if (samePage &&
+        _visibleLeaf == null &&
+        _firstPageView == null &&
+        !startAtTop) {
+      return;
+    }
+    setState(() {
+      _bookLeaf = null;
+      fresh = false;
+      userFresh = false;
+      _firstPageView = startAtTop
+          ? (pageId: id, request: ++_firstPageRequest)
+          : null;
+      if (startAtTop) _reveal = null;
+    });
+    if (!samePage) c.openPage(id);
+  }, paperTurn: paperTurn);
 
   Future<void> _openPassage(Passage passage, {bool paperTurn = true}) =>
       _navigatePage(() async {
@@ -199,6 +213,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           _bookLeaf = null;
           fresh = false;
           userFresh = false;
+          _firstPageView = null;
           _reveal = offset != null && target.text == passage.page.text
               ? (pageId: id, offset: offset, request: ++_revealRequest)
               : null;
@@ -228,7 +243,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     if (first == null) {
       await _newSheet(book.id);
     } else {
-      await _openPage(first.id);
+      await _openPage(first.id, startAtTop: true);
     }
   }
 
@@ -365,6 +380,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       _originalByVolume.clear();
       _bookLeaf = null;
       _reveal = null;
+      _firstPageView = null;
       fresh = c.library.pages.isEmpty;
       userFresh = false;
       draft = _blank();
@@ -382,6 +398,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       }
       if (_accountLocked || _leafBook == null) _bookLeaf = null;
       if (_accountLocked || _reveal?.pageId != page.id) _reveal = null;
+      if (_accountLocked || _firstPageView?.pageId != page.id) {
+        _firstPageView = null;
+      }
       if (_accountLocked ||
           _savedSource?.pageId != page.id ||
           c.library.originalRemovals.any(
@@ -1403,6 +1422,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       preview: true,
       navigationEnabled: false,
       previewBook: displayBook,
+      previewFromTop: true,
     );
     Widget cover({bool back = false}) => BookFrontCover(
       title: displayBook!.title,
@@ -1589,6 +1609,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     required bool preview,
     required bool navigationEnabled,
     Book? previewBook,
+    bool previewFromTop = false,
   }) {
     final record = c.library.records
         .where((r) => r.id == currentPage.recordId)
@@ -1736,8 +1757,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 key: const ValueKey('writing-surface'),
                 child: preview
                     ? PageReadPreview(
-                        key: ValueKey(currentPage.id),
+                        key: ValueKey((currentPage.id, previewFromTop)),
                         page: currentPage,
+                        fromTop: previewFromTop,
                         style: style,
                       )
                     : PageEditor(
@@ -1752,6 +1774,10 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                             )
                             .firstOrNull,
                         keyboardOverlap: keyboardOverlap,
+                        startAtTopRequest:
+                            _firstPageView?.pageId == currentPage.id
+                            ? _firstPageView?.request
+                            : null,
                         reveal: _reveal?.pageId == currentPage.id
                             ? (
                                 offset: _reveal!.offset,

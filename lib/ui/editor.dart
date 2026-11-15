@@ -32,6 +32,7 @@ class PageEditor extends StatefulWidget {
     this.originals = const [],
     this.guidedOriginal,
     this.reveal,
+    this.startAtTopRequest,
   });
   final FocusNode? focusNode;
   final void Function(bool focused, bool composing)? onEditingState;
@@ -43,6 +44,7 @@ class PageEditor extends StatefulWidget {
   final RegisteredOriginal? guidedOriginal;
   final double keyboardOverlap;
   final ({int offset, int request})? reveal;
+  final int? startAtTopRequest;
   @override
   State<PageEditor> createState() => _PageEditorState();
 }
@@ -81,7 +83,8 @@ class _PageEditorState extends State<PageEditor> {
         ),
       ),
     );
-    scroll = TranscriptionScrollController(initialScrollOffset: p.scroll);
+    final initialOffset = widget.startAtTopRequest == null ? p.scroll : 0.0;
+    scroll = TranscriptionScrollController(initialScrollOffset: initialOffset);
     if (widget.style.writingSound) _sound = WritingSound();
     _observedText = text.value;
     text.addListener(_textChanged);
@@ -91,7 +94,7 @@ class _PageEditorState extends State<PageEditor> {
         return;
       }
       if (scroll.hasClients) {
-        scroll.jumpTo(p.scroll.clamp(0, scroll.position.maxScrollExtent));
+        scroll.jumpTo(initialOffset.clamp(0, scroll.position.maxScrollExtent));
       }
       _reveal();
       restoring = false;
@@ -121,6 +124,21 @@ class _PageEditorState extends State<PageEditor> {
     if (widget.reveal != null && widget.reveal != oldWidget.reveal) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _reveal();
+      });
+    } else if (widget.startAtTopRequest != oldWidget.startAtTopRequest) {
+      final request = widget.startAtTopRequest;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted ||
+            !scroll.hasClients ||
+            focus.hasFocus ||
+            request != widget.startAtTopRequest) {
+          return;
+        }
+        final previousRestoring = restoring;
+        restoring = true;
+        final offset = request == null ? widget.page.scroll : 0.0;
+        scroll.jumpTo(offset.clamp(0, scroll.position.maxScrollExtent));
+        restoring = previousRestoring;
       });
     }
   }

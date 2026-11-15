@@ -35,6 +35,7 @@ class SourceReading extends StatefulWidget {
     this.onRetry,
     this.onSaveReflection,
     this.onSaveRange,
+    this.onDelete,
   });
 
   final List<RegisteredOriginal> originals;
@@ -48,6 +49,7 @@ class SourceReading extends StatefulWidget {
   final ValueChanged<Passage>? onOpenWriting;
   final VoidCallback? onRetry;
   final Future<bool> Function(RegisteredOriginal, PencilMark?)? onSaveRange;
+  final Future<bool> Function(RegisteredOriginal)? onDelete;
   final Future<bool> Function(RegisteredOriginal, OriginalReflection?)?
   onSaveReflection;
 
@@ -263,6 +265,45 @@ class _SourceReadingState extends State<SourceReading> {
     }
   }
 
+  Future<void> _delete(RegisteredOriginal original) async {
+    if (!_canLeave || !mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('원문을 삭제할까요?'),
+        content: const Text('이 원문과 원문에 남긴 느낀 점이 삭제돼요. 이미 작성한 필사는 남아요.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('삭제', style: TextStyle(color: burgundy)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted || !_canLeave) return;
+    setState(() => saving = true);
+    var deleted = false;
+    try {
+      deleted = await widget.onDelete!(original);
+    } finally {
+      if (mounted) {
+        setState(() {
+          saving = false;
+          if (deleted) selectedId = null;
+        });
+      }
+    }
+    if (mounted && !deleted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('원문을 삭제하지 못했어요. 다시 시도해 주세요.')),
+      );
+    }
+  }
+
   Future<void> _changeRange(RegisteredOriginal original) async {
     if (saving) return;
     setState(() => saving = true);
@@ -426,7 +467,7 @@ class _SourceReadingState extends State<SourceReading> {
                   if (!editing && widget.originals.isNotEmpty)
                     IconButton(
                       tooltip: searching ? '원문 검색 닫기' : '저장된 원문 검색',
-                      onPressed: () => _toggleSearch(searching),
+                      onPressed: saving ? null : () => _toggleSearch(searching),
                       isSelected: searching,
                       selectedIcon: const Icon(CupertinoIcons.search, size: 19),
                       icon: const Icon(CupertinoIcons.search, size: 19),
@@ -437,7 +478,7 @@ class _SourceReadingState extends State<SourceReading> {
                         maxWidth: MediaQuery.sizeOf(context).width * .34,
                       ),
                       child: TextButton(
-                        onPressed: _register,
+                        onPressed: saving ? null : _register,
                         child: const Text('원문 등록', textAlign: TextAlign.center),
                       ),
                     ),
@@ -491,31 +532,52 @@ class _SourceReadingState extends State<SourceReading> {
                 const SizedBox(height: 4),
               if (original != null &&
                   !editing &&
-                  (original.photoId != null || original.isFullPage))
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Wrap(
-                    spacing: 8,
-                    children: [
-                      if (original.photoId case final id?)
-                        TextButton.icon(
-                          onPressed: saving ? null : () => _showPhoto(id),
-                          icon: const Icon(CupertinoIcons.photo, size: 16),
-                          label: const Text('원본 사진'),
-                        ),
-                      if (original.isFullPage && widget.onSaveRange != null)
-                        TextButton(
-                          onPressed: saving
-                              ? null
-                              : () => _changeRange(original),
-                          child: Text(
-                            original.writingRange == null
-                                ? '필사 범위 · 전체 페이지'
-                                : '필사 범위 · 구간 선택됨',
+                  (original.photoId != null ||
+                      original.isFullPage ||
+                      widget.onDelete != null))
+                Row(
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8,
+                        children: [
+                          if (original.photoId case final id?)
+                            TextButton.icon(
+                              onPressed: saving ? null : () => _showPhoto(id),
+                              icon: const Icon(CupertinoIcons.photo, size: 16),
+                              label: const Text('원본 사진'),
+                            ),
+                          if (original.isFullPage && widget.onSaveRange != null)
+                            TextButton(
+                              onPressed: saving
+                                  ? null
+                                  : () => _changeRange(original),
+                              child: Text(
+                                original.writingRange == null
+                                    ? '필사 범위 · 전체 페이지'
+                                    : '필사 범위 · 구간 선택됨',
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (widget.onDelete != null)
+                      PopupMenuButton<bool>(
+                        tooltip: '원문 더 보기',
+                        icon: const Icon(CupertinoIcons.ellipsis, size: 19),
+                        enabled: !saving,
+                        itemBuilder: (_) => [
+                          const PopupMenuItem(
+                            value: true,
+                            child: Text(
+                              '원문 삭제',
+                              style: TextStyle(color: burgundy),
+                            ),
                           ),
-                        ),
-                    ],
-                  ),
+                        ],
+                        onSelected: (_) => _delete(original),
+                      ),
+                  ],
                 ),
               if (widget.onRetry != null && !editing)
                 TextButton(

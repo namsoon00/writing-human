@@ -382,7 +382,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       }
       if (_accountLocked || _leafBook == null) _bookLeaf = null;
       if (_accountLocked || _reveal?.pageId != page.id) _reveal = null;
-      if (_accountLocked || _savedSource?.pageId != page.id) {
+      if (_accountLocked ||
+          _savedSource?.pageId != page.id ||
+          c.library.originalRemovals.any(
+            (item) => item.originalId == _savedSource?.original.id,
+          )) {
         _savedSource = null;
       }
     });
@@ -571,6 +575,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   bool _isShareRegistered(IncomingSource share) {
     final id = _sharedRecordId(share);
     return c.library.records.any((record) => record.id == id) ||
+        c.library.originalRemovals.any((entry) => entry.originalId == id) ||
         c.library.books.any(
           (book) => book.originals.any((original) => original.id == id),
         );
@@ -1091,6 +1096,14 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                   recordId: selectedPage.recordId,
                   original: latest,
                   range: range,
+                );
+              },
+              onDelete: (original) async {
+                if (!mounted || c != owner || _accountLocked) return false;
+                return owner.deleteOriginal(
+                  bookId: bookId,
+                  recordId: selectedPage.recordId,
+                  original: original,
                 );
               },
               onSaveReflection: (original, reflection) => _saveReflection(

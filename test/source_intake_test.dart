@@ -207,6 +207,65 @@ Future<void> takePhoto(WidgetTester tester, {bool settle = true}) async {
 }
 
 void main() {
+  testWidgets(
+    'Original deletion confirms, keeps failed edits and leaves writing intact',
+    (tester) async {
+      const original = RegisteredOriginal(
+        'remove',
+        '지울 원문',
+        reflection: OriginalReflection('함께 지울 느낀 점'),
+      );
+      final store = MemoryStore()
+        ..data = existing().copy(
+          records: const [
+            WritingRecord(
+              id: 'r',
+              title: '기존 필사',
+              originals: [original, RegisteredOriginal('keep', '남겨 둘 원문')],
+            ),
+          ],
+        );
+      final writing = store.data.activePage!.text;
+      await open(tester, store, FakeIntake());
+      await tester.tap(place);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('remove')));
+      await tester.pumpAndSettle();
+
+      Future<void> askToDelete() async {
+        await tester.tap(find.byTooltip('원문 더 보기'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('원문 삭제'));
+        await tester.pumpAndSettle();
+        expect(find.text('원문을 삭제할까요?'), findsOneWidget);
+      }
+
+      await askToDelete();
+      await tester.tap(find.text('취소'));
+      await tester.pumpAndSettle();
+      expect(store.data.records.single.originals.length, 2);
+
+      store.fail = true;
+      await askToDelete();
+      await tester.tap(find.text('삭제'));
+      await tester.pumpAndSettle();
+      expect(find.text('원문을 삭제하지 못했어요. 다시 시도해 주세요.'), findsOneWidget);
+      expect(
+        store.data.records.single.originals.first.reflection!.text,
+        '함께 지울 느낀 점',
+      );
+
+      store.fail = false;
+      await askToDelete();
+      await tester.tap(find.text('삭제'));
+      await tester.pumpAndSettle();
+      expect(find.text('남겨 둘 원문'), findsOneWidget);
+      expect(find.text('지울 원문'), findsNothing);
+      expect(store.data.records.single.originals.single.id, 'keep');
+      expect(store.data.activePage!.text, writing);
+    },
+  );
+
   testWidgets('The original header searches saved text and citations locally', (
     tester,
   ) async {

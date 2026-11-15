@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import '../data/model.dart';
+import '../data/original_removals.dart';
 
 bool sameData(Object? a, Object? b) => jsonEncode(a) == jsonEncode(b);
 String _hash(Object value) =>
@@ -173,9 +174,17 @@ class MergeResult {
   final int conflictCopies;
 }
 
-/// Append-only three-way reconciliation. Deletions are deliberately unsupported.
+/// Three-way reconciliation keeps explicit page and original removals.
 /// Conflicting prose is preserved as a separate, visible writing record.
 MergeResult mergeLibraries(Library base, Library local, Library remote) {
+  final originalRemovals = {
+    ...base.originalRemovals,
+    ...local.originalRemovals,
+    ...remote.originalRemovals,
+  };
+  base = applyOriginalRemovals(base, originalRemovals);
+  local = applyOriginalRemovals(local, originalRemovals);
+  remote = applyOriginalRemovals(remote, originalRemovals);
   final books = <String, Book>{for (final b in remote.books) b.id: b};
   final baseBooks = {for (final b in base.books) b.id: b};
   for (final b in local.books) {
@@ -510,18 +519,21 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
   if (!normalized.any((p) => p.id == active && !trash.containsKey(p.id))) {
     active = normalized.where((p) => !trash.containsKey(p.id)).firstOrNull?.id;
   }
-  final merged = Library(
-    books: books.values.toList()..sort((a, b) => a.id.compareTo(b.id)),
-    records: records.values.toList()..sort((a, b) => a.id.compareTo(b.id)),
-    pages: normalized.where((p) => !trash.containsKey(p.id)).toList(),
-    trashedPages: normalized.where((p) => trash.containsKey(p.id)).toList(),
-    purgedPageIds: purgedPageIds,
-    activePageId: active,
-    writing:
-        active != null && _field(base.writing, local.writing, remote.writing),
-    style: style,
-    sync: local.sync,
-    lastBackupAt: local.lastBackupAt,
+  final merged = applyOriginalRemovals(
+    Library(
+      books: books.values.toList()..sort((a, b) => a.id.compareTo(b.id)),
+      records: records.values.toList()..sort((a, b) => a.id.compareTo(b.id)),
+      pages: normalized.where((p) => !trash.containsKey(p.id)).toList(),
+      trashedPages: normalized.where((p) => trash.containsKey(p.id)).toList(),
+      purgedPageIds: purgedPageIds,
+      activePageId: active,
+      writing:
+          active != null && _field(base.writing, local.writing, remote.writing),
+      style: style,
+      sync: local.sync,
+      lastBackupAt: local.lastBackupAt,
+    ),
+    originalRemovals,
   );
   final positions = <String, String>{};
   final localPositions = merged.validBookPositions(local.bookPositions);

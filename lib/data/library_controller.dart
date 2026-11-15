@@ -3,6 +3,8 @@ import 'package:uuid/uuid.dart';
 import 'model.dart';
 import 'store.dart';
 import 'library_backup.dart';
+import 'original_removals.dart';
+import '../source/originals.dart';
 
 class LibraryController extends ChangeNotifier {
   static const defaultPracticeBook = Book(
@@ -285,6 +287,41 @@ class LibraryController extends ChangeNotifier {
       ),
     );
     return true;
+  }
+
+  static const _originalDeleteError = '원문 삭제를 저장하지 못했어요. 다시 시도해 주세요.';
+
+  Future<bool> deleteOriginal({
+    required String? bookId,
+    required String recordId,
+    required RegisteredOriginal original,
+  }) async {
+    await settled;
+    if (_disposed ||
+        editorFocused ||
+        composing ||
+        (saveError != null && saveError != _originalDeleteError)) {
+      return false;
+    }
+    final stillListed =
+        originalsFor(library, bookId: bookId, recordId: recordId).any(
+          (item) =>
+              item.id == original.id &&
+              item.text == original.text &&
+              item.citation == original.citation &&
+              item.photoId == original.photoId,
+        );
+    if (!stillListed) return false;
+    final next = applyOriginalRemovals(library, [
+      ...library.originalRemovals,
+      ...removalKeysFor(
+        library,
+        original: original,
+        bookId: bookId,
+        recordId: recordId,
+      ),
+    ]);
+    return _saveBeforePublishing(next, error: _originalDeleteError);
   }
 
   Future<bool> saveOriginalReflection({
@@ -729,7 +766,11 @@ class LibraryController extends ChangeNotifier {
         )
         .rememberActiveBookPosition();
 
-    return _saveTrashChange(next, activeChanged: activeChanged);
+    return _saveBeforePublishing(
+      next,
+      error: _trashSaveError,
+      activeChanged: activeChanged,
+    );
   }
 
   bool get _canChangeTrash =>
@@ -752,11 +793,12 @@ class LibraryController extends ChangeNotifier {
           .toList(),
       purgedPageIds: restore ? null : [...library.purgedPageIds, id],
     );
-    return _saveTrashChange(next);
+    return _saveBeforePublishing(next, error: _trashSaveError);
   }
 
-  Future<bool> _saveTrashChange(
+  Future<bool> _saveBeforePublishing(
     Library next, {
+    required String error,
     bool activeChanged = false,
   }) async {
     final revision = ++_revision;
@@ -775,7 +817,7 @@ class LibraryController extends ChangeNotifier {
         committed = true;
       } catch (_) {
         if (revision == _revision) {
-          saveError = _trashSaveError;
+          saveError = error;
         }
       } finally {
         if (revision == _revision) saving = false;

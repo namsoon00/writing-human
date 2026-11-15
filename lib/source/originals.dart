@@ -1,56 +1,104 @@
-import 'dart:convert';
-
-import 'package:crypto/crypto.dart';
-
 import '../data/model.dart';
 import '../data/library_search.dart';
+import '../data/original_removals.dart';
 
-RegisteredOriginal _legacyOriginal(String text, [String citation = '']) {
-  final digest = sha256.convert(utf8.encode(jsonEncode([text, citation])));
-  return RegisteredOriginal('legacy-$digest', text, citation: citation);
-}
+RegisteredOriginal _legacyOriginal(String text, [String citation = '']) =>
+    RegisteredOriginal(
+      legacyOriginalId(text, citation),
+      text,
+      citation: citation,
+    );
 
-List<RegisteredOriginal> originalsFor(
+typedef _ScopedOriginal = ({OriginalRemoval key, RegisteredOriginal original});
+
+Iterable<_ScopedOriginal> _scopedOriginals(
   Library library, {
   String? bookId,
   String? recordId,
-}) {
+  bool includeTrash = false,
+}) sync* {
   final records = library.records.where(
     (record) =>
         bookId == null ? record.id == recordId : record.bookId == bookId,
   );
   final ids = records.map((record) => record.id).toSet();
   final book = library.books.where((book) => book.id == bookId).firstOrNull;
-  final originals = <(String, String, String?), RegisteredOriginal>{};
-
-  void add(RegisteredOriginal original) {
-    if (original.text.trim().isNotEmpty ||
-        original.citation.trim().isNotEmpty) {
-      originals.putIfAbsent((
-        original.text,
-        original.citation,
-        original.photoId,
-      ), () => original);
+  if (book != null) {
+    for (final original in book.originals) {
+      yield (
+        key: (ownerId: book.id, originalId: original.id, book: true),
+        original: original,
+      );
     }
   }
 
-  for (final original in book?.originals ?? const <RegisteredOriginal>[]) {
-    add(original);
-  }
+  _ScopedOriginal fromRecord(String id, RegisteredOriginal original) => (
+    key: (ownerId: id, originalId: original.id, book: false),
+    original: original,
+  );
+
   for (final record in records) {
     for (final original in record.originals) {
-      add(original);
+      yield fromRecord(record.id, original);
     }
-    if (record.source.trim().isNotEmpty) add(_legacyOriginal(record.source));
+    if (record.source.trim().isNotEmpty) {
+      yield fromRecord(record.id, _legacyOriginal(record.source));
+    }
   }
-  for (final page in library.pages.where(
-    (page) => ids.contains(page.recordId),
-  )) {
+  for (final page in [
+    ...library.pages,
+    if (includeTrash) ...library.trashedPages,
+  ]) {
+    if (!ids.contains(page.recordId)) continue;
     for (final passage in page.passages) {
-      add(_legacyOriginal(passage.source, passage.citation));
+      yield fromRecord(
+        page.recordId,
+        _legacyOriginal(passage.source, passage.citation),
+      );
+    }
+  }
+}
+
+(String, String, String?) _originalContent(RegisteredOriginal original) =>
+    (original.text, original.citation, original.photoId);
+
+List<RegisteredOriginal> originalsFor(
+  Library library, {
+  String? bookId,
+  String? recordId,
+}) {
+  final removed = library.originalRemovals.toSet();
+  final originals = <(String, String, String?), RegisteredOriginal>{};
+  for (final item in _scopedOriginals(
+    library,
+    bookId: bookId,
+    recordId: recordId,
+  )) {
+    final original = item.original;
+    if (!removed.contains(item.key) &&
+        (original.text.trim().isNotEmpty ||
+            original.citation.trim().isNotEmpty)) {
+      originals.putIfAbsent(_originalContent(original), () => original);
     }
   }
   return originals.values.toList();
+}
+
+Iterable<OriginalRemoval> removalKeysFor(
+  Library library, {
+  required RegisteredOriginal original,
+  required String? bookId,
+  required String recordId,
+}) sync* {
+  final target = _originalContent(original);
+  for (final entry in _scopedOriginals(
+    library,
+    bookId: bookId,
+    recordId: recordId,
+    includeTrash: true,
+  )) {
+    if (_originalContent(entry.original) == target) yield entry.key;
+  }
 }
 
 class OriginalMatch {

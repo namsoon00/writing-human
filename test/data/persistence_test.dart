@@ -5,6 +5,9 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:writing_human/data/sqlite_store.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/data/library_controller.dart';
+import 'package:writing_human/data/library_backup.dart';
+import 'package:writing_human/source/originals.dart';
+import 'package:writing_human/sync/merge.dart';
 
 void main() {
   sqfliteFfiInit();
@@ -15,6 +18,80 @@ void main() {
   tearDown(() async {
     await dir.delete(recursive: true);
   });
+
+  test(
+    'An original deletion survives SQLite, sync and an older backup',
+    () async {
+      const source = RegisteredOriginal('original', '지울 원문');
+      const before = Library(
+        books: [
+          Book(id: 'b', title: '삭제한 책', originals: [source]),
+          Book(id: 'other', title: '별도 책', originals: [source]),
+        ],
+        records: [
+          WritingRecord(id: 'r', bookId: 'b', title: '필사', source: '지울 원문'),
+        ],
+        pages: [
+          WritingPage(
+            id: 'p',
+            recordId: 'r',
+            number: 1,
+            text: '직접 쓴 필사',
+            base: 2,
+            extent: 4,
+            pencilMarks: [PencilMark(0, 2)],
+            guidedOriginalId: 'original',
+            passages: [
+              PagePassage(id: 'old', start: 0, source: '지울 원문'),
+              PagePassage(id: 'keep', start: 2, source: '남긴 출처'),
+            ],
+          ),
+        ],
+        activePageId: 'p',
+        writing: true,
+      );
+      final file = '${dir.path}/original-deletion.db';
+      final store = await SqliteLibraryStore.open(
+        file,
+        factory: databaseFactoryFfi,
+      );
+      await store.save(before);
+      final controller = LibraryController(store, await store.load());
+      expect(
+        await controller.deleteOriginal(
+          bookId: 'b',
+          recordId: 'r',
+          original: source,
+        ),
+        isTrue,
+      );
+      controller.dispose();
+      await store.close();
+
+      final reopened = await SqliteLibraryStore.open(
+        file,
+        factory: databaseFactoryFfi,
+      );
+      final after = await reopened.load();
+      await reopened.close();
+      for (final library in [
+        after,
+        mergeLibraries(before, before, after).library,
+        mergeLibraries(before, after, before).library,
+        mergeBackup(after, before),
+      ]) {
+        expect(originalsFor(library, bookId: 'b').single.text, '남긴 출처');
+        expect(originalsFor(library, bookId: 'other').single.id, 'original');
+        expect(library.records.single.source, isEmpty);
+        expect(library.activePage!.text, '직접 쓴 필사');
+        expect(library.activePage!.base, 2);
+        expect(library.activePage!.extent, 4);
+        expect(library.activePage!.guidedOriginalId, isNull);
+        expect(library.activePage!.pencilMarks.single.end, 2);
+        expect(library.originalRemovals.length, 2);
+      }
+    },
+  );
 
   test(
     'SQLite close/reopen preserves hierarchy, text, page, selection and scroll',

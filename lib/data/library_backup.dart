@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:uuid/uuid.dart';
 
 import 'model.dart';
+import 'original_removals.dart';
 import 'original_photo_store.dart';
 
 const maxBackupBytes = 32 * 1024 * 1024;
@@ -120,6 +121,10 @@ List<Json> _pageContent(List<WritingPage> pages) => [
 /// collisions receive new IDs so existing records and their pages stay intact.
 Library mergeBackup(Library current, Library backup) {
   backup.validate();
+  backup = applyOriginalRemovals(backup, [
+    ...current.originalRemovals,
+    ...backup.originalRemovals,
+  ]);
   if (current.books.isEmpty && current.records.isEmpty) {
     return backup.copy(sync: current.sync, lastBackupAt: current.lastBackupAt);
   }
@@ -151,6 +156,7 @@ Library mergeBackup(Library current, Library backup) {
   ]);
   final backupGroups = _groupPages([...backup.pages, ...backup.trashedPages]);
   final restoredPageIds = <String, String>{};
+  final recordIds = <String, String>{};
   for (final record in backup.records) {
     final json = {..._recordContent(record), 'bookId': bookIds[record.bookId]};
     final group = backupGroups[record.id] ?? [];
@@ -200,6 +206,7 @@ Library mergeBackup(Library current, Library backup) {
           }
         }
       }
+      recordIds[record.id] = id;
       for (var i = 0; i < group.length; i++) {
         if (pages.containsKey(candidatePages[i].id)) {
           restoredPageIds[group[i].id] = candidatePages[i].id;
@@ -210,28 +217,41 @@ Library mergeBackup(Library current, Library backup) {
   }
 
   final active = current.activePageId ?? restoredPageIds[backup.activePageId];
-  final merged = current.copy(
-    books: books.values.toList(),
-    records: records.values.toList(),
-    pages: pages.values.toList(),
-    trashedPages: trash.values.toList(),
-    activePageId: active,
-    bookPositions: {
-      for (final entry in backup.bookPositions.entries)
-        ?bookIds[entry.key]: ?restoredPageIds[entry.value],
-      ...current.bookPositions,
-    },
-    writing:
-        active != null &&
-        (current.activePageId == null ? backup.writing : current.writing),
-    style: current.style.copy(
-      favoriteBookIds: [
-        ...{
-          ...current.style.favoriteBookIds,
-          ...backup.style.favoriteBookIds.map((id) => bookIds[id]).nonNulls,
-        },
-      ],
+  final merged = applyOriginalRemovals(
+    current.copy(
+      books: books.values.toList(),
+      records: records.values.toList(),
+      pages: pages.values.toList(),
+      trashedPages: trash.values.toList(),
+      activePageId: active,
+      bookPositions: {
+        for (final entry in backup.bookPositions.entries)
+          ?bookIds[entry.key]: ?restoredPageIds[entry.value],
+        ...current.bookPositions,
+      },
+      writing:
+          active != null &&
+          (current.activePageId == null ? backup.writing : current.writing),
+      style: current.style.copy(
+        favoriteBookIds: [
+          ...{
+            ...current.style.favoriteBookIds,
+            ...backup.style.favoriteBookIds.map((id) => bookIds[id]).nonNulls,
+          },
+        ],
+      ),
     ),
+    [
+      ...current.originalRemovals,
+      for (final removed in backup.originalRemovals)
+        if ((removed.book ? bookIds : recordIds)[removed.ownerId]
+            case final ownerId?)
+          (
+            ownerId: ownerId,
+            originalId: removed.originalId,
+            book: removed.book,
+          ),
+    ],
   );
   merged.validate();
   return merged;

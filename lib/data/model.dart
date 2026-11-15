@@ -732,6 +732,20 @@ class SyncMetadata {
   }
 }
 
+typedef OriginalRemoval = ({String ownerId, String originalId, bool book});
+
+List<OriginalRemoval> readOriginalRemovals(Object? values) => [
+  for (final value in (values as List? ?? const []))
+    if (value case [final bool book, final String owner, final String original])
+      (ownerId: owner, originalId: original, book: book)
+    else
+      throw const FormatException('잘못된 원문 삭제 기록'),
+];
+
+List<List<Object>> originalRemovalsJson(List<OriginalRemoval> values) => [
+  for (final item in values) [item.book, item.ownerId, item.originalId],
+];
+
 class Library {
   const Library({
     this.books = const [],
@@ -739,6 +753,7 @@ class Library {
     this.pages = const [],
     this.trashedPages = const [],
     this.purgedPageIds = const [],
+    this.originalRemovals = const [],
     this.activePageId,
     this.bookPositions = const {},
     this.writing = false,
@@ -750,6 +765,7 @@ class Library {
   final List<WritingRecord> records;
   final List<WritingPage> pages, trashedPages;
   final List<String> purgedPageIds;
+  final List<OriginalRemoval> originalRemovals;
   final String? activePageId;
   final Map<String, String> bookPositions;
   final bool writing;
@@ -782,6 +798,7 @@ class Library {
     List<WritingPage>? pages,
     List<WritingPage>? trashedPages,
     List<String>? purgedPageIds,
+    List<OriginalRemoval>? originalRemovals,
     String? activePageId,
     Map<String, String>? bookPositions,
     bool? writing,
@@ -795,6 +812,7 @@ class Library {
     pages: pages ?? this.pages,
     trashedPages: trashedPages ?? this.trashedPages,
     purgedPageIds: purgedPageIds ?? this.purgedPageIds,
+    originalRemovals: originalRemovals ?? this.originalRemovals,
     activePageId: clearActive ? null : activePageId ?? this.activePageId,
     bookPositions: bookPositions ?? this.bookPositions,
     writing: writing ?? this.writing,
@@ -813,6 +831,8 @@ class Library {
     if (trashedPages.isNotEmpty)
       'trashedPages': trashedPages.map((page) => page.toJson()).toList(),
     if (purgedPageIds.isNotEmpty) 'purgedPageIds': purgedPageIds,
+    if (originalRemovals.isNotEmpty)
+      'originalRemovals': originalRemovalsJson(originalRemovals),
     'activePageId': activePageId,
     if (bookPositions.isNotEmpty) 'bookPositions': bookPositions,
     'writing': writing,
@@ -838,6 +858,7 @@ class Library {
           .map((page) => WritingPage.fromJson(page as Json))
           .toList(),
       purgedPageIds: List<String>.from(j['purgedPageIds'] as List? ?? []),
+      originalRemovals: readOriginalRemovals(j['originalRemovals']),
       activePageId: j['activePageId'] as String?,
       bookPositions: Map<String, String>.from(
         j['bookPositions'] as Json? ?? {},
@@ -891,6 +912,10 @@ class Library {
         allIds.length != allPages.length ||
         numbers.length != allPages.length ||
         purged.length != purgedPageIds.length ||
+        originalRemovals.toSet().length != originalRemovals.length ||
+        originalRemovals.any(
+          (entry) => entry.originalId.isEmpty || entry.originalId.length > 250,
+        ) ||
         purged.any(
           (id) => id.isEmpty || id.length > 250 || allIds.contains(id),
         ) ||

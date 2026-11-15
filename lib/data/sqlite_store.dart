@@ -167,6 +167,7 @@ class SqliteLibraryStore implements LibraryStore {
       trashedPages: (settings['trashedPages'] as List? ?? [])
           .map((page) => WritingPage.fromJson(page as Json))
           .toList(),
+      originalRemovals: readOriginalRemovals(settings['originalRemovals']),
       purgedPageIds: List<String>.from(
         settings['purgedPageIds'] as List? ?? [],
       ),
@@ -258,6 +259,8 @@ class SqliteLibraryStore implements LibraryStore {
             'trashedPages': library.trashedPages
                 .map((page) => page.toJson())
                 .toList(),
+          if (library.originalRemovals.isNotEmpty)
+            'originalRemovals': originalRemovalsJson(library.originalRemovals),
           if (library.purgedPageIds.isNotEmpty)
             'purgedPageIds': library.purgedPageIds,
           if (library.bookPositions.isNotEmpty)

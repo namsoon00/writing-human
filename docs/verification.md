@@ -1475,3 +1475,7 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   테스트 142개 및 GitHub Pages 웹 release 빌드를 통과했다.
 - iOS 앱 아이콘 파일, Android 기본·적응형 아이콘 및 웹 설치 아이콘은 먹갈색 도장으로
   교체했다. 브라우저 탭의 favicon 파일과 주소는 유지했다.
+- iOS 시뮬레이터용 빌드를 설치해 iPhone 17 Pro 홈 화면에서 도장 글자와
+  테두리가 표시되는 것을 육안 확인했다. Android Debug APK를 패키징해
+  적응형 XML과 밀도별 아이콘을 확인했다. iOS·Android 실기기 및 Android
+  홈 화면에서의 표시 여부는 검증하지 않았다.

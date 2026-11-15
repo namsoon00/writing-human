@@ -6,6 +6,7 @@ import 'reading_details.dart';
 import 'paper_palette.dart';
 
 const detailMetadataInk = Color(0xff655747);
+const _bookplateStampInk = Color(0xff654020);
 
 Widget _decoration(Widget child) => IgnorePointer(
   child: ExcludeSemantics(child: RepaintBoundary(child: child)),
@@ -661,12 +662,35 @@ class Bookplate extends StatelessWidget {
                 ),
               ),
               if (choice.enabled)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Image.asset(
-                    'assets/images/bookplate-stamp.png',
-                    height: 48,
-                    excludeFromSemantics: true,
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: ExcludeSemantics(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: Border.fromBorderSide(
+                          BorderSide(color: _bookplateStampInk, width: 1.6),
+                        ),
+                        borderRadius: BorderRadius.all(Radius.circular(2)),
+                      ),
+                      child: SizedBox(
+                        width: 45,
+                        height: 48,
+                        child: Center(
+                          child: Text(
+                            '쓰는\n인간',
+                            textAlign: TextAlign.center,
+                            textScaler: TextScaler.noScaling,
+                            style: TextStyle(
+                              fontFamily: appFontFamily,
+                              fontFamilyFallback: appFontFallback,
+                              color: _bookplateStampInk,
+                              fontSize: 15,
+                              height: 1,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               if (flower.enabled)

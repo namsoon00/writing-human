@@ -20,6 +20,123 @@ void main() {
   });
 
   test(
+    'Original editing keeps guides, valid photo lines and sync changes',
+    () async {
+      final original = RegisteredOriginal(
+        'source',
+        '첫 줄\n두번째 줄',
+        citation: '초판',
+        photoId: List.filled(64, 'a').join(),
+        isFullPage: true,
+        reflection: const OriginalReflection('느낀 점', mark: PencilMark(4, 9)),
+        writingRange: const PencilMark(4, 9),
+        photoLines: const [
+          OriginalPhotoLine(PencilMark(0, 3), 0, 0, 100, 100),
+          OriginalPhotoLine(PencilMark(4, 9), 0, 200, 100, 300),
+        ],
+      );
+      final before = Library(
+        books: [
+          Book(id: 'b', title: '책', originals: [original]),
+        ],
+        records: const [WritingRecord(id: 'r', bookId: 'b', title: '필사')],
+        pages: const [
+          WritingPage(
+            id: 'p',
+            recordId: 'r',
+            number: 1,
+            text: '필사 그대로',
+            guidedOriginalId: 'source',
+          ),
+        ],
+        activePageId: 'p',
+        writing: true,
+      );
+      final file = '${dir.path}/original-edit.db';
+      final store = await SqliteLibraryStore.open(
+        file,
+        factory: databaseFactoryFfi,
+      );
+      await store.save(before);
+      final controller = LibraryController(store, await store.load());
+      final updated = await controller.saveOriginalEdit(
+        bookId: 'b',
+        recordId: 'r',
+        original: original,
+        text: '고친 첫 줄\n두번째 줄',
+        citation: '개정판',
+      );
+      expect(updated?.id, original.id);
+      expect(
+        await controller.saveOriginalEdit(
+          bookId: 'b',
+          recordId: 'r',
+          original: original,
+          text: '오래된 초안',
+          citation: '',
+        ),
+        isNull,
+      );
+      controller.dispose();
+      await store.close();
+
+      final reopened = await SqliteLibraryStore.open(
+        file,
+        factory: databaseFactoryFfi,
+      );
+      final after = await reopened.load();
+      await reopened.close();
+      for (final library in [
+        after,
+        mergeLibraries(before, before, after).library,
+        mergeLibraries(before, after, before).library,
+      ]) {
+        final saved = library.books.single.originals.single;
+        expect(saved.text, '고친 첫 줄\n두번째 줄');
+        expect(saved.citation, '개정판');
+        expect(saved.photoId, original.photoId);
+        expect(saved.reflection?.text, '느낀 점');
+        expect(saved.reflection?.mark?.start, 7);
+        expect(saved.writingRange?.toJson(), {'start': 7, 'end': 12});
+        expect(saved.photoLines.map((line) => line.range.start), [3, 7]);
+        expect(library.activePage!.guidedOriginalId, 'source');
+        expect(library.activePage!.text, '필사 그대로');
+      }
+    },
+  );
+
+  test(
+    'An edited legacy original replaces its old copies in the same scope',
+    () {
+      const library = Library(
+        books: [Book(id: 'b', title: '책')],
+        records: [
+          WritingRecord(id: 'r', bookId: 'b', title: '필사', source: '예전 원문'),
+        ],
+        pages: [WritingPage(id: 'p', recordId: 'r', number: 1, text: '내가 쓴 글')],
+      );
+      final legacy = originalsFor(library, bookId: 'b').single;
+      final before = library.copy(
+        pages: [library.pages.single.withDetails(guidedOriginalId: legacy.id)],
+      );
+      final after = editOriginalInScope(
+        before,
+        bookId: 'b',
+        recordId: 'r',
+        original: legacy,
+        text: '교정한 원문',
+        citation: '개정판',
+        newId: () => 'saved-original',
+      );
+      final merged = mergeLibraries(before, before, after).library;
+      expect(originalsFor(merged, bookId: 'b').single.text, '교정한 원문');
+      expect(merged.records.single.source, isEmpty);
+      expect(merged.pages.single.guidedOriginalId, 'saved-original');
+      expect(merged.pages.single.text, '내가 쓴 글');
+    },
+  );
+
+  test(
     'An original deletion survives SQLite, sync and an older backup',
     () async {
       const source = RegisteredOriginal('original', '지울 원문');

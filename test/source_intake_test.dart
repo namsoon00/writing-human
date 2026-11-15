@@ -207,6 +207,70 @@ Future<void> takePhoto(WidgetTester tester, {bool settle = true}) async {
 }
 
 void main() {
+  testWidgets('Original editing keeps the draft through IME and save retry', (
+    tester,
+  ) async {
+    final store = MemoryStore()
+      ..data = existing().copy(
+        records: const [
+          WritingRecord(
+            id: 'r',
+            title: '기존 필사',
+            originals: [
+              RegisteredOriginal('source', '고치기 전 원문', citation: '초판'),
+            ],
+          ),
+        ],
+      );
+    final writing = store.data.activePage!.toJson();
+    await open(tester, store, FakeIntake());
+    await tester.tap(place);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('source')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('원문 더 보기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('원문 수정'));
+    await tester.pumpAndSettle();
+    final text = find.byKey(const ValueKey('edit-original-text'));
+    final citation = find.byKey(const ValueKey('edit-original-citation'));
+    final button = find.widgetWithText(FilledButton, '저장');
+    expect(tester.widget<TextField>(text).controller!.text, '고치기 전 원문');
+    expect(tester.widget<TextField>(citation).controller!.text, '초판');
+
+    await tester.ensureVisible(citation);
+    await tester.enterText(citation, '개정판');
+    await tester.enterText(text, '고친 글');
+    const composing = TextEditingValue(
+      text: '고친 글',
+      composing: TextRange(start: 3, end: 4),
+      selection: TextSelection.collapsed(offset: 4),
+    );
+    tester.testTextInput.updateEditingValue(composing);
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(button).onPressed, isNull);
+    expect(tester.widget<TextField>(text).controller!.value, composing);
+    tester.testTextInput.updateEditingValue(
+      composing.copyWith(composing: TextRange.empty),
+    );
+    await tester.pumpAndSettle();
+
+    store.fail = true;
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(find.text('수정 내용을 저장하지 못했어요. 입력한 내용은 남아 있어요.'), findsOneWidget);
+    expect(tester.widget<TextField>(text).controller!.text, '고친 글');
+    expect(store.data.records.single.originals.single.text, '고치기 전 원문');
+    store.fail = false;
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(text, findsNothing);
+    expect(store.data.records.single.originals.single.text, '고친 글');
+    expect(store.data.records.single.originals.single.citation, '개정판');
+    expect(store.data.records.single.originals.single.id, 'source');
+    expect(store.data.activePage!.toJson(), writing);
+  });
+
   testWidgets(
     'Original deletion confirms, keeps failed edits and leaves writing intact',
     (tester) async {

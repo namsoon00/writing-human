@@ -12,6 +12,7 @@ import '../source/source_scan.dart';
 import 'book_details.dart';
 import 'paper.dart';
 import 'paper_panel.dart';
+import 'original_edit.dart';
 import 'paper_search_field.dart';
 import 'original_range_sheet.dart';
 import 'pencil_marks.dart';
@@ -36,6 +37,7 @@ class SourceReading extends StatefulWidget {
     this.onSaveReflection,
     this.onSaveRange,
     this.onDelete,
+    this.onEdit,
   });
 
   final List<RegisteredOriginal> originals;
@@ -50,6 +52,12 @@ class SourceReading extends StatefulWidget {
   final VoidCallback? onRetry;
   final Future<bool> Function(RegisteredOriginal, PencilMark?)? onSaveRange;
   final Future<bool> Function(RegisteredOriginal)? onDelete;
+  final Future<RegisteredOriginal?> Function(
+    RegisteredOriginal,
+    String,
+    String,
+  )?
+  onEdit;
   final Future<bool> Function(RegisteredOriginal, OriginalReflection?)?
   onSaveReflection;
 
@@ -265,6 +273,22 @@ class _SourceReadingState extends State<SourceReading> {
     }
   }
 
+  Future<void> _editOriginal(RegisteredOriginal original, Color color) async {
+    if (!_canLeave) return;
+    final saved = await Navigator.of(context).push(
+      paperPanelRoute<RegisteredOriginal>(
+        (_) => OriginalEdit(
+          original: original,
+          color: color,
+          style: widget.style,
+          onSave: (text, citation) => widget.onEdit!(original, text, citation),
+        ),
+        color: color,
+      ),
+    );
+    if (mounted && saved != null) _open(saved.id);
+  }
+
   Future<void> _delete(RegisteredOriginal original) async {
     if (!_canLeave || !mounted) return;
     final confirmed = await showDialog<bool>(
@@ -405,7 +429,13 @@ class _SourceReadingState extends State<SourceReading> {
     final original = widget.originals
         .where((item) => item.id == selectedId)
         .firstOrNull;
-    final match = selectedId == widget.match?.original.id ? widget.match : null;
+    final previousMatch = widget.match;
+    final match =
+        previousMatch != null &&
+            original?.id == previousMatch.original.id &&
+            original?.text == previousMatch.original.text
+        ? previousMatch
+        : null;
     final reflection = original?.reflection;
     final searching = original == null && showSearch;
     final pattern = searching ? originalSearchPattern(query) : null;
@@ -534,7 +564,8 @@ class _SourceReadingState extends State<SourceReading> {
                   !editing &&
                   (original.photoId != null ||
                       original.isFullPage ||
-                      widget.onDelete != null))
+                      widget.onDelete != null ||
+                      widget.onEdit != null))
                 Row(
                   children: [
                     Expanded(
@@ -561,21 +592,33 @@ class _SourceReadingState extends State<SourceReading> {
                         ],
                       ),
                     ),
-                    if (widget.onDelete != null)
-                      PopupMenuButton<bool>(
+                    if (widget.onEdit != null || widget.onDelete != null)
+                      PopupMenuButton<_OriginalAction>(
                         tooltip: '원문 더 보기',
                         icon: const Icon(CupertinoIcons.ellipsis, size: 19),
                         enabled: !saving,
                         itemBuilder: (_) => [
-                          const PopupMenuItem(
-                            value: true,
-                            child: Text(
-                              '원문 삭제',
-                              style: TextStyle(color: burgundy),
+                          if (widget.onEdit != null)
+                            const PopupMenuItem(
+                              value: _OriginalAction.edit,
+                              child: Text('원문 수정'),
                             ),
-                          ),
+                          if (widget.onDelete != null)
+                            const PopupMenuItem(
+                              value: _OriginalAction.delete,
+                              child: Text(
+                                '원문 삭제',
+                                style: TextStyle(color: burgundy),
+                              ),
+                            ),
                         ],
-                        onSelected: (_) => _delete(original),
+                        onSelected: (action) => switch (action) {
+                          _OriginalAction.edit => _editOriginal(
+                            original,
+                            panel,
+                          ),
+                          _OriginalAction.delete => _delete(original),
+                        },
                       ),
                   ],
                 ),
@@ -693,6 +736,8 @@ class _SourceReadingState extends State<SourceReading> {
     );
   }
 }
+
+enum _OriginalAction { edit, delete }
 
 class _OriginalText extends StatefulWidget {
   const _OriginalText({

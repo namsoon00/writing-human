@@ -1098,6 +1098,16 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                   range: range,
                 );
               },
+              onEdit: (original, text, citation) async {
+                if (!mounted || c != owner || _accountLocked) return null;
+                return owner.saveOriginalEdit(
+                  bookId: bookId,
+                  recordId: selectedPage.recordId,
+                  original: original,
+                  text: text,
+                  citation: citation,
+                );
+              },
               onDelete: (original) async {
                 if (!mounted || c != owner || _accountLocked) return false;
                 return owner.deleteOriginal(

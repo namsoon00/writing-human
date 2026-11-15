@@ -101,6 +101,99 @@ Iterable<OriginalRemoval> removalKeysFor(
   }
 }
 
+/// Replace every stored copy that appears as this single list item.
+Library editOriginalInScope(
+  Library library, {
+  required String? bookId,
+  required String recordId,
+  required RegisteredOriginal original,
+  required String text,
+  required String citation,
+  required String Function() newId,
+}) {
+  final keys = removalKeysFor(
+    library,
+    original: original,
+    bookId: bookId,
+    recordId: recordId,
+  ).toSet();
+  final legacyIds = {
+    for (final key in keys)
+      if (key.originalId.startsWith('legacy-')) key.originalId: newId(),
+  };
+  final promotedId = legacyIds[original.id];
+  final owner = keys.firstWhere((key) => key.originalId == original.id);
+
+  List<RegisteredOriginal> replace(
+    List<RegisteredOriginal> values,
+    String id, {
+    required bool book,
+  }) {
+    final updated = [
+      for (final item in values)
+        if (keys.contains((ownerId: id, originalId: item.id, book: book)))
+          item.edited(text, citation, newId: legacyIds[item.id])
+        else
+          item,
+    ];
+    if (promotedId != null && owner.ownerId == id && owner.book == book) {
+      if (!updated.any((item) => item.id == promotedId)) {
+        updated.add(original.edited(text, citation, newId: promotedId));
+      }
+    }
+    return updated;
+  }
+
+  final scopedRecords = library.records
+      .where(
+        (record) =>
+            bookId == null ? record.id == recordId : record.bookId == bookId,
+      )
+      .map((record) => record.id)
+      .toSet();
+  final changed = library.copy(
+    books: [
+      for (final book in library.books)
+        if (book.id == bookId)
+          book.copy(originals: replace(book.originals, book.id, book: true))
+        else
+          book,
+    ],
+    records: [
+      for (final record in library.records)
+        if (scopedRecords.contains(record.id))
+          record.copy(
+            originals: replace(record.originals, record.id, book: false),
+          )
+        else
+          record,
+    ],
+  );
+  final selected = originalsFor(changed, bookId: bookId, recordId: recordId)
+      .firstWhere(
+        (item) =>
+            item.text == text &&
+            item.citation == citation &&
+            item.photoId == original.photoId,
+      );
+  final previousIds = keys.map((item) => item.originalId).toSet();
+  WritingPage relinkGuide(WritingPage page) =>
+      previousIds.contains(page.guidedOriginalId) &&
+          scopedRecords.contains(page.recordId)
+      ? page.withDetails(guidedOriginalId: selected.id)
+      : page;
+  return applyOriginalRemovals(
+    changed.copy(
+      pages: library.pages.map(relinkGuide).toList(),
+      trashedPages: library.trashedPages.map(relinkGuide).toList(),
+    ),
+    [
+      ...library.originalRemovals,
+      ...keys.where((key) => legacyIds.containsKey(key.originalId)),
+    ],
+  );
+}
+
 class OriginalMatch {
   const OriginalMatch(
     this.original,

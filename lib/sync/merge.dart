@@ -26,17 +26,25 @@ List<RegisteredOriginal> _mergeOriginals(
 ) {
   final before = {for (final entry in base) entry.id: entry};
   final merged = {for (final entry in remote) entry.id: entry};
-  for (final entry in local) {
-    final incoming = merged[entry.id];
-    if (incoming == null ||
-        incoming.text != entry.text ||
-        incoming.citation != entry.citation) {
-      merged[entry.id] = entry;
+  for (final localEntry in local) {
+    final remoteEntry = merged[localEntry.id];
+    if (remoteEntry == null) {
+      merged[localEntry.id] = localEntry;
       continue;
     }
+    final previous = before[localEntry.id];
+    final text = _field(previous?.text, localEntry.text, remoteEntry.text);
+    final citation = _field(
+      previous?.citation,
+      localEntry.citation,
+      remoteEntry.citation,
+    );
+    final entry = localEntry.edited(text, citation);
+    final incoming = remoteEntry.edited(text, citation);
+    final oldEntry = previous?.edited(text, citation);
     final left = entry.reflection;
     final right = incoming.reflection;
-    final old = before[entry.id]?.reflection;
+    final old = oldEntry?.reflection;
     final reflection = switch ((left, right)) {
       (null, _) => right,
       (_, null) => left,
@@ -54,7 +62,7 @@ List<RegisteredOriginal> _mergeOriginals(
       _
           when sameData(
             entry.writingRange?.toJson(),
-            before[entry.id]?.writingRange?.toJson(),
+            oldEntry?.writingRange?.toJson(),
           ) =>
         incoming.writingRange,
       _ => entry.writingRange,

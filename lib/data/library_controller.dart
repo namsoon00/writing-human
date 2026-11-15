@@ -324,6 +324,59 @@ class LibraryController extends ChangeNotifier {
     return _saveBeforePublishing(next, error: _originalDeleteError);
   }
 
+  static const _originalEditError = '원문 수정을 저장하지 못했어요. 다시 시도해 주세요.';
+
+  Future<RegisteredOriginal?> saveOriginalEdit({
+    required String? bookId,
+    required String recordId,
+    required RegisteredOriginal original,
+    required String text,
+    required String citation,
+  }) async {
+    await settled;
+    if (_disposed ||
+        editorFocused ||
+        composing ||
+        (saveError != null && saveError != _originalEditError)) {
+      return null;
+    }
+    final latest = originalsFor(library, bookId: bookId, recordId: recordId)
+        .where(
+          (item) =>
+              item.id == original.id &&
+              item.text == original.text &&
+              item.citation == original.citation &&
+              item.photoId == original.photoId,
+        )
+        .firstOrNull;
+    if (latest == null ||
+        !RegisteredOriginal.validList([latest.edited(text, citation)])) {
+      return null;
+    }
+    if (text == latest.text && citation == latest.citation) return latest;
+    final next = editOriginalInScope(
+      library,
+      original: latest,
+      bookId: bookId,
+      recordId: recordId,
+      text: text,
+      citation: citation,
+      newId: _id,
+    );
+    final saved = originalsFor(next, bookId: bookId, recordId: recordId)
+        .where(
+          (item) =>
+              item.text == text &&
+              item.citation == citation &&
+              item.photoId == latest.photoId,
+        )
+        .firstOrNull;
+    if (saved == null) return null;
+    return await _saveBeforePublishing(next, error: _originalEditError)
+        ? saved
+        : null;
+  }
+
   Future<bool> saveOriginalReflection({
     required String? bookId,
     required String recordId,

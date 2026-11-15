@@ -68,6 +68,45 @@ class RegisteredOriginal {
   RegisteredOriginal withReflection(OriginalReflection? value) =>
       withDetails(reflection: value, writingRange: writingRange);
 
+  RegisteredOriginal edited(String text, String citation, {String? newId}) {
+    final change = text == this.text
+        ? null
+        : _TextChange.between(this.text, text);
+    final note = reflection;
+    final mark = note?.mark;
+    final previousRange = writingRange;
+    final range = previousRange == null
+        ? null
+        : change?.updatedRange(previousRange) ?? previousRange;
+    return RegisteredOriginal(
+      newId ?? id,
+      text,
+      citation: citation,
+      reflection: note == null || mark == null || change == null
+          ? note
+          : OriginalReflection(note.text, mark: change.unchangedRange(mark)),
+      photoId: photoId,
+      isFullPage: isFullPage,
+      writingRange: range != null && validOriginalRange(text, range)
+          ? range
+          : null,
+      photoLines: change == null
+          ? photoLines
+          : [
+              for (final line in photoLines)
+                if (change.unchangedRange(line.range) case final range?
+                    when validOriginalRange(text, range))
+                  OriginalPhotoLine(
+                    range,
+                    line.left,
+                    line.top,
+                    line.right,
+                    line.bottom,
+                  ),
+            ],
+    );
+  }
+
   Json toJson() => {
     'id': id,
     'text': text,
@@ -309,6 +348,29 @@ class PencilMark {
     List<PencilMark> marks,
   ) {
     if (before == after || marks.isEmpty) return marks;
+    final change = _TextChange.between(before, after);
+    final prefix = change.start, oldEnd = change.oldEnd, delta = change.delta;
+    return normalize([
+      for (final mark in marks) ...[
+        if (mark.start < prefix)
+          PencilMark(mark.start, mark.end < prefix ? mark.end : prefix),
+        if (mark.end > oldEnd)
+          PencilMark(
+            (mark.start > oldEnd ? mark.start : oldEnd) + delta,
+            mark.end + delta,
+          ),
+      ],
+    ]);
+  }
+}
+
+class _TextChange {
+  const _TextChange(this.start, this.oldEnd, this.newEnd);
+
+  final int start, oldEnd, newEnd;
+  int get delta => newEnd - oldEnd;
+
+  factory _TextChange.between(String before, String after) {
     var prefix = 0;
     while (prefix < before.length &&
         prefix < after.length &&
@@ -335,18 +397,24 @@ class PencilMark {
       oldEnd++;
       newEnd++;
     }
-    final delta = newEnd - oldEnd;
-    return normalize([
-      for (final mark in marks) ...[
-        if (mark.start < prefix)
-          PencilMark(mark.start, mark.end < prefix ? mark.end : prefix),
-        if (mark.end > oldEnd)
-          PencilMark(
-            (mark.start > oldEnd ? mark.start : oldEnd) + delta,
-            mark.end + delta,
-          ),
-      ],
-    ]);
+    return _TextChange(prefix, oldEnd, newEnd);
+  }
+
+  PencilMark? unchangedRange(PencilMark range) {
+    if (range.end <= start) return range;
+    if (range.start >= oldEnd) {
+      return PencilMark(range.start + delta, range.end + delta);
+    }
+    return null;
+  }
+
+  PencilMark updatedRange(PencilMark range) {
+    final unchanged = unchangedRange(range);
+    if (unchanged != null) return unchanged;
+    return PencilMark(
+      range.start <= start ? range.start : start,
+      range.end >= oldEnd ? range.end + delta : newEnd,
+    );
   }
 }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:writing_human/ui/paper_swipe.dart';
@@ -13,6 +15,16 @@ final field = find.byKey(const ValueKey('page-text'));
 final reveal = find.byKey(const ValueKey('page-turn-reveal'));
 final cover = find.byKey(const ValueKey('book-front-cover'));
 final overlay = find.byKey(const ValueKey('page-turn-overlay'));
+
+class _PageSaveGate extends MemoryStore {
+  Completer<void>? gate;
+
+  @override
+  Future<void> save(Library library) async {
+    if (gate case final pending?) await pending.future;
+    await super.save(library);
+  }
+}
 
 Library twoPages({bool bound = false}) => Library(
   books: [if (bound) const Book(id: 'book', title: '한 권의 책')],
@@ -767,39 +779,60 @@ void main() {
     },
   );
 
-  testWidgets('Overview shows paper previews and switches only after closing', (
-    tester,
-  ) async {
-    final store = MemoryStore()..data = twoPages().copy(activePageId: 'two');
-    await open(tester, store);
-    await tester.tap(find.text('2'));
-    await tester.pumpAndSettle();
-    expect(find.byType(PagesSheet), findsOneWidget);
-    expect(find.text('표지'), findsNothing);
-    expect(find.text('뒷표지'), findsNothing);
-    expect(find.text('1쪽'), findsOneWidget);
-    expect(find.text('2쪽 · 현재'), findsOneWidget);
-    await tester.tap(find.text('1쪽'));
-    await tester.pump(const Duration(milliseconds: 50));
-    expect(store.data.activePageId, 'two');
-    await tester.pumpAndSettle();
-    expect(store.data.activePageId, 'one');
-    await tester.tap(find.text('1'));
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('한 쪽 더'),
-      160,
-      scrollable: find.descendant(
-        of: find.byType(PagesSheet),
-        matching: find.byType(Scrollable),
-      ),
-    );
-    await tester.tap(find.text('한 쪽 더'));
-    await tester.pumpAndSettle();
-    expect(store.data.pages.length, 3);
-    expect(find.text('3'), findsOneWidget);
-    expect(tester.widget<TextField>(field).controller!.text, isEmpty);
-  });
+  testWidgets(
+    'Overview shows paper previews and prepares the destination before closing',
+    (tester) async {
+      final store = _PageSaveGate()
+        ..data = twoPages().copy(activePageId: 'two');
+      await open(tester, store);
+      await tester.tap(find.text('2'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PagesSheet), findsOneWidget);
+      expect(find.text('표지'), findsNothing);
+      expect(find.text('뒷표지'), findsNothing);
+      expect(find.text('1쪽'), findsOneWidget);
+      expect(find.text('2쪽 · 현재'), findsOneWidget);
+      final pending = store.gate = Completer<void>();
+      await tester.tap(find.text('1쪽'));
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.byType(PagesSheet), findsOneWidget);
+      expect(store.data.activePageId, 'two');
+
+      pending.complete();
+      store.gate = null;
+      await tester.pump();
+      final behindPanel = find.byKey(
+        const ValueKey('page-text'),
+        skipOffstage: false,
+      );
+      expect(
+        tester.widget<TextField>(behindPanel).controller!.text,
+        startsWith('첫 페이지'),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(
+        find.byKey(const ValueKey('page-turn-overlay'), skipOffstage: false),
+        findsNothing,
+      );
+      await tester.pumpAndSettle();
+      expect(store.data.activePageId, 'one');
+      await tester.tap(find.text('1'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('한 쪽 더'),
+        160,
+        scrollable: find.descendant(
+          of: find.byType(PagesSheet),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      await tester.tap(find.text('한 쪽 더'));
+      await tester.pumpAndSettle();
+      expect(store.data.pages.length, 3);
+      expect(find.text('3'), findsOneWidget);
+      expect(tester.widget<TextField>(field).controller!.text, isEmpty);
+    },
+  );
 
   testWidgets(
     'Composing input disables page actions without changing its value',

@@ -63,6 +63,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   bool userFresh = false;
   String? draftBookId;
   bool _pageNavigationBusy = false;
+  int _directPageChange = 0;
+  bool _openingFromPanel = false;
   bool _editorComposing = false;
   String? _editingPageId;
   ({String pageId, int offset, int request})? _reveal;
@@ -79,6 +81,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   bool _readingSource = false;
   bool _sourceBusy = false, _pollingSources = false, _pollAgain = false;
   bool _checkedPhotoRecovery = false;
+  MaterialPageRoute<void>? _activePanel;
   Future<void>? _sheetClosed;
   LibraryController? _sheetOwner;
   bool get _accountLocked =>
@@ -124,6 +127,12 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       }
       if (c.saveError != null) return;
       await action();
+      if (!paperTurn &&
+          mounted &&
+          c == owner &&
+          (page.id != origin || wasCover != _coverSide)) {
+        setState(() => _directPageChange++);
+      }
       await owner.settled;
       if (paperTurn &&
           mounted &&
@@ -158,43 +167,46 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _openPage(String id) => _navigatePage(() async {
-    if (page.id == id && _showCover) {
-      setState(() => _coverAnchor = null);
-      return;
-    }
-    if (!c.library.pages.any((p) => p.id == id) || page.id == id) return;
-    _coverAnchor = null;
-    fresh = false;
-    userFresh = false;
-    c.openPage(id);
-  });
+  Future<void> _openPage(String id, {bool paperTurn = true}) =>
+      _navigatePage(() async {
+        if (page.id == id && _showCover) {
+          setState(() => _coverAnchor = null);
+          return;
+        }
+        if (!c.library.pages.any((p) => p.id == id) || page.id == id) return;
+        _coverAnchor = null;
+        fresh = false;
+        userFresh = false;
+        c.openPage(id);
+      }, paperTurn: paperTurn);
 
-  Future<void> _openPassage(Passage passage) => _navigatePage(() async {
-    final id = passage.page.id;
-    final target = c.library.pages.where((p) => p.id == id).firstOrNull;
-    if (target == null) return;
-    final offset = passage.offset;
-    setState(() {
-      _coverAnchor = null;
-      fresh = false;
-      userFresh = false;
-      _reveal = offset != null && target.text == passage.page.text
-          ? (pageId: id, offset: offset, request: ++_revealRequest)
-          : null;
-    });
-    if (c.library.activePageId != id) c.openPage(id);
-  });
+  Future<void> _openPassage(Passage passage, {bool paperTurn = true}) =>
+      _navigatePage(() async {
+        final id = passage.page.id;
+        final target = c.library.pages.where((p) => p.id == id).firstOrNull;
+        if (target == null) return;
+        final offset = passage.offset;
+        setState(() {
+          _coverAnchor = null;
+          fresh = false;
+          userFresh = false;
+          _reveal = offset != null && target.text == passage.page.text
+              ? (pageId: id, offset: offset, request: ++_revealRequest)
+              : null;
+        });
+        if (c.library.activePageId != id) c.openPage(id);
+      }, paperTurn: paperTurn);
 
-  Future<void> _openCover({bool back = false}) => _navigatePage(() async {
-    if (book == null) return;
-    final target = back ? _volumePages.last : _volumePages.first;
-    if (target.id != page.id) c.openPage(target.id);
-    setState(() {
-      _coverAnchor = target.id;
-      _coverAtBack = back;
-    });
-  });
+  Future<void> _openCover({bool back = false, bool paperTurn = true}) =>
+      _navigatePage(() async {
+        if (book == null) return;
+        final target = back ? _volumePages.last : _volumePages.first;
+        if (target.id != page.id) c.openPage(target.id);
+        setState(() {
+          _coverAnchor = target.id;
+          _coverAtBack = back;
+        });
+      }, paperTurn: paperTurn);
 
   Future<void> _stepPage(int step) async {
     if (_showCover) {
@@ -226,21 +238,23 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     return mounted && c == owner && (page.id != id || wasCover != _coverSide);
   }
 
-  Future<void> _appendPage({bool addAfterDraft = true}) =>
-      _navigatePage(() async {
-        if (fresh) {
-          // Explicitly adding a page is intent to keep blank pages as well.
-          fresh = false;
-          userFresh = false;
-          _coverAnchor = null;
-          c.saveDraft(draft, bookId: draftBookId, keepBlank: true);
-          if (!addAfterDraft) return;
-          await c.settled;
-          if (!mounted || c.saveError != null) return;
-        }
-        _coverAnchor = null;
-        c.addPage();
-      });
+  Future<void> _appendPage({
+    bool addAfterDraft = true,
+    bool paperTurn = true,
+  }) => _navigatePage(() async {
+    if (fresh) {
+      // Explicitly adding a page is intent to keep blank pages as well.
+      fresh = false;
+      userFresh = false;
+      _coverAnchor = null;
+      c.saveDraft(draft, bookId: draftBookId, keepBlank: true);
+      if (!addAfterDraft) return;
+      await c.settled;
+      if (!mounted || c.saveError != null) return;
+    }
+    _coverAnchor = null;
+    c.addPage();
+  }, paperTurn: paperTurn);
   WritingPage _blank() => WritingPage(
     id: const Uuid().v4(),
     recordId: const Uuid().v4(),
@@ -367,6 +381,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
 
   Future<void> _openPanel(Widget child, {Color color = paper}) {
     final route = paperPanelRoute<void>((_) => child, color: color);
+    _activePanel = route;
     _sheetClosed = route.completed.then((_) {});
     _sheetOwner = c;
     return Navigator.of(context).push<void>(route);
@@ -380,19 +395,47 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     if (mounted && c == owner && !_accountLocked) await action();
   }
 
+  Future<void> _openPageFromPanel(
+    ModalRoute<dynamic>? route,
+    LibraryController? owner,
+    Future<void> Function() open,
+  ) async {
+    if (_openingFromPanel ||
+        _pageNavigationBusy ||
+        owner != c ||
+        _accountLocked ||
+        route?.isCurrent != true) {
+      return;
+    }
+    _openingFromPanel = true;
+    try {
+      // Update the hidden editor before the outgoing panel reveals it.
+      await open();
+      await WidgetsBinding.instance.endOfFrame;
+      if (mounted && c == owner && !_accountLocked && route!.isCurrent) {
+        route.navigator!.pop();
+      }
+    } finally {
+      _openingFromPanel = false;
+    }
+  }
+
+  Future<void> _openFromCollection(Future<void> Function() open) =>
+      _openPageFromPanel(_activePanel, _sheetOwner, open);
+
   void _collection() {
     if (!_canLeaveInput()) return;
     _blur();
     _openPanel(
       CollectionSheet(
         controller: c,
-        onBook: (book) => _afterSheet(() async {
+        onBook: (book) => _openFromCollection(() async {
           if (!c.library.books.any((entry) => entry.id == book.id)) return;
           final target = c.resumePageForBook(book.id);
           if (target == null) {
             await _newSheet(book.id);
           } else {
-            await _openPage(target.id);
+            await _openPage(target.id, paperTurn: false);
           }
         }),
         onRecord: (r) {
@@ -404,17 +447,19 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                   .firstOrNull
                   ?.id ??
               pages.last.id;
-          _afterSheet(() => _openPage(id));
+          _openFromCollection(() => _openPage(id, paperTurn: false));
         },
         onNewSheet: (bookId) {
-          _afterSheet(() => _newSheet(bookId));
+          _openFromCollection(() => _newSheet(bookId));
         },
         onNewBook: () {
           _afterSheet(_createBook);
         },
-        onContentsPage: (page) => _afterSheet(() => _openPage(page.id)),
+        onContentsPage: (page) =>
+            _openFromCollection(() => _openPage(page.id, paperTurn: false)),
         onBookOriginals: (book) => _showOriginals(bookDetails: book),
-        onPassage: (passage) => _afterSheet(() => _openPassage(passage)),
+        onPassage: (passage) =>
+            _openFromCollection(() => _openPassage(passage, paperTurn: false)),
         onArchiveBook: (book) =>
             _afterSheet(() => _archive(selectedBook: book)),
       ),
@@ -914,87 +959,87 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             availableId(_originalByVolume[scope]);
         if (initialId != null) _originalByVolume[scope] = initialId;
         _SavedOriginal? savedAfterPanel;
-        final route =
-            paperPanelRoute<({RegisteredOriginal? original, Passage? passage})>(
-              (_) => ListenableBuilder(
-                listenable: owner,
-                builder: (context, _) => SourceReading(
-                  originals: originals(),
-                  initialOriginalId: initialId,
-                  match: match,
-                  onReadOriginal: (id) {
-                    if (!mounted || c != owner || _accountLocked) return;
-                    _originalByVolume[scope] = id;
-                    if (bookDetails == null) {
-                      _originalByPage[selectedPage.id] = id;
-                    }
-                  },
-                  style: _paperStyle(selectedBook),
-                  onRegister: owner.saveError != null
-                      ? null
-                      : () async {
-                          final saved = await register();
-                          if (saved == null) return null;
-                          if (saved.bookId != bookId ||
-                              saved.startTranscription) {
-                            if (context.mounted &&
-                                ModalRoute.of(context)?.isCurrent == true) {
-                              savedAfterPanel = saved;
-                              Navigator.of(context).pop();
-                            }
-                            return null;
-                          }
-                          return saved.original;
-                        },
-                  writingLocations: originalWritingLocations(
-                    originals(),
-                    owner.library.volumePages(
-                      bookId: bookId,
-                      recordId: selectedPage.recordId,
-                    ),
-                  ),
-                  onTranscribe: owner.saveError == null
-                      ? (original) => Navigator.of(
-                          context,
-                        ).pop((original: original, passage: null))
-                      : null,
-                  onOpenWriting: (passage) => Navigator.of(
-                    context,
-                  ).pop((original: null, passage: passage)),
-                  onRetry: owner.saveError == null ? null : _retrySave,
-                  onSaveRange: (original, range) async {
-                    if (!mounted ||
-                        c != owner ||
-                        _accountLocked ||
-                        owner.composing) {
-                      return false;
-                    }
-                    final latest = originals()
-                        .where((item) => item.id == original.id)
-                        .firstOrNull;
-                    if (latest == null || latest.text != original.text) {
-                      return false;
-                    }
-                    return owner.saveOriginalRange(
-                      bookId: bookId,
-                      recordId: selectedPage.recordId,
-                      original: latest,
-                      range: range,
-                    );
-                  },
-                  onSaveReflection: (original, reflection) => _saveReflection(
-                    owner,
-                    bookId,
-                    selectedPage.recordId,
-                    original,
-                    reflection,
-                  ),
+        bool openedWriting = false;
+        late final MaterialPageRoute<RegisteredOriginal> route;
+        route = paperPanelRoute<RegisteredOriginal>(
+          (_) => ListenableBuilder(
+            listenable: owner,
+            builder: (context, _) => SourceReading(
+              originals: originals(),
+              initialOriginalId: initialId,
+              match: match,
+              onReadOriginal: (id) {
+                if (!mounted || c != owner || _accountLocked) return;
+                _originalByVolume[scope] = id;
+                if (bookDetails == null) {
+                  _originalByPage[selectedPage.id] = id;
+                }
+              },
+              style: _paperStyle(selectedBook),
+              onRegister: owner.saveError != null
+                  ? null
+                  : () async {
+                      final saved = await register();
+                      if (saved == null) return null;
+                      if (saved.bookId != bookId || saved.startTranscription) {
+                        if (context.mounted &&
+                            ModalRoute.of(context)?.isCurrent == true) {
+                          savedAfterPanel = saved;
+                          Navigator.of(context).pop();
+                        }
+                        return null;
+                      }
+                      return saved.original;
+                    },
+              writingLocations: originalWritingLocations(
+                originals(),
+                owner.library.volumePages(
+                  bookId: bookId,
+                  recordId: selectedPage.recordId,
                 ),
               ),
-              color: panelPaperColor(
-                paperColors[_paperStyle(selectedBook).paperIndex],
+              onTranscribe: owner.saveError == null
+                  ? (original) => Navigator.of(context).pop(original)
+                  : null,
+              onOpenWriting: (passage) =>
+                  _openPageFromPanel(route, owner, () async {
+                    await _openPassage(passage, paperTurn: false);
+                    openedWriting = true;
+                  }),
+              onRetry: owner.saveError == null ? null : _retrySave,
+              onSaveRange: (original, range) async {
+                if (!mounted ||
+                    c != owner ||
+                    _accountLocked ||
+                    owner.composing) {
+                  return false;
+                }
+                final latest = originals()
+                    .where((item) => item.id == original.id)
+                    .firstOrNull;
+                if (latest == null || latest.text != original.text) {
+                  return false;
+                }
+                return owner.saveOriginalRange(
+                  bookId: bookId,
+                  recordId: selectedPage.recordId,
+                  original: latest,
+                  range: range,
+                );
+              },
+              onSaveReflection: (original, reflection) => _saveReflection(
+                owner,
+                bookId,
+                selectedPage.recordId,
+                original,
+                reflection,
               ),
-            );
+            ),
+          ),
+          color: panelPaperColor(
+            paperColors[_paperStyle(selectedBook).paperIndex],
+          ),
+        );
         final action = await Navigator.of(context).push(route);
         await route.completed;
         if (savedAfterPanel case final saved?) {
@@ -1007,25 +1052,19 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           }
           return;
         }
+        if (openedWriting && mounted && c == owner && !_accountLocked) {
+          if (bookDetails != null) await _afterSheet(() async {});
+          return;
+        }
         if (action != null && mounted && c == owner && !_accountLocked) {
-          if (action.original case final original?) {
-            if (bookDetails != null) {
-              await _afterSheet(
-                () => _startTranscription(original, bookId, selectedPage),
-              );
-            } else {
-              await _startTranscription(original, bookId, selectedPage);
-            }
-            return;
+          if (bookDetails != null) {
+            await _afterSheet(
+              () => _startTranscription(action, bookId, selectedPage),
+            );
+          } else {
+            await _startTranscription(action, bookId, selectedPage);
           }
-          if (action.passage case final passage?) {
-            if (bookDetails != null) {
-              await _afterSheet(() => _openPassage(passage));
-            } else {
-              await _openPassage(passage);
-            }
-            return;
-          }
+          return;
         }
       }
       if (wasEditing &&
@@ -1135,7 +1174,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     if (_pageNavigationBusy || !_canLeaveInput()) return;
     _blur();
     final owner = c;
-    final route = paperPanelRoute<PageChoice>(
+    late final MaterialPageRoute<void> route;
+    route = paperPanelRoute<void>(
       (_) => AnimatedBuilder(
         animation: owner,
         builder: (_, _) {
@@ -1157,6 +1197,15 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               style: style,
               coverTitle: book?.title,
               coverVariant: _coverVariant,
+              onChoose: (choice) => _openPageFromPanel(route, owner, () async {
+                if (choice.append) {
+                  await _appendPage(paperTurn: false);
+                } else if (choice.cover) {
+                  await _openCover(back: choice.backCover, paperTurn: false);
+                } else if (choice.pageId case final id?) {
+                  await _openPage(id, paperTurn: false);
+                }
+              }),
               canTrash: (page) => (pageCounts[page.recordId] ?? 0) > 1,
               onTrash: (target) async {
                 if (!mounted ||
@@ -1165,26 +1214,19 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                     !_canLeaveInput()) {
                   return false;
                 }
-                return owner.trashPage(target);
+                final previous = page.id;
+                final saved = await owner.trashPage(target);
+                if (saved && mounted && c == owner && page.id != previous) {
+                  setState(() => _directPageChange++);
+                }
+                return saved;
               },
             ),
           );
         },
       ),
     );
-    final choice = await Navigator.of(context).push<PageChoice>(route);
-    // Let the overview finish closing so the actual paper turn is visible.
-    await route.completed;
-    if (!mounted || c != owner || _accountLocked || choice == null) {
-      return;
-    }
-    if (choice.append) {
-      await _appendPage();
-    } else if (choice.cover) {
-      await _openCover(back: choice.backCover);
-    } else if (choice.pageId != null) {
-      await _openPage(choice.pageId!);
-    }
+    await Navigator.of(context).push(route);
   }
 
   @override
@@ -1277,6 +1319,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       body: PageTurnView(
         key: ValueKey((c, c.editorEpoch)),
         controller: _pageTurn,
+        directPageChange: _directPageChange,
         page: current,
         style: _paperStyle(book),
         scopeId: book?.id ?? current.recordId,

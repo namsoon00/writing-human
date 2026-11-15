@@ -20,6 +20,7 @@ class PagesSheet extends StatelessWidget {
     required this.style,
     required this.coverTitle,
     required this.coverVariant,
+    required this.onChoose,
     required this.canTrash,
     required this.onTrash,
   });
@@ -28,6 +29,7 @@ class PagesSheet extends StatelessWidget {
   final WritingStyle style;
   final String? coverTitle;
   final int coverVariant;
+  final ValueChanged<PageChoice> onChoose;
   final bool Function(WritingPage) canTrash;
   final Future<bool> Function(WritingPage) onTrash;
 
@@ -88,7 +90,7 @@ class PagesSheet extends StatelessWidget {
                 final back = index != 0;
                 return InkWell(
                   borderRadius: BorderRadius.circular(12),
-                  onTap: () => Navigator.pop(context, (
+                  onTap: () => onChoose((
                     pageId: null,
                     append: false,
                     cover: true,
@@ -123,7 +125,7 @@ class PagesSheet extends StatelessWidget {
               if (index == pages.length + coverOffset * 2) {
                 return InkWell(
                   borderRadius: BorderRadius.circular(12),
-                  onTap: () => Navigator.pop(context, (
+                  onTap: () => onChoose((
                     pageId: null,
                     append: true,
                     cover: false,
@@ -161,7 +163,7 @@ class PagesSheet extends StatelessWidget {
                     label: '$number쪽${selected ? ', 현재 페이지' : ''}',
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
-                      onTap: () => Navigator.pop(context, (
+                      onTap: () => onChoose((
                         pageId: page.id,
                         append: false,
                         cover: false,

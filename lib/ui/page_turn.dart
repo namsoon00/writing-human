@@ -27,6 +27,7 @@ class PageTurnView extends StatefulWidget {
     this.composing = false,
     required this.child,
     required this.controller,
+    required this.directPageChange,
     required this.scopeId,
     required this.position,
     required this.onTurn,
@@ -45,7 +46,7 @@ class PageTurnView extends StatefulWidget {
   final PageTurnController controller;
   final String scopeId;
   // -1 is the front cover. This is deliberately not a saved page number.
-  final int position;
+  final int position, directPageChange;
   final Widget? previous, next;
   final bool isCover, isBackCover, previousIsCover, nextIsCover;
   final Widget? coverSurface;
@@ -248,7 +249,8 @@ class _PageTurnViewState extends State<PageTurnView>
         oldWidget.page.id != widget.page.id ||
         oldWidget.position != widget.position ||
         oldWidget.isCover != widget.isCover;
-    if (oldWidget.scopeId != widget.scopeId ||
+    if (oldWidget.directPageChange != widget.directPageChange ||
+        oldWidget.scopeId != widget.scopeId ||
         widget.composing ||
         (widget.editing && !oldWidget.editing)) {
       _stopImage();

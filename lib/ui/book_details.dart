@@ -661,54 +661,23 @@ class Bookplate extends StatelessWidget {
                   ),
                 ),
               ),
-              if (choice.enabled || flower.enabled)
+              if (choice.enabled)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: _BookplateStamp(),
+                ),
+              if (flower.enabled)
                 Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: _BookplateImprints(
-                    showStamp: choice.enabled,
-                    flower: flower,
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Align(
+                    alignment: flowerAlignment(flower),
+                    child: PressedFlower(choice: flower, size: 58),
                   ),
                 ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _BookplateImprints extends StatelessWidget {
-  const _BookplateImprints({required this.showStamp, required this.flower});
-
-  final bool showStamp;
-  final BookDetailChoice flower;
-
-  @override
-  Widget build(BuildContext context) {
-    final alignment = flowerAlignment(flower);
-    final separateFlower =
-        flower.enabled && showStamp && alignment != Alignment.bottomRight;
-    final flowerMark = Align(
-      alignment: alignment,
-      child: PressedFlower(choice: flower, size: 58),
-    );
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (separateFlower)
-          Padding(padding: const EdgeInsets.only(bottom: 6), child: flowerMark),
-        Stack(
-          alignment: Alignment.bottomLeft,
-          children: [
-            if (flower.enabled && !separateFlower) flowerMark,
-            if (showStamp)
-              const Align(
-                alignment: Alignment.bottomLeft,
-                child: _BookplateStamp(),
-              ),
-          ],
-        ),
-      ],
     );
   }
 }
@@ -721,13 +690,13 @@ class _BookplateStamp extends StatelessWidget {
     child: DecoratedBox(
       decoration: BoxDecoration(
         border: Border.fromBorderSide(
-          BorderSide(color: _bookplateStampInk, width: 1.6),
+          BorderSide(color: _bookplateStampInk, width: 1.2),
         ),
         borderRadius: BorderRadius.all(Radius.circular(2)),
       ),
       child: SizedBox(
-        width: 45,
-        height: 48,
+        width: 34,
+        height: 36,
         child: Center(
           child: Text(
             '쓰는\n인간',
@@ -737,7 +706,7 @@ class _BookplateStamp extends StatelessWidget {
               fontFamily: appFontFamily,
               fontFamilyFallback: appFontFallback,
               color: _bookplateStampInk,
-              fontSize: 15,
+              fontSize: 11.5,
               height: 1,
             ),
           ),

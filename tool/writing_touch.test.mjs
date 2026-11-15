@@ -10,25 +10,35 @@ const bridge = scripts.map((match) => match[1]).find((script) =>
 );
 assert.ok(bridge);
 
+test('the semantic input host is anchored to the Flutter view', () => {
+  assert.match(html, /flutter-view > flt-semantics-host\s*\{\s*top:\s*0;\s*left:\s*0;\s*\}/);
+});
+
 function simulate({x = 100, move = 0, duration = 80, control, composing = false,
   isTrusted = true, canceled = false, replaceEditor = false,
-  search = false, alreadyFocused = false, disabled = false} = {}) {
+  search = false, alreadyFocused = false, disabled = false,
+  keyboardVisible = false, blurDuringTap = false, cancelable = true} = {}) {
   const handlers = new Map();
   vm.runInNewContext(bridge, {
     matchMedia: () => ({matches: true}),
     CSS: {supports: () => false},
+    window: {
+      innerHeight: 844,
+      visualViewport: {height: keyboardVisible ? 510 : 844, scale: 1},
+    },
     document: {
       documentElement: {classList: {add() {}}},
       addEventListener: (name, callback) => handlers.set(name, callback),
     },
   });
   const result = {focused: false, prevented: false};
+  let editorFocused = alreadyFocused;
   const editor = {
     localName: search ? 'input' : 'textarea',
     disabled,
     matches(selector) {
       assert.equal(selector, ':focus');
-      return alreadyFocused;
+      return editorFocused;
     },
     focus(options) {
       assert.equal(options.preventScroll, true);
@@ -61,13 +71,14 @@ function simulate({x = 100, move = 0, duration = 80, control, composing = false,
   if (move) handlers.get('touchmove')({touches: [touch(move)]});
   if (canceled) handlers.get('touchcancel')();
   if (replaceEditor) currentEditor = {...editor};
+  if (blurDuringTap) editorFocused = false;
   handlers.get('touchend')({
     composedPath: () => path,
     changedTouches: [touch(move)],
     touches: [],
     timeStamp: duration,
     isTrusted,
-    cancelable: true,
+    cancelable,
     preventDefault() { result.prevented = true; },
   });
   return result;
@@ -101,10 +112,31 @@ test('canceled or untrusted touches and replaced inputs are ignored', () => {
   }
 });
 
-test('touch search focuses its keyboard and leaves caret placement to Flutter', () => {
-  assert.deepEqual(simulate({search: true}), {focused: true, prevented: true});
+test('short taps request the keyboard even when the input kept its focus', () => {
+  for (const search of [false, true]) {
+    assert.deepEqual(simulate({search}), {focused: true, prevented: true});
+    assert.deepEqual(
+      simulate({search, alreadyFocused: true}),
+      {focused: true, prevented: true},
+    );
+    assert.deepEqual(
+      simulate({search, alreadyFocused: true, cancelable: false}),
+      {focused: true, prevented: false},
+    );
+    assert.deepEqual(
+      simulate({search, alreadyFocused: true, composing: true}),
+      {focused: false, prevented: true},
+    );
+  }
+});
+
+test('an open keyboard, an intentional blur and disabled fields keep their behavior', () => {
   assert.deepEqual(
-    simulate({search: true, alreadyFocused: true}),
+    simulate({search: true, alreadyFocused: true, keyboardVisible: true}),
+    {focused: false, prevented: true},
+  );
+  assert.deepEqual(
+    simulate({alreadyFocused: true, blurDuringTap: true}),
     {focused: false, prevented: true},
   );
   assert.deepEqual(

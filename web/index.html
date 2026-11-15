@@ -32,6 +32,16 @@
   <title>쓰는 인간</title>
   <link rel="manifest" href="manifest.json?v=4">
   <style>
+    /* Flutter 3.41 leaves the host's absolute position implicit. Anchor it
+       so WebKit can focus the inputs at their visible coordinates. */
+    flutter-view > flt-semantics-host { top: 0; left: 0; }
+
+    /* Prevent WebKit from zooming a focused input with its default text size. */
+    .paper-touch-input flutter-view [flt-semantics-identifier="writing-page-body"] textarea,
+    .paper-touch-input flutter-view [flt-semantics-identifier="paper-search-input"] input {
+      font-size: 16px;
+    }
+
     /* The semantics textarea sits outside Flutter's touch-action pane.
        Leave pan arbitration to the editor and paper recognizers. */
     flutter-view [flt-semantics-identifier="writing-page-body"] textarea { touch-action: none; }
@@ -98,6 +108,12 @@
         return null;
       }
 
+      function keyboardIsVisible() {
+        const viewport = window.visualViewport;
+        // Compensate for page zoom. A toolbar resize alone is not a keyboard.
+        return viewport && window.innerHeight - viewport.height * viewport.scale > 120;
+      }
+
       document.addEventListener('touchstart', (event) => {
         tapStart = null;
         if (event.touches.length !== 1) return;
@@ -107,6 +123,7 @@
           tapStart = {
             editor, x: touch.clientX, y: touch.clientY,
             id: touch.identifier, time: event.timeStamp, moved: false,
+            wasFocused: editor.matches(':focus'),
           };
         }
       }, {capture: true, passive: true});
@@ -126,19 +143,22 @@
       document.addEventListener('touchend', (event) => {
         const start = tapStart;
         tapStart = null;
-        if (!start || !event.isTrusted || !event.cancelable || event.touches.length !== 0) return;
+        if (!start || !event.isTrusted || event.touches.length !== 0) return;
         const touch = event.changedTouches[0];
         if (touch?.identifier !== start.id || editorAt(event, touch) !== start.editor) return;
         if (!composingField?.matches(':focus') && !start.moved &&
             event.timeStamp - start.time < longPressMs &&
             Math.hypot(touch.clientX - start.x, touch.clientY - start.y) <= touchSlop) {
-          // Focus within the trusted tap so mobile browsers can open the keyboard.
-          if (!start.editor.matches(':focus')) {
+          const focused = start.editor.matches(':focus');
+          // WebKit can leave the input focused after hiding the keyboard.
+          // Request focus again during the trusted tap when it is closed.
+          // If the gesture blurred the editor, preserve Flutter's dismissal.
+          if ((!start.wasFocused || focused) && (!focused || !keyboardIsVisible())) {
             start.editor.focus({preventScroll: true});
           }
         }
         // A compatibility click can blur the editor or disturb Flutter selection.
-        event.preventDefault();
+        if (event.cancelable) event.preventDefault();
       }, {capture: true, passive: false});
     }
   </script>

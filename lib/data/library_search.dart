@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart' show StringCharacters;
+
 import 'model.dart';
 
 class Passage {
@@ -23,6 +25,26 @@ class LibraryPassages {
     record.title,
   ].join(' · ');
 
+  Iterable<String> completions(String query, {String? bookId}) =>
+      searchCompletions(query, _searchFields(bookId));
+
+  Iterable<String> _searchFields(String? bookId) sync* {
+    for (final book in library.books) {
+      if (bookId != null && book.id != bookId) continue;
+      yield book.title;
+      yield book.author;
+    }
+    for (final record in library.records.reversed) {
+      if (bookId != null && record.bookId != bookId) continue;
+      yield record.title;
+    }
+    for (final page in library.pages.reversed) {
+      if (bookId != null && _records[page.recordId]?.bookId != bookId) continue;
+      if (page.writtenOn case final date?) yield date;
+      yield page.text;
+    }
+  }
+
   Iterable<Passage> search(String query, {String? bookId}) sync* {
     final term = query.trim();
     if (term.isEmpty) return;
@@ -42,12 +64,12 @@ class LibraryPassages {
         yield Passage(
           page,
           _label(record),
-          _excerpt(page.text, hit.start, hit.end),
+          searchExcerpt(page.text, hit.start, hit.end),
           offset: hit.start,
         );
       } else if (match.hasMatch(page.writtenOn ?? '')) {
         matchedRecords.add(record.id);
-        yield Passage(page, _label(record), _excerpt(page.text, 0, 0));
+        yield Passage(page, _label(record), searchExcerpt(page.text, 0, 0));
       }
     }
     for (final record in library.records.reversed) {
@@ -59,13 +81,13 @@ class LibraryPassages {
         book?.title,
         book?.author,
       ].nonNulls.any(match.hasMatch)) {
-        yield Passage(page, _label(record), _excerpt(page.text, 0, 0));
+        yield Passage(page, _label(record), searchExcerpt(page.text, 0, 0));
       }
     }
   }
 }
 
-String _excerpt(String text, int start, int end) {
+String searchExcerpt(String text, int start, int end) {
   if (text.trim().isEmpty) return '아직 비어 있는 종이';
   var from = (start - 24).clamp(0, text.length);
   var to = (end.clamp(start, start + 50) + 72).clamp(0, text.length);
@@ -77,4 +99,42 @@ String _excerpt(String text, int start, int end) {
   if (lowSurrogateAt(from)) from--;
   if (lowSurrogateAt(to)) to++;
   return '${from == 0 ? '' : '…'}${text.substring(from, to).trim()}${to == text.length ? '' : '…'}';
+}
+
+/// Suggest terms that occur in searchable fields without changing their spelling.
+Iterable<String> searchCompletions(
+  String query,
+  Iterable<String> fields,
+) sync* {
+  final term = query.trim();
+  if (term.isEmpty) return;
+  final match = RegExp(RegExp.escape(term), caseSensitive: false);
+  final seen = {term.toLowerCase()};
+  for (final field in fields) {
+    final hit = match.firstMatch(field);
+    if (hit == null) continue;
+    final lineStart = field.lastIndexOf('\n', hit.start) + 1;
+    final nextLine = field.indexOf('\n', hit.end);
+    final lineEnd = nextLine < 0 ? field.length : nextLine;
+    final line = field.substring(lineStart, lineEnd).trim();
+    final completion = line.characters.length <= 48
+        ? line
+        : field
+              .substring(hit.start, lineEnd)
+              .characters
+              .take(48)
+              .toString()
+              .trim();
+    if (completion.length >= term.length &&
+        seen.add(completion.toLowerCase())) {
+      yield completion;
+      if (seen.length == 6) return;
+    }
+  }
+}
+
+RegExp? originalSearchPattern(String query) {
+  final terms = query.trim().split(RegExp(r'\s+'));
+  if (terms.first.isEmpty) return null;
+  return RegExp(terms.map(RegExp.escape).join(r'\s+'), caseSensitive: false);
 }

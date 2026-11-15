@@ -319,6 +319,15 @@ void main() {
     expect(store.writes, 0);
     await tester.tap(find.byTooltip('노트 검색'));
     await tester.pumpAndSettle();
+    await tester.enterText(search, '노트 1');
+    await tester.pumpAndSettle();
+    final candidates = find.byKey(const ValueKey('search-completions'));
+    final title = find.descendant(of: candidates, matching: find.text('노트 10'));
+    await tester.tap(title);
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(search).controller!.text, '노트 10');
+    expect(candidates, findsNothing);
+    expect(cover('b10'), findsOneWidget);
     await tester.enterText(search, '노트 16');
     await tester.pumpAndSettle();
     await tester.tap(cover('b16'));

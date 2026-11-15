@@ -207,7 +207,7 @@ Future<void> takePhoto(WidgetTester tester, {bool settle = true}) async {
 }
 
 void main() {
-  testWidgets('Saved originals open source search from the header', (
+  testWidgets('The original header searches saved text and citations locally', (
     tester,
   ) async {
     final store = MemoryStore()
@@ -216,27 +216,148 @@ void main() {
           WritingRecord(
             id: 'r',
             title: '기존 필사',
-            originals: [RegisteredOriginal('original', '저장해 둔 원문')],
+            originals: [
+              RegisteredOriginal(
+                'spring',
+                '봄날을 기다려요.\n잔디 사이에 꽃이 피었어요.',
+                citation: '봄날의 편지 · 기록자',
+              ),
+              RegisteredOriginal('winter', '눈 내리는 저녁', citation: '겨울 일기'),
+            ],
           ),
         ],
       );
     await open(tester, store, FakeIntake());
+    final writes = store.writes;
     await tester.tap(place);
     await tester.pumpAndSettle();
-    final shortcut = find.descendant(
-      of: reading,
-      matching: find.byTooltip('시·문장 검색'),
+    await tester.tap(find.byTooltip('저장된 원문 검색'));
+    await tester.pumpAndSettle();
+
+    final input = find.byKey(const ValueKey('saved-original-search'));
+    final candidates = find.byKey(const ValueKey('search-completions'));
+    final candidate = find.descendant(
+      of: candidates,
+      matching: find.text('봄날의 편지'),
     );
-    await tester.tap(shortcut);
+    await tester.enterText(input, '봄날');
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ChoiceChip, '웹 검색'));
+    expect(candidate, findsOneWidget);
+    expect(find.text('눈 내리는 저녁'), findsNothing);
+    expect(find.byType(SourceImportSheet), findsNothing);
+    await tester.tap(candidate);
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(TextField, '검색어'), findsOneWidget);
-    await tester.tap(find.byTooltip('검색 닫기'));
+    final field = tester.widget<TextField>(input);
+    expect(field.controller!.text, '봄날의 편지');
+    expect(field.focusNode!.hasFocus, isFalse);
+    await tester.tap(find.byKey(const ValueKey('spring')));
     await tester.pumpAndSettle();
-    expect(find.byType(SourceImportSheet), findsOneWidget);
-    expect(find.text('시·문장 검색'), findsOneWidget);
-    expect(store.data.records.single.originals.single.text, '저장해 둔 원문');
+    expect(find.byTooltip('원문 목록'), findsOneWidget);
+    await tester.tap(find.byTooltip('원문 목록'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(input).controller!.text, '봄날의 편지');
+
+    await tester.enterText(input, '잔디 사이');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('winter')), findsNothing);
+    expect(find.text('봄날의 편지 · 기록자'), findsOneWidget);
+    await tester.enterText(input, '없는 원문');
+    await tester.pumpAndSettle();
+    expect(find.text('일치하는 원문이 없어요.'), findsOneWidget);
+    await tester.tap(find.byTooltip('원문 검색 닫기'));
+    await tester.pumpAndSettle();
+    expect(find.text('눈 내리는 저녁'), findsOneWidget);
+    expect(store.writes, writes);
+  });
+
+  testWidgets('Web completions wait for IME commit and ignore stale requests', (
+    tester,
+  ) async {
+    final requests = <Uri>[];
+    final client = MockClient((request) async {
+      requests.add(request.url);
+      final params = request.url.queryParameters;
+      if (params['srsearch'] == 'intitle:바람*') {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+      }
+      final (key, rows) = switch (params) {
+        {'pssearch': '윤동'} => (
+          'prefixsearch',
+          [
+            {'title': '저자:윤동주', 'pageid': 1},
+          ],
+        ),
+        {'srsearch': 'intitle:바람*'} => (
+          'search',
+          [
+            {'title': '바람 부는 날', 'pageid': 1},
+          ],
+        ),
+        {'srsearch': '"하늘을" 우러*'} => (
+          'search',
+          [
+            {'snippet': '앞 글 <span>하늘을</span> 우러러 한 점 부끄럼'},
+          ],
+        ),
+        _ => ('search', <Map<String, Object>>[]),
+      };
+      return http.Response.bytes(
+        utf8.encode(
+          jsonEncode({
+            'query': {key: rows},
+          }),
+        ),
+        200,
+      );
+    });
+    await http.runWithClient(() async {
+      await open(tester, MemoryStore(), FakeIntake());
+      await openRegistration(tester);
+      await tester.tap(find.text('시·문장 검색'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, '웹 검색'));
+      await tester.pumpAndSettle();
+      final input = find.widgetWithText(TextField, '검색어');
+      await tester.showKeyboard(input);
+      const composing = TextEditingValue(
+        text: '바람',
+        selection: TextSelection.collapsed(offset: 2),
+        composing: TextRange(start: 1, end: 2),
+      );
+      tester.testTextInput.updateEditingValue(composing);
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(requests, isEmpty);
+      final controller = tester.widget<TextField>(input).controller!;
+      expect(controller.value, composing);
+      tester.testTextInput.updateEditingValue(
+        composing.copyWith(composing: TextRange.empty),
+      );
+      await tester.pump(const Duration(milliseconds: 360));
+      expect(requests.single.queryParameters['srsearch'], 'intitle:바람*');
+
+      await tester.tap(find.text('작가 이름'));
+      await tester.enterText(input, '윤동');
+      await tester.pump(const Duration(milliseconds: 360));
+      await tester.pumpAndSettle();
+      final suggestions = find.byKey(const ValueKey('search-completions'));
+      Finder option(String title) =>
+          find.descendant(of: suggestions, matching: find.text(title));
+      expect(requests.last.queryParameters['psnamespace'], '100');
+      expect(option('윤동주'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 550));
+      expect(option('바람 부는 날'), findsNothing);
+
+      await tester.tap(find.text('기억나는 구절'));
+      await tester.enterText(input, '하늘을 우러');
+      await tester.pump(const Duration(milliseconds: 360));
+      await tester.pumpAndSettle();
+      final phrase = option('하늘을 우러러 한 점');
+      expect(phrase, findsOneWidget);
+      await tester.tap(phrase);
+      await tester.pumpAndSettle();
+      expect(controller.text, '하늘을 우러러 한 점');
+      expect(requests.last.queryParameters['srsearch'], '"하늘을 우러러 한 점"');
+    }, () => client);
   });
 
   testWidgets('Search imports a source citation and keeps the original draft', (

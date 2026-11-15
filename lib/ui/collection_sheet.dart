@@ -5,6 +5,7 @@ import '../data/library_search.dart';
 import '../data/model.dart';
 import 'paper.dart';
 import 'paper_panel.dart';
+import 'search_completions.dart';
 import 'book_details.dart';
 import 'book_appearance.dart';
 import 'bookshelf.dart';
@@ -579,32 +580,19 @@ class _CollectionSheetState extends State<CollectionSheet> {
                 ),
               ),
             ),
-          if (shelf && showSearch)
+          if (canSearch && showSearch)
             Padding(
+              key: shelf ? null : const ValueKey('collection-search'),
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
               child: TextField(
-                key: const ValueKey('shelf-title-search'),
+                key: shelf ? const ValueKey('shelf-title-search') : null,
                 controller: searchField,
                 focusNode: searchFocus,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: '노트 제목 찾기',
-                  prefixIcon: Icon(CupertinoIcons.search, size: 17),
-                  isDense: true,
-                ),
-                onChanged: (value) => setState(() => query = value),
-              ),
-            ),
-          if (!shelf && canSearch && showSearch)
-            Padding(
-              key: const ValueKey('collection-search'),
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
-              child: TextField(
-                controller: searchField,
-                focusNode: searchFocus,
-                autofocus: true,
+                textInputAction: TextInputAction.search,
+                onSubmitted: (_) => searchFocus.unfocus(),
                 decoration: InputDecoration(
-                  hintText: '문장, 책, 날짜 찾기',
+                  hintText: shelf ? '노트 제목 찾기' : '문장, 책, 날짜 찾기',
                   prefixIcon: const Icon(CupertinoIcons.search, size: 17),
                   isDense: true,
                   enabledBorder: book == null
@@ -618,7 +606,21 @@ class _CollectionSheetState extends State<CollectionSheet> {
                           borderSide: BorderSide(color: brandInk),
                         ),
                 ),
-                onChanged: (v) => setState(() => query = v),
+                onChanged: (value) => setState(() => query = value),
+              ),
+            ),
+          if (canSearch && showSearch)
+            Flexible(
+              child: SearchCompletions(
+                controller: searchField,
+                focusNode: searchFocus,
+                options: (query) => shelf
+                    ? searchCompletions(query, [
+                        for (final book in c.library.books) book.title,
+                        LibraryController.defaultPracticeBook.title,
+                      ])
+                    : passages!.completions(query, bookId: bookId),
+                onSelected: (value) => setState(() => query = value),
               ),
             ),
           Expanded(

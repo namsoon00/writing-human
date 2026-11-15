@@ -59,8 +59,15 @@ void main() {
         matching: find.byType(EditableText),
       );
       expect(tester.widget<EditableText>(input).focusNode.hasFocus, isTrue);
-      tester.testTextInput.enterText('마지막에서 찾은 문장');
+      tester.testTextInput.enterText('마지막에서');
       await tester.pumpAndSettle();
+      final completion = find.descendant(
+        of: find.byKey(const ValueKey('search-completions')),
+        matching: find.text('마지막에서 찾은 문장'),
+      );
+      await tester.tap(completion);
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(search).controller!.text, '마지막에서 찾은 문장');
       final result = find.textContaining('마지막에서 찾은 문장').last;
       await tester.tap(result);
       tester.view.resetViewInsets();

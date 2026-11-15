@@ -41,7 +41,6 @@ class SourceImportSheet extends StatefulWidget {
     required this.initialText,
     required this.choice,
     this.initialPhoto,
-    this.startWithSearch = false,
     this.paperColor = paper,
     this.penColor = ink,
     this.grainOpacity = .16,
@@ -60,7 +59,7 @@ class SourceImportSheet extends StatefulWidget {
   final Color paperColor, penColor;
   final double grainOpacity;
   final SourcePhoto? initialPhoto;
-  final bool shared, registration, allowUnbound, startWithSearch;
+  final bool shared, registration, allowUnbound;
   final bool allowTranscription;
   final Map<String, String> books;
   final String? bookId;
@@ -112,10 +111,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     if (widget.initialPhoto case final photo?) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _read(photo, _ScanMode.page);
-      });
-    } else if (widget.startWithSearch) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _searchSources();
       });
     }
   }

@@ -1,13 +1,18 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:html/parser.dart' as html;
 import 'package:http/http.dart' as http;
+
+import '../data/library_search.dart';
 
 import '../source/wikisource_preview.dart';
 import 'source_browser.dart';
 import 'paper_panel.dart';
+import 'search_completions.dart';
 
 enum _Collection {
   works('위키문헌', 'ko.wikisource.org'),
@@ -15,6 +20,80 @@ enum _Collection {
 
   const _Collection(this.label, this.host);
   final String label, host;
+
+  Future<List<String>> complete(
+    http.Client client,
+    String query,
+    _SearchMode mode,
+  ) async {
+    final authors = mode == _SearchMode.author;
+    final phrase = mode == _SearchMode.phrase;
+    final module = authors ? 'prefixsearch' : 'search';
+    final words = _words(query).split(' ');
+    final titleTerms = RegExp(r'^[가-힣]+$').hasMatch(_compact(query))
+        ? [_compact(query)]
+        : words;
+    final response = await client
+        .get(
+          Uri.https(host, '/w/api.php', {
+            'action': 'query',
+            'list': module,
+            if (authors) ...{
+              'pssearch': query,
+              'psnamespace': '100',
+              'pslimit': '6',
+            } else ...{
+              'srsearch': phrase
+                  ? [
+                      if (words.length > 1)
+                        '"${words.take(words.length - 1).join(' ')}"',
+                      '${words.last}*',
+                    ].join(' ')
+                  : [
+                      ...titleTerms
+                          .take(titleTerms.length - 1)
+                          .map((term) => 'intitle:$term'),
+                      'intitle:${titleTerms.last}*',
+                    ].join(' '),
+              'srnamespace': '0',
+              'srlimit': '6',
+              'srprop': phrase ? 'snippet' : '',
+            },
+            'format': 'json',
+            'origin': '*',
+          }),
+        )
+        .timeout(const Duration(seconds: 4));
+    if (response.statusCode != 200) return const [];
+    final data = jsonDecode(utf8.decode(response.bodyBytes));
+    if (data case {'query': final Map results} when results[module] is List) {
+      final rows = results[module] as List;
+      if (phrase) {
+        final prefix = RegExp.escape(query.replaceAll(RegExp(r'\s+'), ' '));
+        final continuation = RegExp(
+          '$prefix'
+          r'[^\s.,…!?]*(?: +[^\s.,…!?]+){0,2}',
+          caseSensitive: false,
+        );
+        return [
+          for (final row in rows)
+            if (row case {'snippet': final String markup})
+              ?continuation.stringMatch(
+                (html.parseFragment(markup).text ?? '').replaceAll(
+                  RegExp(r'\s+'),
+                  ' ',
+                ),
+              ),
+        ];
+      }
+      return [
+        for (final row in rows)
+          if (row case {'title': final String title})
+            title.split('/').last.replaceFirst('저자:', '').trim(),
+      ];
+    }
+    return const [];
+  }
 
   Future<List<_SourceHit>> search(
     http.Client client,
@@ -176,6 +255,80 @@ class _SourceSearchState extends State<_SourceSearch> {
   Future<List<String>>? _preview;
   final _stanzas = <int>{};
   List<(_Collection, List<_SourceHit>?)> _results = const [];
+
+  Timer? _completionDelay;
+  (_SearchMode, String)? _completionQuery;
+  int _completionVersion = 0;
+  List<String> _remoteCompletions = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _query.addListener(_queueCompletions);
+    _focus.addListener(_queueCompletions);
+  }
+
+  void _queueCompletions() {
+    final value = _query.value;
+    final query = value.text.trim();
+    final canComplete =
+        _webSearch &&
+        _focus.hasFocus &&
+        !_loading &&
+        _words(query).characters.length >= 2 &&
+        !(value.isComposingRangeValid && !value.composing.isCollapsed);
+    final next = canComplete ? (_mode, query) : null;
+    if (_completionQuery == next) return;
+    _completionDelay?.cancel();
+    _completionQuery = next;
+    final version = ++_completionVersion;
+    if (_remoteCompletions.isNotEmpty) {
+      setState(() => _remoteCompletions = const []);
+    }
+    if (next != null) {
+      _completionDelay = Timer(const Duration(milliseconds: 350), () async {
+        final (mode, text) = next;
+        final collections = mode == _SearchMode.phrase
+            ? _Collection.values
+            : [_Collection.works];
+        final results = await Future.wait(
+          collections.map((collection) async {
+            try {
+              return await collection.complete(_client, text, mode);
+            } on Exception {
+              return const <String>[];
+            }
+          }),
+        );
+        if (mounted && _completionVersion == version) {
+          setState(
+            () => _remoteCompletions = results.expand((rows) => rows).toList(),
+          );
+        }
+      });
+    }
+  }
+
+  Iterable<String> _completions(String query) sync* {
+    final terms = switch (_mode) {
+      _SearchMode.title => WikisourcePoem.reviewed.values.map(
+        (poem) => poem.title,
+      ),
+      _SearchMode.author => WikisourcePoem.reviewed.values.map(
+        (poem) => poem.author,
+      ),
+      _SearchMode.phrase => const <String>[],
+    };
+    final seen = {query.toLowerCase(), ''};
+    for (final option in [
+      ...searchCompletions(query, terms),
+      ..._remoteCompletions,
+    ]) {
+      if (option.characters.length <= 160 && seen.add(option.toLowerCase())) {
+        yield option;
+      }
+    }
+  }
 
   Future<void> _search() async {
     final value = _query.value;
@@ -409,6 +562,9 @@ class _SourceSearchState extends State<_SourceSearch> {
 
   @override
   void dispose() {
+    _completionDelay?.cancel();
+    _query.removeListener(_queueCompletions);
+    _focus.removeListener(_queueCompletions);
     _client.close();
     _query.dispose();
     _focus.dispose();
@@ -481,6 +637,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                       onSelected: (_) {
                         _focus.unfocus();
                         setState(() => _webSearch = web);
+                        _queueCompletions();
                       },
                     ),
                 ],
@@ -496,12 +653,15 @@ class _SourceSearchState extends State<_SourceSearch> {
                         selected: _mode == mode,
                         onSelected: _loading
                             ? null
-                            : (_) => setState(() {
-                                _mode = mode;
-                                _searched = null;
-                                _linkError = null;
-                                _results = const [];
-                              }),
+                            : (_) {
+                                setState(() {
+                                  _mode = mode;
+                                  _searched = null;
+                                  _linkError = null;
+                                  _results = const [];
+                                });
+                                _queueCompletions();
+                              },
                       ),
                   ],
                 ),
@@ -533,6 +693,14 @@ class _SourceSearchState extends State<_SourceSearch> {
                   ),
                 ),
                 if (_loading) const LinearProgressIndicator(),
+                Flexible(
+                  child: SearchCompletions(
+                    controller: _query,
+                    focusNode: _focus,
+                    options: _completions,
+                    onSelected: (_) => _search(),
+                  ),
+                ),
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),

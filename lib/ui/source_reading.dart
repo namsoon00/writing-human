@@ -16,6 +16,7 @@ import 'original_range_sheet.dart';
 import 'pencil_marks.dart';
 import 'reading_details.dart';
 import 'reflection_ink.dart';
+import 'search_completions.dart';
 import 'writing_pen.dart';
 
 class SourceReading extends StatefulWidget {
@@ -40,8 +41,7 @@ class SourceReading extends StatefulWidget {
   final String? initialOriginalId;
   final ValueChanged<String>? onReadOriginal;
   final WritingStyle style;
-  final Future<RegisteredOriginal?> Function({bool startWithSearch})?
-  onRegister;
+  final Future<RegisteredOriginal?> Function()? onRegister;
   final Map<String, ({Passage passage, bool marked})> writingLocations;
   final ValueChanged<RegisteredOriginal>? onTranscribe;
   final ValueChanged<Passage>? onOpenWriting;
@@ -56,6 +56,10 @@ class SourceReading extends StatefulWidget {
 
 class _SourceReadingState extends State<SourceReading> {
   late String? selectedId = widget.initialOriginalId;
+  final searchField = TextEditingController();
+  final searchFocus = FocusNode(debugLabel: 'saved original search');
+  bool showSearch = false;
+  String query = '';
   final reflectionField = TextEditingController();
   final reflectionFocus = FocusNode();
   final readingItem = GlobalKey();
@@ -87,7 +91,15 @@ class _SourceReadingState extends State<SourceReading> {
     reflectionFocus.addListener(_focusChanged);
   }
 
+  Iterable<String> _searchFields(Iterable<RegisteredOriginal> originals) sync* {
+    for (final item in originals) {
+      yield* item.citation.split(' · ');
+      yield item.text.replaceAll(_previewWhitespace, ' ');
+    }
+  }
+
   void _open(String id) {
+    searchFocus.unfocus();
     setState(() => selectedId = id);
     widget.onReadOriginal?.call(id);
   }
@@ -109,10 +121,26 @@ class _SourceReadingState extends State<SourceReading> {
     });
   }
 
-  Future<void> _register({bool startWithSearch = false}) async {
-    final registered = await widget.onRegister!(
-      startWithSearch: startWithSearch,
-    );
+  void _toggleSearch(bool searching) {
+    if (searching) {
+      searchFocus.unfocus();
+      searchField.clear();
+      setState(() {
+        showSearch = false;
+        query = '';
+      });
+    } else {
+      setState(() {
+        selectedId = null;
+        showSearch = true;
+      });
+      searchFocus.requestFocus();
+    }
+  }
+
+  Future<void> _register() async {
+    searchFocus.unfocus();
+    final registered = await widget.onRegister!();
     if (!mounted || registered == null) return;
     markedOnly = false;
     _open(
@@ -133,6 +161,8 @@ class _SourceReadingState extends State<SourceReading> {
   @override
   void dispose() {
     _autosave?.cancel();
+    searchField.dispose();
+    searchFocus.dispose();
     reflectionField.dispose();
     reflectionFocus.dispose();
     super.dispose();
@@ -335,9 +365,16 @@ class _SourceReadingState extends State<SourceReading> {
         .firstOrNull;
     final match = selectedId == widget.match?.original.id ? widget.match : null;
     final reflection = original?.reflection;
-    final visibleOriginals = markedOnly
-        ? widget.originals.where(_isMarked).toList()
+    final searching = original == null && showSearch;
+    final pattern = searching ? originalSearchPattern(query) : null;
+    final scopedOriginals = markedOnly
+        ? widget.originals.where(_isMarked)
         : widget.originals;
+    final visibleOriginals = scopedOriginals.where((item) {
+      return pattern == null ||
+          pattern.hasMatch(item.citation) ||
+          pattern.hasMatch(item.text);
+    }).toList();
     final writing = widget.writingLocations[original?.id]?.passage;
     final mark = editing ? draftMark : reflection?.mark;
     final note = original == null || original.text.trim().isEmpty
@@ -385,12 +422,18 @@ class _SourceReadingState extends State<SourceReading> {
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
-                  if (widget.onRegister != null && !editing) ...[
+                  if (!editing && widget.originals.isNotEmpty)
                     IconButton(
-                      tooltip: '시·문장 검색',
-                      onPressed: () => _register(startWithSearch: true),
-                      icon: const Icon(CupertinoIcons.search, size: 19),
+                      tooltip: searching ? '원문 검색 닫기' : '저장된 원문 검색',
+                      onPressed: () => _toggleSearch(searching),
+                      icon: Icon(
+                        searching
+                            ? CupertinoIcons.xmark_circle
+                            : CupertinoIcons.search,
+                        size: 19,
+                      ),
                     ),
+                  if (widget.onRegister != null && !editing)
                     ConstrainedBox(
                       constraints: BoxConstraints(
                         maxWidth: MediaQuery.sizeOf(context).width * .34,
@@ -400,7 +443,6 @@ class _SourceReadingState extends State<SourceReading> {
                         child: const Text('원문 등록', textAlign: TextAlign.center),
                       ),
                     ),
-                  ],
                   IconButton(
                     tooltip: '닫기',
                     onPressed: () => _navigate(() => Navigator.pop(context)),
@@ -409,6 +451,20 @@ class _SourceReadingState extends State<SourceReading> {
                 ],
               ),
               const Divider(),
+              if (searching)
+                TextField(
+                  key: const ValueKey('saved-original-search'),
+                  controller: searchField,
+                  focusNode: searchFocus,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (_) => searchFocus.unfocus(),
+                  onChanged: (value) => setState(() => query = value),
+                  decoration: const InputDecoration(
+                    hintText: '원문 내용이나 출처 찾기',
+                    prefixIcon: Icon(CupertinoIcons.search, size: 17),
+                    isDense: true,
+                  ),
+                ),
               if (original == null && widget.originals.isNotEmpty)
                 Align(
                   alignment: Alignment.centerLeft,
@@ -452,6 +508,18 @@ class _SourceReadingState extends State<SourceReading> {
                   onPressed: widget.onRetry,
                   child: const Text('저장 실패 · 다시 저장'),
                 ),
+              if (searching)
+                Flexible(
+                  child: SearchCompletions(
+                    controller: searchField,
+                    focusNode: searchFocus,
+                    options: (query) => searchCompletions(
+                      query.replaceAll(_previewWhitespace, ' '),
+                      _searchFields(scopedOriginals),
+                    ),
+                    onSelected: (value) => setState(() => query = value),
+                  ),
+                ),
               Expanded(
                 child: original != null
                     ? _OriginalText(
@@ -466,7 +534,11 @@ class _SourceReadingState extends State<SourceReading> {
                     : visibleOriginals.isEmpty
                     ? Center(
                         child: Text(
-                          markedOnly ? '밑칠한 구절이 없어요.' : '등록한 원문이 없습니다.',
+                          pattern != null
+                              ? '일치하는 원문이 없어요.'
+                              : markedOnly
+                              ? '밑칠한 구절이 없어요.'
+                              : '등록한 원문이 없습니다.',
                         ),
                       )
                     : SingleChildScrollView(
@@ -493,14 +565,7 @@ class _SourceReadingState extends State<SourceReading> {
                                   child: ListTile(
                                     contentPadding: EdgeInsets.zero,
                                     title: Text(
-                                      item.text.isEmpty
-                                          ? item.citation
-                                          : item.text
-                                                .replaceAll(
-                                                  _previewWhitespace,
-                                                  ' ',
-                                                )
-                                                .trim(),
+                                      _originalPreview(item, pattern),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: writingTextStyle(
@@ -589,6 +654,13 @@ class _OriginalText extends StatefulWidget {
 
 final _sentenceEnd = RegExp(r'[.!?。！？]+|\n');
 final _previewWhitespace = RegExp(r'\s+');
+
+String _originalPreview(RegisteredOriginal item, RegExp? pattern) {
+  if (item.text.isEmpty) return item.citation;
+  final text = item.text.replaceAll(_previewWhitespace, ' ').trim();
+  final match = pattern?.firstMatch(text);
+  return match == null ? text : searchExcerpt(text, match.start, match.end);
+}
 
 class _OriginalTextState extends State<_OriginalText> {
   final scroll = ScrollController();

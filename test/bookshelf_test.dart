@@ -56,6 +56,8 @@ void main() {
 
     await shelf(tester);
     await tester.scrollUntilVisible(cover('b'), 200, scrollable: scroll);
+    await Scrollable.ensureVisible(tester.element(cover('b')), alignment: .5);
+    await tester.pumpAndSettle();
     await tester.tap(cover('b'));
     await tester.pumpAndSettle();
     expect(store.data.activePageId, 'other');
@@ -68,6 +70,8 @@ void main() {
 
     await shelf(tester);
     await tester.scrollUntilVisible(cover('a'), 200, scrollable: scroll);
+    await Scrollable.ensureVisible(tester.element(cover('a')), alignment: .5);
+    await tester.pumpAndSettle();
     await tester.tap(cover('a'));
     await tester.pumpAndSettle();
     expect(store.data.activePageId, 'one');
@@ -280,11 +284,7 @@ void main() {
     await tester.tap(find.byTooltip('노트 검색'));
     await tester.pumpAndSettle();
     final search = find.byKey(const ValueKey('shelf-title-search'));
-    final body = tester.widget<Semantics>(
-      find.bySemanticsIdentifier('writing-page-body'),
-    );
-    final render = tester.renderObject<RenderObject>(find.byWidget(body));
-    expect(render.debugSemantics?.attached ?? false, isFalse);
+    expect(find.bySemanticsIdentifier('writing-page-body'), findsNothing);
     final editable = find.descendant(
       of: search,
       matching: find.byType(EditableText),

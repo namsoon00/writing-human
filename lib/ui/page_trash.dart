@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../data/library_controller.dart';
 import '../data/model.dart';
 import 'paper.dart';
+import 'paper_panel.dart';
 
 class PageTrash extends StatefulWidget {
   const PageTrash({
@@ -83,68 +84,56 @@ class _PageTrashState extends State<PageTrash> {
         final library = widget.controller.library;
         final records = {for (final item in library.records) item.id: item};
         final books = {for (final item in library.books) item.id: item.title};
-        return AlertDialog(
-          title: const Text('휴지통'),
-          content: SizedBox(
-            width: 420,
-            height: library.trashedPages.isEmpty
-                ? null
-                : MediaQuery.sizeOf(context).height * .35,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (_saving) const LinearProgressIndicator(),
-                if (_error case final error?)
-                  Semantics(
-                    liveRegion: true,
-                    child: Text(error, style: const TextStyle(color: burgundy)),
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              PaperPanelHeader('휴지통', canClose: !_saving),
+              if (_saving) const LinearProgressIndicator(),
+              if (_error case final error?)
+                Semantics(
+                  liveRegion: true,
+                  child: Text(error, style: const TextStyle(color: burgundy)),
+                ),
+              if (library.trashedPages.isEmpty)
+                const Text('휴지통이 비어 있어요.')
+              else
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: library.trashedPages.length,
+                    separatorBuilder: (_, _) => const Divider(color: line),
+                    itemBuilder: (_, index) {
+                      final page = library.trashedPages[index];
+                      final record = records[page.recordId];
+                      final book = books[record?.bookId];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          _excerpt(page),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          [book ?? '책 없는 필사', ?record?.title].join(' · '),
+                        ),
+                        trailing: PopupMenuButton<bool>(
+                          enabled: !_saving,
+                          tooltip: '휴지통 쪽 메뉴',
+                          icon: const Icon(CupertinoIcons.ellipsis),
+                          onSelected: (restore) =>
+                              _change(page, restore: restore),
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(value: true, child: Text('복원')),
+                            PopupMenuItem(value: false, child: Text('영구 삭제')),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                if (library.trashedPages.isEmpty)
-                  const Text('휴지통이 비어 있어요.')
-                else
-                  Expanded(
-                    child: ListView.separated(
-                      itemCount: library.trashedPages.length,
-                      separatorBuilder: (_, _) => const Divider(color: line),
-                      itemBuilder: (_, index) {
-                        final page = library.trashedPages[index];
-                        final record = records[page.recordId];
-                        final book = books[record?.bookId];
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(
-                            _excerpt(page),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(
-                            [book ?? '책 없는 필사', ?record?.title].join(' · '),
-                          ),
-                          trailing: PopupMenuButton<bool>(
-                            enabled: !_saving,
-                            tooltip: '휴지통 쪽 메뉴',
-                            icon: const Icon(CupertinoIcons.ellipsis),
-                            onSelected: (restore) =>
-                                _change(page, restore: restore),
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(value: true, child: Text('복원')),
-                              PopupMenuItem(value: false, child: Text('영구 삭제')),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-              ],
-            ),
+                ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: _saving ? null : () => Navigator.pop(context),
-              child: const Text('닫기'),
-            ),
-          ],
         );
       },
     ),

@@ -11,6 +11,7 @@ import '../source/originals.dart';
 import '../source/source_scan.dart';
 import 'book_details.dart';
 import 'paper.dart';
+import 'paper_panel.dart';
 import 'original_range_sheet.dart';
 import 'pencil_marks.dart';
 import 'reading_details.dart';
@@ -25,9 +26,6 @@ class SourceReading extends StatefulWidget {
     this.initialOriginalId,
     this.onReadOriginal,
     this.style = const WritingStyle(),
-    this.coverIndex,
-    this.pagesBefore = 0,
-    this.pagesAfter = 0,
     this.onRegister,
     this.writingLocations = const {},
     this.onTranscribe,
@@ -42,8 +40,6 @@ class SourceReading extends StatefulWidget {
   final String? initialOriginalId;
   final ValueChanged<String>? onReadOriginal;
   final WritingStyle style;
-  final int? coverIndex;
-  final int pagesBefore, pagesAfter;
   final Future<RegisteredOriginal?> Function({bool startWithSearch})?
   onRegister;
   final Map<String, ({Passage passage, bool marked})> writingLocations;
@@ -283,37 +279,49 @@ class _SourceReadingState extends State<SourceReading> {
 
   Future<void> _showPhoto(String id) async {
     final bytes = const OriginalPhotoStore().load(id);
-    await showDialog<void>(
-      context: context,
-      builder: (context) => Dialog.fullscreen(
-        child: Scaffold(
-          appBar: AppBar(title: const Text('원본 사진')),
-          body: FutureBuilder(
-            future: bytes,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState != ConnectionState.done) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final image = snapshot.data;
-              if (image == null) {
-                return Center(
-                  child: Text(
-                    snapshot.hasError ? '사진을 읽지 못했어요.' : '이 기기에 보관된 사진이 없어요.',
-                  ),
-                );
-              }
-              return Center(
-                child: InteractiveViewer(
-                  maxScale: 6,
-                  child: Image.memory(
-                    image,
-                    key: const ValueKey('saved-original-photo'),
-                    semanticLabel: '저장한 원본 사진',
-                    errorBuilder: (_, _, _) => const Text('이 사진을 표시할 수 없어요.'),
-                  ),
+    await Navigator.of(context).push<void>(
+      paperPanelRoute(
+        (_) => PaperPanel(
+          color: panelPaperColor(paperColors[widget.style.paperIndex]),
+          child: Column(
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 8, 12, 0),
+                child: PaperPanelHeader('원본 사진'),
+              ),
+              Expanded(
+                child: FutureBuilder(
+                  future: bytes,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final image = snapshot.data;
+                    if (image == null) {
+                      return Center(
+                        child: Text(
+                          snapshot.hasError
+                              ? '사진을 읽지 못했어요.'
+                              : '이 기기에 보관된 사진이 없어요.',
+                        ),
+                      );
+                    }
+                    return Center(
+                      child: InteractiveViewer(
+                        maxScale: 6,
+                        child: Image.memory(
+                          image,
+                          key: const ValueKey('saved-original-photo'),
+                          semanticLabel: '저장한 원본 사진',
+                          errorBuilder: (_, _, _) =>
+                              const Text('이 사진을 표시할 수 없어요.'),
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
+              ),
+            ],
           ),
         ),
       ),
@@ -342,8 +350,6 @@ class _SourceReadingState extends State<SourceReading> {
                 ? null
                 : () => _editReflection(original, match),
           );
-    final media = MediaQuery.of(context);
-    final keyboard = media.viewInsets.bottom;
     final style = widget.style;
     final details = style.bookDetails;
     final panel = panelPaperColor(paperColors[style.paperIndex]);
@@ -354,235 +360,204 @@ class _SourceReadingState extends State<SourceReading> {
           unawaited(_navigate(() => Navigator.pop(context)));
         }
       },
-      child: Padding(
-        padding: EdgeInsets.only(bottom: keyboard),
-        child: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: (media.size.height * .68 - keyboard).clamp(
-              media.size.height * .38,
-              media.size.height,
-            ),
-            child: PaperBackdrop(
-              key: const ValueKey('source-paper'),
-              binding: details.binding,
-              color: panel,
-              outsideColor: panel,
-              grainOpacity: panelGrainOpacity,
-              coverIndex: widget.coverIndex,
-              pagesBefore: widget.pagesBefore,
-              pagesAfter: widget.pagesAfter,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 2, 24, 12),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        if (original != null)
-                          IconButton(
-                            tooltip: '원문 목록',
-                            onPressed: () => _navigate(_showList),
-                            icon: const Icon(
-                              CupertinoIcons.chevron_left,
-                              size: 19,
-                            ),
-                          ),
-                        Expanded(
-                          child: Text(
-                            original?.citation.trim().isNotEmpty == true
-                                ? original!.citation
-                                : '원문',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                        ),
-                        if (widget.onRegister != null && !editing) ...[
-                          IconButton(
-                            tooltip: '시·문장 검색',
-                            onPressed: () => _register(startWithSearch: true),
-                            icon: const Icon(CupertinoIcons.search, size: 19),
-                          ),
-                          ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: MediaQuery.sizeOf(context).width * .34,
-                            ),
-                            child: TextButton(
-                              onPressed: _register,
-                              child: const Text(
-                                '원문 등록',
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                        ],
-                        IconButton(
-                          tooltip: '닫기',
-                          onPressed: () =>
-                              _navigate(() => Navigator.pop(context)),
-                          icon: const Icon(CupertinoIcons.xmark, size: 18),
-                        ),
-                      ],
+      child: PaperPanel(
+        key: const ValueKey('source-paper'),
+        color: panel,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 2, 24, 12),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  if (original != null)
+                    IconButton(
+                      tooltip: '원문 목록',
+                      onPressed: () => _navigate(_showList),
+                      icon: const Icon(CupertinoIcons.chevron_left, size: 19),
                     ),
-                    const Divider(),
-                    if (original == null && widget.originals.isNotEmpty)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: FilterChip(
-                          label: const Text('밑칠한 구절만 보기'),
-                          selectedColor: panelSelectedColor(panel),
-                          selected: markedOnly,
-                          onSelected: (value) =>
-                              setState(() => markedOnly = value),
-                        ),
+                  Expanded(
+                    child: Text(
+                      original?.citation.trim().isNotEmpty == true
+                          ? original!.citation
+                          : '원문',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  if (widget.onRegister != null && !editing) ...[
+                    IconButton(
+                      tooltip: '시·문장 검색',
+                      onPressed: () => _register(startWithSearch: true),
+                      icon: const Icon(CupertinoIcons.search, size: 19),
+                    ),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.sizeOf(context).width * .34,
                       ),
-                    if (original != null &&
-                        !editing &&
-                        (original.photoId != null || original.isFullPage))
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Wrap(
-                          spacing: 8,
+                      child: TextButton(
+                        onPressed: _register,
+                        child: const Text('원문 등록', textAlign: TextAlign.center),
+                      ),
+                    ),
+                  ],
+                  IconButton(
+                    tooltip: '닫기',
+                    onPressed: () => _navigate(() => Navigator.pop(context)),
+                    icon: const Icon(CupertinoIcons.xmark, size: 18),
+                  ),
+                ],
+              ),
+              const Divider(),
+              if (original == null && widget.originals.isNotEmpty)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilterChip(
+                    label: const Text('밑칠한 구절만 보기'),
+                    selectedColor: panelSelectedColor(panel),
+                    selected: markedOnly,
+                    onSelected: (value) => setState(() => markedOnly = value),
+                  ),
+                ),
+              if (original != null &&
+                  !editing &&
+                  (original.photoId != null || original.isFullPage))
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    children: [
+                      if (original.photoId case final id?)
+                        TextButton.icon(
+                          onPressed: saving ? null : () => _showPhoto(id),
+                          icon: const Icon(CupertinoIcons.photo, size: 16),
+                          label: const Text('원본 사진'),
+                        ),
+                      if (original.isFullPage && widget.onSaveRange != null)
+                        TextButton(
+                          onPressed: saving
+                              ? null
+                              : () => _changeRange(original),
+                          child: Text(
+                            original.writingRange == null
+                                ? '필사 범위 · 전체 페이지'
+                                : '필사 범위 · 구간 선택됨',
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              if (widget.onRetry != null && !editing)
+                TextButton(
+                  onPressed: widget.onRetry,
+                  child: const Text('저장 실패 · 다시 저장'),
+                ),
+              Expanded(
+                child: original != null
+                    ? _OriginalText(
+                        key: ValueKey(original.id),
+                        original: original,
+                        style: style,
+                        match: match,
+                        mark: mark,
+                        note: note,
+                        editing: editing,
+                      )
+                    : visibleOriginals.isEmpty
+                    ? Center(
+                        child: Text(
+                          markedOnly ? '밑칠한 구절이 없어요.' : '등록한 원문이 없습니다.',
+                        ),
+                      )
+                    : SingleChildScrollView(
+                        child: Column(
                           children: [
-                            if (original.photoId case final id?)
-                              TextButton.icon(
-                                onPressed: saving ? null : () => _showPhoto(id),
-                                icon: const Icon(
-                                  CupertinoIcons.photo,
-                                  size: 16,
-                                ),
-                                label: const Text('원본 사진'),
-                              ),
-                            if (original.isFullPage &&
-                                widget.onSaveRange != null)
-                              TextButton(
-                                onPressed: saving
-                                    ? null
-                                    : () => _changeRange(original),
-                                child: Text(
-                                  original.writingRange == null
-                                      ? '필사 범위 · 전체 페이지'
-                                      : '필사 범위 · 구간 선택됨',
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    if (widget.onRetry != null && !editing)
-                      TextButton(
-                        onPressed: widget.onRetry,
-                        child: const Text('저장 실패 · 다시 저장'),
-                      ),
-                    Expanded(
-                      child: original != null
-                          ? _OriginalText(
-                              key: ValueKey(original.id),
-                              original: original,
-                              style: style,
-                              match: match,
-                              mark: mark,
-                              note: note,
-                              editing: editing,
-                            )
-                          : visibleOriginals.isEmpty
-                          ? Center(
-                              child: Text(
-                                markedOnly ? '밑칠한 구절이 없어요.' : '등록한 원문이 없습니다.',
-                              ),
-                            )
-                          : SingleChildScrollView(
-                              child: Column(
-                                children: [
-                                  for (final (index, item)
-                                      in visibleOriginals.indexed) ...[
-                                    if (index > 0)
-                                      details.recordDivider.enabled
-                                          ? RecordDivider(
-                                              choice: details.recordDivider,
-                                              compact: true,
-                                            )
-                                          : const SizedBox(height: 8),
-                                    InkWell(
-                                      key: item.id == _readingId
-                                          ? readingItem
-                                          : ValueKey(item.id),
-                                      onTap: () => _open(item.id),
-                                      child: SourceSlip(
+                            for (final (index, item)
+                                in visibleOriginals.indexed) ...[
+                              if (index > 0)
+                                details.recordDivider.enabled
+                                    ? RecordDivider(
+                                        choice: details.recordDivider,
                                         compact: true,
-                                        panelColor: panel,
-                                        choice: details.sourceSlip,
-                                        child: ListTile(
-                                          contentPadding: EdgeInsets.zero,
-                                          title: Text(
-                                            item.text.isEmpty
-                                                ? item.citation
-                                                : item.text
-                                                      .replaceAll(
-                                                        _previewWhitespace,
-                                                        ' ',
-                                                      )
-                                                      .trim(),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: writingTextStyle(
-                                              style.fontIndex,
-                                              size: 17,
-                                              useDevelopmentTypeface:
-                                                  style.useDevelopmentTypeface,
-                                              color: ink,
-                                            ),
-                                          ),
-                                          subtitle:
-                                              item.citation.isEmpty ||
-                                                  item.text.isEmpty
-                                              ? null
-                                              : Text(
-                                                  item.citation,
-                                                  maxLines: 2,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                        ),
+                                      )
+                                    : const SizedBox(height: 8),
+                              InkWell(
+                                key: item.id == _readingId
+                                    ? readingItem
+                                    : ValueKey(item.id),
+                                onTap: () => _open(item.id),
+                                child: SourceSlip(
+                                  compact: true,
+                                  panelColor: panel,
+                                  choice: details.sourceSlip,
+                                  child: ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    title: Text(
+                                      item.text.isEmpty
+                                          ? item.citation
+                                          : item.text
+                                                .replaceAll(
+                                                  _previewWhitespace,
+                                                  ' ',
+                                                )
+                                                .trim(),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: writingTextStyle(
+                                        style.fontIndex,
+                                        size: 17,
+                                        useDevelopmentTypeface:
+                                            style.useDevelopmentTypeface,
+                                        color: ink,
                                       ),
                                     ),
-                                  ],
-                                ],
+                                    subtitle:
+                                        item.citation.isEmpty ||
+                                            item.text.isEmpty
+                                        ? null
+                                        : Text(
+                                            item.citation,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                  ),
+                                ),
                               ),
-                            ),
-                    ),
-                    if (original != null && !editing)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Wrap(
-                          spacing: 8,
-                          children: [
-                            if (widget.onTranscribe != null &&
-                                original.text.trim().isNotEmpty)
-                              TextButton(
-                                onPressed: saving
-                                    ? null
-                                    : () => widget.onTranscribe!(original),
-                                child: const Text('이 구절 필사하기'),
-                              ),
-                            if (writing != null && widget.onOpenWriting != null)
-                              TextButton(
-                                onPressed: saving
-                                    ? null
-                                    : () => widget.onOpenWriting!(writing),
-                                child: const Text('필사한 쪽 열기'),
-                              ),
+                            ],
                           ],
                         ),
                       ),
-                    if (failed && editing)
-                      TextButton(
-                        onPressed: _composing ? null : _flush,
-                        child: const Text('느낀 점 저장 실패 · 다시 시도'),
-                      ),
-                  ],
-                ),
               ),
-            ),
+              if (original != null && !editing)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    children: [
+                      if (widget.onTranscribe != null &&
+                          original.text.trim().isNotEmpty)
+                        TextButton(
+                          onPressed: saving
+                              ? null
+                              : () => widget.onTranscribe!(original),
+                          child: const Text('이 구절 필사하기'),
+                        ),
+                      if (writing != null && widget.onOpenWriting != null)
+                        TextButton(
+                          onPressed: saving
+                              ? null
+                              : () => widget.onOpenWriting!(writing),
+                          child: const Text('필사한 쪽 열기'),
+                        ),
+                    ],
+                  ),
+                ),
+              if (failed && editing)
+                TextButton(
+                  onPressed: _composing ? null : _flush,
+                  child: const Text('느낀 점 저장 실패 · 다시 시도'),
+                ),
+            ],
           ),
         ),
       ),

@@ -404,7 +404,7 @@ void main() {
       await tester.tap(find.text('장서표').last);
       await tester.pumpAndSettle();
       expect(find.byType(PressedFlower), findsOneWidget);
-      await tester.tap(find.text('닫기'));
+      await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       final customize = find.widgetWithText(TextButton, '책 꾸미기');
       expect(tester.getSize(customize).height, greaterThanOrEqualTo(48));

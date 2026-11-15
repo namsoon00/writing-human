@@ -11,6 +11,7 @@ import '../data/library_controller.dart';
 import '../data/model.dart';
 import '../data/writing_export.dart';
 import 'paper.dart';
+import 'paper_panel.dart';
 import 'page_trash.dart';
 
 class ArchiveSheet extends StatefulWidget {
@@ -198,114 +199,103 @@ class _ArchiveSheetState extends State<ArchiveSheet> {
   @override
   Widget build(BuildContext context) => PopScope(
     canPop: !_busy,
-    child: SafeArea(
-      top: false,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
-          final last = _controller.library.lastBackupAt?.toLocal();
-          final locale = MaterialLocalizations.of(context);
-          return SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 0, 4),
-                  child: Row(
-                    children: [
-                      const Expanded(
+    child: AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final last = _controller.library.lastBackupAt?.toLocal();
+        final locale = MaterialLocalizations.of(context);
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(28, 6, 16, 8),
+              child: PaperPanelHeader('기록 보관', canClose: !_busy),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                children: [
+                  ListTile(
+                    leading: const Icon(CupertinoIcons.trash),
+                    title: const Text('휴지통'),
+                    subtitle: Text(
+                      '${_controller.library.trashedPages.length}쪽',
+                    ),
+                    onTap: _busy || !_available
+                        ? null
+                        : () => Navigator.of(context).push(
+                            paperPanelRoute<void>(
+                              (_) => PaperPanel(
+                                child: PageTrash(
+                                  controller: _controller,
+                                  canAccess: widget.canAccess,
+                                ),
+                              ),
+                            ),
+                          ),
+                  ),
+                  ListTile(
+                    leading: const Icon(CupertinoIcons.arrow_down_doc),
+                    title: const Text('전체 백업 내보내기'),
+                    subtitle: last == null
+                        ? null
+                        : Text(
+                            '마지막 내보내기 ${locale.formatMediumDate(last)} '
+                            '${locale.formatTimeOfDay(TimeOfDay.fromDateTime(last))}',
+                          ),
+                    onTap: _busy
+                        ? null
+                        : () => _run(_backup, '백업 파일을 내보내지 못했어요.'),
+                  ),
+                  ListTile(
+                    leading: const Icon(CupertinoIcons.arrow_up_doc),
+                    title: const Text('백업에서 가져오기'),
+                    onTap: _busy
+                        ? null
+                        : () => _run(_restore, '백업 파일을 열지 못했어요.'),
+                  ),
+                  if (widget.record case final record?)
+                    ListTile(
+                      leading: const Icon(CupertinoIcons.doc_plaintext),
+                      title: const Text('이 필사 텍스트 내보내기'),
+                      onTap: _busy
+                          ? null
+                          : () =>
+                                _run(() => _text(record), '텍스트 파일을 내보내지 못했어요.'),
+                    ),
+                  if (widget.book case final book?)
+                    ListTile(
+                      leading: const Icon(CupertinoIcons.book),
+                      title: const Text('이 책 PDF 내보내기'),
+                      subtitle: Text(book.title),
+                      onTap: _busy
+                          ? null
+                          : () => _run(() => _pdf(book), 'PDF를 내보내지 못했어요.'),
+                    ),
+                  if (_busy) const LinearProgressIndicator(),
+                  if (_status case final status?)
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Semantics(
+                        liveRegion: true,
                         child: Text(
-                          '기록 보관',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          status,
+                          style: TextStyle(color: _failed ? burgundy : ink),
                         ),
-                      ),
-                      IconButton(
-                        tooltip: '닫기',
-                        onPressed: _busy ? null : () => Navigator.pop(context),
-                        icon: const Icon(CupertinoIcons.xmark, size: 18),
-                      ),
-                    ],
-                  ),
-                ),
-                ListTile(
-                  leading: const Icon(CupertinoIcons.trash),
-                  title: const Text('휴지통'),
-                  subtitle: Text('${_controller.library.trashedPages.length}쪽'),
-                  onTap: _busy || !_available
-                      ? null
-                      : () => showDialog<void>(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (_) => PageTrash(
-                            controller: _controller,
-                            canAccess: widget.canAccess,
-                          ),
-                        ),
-                ),
-                ListTile(
-                  leading: const Icon(CupertinoIcons.arrow_down_doc),
-                  title: const Text('전체 백업 내보내기'),
-                  subtitle: last == null
-                      ? null
-                      : Text(
-                          '마지막 내보내기 ${locale.formatMediumDate(last)} '
-                          '${locale.formatTimeOfDay(TimeOfDay.fromDateTime(last))}',
-                        ),
-                  onTap: _busy
-                      ? null
-                      : () => _run(_backup, '백업 파일을 내보내지 못했어요.'),
-                ),
-                ListTile(
-                  leading: const Icon(CupertinoIcons.arrow_up_doc),
-                  title: const Text('백업에서 가져오기'),
-                  onTap: _busy ? null : () => _run(_restore, '백업 파일을 열지 못했어요.'),
-                ),
-                if (widget.record case final record?)
-                  ListTile(
-                    leading: const Icon(CupertinoIcons.doc_plaintext),
-                    title: const Text('이 필사 텍스트 내보내기'),
-                    onTap: _busy
-                        ? null
-                        : () => _run(() => _text(record), '텍스트 파일을 내보내지 못했어요.'),
-                  ),
-                if (widget.book case final book?)
-                  ListTile(
-                    leading: const Icon(CupertinoIcons.book),
-                    title: const Text('이 책 PDF 내보내기'),
-                    subtitle: Text(book.title),
-                    onTap: _busy
-                        ? null
-                        : () => _run(() => _pdf(book), 'PDF를 내보내지 못했어요.'),
-                  ),
-                if (_busy) const LinearProgressIndicator(),
-                if (_status case final status?)
-                  Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Semantics(
-                      liveRegion: true,
-                      child: Text(
-                        status,
-                        style: TextStyle(color: _failed ? burgundy : ink),
                       ),
                     ),
-                  ),
-                if (_controller.saveError != null)
-                  TextButton(
-                    onPressed: _busy
-                        ? null
-                        : () => _run(_retrySave, '기기에 저장하지 못했어요.'),
-                    child: const Text('저장 실패 · 다시 시도'),
-                  ),
-              ],
+                  if (_controller.saveError != null)
+                    TextButton(
+                      onPressed: _busy
+                          ? null
+                          : () => _run(_retrySave, '기기에 저장하지 못했어요.'),
+                      child: const Text('저장 실패 · 다시 시도'),
+                    ),
+                ],
+              ),
             ),
-          );
-        },
-      ),
+          ],
+        );
+      },
     ),
   );
 }

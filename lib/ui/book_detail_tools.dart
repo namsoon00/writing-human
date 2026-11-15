@@ -19,62 +19,56 @@ class BookDetailTools extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => SafeArea(
-    top: false,
-    child: SizedBox(
-      height: MediaQuery.sizeOf(context).height * .86,
-      child: AnimatedBuilder(
-        animation: controller,
-        builder: (context, _) => Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 4, 12, 8),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      '책의 디테일',
-                      style: TextStyle(
-                        fontFamily: appFontFamily,
-                        fontFamilyFallback: appFontFallback,
-                        fontSize: 21,
-                      ),
-                    ),
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: controller,
+    builder: (context, _) => Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 4, 12, 8),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  '책의 디테일',
+                  style: TextStyle(
+                    fontFamily: appFontFamily,
+                    fontFamilyFallback: appFontFallback,
+                    fontSize: 21,
                   ),
-                  IconButton(
-                    tooltip: '디테일 닫기',
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(CupertinoIcons.xmark, size: 18),
-                  ),
-                ],
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(24, 0, 24, 16),
-              child: Text(
-                '모양과 색을 고르면 바로 적용돼요.\n꾸밈을 꺼도 글과 기록은 그대로 남아요.',
-                style: TextStyle(color: muted, fontSize: 12, height: 1.7),
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                children: [
-                  for (final kind in BookDetailKind.values)
-                    if (kind != BookDetailKind.binding) _item(context, kind),
-                ],
-              ),
-            ),
-            if (controller.saveError != null)
-              TextButton(
-                onPressed: controller.retrySave,
-                child: const Text(
-                  '설정 저장 실패 · 다시 시도',
-                  style: TextStyle(color: burgundy),
                 ),
               ),
-          ],
+              IconButton(
+                tooltip: '디테일 닫기',
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(CupertinoIcons.xmark, size: 18),
+              ),
+            ],
+          ),
         ),
-      ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(24, 0, 24, 16),
+          child: Text(
+            '모양과 색을 고르면 바로 적용돼요.\n꾸밈을 꺼도 글과 기록은 그대로 남아요.',
+            style: TextStyle(color: muted, fontSize: 12, height: 1.7),
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            children: [
+              for (final kind in BookDetailKind.values)
+                if (kind != BookDetailKind.binding) _item(context, kind),
+            ],
+          ),
+        ),
+        if (controller.saveError != null)
+          TextButton(
+            onPressed: controller.retrySave,
+            child: const Text(
+              '설정 저장 실패 · 다시 시도',
+              style: TextStyle(color: burgundy),
+            ),
+          ),
+      ],
     ),
   );
 

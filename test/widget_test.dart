@@ -746,14 +746,27 @@ void main() {
     expect(find.textContaining('11,172'), findsNothing);
     final archive = find.text('기록 보관');
     await tester.ensureVisible(archive);
+    addTearDown(tester.view.resetPadding);
+    tester.view.padding = const FakeViewPadding(top: 47, bottom: 34);
+    await tester.pumpAndSettle();
     await tester.tap(archive);
     await tester.pumpAndSettle();
 
-    final sheet = tester.getRect(find.byType(BottomSheet));
-    final last = tester.getRect(find.widgetWithText(ListTile, '이 책 PDF 내보내기'));
-    expect(sheet.height, lessThan(tester.view.physicalSize.height / 2));
-    expect(sheet.bottom, tester.view.physicalSize.height);
-    expect(sheet.bottom - last.bottom, 20);
+    final panel = find.byKey(const ValueKey('paper-panel-page'));
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(tester.getSize(panel), tester.view.physicalSize);
+    final backdrop = find.descendant(
+      of: panel,
+      matching: find.byType(PaperBackdrop),
+    );
+    expect(tester.getRect(backdrop), tester.getRect(panel));
+    final background = tester.widget<PaperBackdrop>(backdrop);
+    expect(background.coverIndex, isNull);
+    expect(background.binding.enabled, isFalse);
+    expect(
+      tester.getTopLeft(find.byTooltip('닫기')).dy,
+      greaterThanOrEqualTo(47),
+    );
     expect(find.text('전체 백업 내보내기'), findsOneWidget);
     expect(find.text('백업에서 가져오기'), findsOneWidget);
     expect(find.text('이 필사 텍스트 내보내기'), findsOneWidget);

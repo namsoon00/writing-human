@@ -19,6 +19,7 @@ import 'collection_sheet.dart';
 import 'editor.dart';
 import 'new_book_dialog.dart';
 import 'paper.dart';
+import 'paper_panel.dart';
 import 'tools_screen.dart';
 import 'writing_chrome.dart';
 import 'page_turn.dart';
@@ -364,22 +365,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     });
   }, paperTurn: false);
 
-  Future<void> _sheet(
-    Widget child, {
-    bool enableDrag = true,
-    bool? showDragHandle,
-    Color? backgroundColor,
-  }) {
-    final route = ModalBottomSheetRoute<void>(
-      isScrollControlled: true,
-      showDragHandle: showDragHandle ?? enableDrag,
-      backgroundColor: backgroundColor,
-      clipBehavior: Clip.antiAlias,
-      enableDrag: enableDrag,
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      constraints: const BoxConstraints(maxWidth: 600),
-      builder: (_) => child,
-    );
+  Future<void> _openPanel(Widget child, {Color color = paper}) {
+    final route = paperPanelRoute<void>((_) => child, color: color);
     _sheetClosed = route.completed.then((_) {});
     _sheetOwner = c;
     return Navigator.of(context).push<void>(route);
@@ -396,10 +383,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   void _collection() {
     if (!_canLeaveInput()) return;
     _blur();
-    _sheet(
+    _openPanel(
       CollectionSheet(
         controller: c,
-        showHandle: true,
         onBook: (book) => _afterSheet(() async {
           if (!c.library.books.any((entry) => entry.id == book.id)) return;
           final target = c.resumePageForBook(book.id);
@@ -432,8 +418,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         onArchiveBook: (book) =>
             _afterSheet(() => _archive(selectedBook: book)),
       ),
-      showDragHandle: false,
-      backgroundColor: Colors.transparent,
     );
   }
 
@@ -453,19 +437,16 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
 
   void _menu() {
     _blur();
-    _sheet(
+    _openPanel(
       ToolsScreen(
         controller: c,
         bookId: book?.id,
-        onBack: () => Navigator.pop(context),
         onBind: () => _afterSheet(_bind),
         onArchive: () => _afterSheet(_archive),
         onSync: widget.sync?.available == true
             ? () => _afterSheet(() async => _syncInfo())
             : null,
       ),
-      showDragHandle: false,
-      backgroundColor: Colors.transparent,
     );
   }
 
@@ -890,12 +871,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     final selectedPage = page;
     final selectedBook = bookDetails ?? book;
     final bookId = selectedBook?.id;
-    final volume = bookId == null
-        ? _volumePages
-        : owner.library.volumePages(bookId: bookId);
-    final position = bookDetails == null
-        ? volume.indexWhere((p) => p.id == selectedPage.id)
-        : -1;
     // Web accessibility can move focus to the button before its handler.
     final wasEditing =
         bookDetails == null &&
@@ -946,20 +921,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         if (initialId != null) _originalByVolume[scope] = initialId;
         _SavedOriginal? savedAfterPanel;
         final route =
-            ModalBottomSheetRoute<
-              ({RegisteredOriginal? original, Passage? passage})
-            >(
-              isScrollControlled: true,
-              showDragHandle: false,
-              enableDrag: false,
-              backgroundColor: panelPaperColor(
-                paperColors[_paperStyle(selectedBook).paperIndex],
-              ),
-              barrierLabel: MaterialLocalizations.of(
-                context,
-              ).modalBarrierDismissLabel,
-              constraints: const BoxConstraints(maxWidth: 600),
-              builder: (_) => ListenableBuilder(
+            paperPanelRoute<({RegisteredOriginal? original, Passage? passage})>(
+              (_) => ListenableBuilder(
                 listenable: owner,
                 builder: (context, _) => SourceReading(
                   originals: originals(),
@@ -973,11 +936,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                     }
                   },
                   style: _paperStyle(selectedBook),
-                  coverIndex: selectedBook == null
-                      ? null
-                      : owner.coverIndexFor(selectedBook),
-                  pagesBefore: position < 0 ? 0 : position,
-                  pagesAfter: volume.length - position - 1,
                   onRegister: owner.saveError != null
                       ? null
                       : ({bool startWithSearch = false}) async {
@@ -1040,6 +998,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                     reflection,
                   ),
                 ),
+              ),
+              color: panelPaperColor(
+                paperColors[_paperStyle(selectedBook).paperIndex],
               ),
             );
         final action = await Navigator.of(context).push(route);
@@ -1123,47 +1084,45 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     _blur();
     final selectedRecord = record;
     userFresh = fresh;
-    String? id = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      constraints: const BoxConstraints(maxWidth: 600),
-      builder: (context) => SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+    final route = paperPanelRoute<String>(
+      (context) => PaperPanel(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              ListTile(
-                title: Text(
-                  book == null ? '책에 넣기' : '다른 책으로 옮기기',
-                  style: const TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w700,
-                  ),
+              PaperPanelHeader(book == null ? '책에 넣기' : '다른 책으로 옮기기'),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  children: [
+                    for (final b in c.library.books.where(
+                      (b) => b.id != book?.id,
+                    ))
+                      ListTile(
+                        leading: BookCover(
+                          title: '',
+                          width: 29,
+                          variant: c.coverIndexFor(b),
+                          details: c.detailsFor(b),
+                        ),
+                        title: Text(b.title),
+                        onTap: () => Navigator.pop(context, b.id),
+                      ),
+                    ListTile(
+                      leading: const Icon(CupertinoIcons.plus, size: 18),
+                      title: const Text('새 책 만들기'),
+                      onTap: () => Navigator.pop(context, 'new'),
+                    ),
+                  ],
                 ),
-              ),
-              for (final b in c.library.books.where((b) => b.id != book?.id))
-                ListTile(
-                  leading: BookCover(
-                    title: '',
-                    width: 29,
-                    variant: c.coverIndexFor(b),
-                    details: c.detailsFor(b),
-                  ),
-                  title: Text(b.title),
-                  onTap: () => Navigator.pop(context, b.id),
-                ),
-              ListTile(
-                leading: const Icon(CupertinoIcons.plus, size: 18),
-                title: const Text('새 책 만들기'),
-                onTap: () => Navigator.pop(context, 'new'),
               ),
             ],
           ),
         ),
       ),
     );
+    String? id = await Navigator.of(context).push(route);
+    await route.completed;
     if (id == null || !mounted) return;
     if (id == 'new') {
       final values = await showDialog<(String, String)>(
@@ -1184,13 +1143,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     if (_pageNavigationBusy || !_canLeaveInput()) return;
     _blur();
     final owner = c;
-    final route = ModalBottomSheetRoute<PageChoice>(
-      isScrollControlled: true,
-      showDragHandle: true,
-      backgroundColor: paperColors[_paperStyle(book).paperIndex],
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      constraints: const BoxConstraints(maxWidth: 600),
-      builder: (_) => AnimatedBuilder(
+    final route = paperPanelRoute<PageChoice>(
+      (_) => AnimatedBuilder(
         animation: owner,
         builder: (_, _) {
           final pages = _volumePages;
@@ -1202,11 +1156,13 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               ifAbsent: () => 1,
             );
           }
-          return _insertedPage(
-            PagesSheet(
+          final style = _paperStyle(book);
+          return PaperPanel(
+            color: panelPaperColor(paperColors[style.paperIndex]),
+            child: PagesSheet(
               pages: pages,
               currentId: page.id,
-              style: _paperStyle(book),
+              style: style,
               coverTitle: book?.title,
               coverVariant: _coverVariant,
               canTrash: (page) => (pageCounts[page.recordId] ?? 0) > 1,
@@ -1220,8 +1176,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 return owner.trashPage(target);
               },
             ),
-            forBook: book,
-            pageCount: pages.length,
           );
         },
       ),
@@ -1239,26 +1193,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     } else if (choice.pageId != null) {
       await _openPage(choice.pageId!);
     }
-  }
-
-  Widget _insertedPage(
-    Widget child, {
-    Book? forBook,
-    int pageCount = 0,
-    bool shrinkWrap = false,
-  }) {
-    final style = _paperStyle(forBook);
-    return PaperBackdrop(
-      color: paperColors[style.paperIndex],
-      grainOpacity: paperGrainOpacity[style.paperIndex],
-      binding: forBook == null
-          ? const BookDetailChoice(enabled: false)
-          : style.bookDetails.binding,
-      coverIndex: forBook == null ? null : c.coverIndexFor(forBook),
-      pagesAfter: pageCount,
-      shrinkWrap: shrinkWrap,
-      child: child,
-    );
   }
 
   @override
@@ -1646,117 +1580,106 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     editorFocus.unfocus();
     c.setEditorState(focused: false, isComposing: false);
     final sync = widget.sync!;
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: appPaper,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) => AnimatedBuilder(
-        animation: sync,
-        builder: (context, _) => SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(28, 6, 28, 30),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(CupertinoIcons.cloud, size: 23),
-                    SizedBox(width: 12),
+    Navigator.of(context).push(
+      paperPanelRoute<void>(
+        (_) => AnimatedBuilder(
+          animation: sync,
+          builder: (context, _) => PaperPanel(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(28, 6, 28, 30),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const PaperPanelHeader('다른 기기에서 이어 쓰기'),
+                  const SizedBox(height: 20),
+                  Text(
+                    sync.message,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      height: 1.8,
+                      color: ink,
+                    ),
+                  ),
+                  if (sync.signedIn) ...[
+                    const SizedBox(height: 8),
                     Text(
-                      '다른 기기에서 이어 쓰기',
+                      sync.context.account!.email.isEmpty
+                          ? '같은 ChatGPT 계정의 PC·모바일 책장'
+                          : sync.context.account!.email,
+                      style: const TextStyle(fontSize: 12, color: muted),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  const Text(
+                    '기기에 먼저 저장하고, 연결되면 계정에 보관합니다.\n서로 다르게 고친 문장은 ‘충돌 보관’ 필사로 남깁니다.',
+                    style: TextStyle(fontSize: 12, height: 1.9, color: muted),
+                  ),
+                  if (sync.conflictCopies > 0) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      '겹쳐 수정한 기록 ${sync.conflictCopies}편을 따로 보관했습니다.',
+                      style: const TextStyle(fontSize: 12, color: burgundy),
+                    ),
+                  ],
+                  if (sync.legacyError) ...[
+                    const SizedBox(height: 14),
+                    const Text(
+                      '기존 기기 기록을 읽지 못했습니다. 원본은 그대로 보관하며, 빈 기록으로 덮어쓰지 않습니다.',
                       style: TextStyle(
-                        fontSize: 21,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                        color: burgundy,
+                        height: 1.8,
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  sync.message,
-                  style: const TextStyle(fontSize: 14, height: 1.8, color: ink),
-                ),
-                if (sync.signedIn) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    sync.context.account!.email.isEmpty
-                        ? '같은 ChatGPT 계정의 PC·모바일 책장'
-                        : sync.context.account!.email,
-                    style: const TextStyle(fontSize: 12, color: muted),
-                  ),
-                ],
-                const SizedBox(height: 16),
-                const Text(
-                  '기기에 먼저 저장하고, 연결되면 계정에 보관합니다.\n서로 다르게 고친 문장은 ‘충돌 보관’ 필사로 남깁니다.',
-                  style: TextStyle(fontSize: 12, height: 1.9, color: muted),
-                ),
-                if (sync.conflictCopies > 0) ...[
-                  const SizedBox(height: 14),
-                  Text(
-                    '겹쳐 수정한 기록 ${sync.conflictCopies}편을 따로 보관했습니다.',
-                    style: const TextStyle(fontSize: 12, color: burgundy),
-                  ),
-                ],
-                if (sync.legacyError) ...[
-                  const SizedBox(height: 14),
-                  const Text(
-                    '기존 기기 기록을 읽지 못했습니다. 원본은 그대로 보관하며, 빈 기록으로 덮어쓰지 않습니다.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: burgundy,
-                      height: 1.8,
+                  if (sync.hasLegacy) ...[
+                    const SizedBox(height: 22),
+                    const Divider(color: line),
+                    const SizedBox(height: 8),
+                    Text(
+                      '이 기기의 기존 기록 ${sync.legacyBooks}권 · 필사 ${sync.legacyRecords}편',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
                     ),
-                  ),
-                ],
-                if (sync.hasLegacy) ...[
+                    const SizedBox(height: 7),
+                    const Text(
+                      '계정 책장에 합쳐 가져옵니다. 기존 기기 기록도 그대로 보관합니다.',
+                      style: TextStyle(fontSize: 12, color: muted, height: 1.8),
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: sync.busy ? null : sync.importLegacy,
+                        child: const Text('이 기기 기록 가져오기'),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 22),
-                  const Divider(color: line),
-                  const SizedBox(height: 8),
-                  Text(
-                    '이 기기의 기존 기록 ${sync.legacyBooks}권 · 필사 ${sync.legacyRecords}편',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  const Text(
-                    '계정 책장에 합쳐 가져옵니다. 기존 기기 기록도 그대로 보관합니다.',
-                    style: TextStyle(fontSize: 12, color: muted, height: 1.8),
-                  ),
-                  const SizedBox(height: 14),
                   SizedBox(
                     width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: sync.busy ? null : sync.importLegacy,
-                      child: const Text('이 기기 기록 가져오기'),
+                    child: FilledButton(
+                      onPressed: sync.busy
+                          ? null
+                          : sync.signedIn && sync.phase != 'sign_in_required'
+                          ? sync.syncNow
+                          : sync.context.signIn,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(
+                        sync.busy
+                            ? '동기화 중'
+                            : sync.signedIn && sync.phase != 'sign_in_required'
+                            ? '지금 동기화'
+                            : 'ChatGPT로 로그인',
+                      ),
                     ),
                   ),
                 ],
-                const SizedBox(height: 22),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: sync.busy
-                        ? null
-                        : sync.signedIn && sync.phase != 'sign_in_required'
-                        ? sync.syncNow
-                        : sync.context.signIn,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: Text(
-                      sync.busy
-                          ? '동기화 중'
-                          : sync.signedIn && sync.phase != 'sign_in_required'
-                          ? '지금 동기화'
-                          : 'ChatGPT로 로그인',
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -1769,21 +1692,20 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     _blur();
     final owner = c;
     final targetBook = selectedBook ?? book;
-    await _sheet(
-      _insertedPage(
-        ArchiveSheet(
+    final panel = panelPaperColor(
+      paperColors[_paperStyle(targetBook).paperIndex],
+    );
+    await _openPanel(
+      PaperPanel(
+        color: panel,
+        child: ArchiveSheet(
           controller: owner,
           canAccess: () => mounted && c == owner && !_accountLocked,
           record: selectedBook == null ? record : null,
           book: targetBook,
         ),
-        forBook: targetBook,
-        pageCount: targetBook == null
-            ? 0
-            : c.library.volumePages(bookId: targetBook.id).length,
-        shrinkWrap: true,
       ),
-      enableDrag: false,
+      color: panel,
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../data/library_controller.dart';
 import 'paper.dart';
+import 'paper_panel.dart';
 import 'book_detail_tools.dart';
 import 'book_appearance.dart';
 
@@ -11,14 +12,13 @@ class ToolsScreen extends StatelessWidget {
     super.key,
     required this.controller,
     this.bookId,
-    this.onBack,
     required this.onBind,
     required this.onArchive,
     this.onSync,
   });
   final LibraryController controller;
   final String? bookId;
-  final VoidCallback? onBack, onSync;
+  final VoidCallback? onSync;
   final VoidCallback onBind, onArchive;
 
   @override
@@ -32,240 +32,223 @@ class ToolsScreen extends StatelessWidget {
       final panel = panelPaperColor(
         paperColors[book?.paperIndex ?? style.paperIndex],
       );
-      return SafeArea(
-        top: false,
-        child: PaperBackdrop(
-          color: panel,
-          outsideColor: panel,
-          grainOpacity: panelGrainOpacity,
-          binding: controller.detailsFor(book).binding,
-          coverIndex: book == null ? null : controller.coverIndexFor(book),
-          pagesAfter: book == null
-              ? 0
-              : controller.library.volumePages(bookId: book.id).length,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const PaperSheetHandle(),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        '쓰기 도구',
-                        style: TextStyle(
-                          fontFamily: appFontFamily,
-                          fontFamilyFallback: appFontFallback,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                        ),
+      return PaperPanel(
+        color: panel,
+        child: Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(24, 6, 12, 8),
+              child: PaperPanelHeader('쓰기 도구'),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                children: [
+                  if (book == null) ...[
+                    _row(
+                      '기본 종이',
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (final (i, name) in paperNames.indexed)
+                            _swatch(
+                              label: name,
+                              color: paperColors[i],
+                              sheet: true,
+                              selected: style.paperIndex == i,
+                              onTap: () => controller.setStyle(
+                                style.copy(paperIndex: i),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                    IconButton(
-                      tooltip: '닫기',
-                      onPressed: onBack,
-                      icon: const Icon(CupertinoIcons.xmark, size: 18),
-                    ),
+                    const SizedBox(height: 16),
                   ],
-                ),
-                const SizedBox(height: 18),
-                if (book == null) ...[
                   _row(
-                    '기본 종이',
+                    '잉크',
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        for (final (i, name) in paperNames.indexed)
+                        for (var i = 0; i < 3; i++)
                           _swatch(
-                            label: name,
-                            color: paperColors[i],
-                            sheet: true,
-                            selected: style.paperIndex == i,
+                            label: ['먹빛', '브라운', '블루'][i],
+                            color: penColors[i],
+                            selected: style.penIndex == i,
                             onTap: () =>
-                                controller.setStyle(style.copy(paperIndex: i)),
+                                controller.setStyle(style.copy(penIndex: i)),
                           ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                ],
-                _row(
-                  '잉크',
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      for (var i = 0; i < 3; i++)
-                        _swatch(
-                          label: ['먹빛', '브라운', '블루'][i],
-                          color: penColors[i],
-                          selected: style.penIndex == i,
-                          onTap: () =>
-                              controller.setStyle(style.copy(penIndex: i)),
-                        ),
-                    ],
+                  const SizedBox(height: 20),
+                  const Text(
+                    '글꼴',
+                    style: TextStyle(fontSize: 13, color: muted),
                   ),
-                ),
-                const SizedBox(height: 20),
-                const Text('글꼴', style: TextStyle(fontSize: 13, color: muted)),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    ChoiceChip(
-                      label: const Text(
-                        developmentFontLabel,
-                        style: TextStyle(fontSize: 13),
-                      ),
-                      selected: style.useDevelopmentTypeface,
-                      onSelected: (_) => controller.setStyle(
-                        style.copy(useDevelopmentTypeface: true),
-                      ),
-                      selectedColor: panelSelectedColor(panel),
-                    ),
-                    for (var i = 0; i < 3; i++)
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
                       ChoiceChip(
-                        label: Text(
-                          fontNames[i],
-                          style: TextStyle(
-                            fontFamily: i == 2 ? 'NanumGothic' : serif,
-                            fontSize: 13,
-                          ),
+                        label: const Text(
+                          developmentFontLabel,
+                          style: TextStyle(fontSize: 13),
                         ),
-                        selected:
-                            !style.useDevelopmentTypeface &&
-                            style.fontIndex == i,
+                        selected: style.useDevelopmentTypeface,
                         onSelected: (_) => controller.setStyle(
-                          style.copy(
-                            fontIndex: i,
-                            useDevelopmentTypeface: false,
-                          ),
+                          style.copy(useDevelopmentTypeface: true),
                         ),
                         selectedColor: panelSelectedColor(panel),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                _toggle(
-                  panel,
-                  '줄 가이드',
-                  style.guides,
-                  (value) => controller.setStyle(style.copy(guides: value)),
-                ),
-                const Divider(color: line),
-                ExpansionTile(
-                  key: const ValueKey('writing-sound-effects'),
-                  title: const Text('소리와 효과'),
-                  textColor: brandInk,
-                  iconColor: muted,
-                  collapsedTextColor: ink,
-                  collapsedIconColor: muted,
-                  tilePadding: EdgeInsets.zero,
-                  childrenPadding: const EdgeInsetsDirectional.only(start: 12),
-                  shape: const Border(),
-                  collapsedShape: const Border(),
-                  children: [
-                    _toggle(
-                      panel,
-                      '글씨 쓰는 소리',
-                      style.writingSound,
-                      (value) =>
-                          controller.setStyle(style.copy(writingSound: value)),
-                    ),
-                    _toggle(
-                      panel,
-                      '잉크 반응',
-                      style.penMotion,
-                      (value) =>
-                          controller.setStyle(style.copy(penMotion: value)),
-                    ),
-                    _toggle(
-                      panel,
-                      '종이 넘김 효과',
-                      style.pageMotion,
-                      (value) =>
-                          controller.setStyle(style.copy(pageMotion: value)),
-                    ),
-                    _toggle(
-                      panel,
-                      '종이 넘김 소리',
-                      style.pageSound,
-                      (value) =>
-                          controller.setStyle(style.copy(pageSound: value)),
-                    ),
-                  ],
-                ),
-                const Divider(color: line),
-                Padding(
-                  padding: const EdgeInsets.only(top: 8, bottom: 2),
-                  child: Semantics(
-                    header: true,
-                    child: const Text(
-                      '책과 기록',
-                      style: TextStyle(fontSize: 13, color: muted),
-                    ),
-                  ),
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    book == null ? '책의 디테일' : '책 꾸미기',
-                    style: const TextStyle(
-                      fontFamily: appFontFamily,
-                      fontFamilyFallback: appFontFallback,
-                      fontSize: 17,
-                    ),
-                  ),
-                  subtitle: Text(
-                    book == null ? '책갈피 · 장서표 · 쪽지와 작은 흔적들' : '표지 · 내지 · 책 장식',
-                    style: const TextStyle(color: muted, fontSize: 11),
-                  ),
-                  trailing: const Icon(
-                    CupertinoIcons.chevron_right,
-                    size: 16,
-                    color: muted,
-                  ),
-                  onTap: book != null
-                      ? () => showBookAppearance(context, controller, book.id)
-                      : () => showModalBottomSheet<void>(
-                          context: context,
-                          isScrollControlled: true,
-                          showDragHandle: true,
-                          constraints: const BoxConstraints(maxWidth: 600),
-                          builder: (_) =>
-                              BookDetailTools(controller: controller),
+                      for (var i = 0; i < 3; i++)
+                        ChoiceChip(
+                          label: Text(
+                            fontNames[i],
+                            style: TextStyle(
+                              fontFamily: i == 2 ? 'NanumGothic' : serif,
+                              fontSize: 13,
+                            ),
+                          ),
+                          selected:
+                              !style.useDevelopmentTypeface &&
+                              style.fontIndex == i,
+                          onSelected: (_) => controller.setStyle(
+                            style.copy(
+                              fontIndex: i,
+                              useDevelopmentTypeface: false,
+                            ),
+                          ),
+                          selectedColor: panelSelectedColor(panel),
                         ),
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(CupertinoIcons.book, size: 20),
-                  title: Text(book == null ? '책에 넣기' : '다른 책으로 옮기기'),
-                  onTap: onBind,
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(CupertinoIcons.archivebox, size: 20),
-                  title: const Text('기록 보관'),
-                  onTap: onArchive,
-                ),
-                if (onSync != null)
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _toggle(
+                    panel,
+                    '줄 가이드',
+                    style.guides,
+                    (value) => controller.setStyle(style.copy(guides: value)),
+                  ),
+                  const Divider(color: line),
+                  ExpansionTile(
+                    key: const ValueKey('writing-sound-effects'),
+                    title: const Text('소리와 효과'),
+                    textColor: brandInk,
+                    iconColor: muted,
+                    collapsedTextColor: ink,
+                    collapsedIconColor: muted,
+                    tilePadding: EdgeInsets.zero,
+                    childrenPadding: const EdgeInsetsDirectional.only(
+                      start: 12,
+                    ),
+                    shape: const Border(),
+                    collapsedShape: const Border(),
+                    children: [
+                      _toggle(
+                        panel,
+                        '글씨 쓰는 소리',
+                        style.writingSound,
+                        (value) => controller.setStyle(
+                          style.copy(writingSound: value),
+                        ),
+                      ),
+                      _toggle(
+                        panel,
+                        '잉크 반응',
+                        style.penMotion,
+                        (value) =>
+                            controller.setStyle(style.copy(penMotion: value)),
+                      ),
+                      _toggle(
+                        panel,
+                        '종이 넘김 효과',
+                        style.pageMotion,
+                        (value) =>
+                            controller.setStyle(style.copy(pageMotion: value)),
+                      ),
+                      _toggle(
+                        panel,
+                        '종이 넘김 소리',
+                        style.pageSound,
+                        (value) =>
+                            controller.setStyle(style.copy(pageSound: value)),
+                      ),
+                    ],
+                  ),
+                  const Divider(color: line),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8, bottom: 2),
+                    child: Semantics(
+                      header: true,
+                      child: const Text(
+                        '책과 기록',
+                        style: TextStyle(fontSize: 13, color: muted),
+                      ),
+                    ),
+                  ),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(CupertinoIcons.cloud, size: 20),
-                    title: const Text('기기 동기화'),
-                    onTap: onSync,
+                    title: Text(
+                      book == null ? '책의 디테일' : '책 꾸미기',
+                      style: const TextStyle(
+                        fontFamily: appFontFamily,
+                        fontFamilyFallback: appFontFallback,
+                        fontSize: 17,
+                      ),
+                    ),
+                    subtitle: Text(
+                      book == null
+                          ? '책갈피 · 장서표 · 쪽지와 작은 흔적들'
+                          : '표지 · 내지 · 책 장식',
+                      style: const TextStyle(color: muted, fontSize: 11),
+                    ),
+                    trailing: const Icon(
+                      CupertinoIcons.chevron_right,
+                      size: 16,
+                      color: muted,
+                    ),
+                    onTap: book != null
+                        ? () => showBookAppearance(context, controller, book.id)
+                        : () => Navigator.of(context).push(
+                            paperPanelRoute<void>(
+                              (_) => PaperPanel(
+                                color: panel,
+                                child: BookDetailTools(controller: controller),
+                              ),
+                              color: panel,
+                            ),
+                          ),
                   ),
-                if (controller.saveError != null)
-                  TextButton(
-                    onPressed: controller.retrySave,
-                    child: const Text('설정 저장 실패 · 다시 시도'),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(CupertinoIcons.book, size: 20),
+                    title: Text(book == null ? '책에 넣기' : '다른 책으로 옮기기'),
+                    onTap: onBind,
                   ),
-              ],
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(CupertinoIcons.archivebox, size: 20),
+                    title: const Text('기록 보관'),
+                    onTap: onArchive,
+                  ),
+                  if (onSync != null)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(CupertinoIcons.cloud, size: 20),
+                      title: const Text('기기 동기화'),
+                      onTap: onSync,
+                    ),
+                  if (controller.saveError != null)
+                    TextButton(
+                      onPressed: controller.retrySave,
+                      child: const Text('설정 저장 실패 · 다시 시도'),
+                    ),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       );
     },

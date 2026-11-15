@@ -39,31 +39,6 @@ TextStyle writingTextStyle(
   letterSpacing: useDevelopmentTypeface ? -.40 : .15,
 );
 
-/// Drawn inside the surface so the sheet and its grip share one background.
-class PaperSheetHandle extends StatelessWidget {
-  const PaperSheetHandle({super.key});
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    label: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-    onTap: () => Navigator.maybePop(context),
-    child: SizedBox(
-      height: kMinInteractiveDimension,
-      child: Center(
-        child: Container(
-          width: 32,
-          height: 4,
-          decoration: BoxDecoration(
-            color: ink.withValues(alpha: .86),
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
 /// A continuous interior page behind header, editable text and footer.
 /// The material is static and never participates in hit testing or semantics.
 class PaperBackdrop extends StatelessWidget {
@@ -76,7 +51,6 @@ class PaperBackdrop extends StatelessWidget {
     this.pagesBefore = 0,
     this.pagesAfter = 0,
     this.grainOpacity = .24,
-    this.shrinkWrap = false,
     this.outsideColor = appPaper,
   });
   final Widget child;
@@ -85,14 +59,12 @@ class PaperBackdrop extends StatelessWidget {
   final int? coverIndex;
   final int pagesBefore, pagesAfter;
   final double grainOpacity;
-  final bool shrinkWrap;
 
   @override
   Widget build(BuildContext context) => ColoredBox(
     color: outsideColor,
     child: Align(
       alignment: Alignment.topCenter,
-      heightFactor: shrinkWrap ? 1 : null,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: writingSurfaceMaxWidth),
         child: Stack(

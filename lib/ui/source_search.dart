@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 
 import '../source/wikisource_preview.dart';
 import 'source_browser.dart';
+import 'paper_panel.dart';
 
 enum _Collection {
   works('위키문헌', 'ko.wikisource.org'),
@@ -147,9 +148,11 @@ class _SourceHit {
 Future<SourceSearchChoice?> showSourceSearch(
   BuildContext context,
   Color paperColor,
-) => showDialog<SourceSearchChoice>(
-  context: context,
-  builder: (_) => _SourceSearch(paperColor: paperColor),
+) => Navigator.of(context).push(
+  paperPanelRoute<SourceSearchChoice>(
+    (_) => _SourceSearch(paperColor: paperColor),
+    color: paperColor,
+  ),
 );
 
 class _SourceSearch extends StatefulWidget {
@@ -418,12 +421,10 @@ class _SourceSearchState extends State<_SourceSearch> {
     final selected = _selected;
     final preview = _preview;
     final hasHits = _results.any((entry) => entry.$2?.isNotEmpty ?? false);
-    return Dialog(
-      backgroundColor: widget.paperColor,
-      insetPadding: const EdgeInsets.all(16),
-      child: SizedBox(
-        width: 500,
-        height: 550,
+    return PopScope(
+      canPop: !_pasting,
+      child: PaperPanel(
+        color: widget.paperColor,
         child: Column(
           children: [
             Padding(

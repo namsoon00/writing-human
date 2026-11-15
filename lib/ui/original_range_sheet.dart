@@ -1,3 +1,4 @@
+import 'paper_panel.dart';
 import 'package:flutter/material.dart';
 
 import '../data/model.dart';
@@ -15,15 +16,16 @@ Future<OriginalRangeChoice?> chooseOriginalRange(
   PencilMark? current,
   SourceScan? photo,
   List<OriginalPhotoLine> photoLines = const [],
-}) => showModalBottomSheet<OriginalRangeChoice>(
-  context: context,
-  isScrollControlled: true,
-  showDragHandle: true,
-  builder: (context) => _OriginalRangeSheet(
-    text: text,
-    current: current,
-    photo: photo,
-    photoLines: photoLines,
+}) => Navigator.of(context).push(
+  paperPanelRoute<OriginalRangeChoice>(
+    (_) => PaperPanel(
+      child: _OriginalRangeSheet(
+        text: text,
+        current: current,
+        photo: photo,
+        photoLines: photoLines,
+      ),
+    ),
   ),
 );
 
@@ -171,133 +173,126 @@ class _OriginalRangeSheetState extends State<_OriginalRangeSheet> {
   }
 
   @override
-  Widget build(BuildContext context) => SafeArea(
-    top: false,
-    child: FractionallySizedBox(
-      heightFactor: .78,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('필사 범위', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            if (widget.photo != null)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(
-                  onPressed: () => setState(() {
-                    _showPhoto = !_showPhoto;
-                    _startOnPhoto = null;
-                  }),
-                  child: Text(_showPhoto ? '글로 선택' : '사진으로 선택'),
-                ),
-              ),
-            if (_showPhoto)
-              Text(
-                widget.photoLines.isEmpty
-                    ? '사진을 참고하고 줄 번호로 범위를 고르세요.'
-                    : _startOnPhoto == null
-                    ? '사진에서 시작 줄을 누르세요.'
-                    : '끝 줄을 누르세요. 지금 적용하면 한 줄만 선택됩니다.',
-              )
-            else
-              const Text('시작 줄과 끝 줄을 고르거나, 글에서 원하는 부분을 선택하세요.'),
-            if (_lines.length > 1 &&
-                (!_showPhoto || widget.photoLines.isEmpty)) ...[
-              ValueListenableBuilder(
-                valueListenable: _text,
-                builder: (context, value, _) {
-                  final selection = value.selection;
-                  final first = _lineAt(selection.start);
-                  final last = selection.isCollapsed
-                      ? first
-                      : _lineAt(selection.end - 1);
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      RangeSlider(
-                        key: const ValueKey('original-line-range'),
-                        values: RangeValues(first.toDouble(), last.toDouble()),
-                        max: (_lines.length - 1).toDouble(),
-                        divisions: _lines.length - 1,
-                        semanticFormatterCallback: (value) =>
-                            '${value.round() + 1}번째 줄',
-                        onChanged: _selectLines,
-                      ),
-                      Text('${first + 1}–${last + 1}줄'),
-                    ],
-                  );
-                },
-              ),
-            ],
-            if (_showPhoto)
-              Expanded(child: _photoPreview())
-            else
-              Expanded(
-                child: TextSelectionTheme(
-                  key: _textKey,
-                  data: TextSelectionTheme.of(
-                    context,
-                  ).copyWith(selectionColor: Colors.transparent),
-                  child: TextField(
-                    key: const ValueKey('original-range-text'),
-                    controller: _text,
-                    scrollController: _scroll,
-                    readOnly: true,
-                    expands: true,
-                    minLines: null,
-                    maxLines: null,
-                    textAlignVertical: TextAlignVertical.top,
-                    decoration: const InputDecoration(border: InputBorder.none),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const PaperPanelHeader('필사 범위'),
+        const SizedBox(height: 8),
+        if (widget.photo != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => setState(() {
+                _showPhoto = !_showPhoto;
+                _startOnPhoto = null;
+              }),
+              child: Text(_showPhoto ? '글로 선택' : '사진으로 선택'),
+            ),
+          ),
+        if (_showPhoto)
+          Text(
+            widget.photoLines.isEmpty
+                ? '사진을 참고하고 줄 번호로 범위를 고르세요.'
+                : _startOnPhoto == null
+                ? '사진에서 시작 줄을 누르세요.'
+                : '끝 줄을 누르세요. 지금 적용하면 한 줄만 선택됩니다.',
+          )
+        else
+          const Text('시작 줄과 끝 줄을 고르거나, 글에서 원하는 부분을 선택하세요.'),
+        if (_lines.length > 1 &&
+            (!_showPhoto || widget.photoLines.isEmpty)) ...[
+          ValueListenableBuilder(
+            valueListenable: _text,
+            builder: (context, value, _) {
+              final selection = value.selection;
+              final first = _lineAt(selection.start);
+              final last = selection.isCollapsed
+                  ? first
+                  : _lineAt(selection.end - 1);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  RangeSlider(
+                    key: const ValueKey('original-line-range'),
+                    values: RangeValues(first.toDouble(), last.toDouble()),
+                    max: (_lines.length - 1).toDouble(),
+                    divisions: _lines.length - 1,
+                    semanticFormatterCallback: (value) =>
+                        '${value.round() + 1}번째 줄',
+                    onChanged: _selectLines,
                   ),
-                ),
+                  Text('${first + 1}–${last + 1}줄'),
+                ],
+              );
+            },
+          ),
+        ],
+        if (_showPhoto)
+          Expanded(child: _photoPreview())
+        else
+          Expanded(
+            child: TextSelectionTheme(
+              key: _textKey,
+              data: TextSelectionTheme.of(
+                context,
+              ).copyWith(selectionColor: Colors.transparent),
+              child: TextField(
+                key: const ValueKey('original-range-text'),
+                controller: _text,
+                scrollController: _scroll,
+                readOnly: true,
+                expands: true,
+                minLines: null,
+                maxLines: null,
+                textAlignVertical: TextAlignVertical.top,
+                decoration: const InputDecoration(border: InputBorder.none),
               ),
-            ValueListenableBuilder(
-              valueListenable: _text,
-              builder: (context, value, _) {
-                final selected = value.selection;
-                final range = PencilMark(selected.start, selected.end);
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+            ),
+          ),
+        ValueListenableBuilder(
+          valueListenable: _text,
+          builder: (context, value, _) {
+            final selected = value.selection;
+            final range = PencilMark(selected.start, selected.end);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_showPhoto && validOriginalRange(widget.text, range))
+                  Text(
+                    widget.text.substring(range.start, range.end),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 8,
                   children: [
-                    if (_showPhoto && validOriginalRange(widget.text, range))
-                      Text(
-                        widget.text.substring(range.start, range.end),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    Wrap(
-                      alignment: WrapAlignment.end,
-                      spacing: 8,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, (
-                            range: null as PencilMark?,
-                          )),
-                          child: const Text('전체 페이지'),
-                        ),
-                        FilledButton(
-                          onPressed: validOriginalRange(widget.text, range)
-                              ? () => Navigator.pop(context, (
-                                  range:
-                                      range.start == 0 &&
-                                          range.end == widget.text.length
-                                      ? null
-                                      : range,
-                                ))
-                              : null,
-                          child: const Text('범위 적용'),
-                        ),
-                      ],
+                    TextButton(
+                      onPressed: () =>
+                          Navigator.pop(context, (range: null as PencilMark?)),
+                      child: const Text('전체 페이지'),
+                    ),
+                    FilledButton(
+                      onPressed: validOriginalRange(widget.text, range)
+                          ? () => Navigator.pop(context, (
+                              range:
+                                  range.start == 0 &&
+                                      range.end == widget.text.length
+                                  ? null
+                                  : range,
+                            ))
+                          : null,
+                      child: const Text('범위 적용'),
                     ),
                   ],
-                );
-              },
-            ),
-          ],
+                ),
+              ],
+            );
+          },
         ),
-      ),
+      ],
     ),
   );
 }

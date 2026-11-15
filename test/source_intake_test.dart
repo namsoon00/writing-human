@@ -19,6 +19,7 @@ import 'package:writing_human/ui/collection_sheet.dart';
 import 'package:writing_human/ui/book_details.dart';
 import 'package:writing_human/ui/book_detail_design.dart';
 import 'package:writing_human/ui/paper.dart';
+import 'package:writing_human/ui/paper_panel.dart';
 import 'package:writing_human/ui/reading_details.dart';
 import 'package:writing_human/ui/source_import_sheet.dart';
 import 'package:writing_human/ui/source_reading.dart';
@@ -306,7 +307,7 @@ void main() {
         140,
         scrollable: find
             .descendant(
-              of: find.byType(Dialog),
+              of: find.byKey(const ValueKey('paper-panel-page')),
               matching: find.byType(Scrollable),
             )
             .last,
@@ -521,7 +522,7 @@ void main() {
         230,
         scrollable: find
             .descendant(
-              of: find.byType(Dialog),
+              of: find.byKey(const ValueKey('paper-panel-page')),
               matching: find.byType(Scrollable),
             )
             .last,
@@ -673,7 +674,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('12쪽'), findsOneWidget);
     expect(tester.widget<Text>(readingText).textSpan!.toPlainText(), first);
-    expect(tester.getTopLeft(reading).dy, greaterThan(250));
+    expect(
+      tester.getRect(reading),
+      Offset.zero & (tester.view.physicalSize / tester.view.devicePixelRatio),
+    );
     await tester.tap(find.text('원문 등록'));
     await tester.pumpAndSettle();
     await saveOriginal('정오의 종소리가 들렸다.', '60쪽');
@@ -835,14 +839,16 @@ void main() {
       await open(tester, store, FakeIntake());
       await tester.tap(place);
       await tester.pumpAndSettle();
+      final surface = find.byKey(const ValueKey('source-paper'));
       final paper = tester.widget<PaperBackdrop>(
-        find.byKey(const ValueKey('source-paper')),
+        find.descendant(of: surface, matching: find.byType(PaperBackdrop)),
       );
+      expect(tester.widget<PaperPanel>(surface).color, paper.color);
       final panel = panelPaperColor(paperColors[3]);
       expect(paper.color, panel);
       expect(paper.grainOpacity, panelGrainOpacity);
-      expect(paper.coverIndex, 2);
-      expect(paper.binding.toJson(), style.bookDetails.binding.toJson());
+      expect(paper.coverIndex, isNull);
+      expect(paper.binding.enabled, isFalse);
       final slips = find.descendant(
         of: reading,
         matching: find.byType(SourceSlip),
@@ -1092,13 +1098,17 @@ void main() {
       await tester.pumpAndSettle();
       final rangePhoto = find.byKey(const ValueKey('source-scan-preview'));
       expect(find.bySemanticsLabel('인식한 책 사진'), findsOneWidget);
-      final frame = tester.getRect(rangePhoto);
-      final imageWidth = frame.height * 600 / 800;
-      final rightLine = frame.center.dx + imageWidth * (.73 - .5);
-      await tester.tapAt(Offset(rightLine, frame.top + frame.height * .22));
+      final frame = tester.getRect(
+        find.descendant(of: rangePhoto, matching: find.byType(Image)),
+      );
+      final rightLine = Offset(
+        frame.left + frame.width * .73,
+        frame.top + frame.height * .22,
+      );
+      await tester.tapAt(rightLine);
       await tester.pumpAndSettle();
       expect(find.textContaining('끝 줄을 누르세요.'), findsOneWidget);
-      await tester.tapAt(Offset(rightLine, frame.top + frame.height * .22));
+      await tester.tapAt(rightLine);
       await tester.pumpAndSettle();
       final rangeText = find.byKey(const ValueKey('original-range-text'));
       String highlighted() {

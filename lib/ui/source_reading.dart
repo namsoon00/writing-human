@@ -494,22 +494,18 @@ class _SourceReadingState extends State<SourceReading> {
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
-                  if (!editing && widget.originals.isNotEmpty)
-                    IconButton(
-                      tooltip: searching ? '원문 검색 닫기' : '저장된 원문 검색',
-                      onPressed: saving ? null : () => _toggleSearch(searching),
-                      isSelected: searching,
-                      selectedIcon: const Icon(CupertinoIcons.search, size: 19),
-                      icon: const Icon(CupertinoIcons.search, size: 19),
-                    ),
                   if (widget.onRegister != null && !editing)
                     ConstrainedBox(
                       constraints: BoxConstraints(
-                        maxWidth: MediaQuery.sizeOf(context).width * .34,
+                        maxWidth: MediaQuery.sizeOf(context).width * .42,
                       ),
-                      child: TextButton(
+                      child: TextButton.icon(
                         onPressed: saving ? null : _register,
-                        child: const Text('원문 등록', textAlign: TextAlign.center),
+                        icon: const Icon(CupertinoIcons.plus, size: 16),
+                        label: const Text('원문 등록', textAlign: TextAlign.center),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
                       ),
                     ),
                   IconButton(
@@ -519,7 +515,43 @@ class _SourceReadingState extends State<SourceReading> {
                   ),
                 ],
               ),
-              if (!searching) const Divider(),
+              const Divider(),
+              if (original == null && widget.originals.isNotEmpty)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      TextButton.icon(
+                        onPressed: saving
+                            ? null
+                            : () => _toggleSearch(searching),
+                        icon: Icon(
+                          searching
+                              ? CupertinoIcons.xmark
+                              : CupertinoIcons.search,
+                          size: 16,
+                        ),
+                        label: Text(searching ? '검색 닫기' : '저장된 원문 검색'),
+                      ),
+                      FilterChip(
+                        label: const Text('밑칠한 구절만 보기'),
+                        avatar: markedOnly
+                            ? null
+                            : const Icon(
+                                CupertinoIcons.line_horizontal_3_decrease,
+                                size: 15,
+                              ),
+                        backgroundColor: Colors.transparent,
+                        selectedColor: panelSelectedColor(panel),
+                        selected: markedOnly,
+                        onSelected: (value) =>
+                            setState(() => markedOnly = value),
+                      ),
+                    ],
+                  ),
+                ),
               if (searching)
                 PaperSearchField(
                   fieldKey: const ValueKey('saved-original-search'),
@@ -539,23 +571,6 @@ class _SourceReadingState extends State<SourceReading> {
                       _searchFields(scopedOriginals),
                     ),
                     onSelected: (value) => setState(() => query = value),
-                  ),
-                ),
-              if (original == null && widget.originals.isNotEmpty)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: FilterChip(
-                    label: const Text('밑칠한 구절만 보기'),
-                    avatar: markedOnly
-                        ? null
-                        : const Icon(
-                            CupertinoIcons.line_horizontal_3_decrease,
-                            size: 15,
-                          ),
-                    backgroundColor: Colors.transparent,
-                    selectedColor: panelSelectedColor(panel),
-                    selected: markedOnly,
-                    onSelected: (value) => setState(() => markedOnly = value),
                   ),
                 ),
               if (original == null && widget.originals.isNotEmpty)

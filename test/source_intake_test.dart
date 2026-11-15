@@ -330,7 +330,7 @@ void main() {
     },
   );
 
-  testWidgets('The original header searches saved text and citations locally', (
+  testWidgets('The original list searches saved text and citations locally', (
     tester,
   ) async {
     final store = MemoryStore()
@@ -354,7 +354,14 @@ void main() {
     final writes = store.writes;
     await tester.tap(place);
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('저장된 원문 검색'));
+    final search = find.widgetWithText(TextButton, '저장된 원문 검색');
+    final register = find.widgetWithText(TextButton, '원문 등록');
+    expect(
+      tester.getTopLeft(search).dy,
+      greaterThan(tester.getBottomLeft(register).dy),
+    );
+    expect(find.widgetWithText(FilterChip, '밑칠한 구절만 보기'), findsOneWidget);
+    await tester.tap(search);
     await tester.pumpAndSettle();
 
     final input = find.byKey(const ValueKey('saved-original-search'));
@@ -398,6 +405,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('spring')));
     await tester.pumpAndSettle();
     expect(find.byTooltip('원문 목록'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, '검색 닫기'), findsNothing);
     await tester.tap(find.byTooltip('원문 목록'));
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(input).controller!.text, '봄날의');
@@ -426,9 +434,17 @@ void main() {
     await tester.enterText(input, '없는 원문');
     await tester.pumpAndSettle();
     expect(find.text('일치하는 원문이 없어요.'), findsOneWidget);
-    await tester.tap(find.byTooltip('원문 검색 닫기'));
+    await tester.tap(find.widgetWithText(TextButton, '검색 닫기'));
     await tester.pumpAndSettle();
     expect(find.text('눈 내리는 저녁'), findsOneWidget);
+    tester.view.physicalSize = const Size(320, 640);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.4;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpAndSettle();
+    expect(search.hitTestable(), findsOneWidget);
+    expect(register.hitTestable(), findsOneWidget);
+    expect(find.text('밑칠한 구절만 보기').hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
     expect(store.writes, writes);
   });
 

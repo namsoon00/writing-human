@@ -16,7 +16,10 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       final store = MemoryStore()
         ..data = Library(
-          books: const [Book(id: 'b', title: '문장집', author: '기록자')],
+          books: const [
+            Book(id: 'b', title: '문장집', author: '기록자'),
+            Book(id: 'empty', title: '빈 노트'),
+          ],
           records: const [WritingRecord(id: 'r', bookId: 'b', title: '첫 필사')],
           pages: [
             const WritingPage(id: 'p1', recordId: 'r', number: 1, text: '첫 쪽'),
@@ -59,6 +62,9 @@ void main() {
         matching: find.byType(EditableText),
       );
       expect(tester.widget<EditableText>(input).focusNode.hasFocus, isTrue);
+      tester.testTextInput.enterText('빈');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('search-completions')), findsNothing);
       tester.testTextInput.enterText('마지막에서');
       await tester.pumpAndSettle();
       final completion = find.descendant(

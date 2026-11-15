@@ -29,13 +29,17 @@ class LibraryPassages {
       searchCompletions(query, _searchFields(bookId));
 
   Iterable<String> _searchFields(String? bookId) sync* {
-    for (final book in library.books) {
-      if (bookId != null && book.id != bookId) continue;
-      yield book.title;
-      yield book.author;
-    }
+    final recordIds = {for (final page in library.pages) page.recordId};
+    final seenBooks = <String>{};
     for (final record in library.records.reversed) {
-      if (bookId != null && record.bookId != bookId) continue;
+      if (!recordIds.contains(record.id) ||
+          (bookId != null && record.bookId != bookId)) {
+        continue;
+      }
+      if (_books[record.bookId] case final book? when seenBooks.add(book.id)) {
+        yield book.title;
+        yield book.author;
+      }
       yield record.title;
     }
     for (final page in library.pages.reversed) {

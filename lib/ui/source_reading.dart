@@ -465,6 +465,18 @@ class _SourceReadingState extends State<SourceReading> {
                     isDense: true,
                   ),
                 ),
+              if (searching)
+                Flexible(
+                  child: SearchCompletions(
+                    controller: searchField,
+                    focusNode: searchFocus,
+                    options: (query) => searchCompletions(
+                      query.replaceAll(_previewWhitespace, ' '),
+                      _searchFields(scopedOriginals),
+                    ),
+                    onSelected: (value) => setState(() => query = value),
+                  ),
+                ),
               if (original == null && widget.originals.isNotEmpty)
                 Align(
                   alignment: Alignment.centerLeft,
@@ -507,18 +519,6 @@ class _SourceReadingState extends State<SourceReading> {
                 TextButton(
                   onPressed: widget.onRetry,
                   child: const Text('저장 실패 · 다시 저장'),
-                ),
-              if (searching)
-                Flexible(
-                  child: SearchCompletions(
-                    controller: searchField,
-                    focusNode: searchFocus,
-                    options: (query) => searchCompletions(
-                      query.replaceAll(_previewWhitespace, ' '),
-                      _searchFields(scopedOriginals),
-                    ),
-                    onSelected: (value) => setState(() => query = value),
-                  ),
                 ),
               Expanded(
                 child: original != null

@@ -856,14 +856,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       } else {
         fresh = false;
         userFresh = false;
-        final text = result.text;
-        owner.saveDraft(
-          WritingPage(id: '$id-page', recordId: id, number: 1),
-          source: result.citation.isEmpty ? text : '',
-          originals: [
-            if (result.citation.isNotEmpty)
-              RegisteredOriginal(id, text, citation: result.citation),
-          ],
+        owner.registerOriginals(
+          page: WritingPage(id: '$id-page', recordId: id, number: 1),
+          passages: [result.text],
+          citation: result.citation,
+          deliveryId: id,
         );
       }
       await owner.settled;

@@ -340,12 +340,19 @@ void main() {
             id: 'r',
             title: '기존 필사',
             originals: [
+              RegisteredOriginal('older', '등록 시각이 없는 예전 원문'),
               RegisteredOriginal(
                 'spring',
                 '봄날을 기다려요.\n잔디 사이에 꽃이 피었어요.',
                 citation: '봄날의 편지 · 기록자',
+                registeredAt: 300,
               ),
-              RegisteredOriginal('winter', '눈 내리는 저녁', citation: '겨울 일기'),
+              RegisteredOriginal(
+                'winter',
+                '눈 내리는 저녁',
+                citation: '겨울 일기',
+                registeredAt: 100,
+              ),
             ],
           ),
         ],
@@ -354,13 +361,25 @@ void main() {
     final writes = store.writes;
     await tester.tap(place);
     await tester.pumpAndSettle();
-    final search = find.widgetWithText(TextButton, '저장된 원문 검색');
+    final search = find.widgetWithText(TextButton, '원문 검색');
     final register = find.widgetWithText(TextButton, '원문 등록');
     expect(
       tester.getTopLeft(search).dy,
       greaterThan(tester.getBottomLeft(register).dy),
     );
-    expect(find.widgetWithText(FilterChip, '밑칠한 구절만 보기'), findsOneWidget);
+    final filter = find.widgetWithText(FilterChip, '밑칠만 보기');
+    expect(
+      tester.getCenter(filter).dy,
+      closeTo(tester.getCenter(search).dy, 1),
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('spring'))).dy,
+      lessThan(tester.getTopLeft(find.byKey(const ValueKey('winter'))).dy),
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('winter'))).dy,
+      lessThan(tester.getTopLeft(find.byKey(const ValueKey('older'))).dy),
+    );
     await tester.tap(search);
     await tester.pumpAndSettle();
 
@@ -443,7 +462,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(search.hitTestable(), findsOneWidget);
     expect(register.hitTestable(), findsOneWidget);
-    expect(find.text('밑칠한 구절만 보기').hitTestable(), findsOneWidget);
+    expect(find.text('밑칠만 보기').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
     expect(store.writes, writes);
   });
@@ -1702,7 +1721,8 @@ void main() {
       await tester.tap(confirm);
       await tester.pumpAndSettle();
       expect(store.data.records, hasLength(2));
-      expect(store.data.records.last.source, '공유한 문장입니다.');
+      expect(store.data.records.last.originals.single.text, '공유한 문장입니다.');
+      expect(store.data.records.last.originals.single.registeredAt, isNotNull);
       expect(store.data.activePage!.text, isEmpty);
       expect(store.data.pages.first.text, composing.text);
       expect(intake.acknowledged, ['test-delivery']);
@@ -2137,7 +2157,7 @@ void main() {
     await open(tester, store, FakeIntake());
     await tester.tap(place);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('밑칠한 구절만 보기'));
+    await tester.tap(find.text('밑칠만 보기'));
     await tester.pumpAndSettle();
     expect(find.text('정오의 종소리가 들렸다.'), findsNothing);
     await tester.tap(find.text('책장에 천천히 내려앉았다.'));

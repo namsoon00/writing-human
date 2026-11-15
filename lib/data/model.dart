@@ -34,6 +34,7 @@ class RegisteredOriginal {
     this.id,
     this.text, {
     this.citation = '',
+    this.registeredAt,
     this.reflection,
     this.photoId,
     this.isFullPage = false,
@@ -42,6 +43,7 @@ class RegisteredOriginal {
   });
 
   final String id, text, citation;
+  final int? registeredAt;
   final OriginalReflection? reflection;
   final String? photoId;
   final bool isFullPage;
@@ -54,10 +56,12 @@ class RegisteredOriginal {
     String? photoId,
     bool? isFullPage,
     List<OriginalPhotoLine>? photoLines,
+    int? registeredAt,
   }) => RegisteredOriginal(
     id,
     text,
     citation: citation,
+    registeredAt: registeredAt ?? this.registeredAt,
     reflection: reflection,
     photoId: photoId ?? this.photoId,
     isFullPage: isFullPage ?? this.isFullPage,
@@ -82,6 +86,7 @@ class RegisteredOriginal {
       newId ?? id,
       text,
       citation: citation,
+      registeredAt: registeredAt,
       reflection: note == null || mark == null || change == null
           ? note
           : OriginalReflection(note.text, mark: change.unchangedRange(mark)),
@@ -111,6 +116,7 @@ class RegisteredOriginal {
     'id': id,
     'text': text,
     'citation': citation,
+    if (registeredAt != null) 'registeredAt': registeredAt,
     if (reflection != null) 'reflection': reflection!.toJson(),
     if (photoId != null) 'photoId': photoId,
     if (isFullPage) 'isFullPage': true,
@@ -123,6 +129,7 @@ class RegisteredOriginal {
     j['id'] as String,
     j['text'] as String,
     citation: j['citation'] as String,
+    registeredAt: j['registeredAt'] as int?,
     reflection: j['reflection'] == null
         ? null
         : OriginalReflection.fromJson(j['reflection'] as Json),
@@ -151,6 +158,7 @@ class RegisteredOriginal {
             value.text.trim().isNotEmpty &&
             value.text.length <= 50000 &&
             value.citation.length <= 500 &&
+            (value.registeredAt == null || value.registeredAt! > 0) &&
             (value.photoId == null || _photoId.hasMatch(value.photoId!)) &&
             (value.writingRange == null ||
                 (value.isFullPage &&

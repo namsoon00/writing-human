@@ -38,6 +38,7 @@ const originals = values => Array.isArray(values) &&
   new Set(values.map(value => value?.id)).size === values.length &&
   values.every(value => object(value) && id(value.id) && text(value.text, 50000) &&
     value.text.trim().length > 0 && text(value.citation, 500) &&
+    (!('registeredAt' in value) || (Number.isSafeInteger(value.registeredAt) && value.registeredAt > 0)) &&
     (!('photoId' in value) || photoId(value.photoId)) &&
     (!('isFullPage' in value) || typeof value.isFullPage === 'boolean') &&
     (!('writingRange' in value) ||

@@ -243,7 +243,7 @@ void main() {
   test(
     'An original reflection survives sync and retains concurrent changes',
     () {
-      const source = RegisteredOriginal('o', '햇빛이 내려앉았다.');
+      const source = RegisteredOriginal('o', '햇빛이 내려앉았다.', registeredAt: 300);
       const base = Library(
         books: [
           Book(id: 'b', title: '책', originals: [source]),
@@ -266,6 +266,7 @@ void main() {
           library.books.single.originals.single.reflection;
       expect(note(mergeLibraries(base, base, remote).library)!.text, '다른 메모.');
       final merged = mergeLibraries(base, local, remote).library;
+      expect(merged.books.single.originals.single.registeredAt, 300);
       expect(note(merged)!.text.split('\n\n').toSet(), {'첫 메모.', '다른 메모.'});
       expect(
         note(mergeLibraries(base, remote, local).library)!.text,

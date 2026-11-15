@@ -68,6 +68,8 @@ List<RegisteredOriginal> _mergeOriginals(
       _ => entry.writingRange,
     };
     merged[entry.id] = entry.withDetails(
+      registeredAt:
+          previous?.registeredAt ?? entry.registeredAt ?? incoming.registeredAt,
       reflection: reflection,
       photoId: incoming.photoId ?? entry.photoId,
       isFullPage: entry.isFullPage || incoming.isFullPage,

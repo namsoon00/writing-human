@@ -237,12 +237,14 @@ class LibraryController extends ChangeNotifier {
     PencilMark? writingRange,
     List<OriginalPhotoLine> photoLines = const [],
   }) {
+    final registeredAt = DateTime.now().millisecondsSinceEpoch;
     final originals = [
       for (final (index, text) in passages.indexed)
         RegisteredOriginal(
           index == 0 ? deliveryId ?? _id() : _id(),
           text,
           citation: citation,
+          registeredAt: registeredAt,
           photoId: photoId,
           isFullPage: isFullPage,
           writingRange: writingRange,

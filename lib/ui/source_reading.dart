@@ -442,11 +442,22 @@ class _SourceReadingState extends State<SourceReading> {
     final scopedOriginals = markedOnly
         ? widget.originals.where(_isMarked)
         : widget.originals;
-    final visibleOriginals = scopedOriginals.where((item) {
-      return pattern == null ||
-          pattern.hasMatch(item.citation) ||
-          pattern.hasMatch(item.text);
-    }).toList();
+    final visibleOriginals =
+        scopedOriginals
+            .where(
+              (item) =>
+                  pattern == null ||
+                  pattern.hasMatch(item.citation) ||
+                  pattern.hasMatch(item.text),
+            )
+            .indexed
+            .toList()
+          ..sort((a, b) {
+            final byDate = (b.$2.registeredAt ?? 0).compareTo(
+              a.$2.registeredAt ?? 0,
+            );
+            return byDate == 0 ? b.$1.compareTo(a.$1) : byDate;
+          });
     final writing = widget.writingLocations[original?.id]?.passage;
     final mark = editing ? draftMark : reflection?.mark;
     final note = original == null || original.text.trim().isEmpty
@@ -533,10 +544,10 @@ class _SourceReadingState extends State<SourceReading> {
                               : CupertinoIcons.search,
                           size: 16,
                         ),
-                        label: Text(searching ? '검색 닫기' : '저장된 원문 검색'),
+                        label: Text(searching ? '검색 닫기' : '원문 검색'),
                       ),
                       FilterChip(
-                        label: const Text('밑칠한 구절만 보기'),
+                        label: const Text('밑칠만 보기'),
                         avatar: markedOnly
                             ? null
                             : const Icon(
@@ -666,7 +677,7 @@ class _SourceReadingState extends State<SourceReading> {
                     : SingleChildScrollView(
                         child: Column(
                           children: [
-                            for (final (index, item)
+                            for (final (index, (_, item))
                                 in visibleOriginals.indexed) ...[
                               if (index > 0)
                                 details.recordDivider.enabled

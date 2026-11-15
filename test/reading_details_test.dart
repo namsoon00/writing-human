@@ -406,10 +406,8 @@ void main() {
       expect(find.byType(PressedFlower), findsOneWidget);
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
-      final customize = find.widgetWithText(TextButton, '책 꾸미기');
-      expect(tester.getSize(customize).height, greaterThanOrEqualTo(48));
-      await tester.tap(customize);
-      await tester.pumpAndSettle();
+      expect(find.text('책 꾸미기'), findsNothing);
+      await choose('책 꾸미기');
       await tester.tap(find.text('표지·내지'));
       await tester.pumpAndSettle();
       final cover = find.widgetWithText(ChoiceChip, '푸른 리넨');

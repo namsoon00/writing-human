@@ -27,6 +27,13 @@ class TranscriptionComparison {
     return _differences;
   }
 
+  int sourceOffsetFor(String written) {
+    _compare(written);
+    return _source
+        .take(_progress)
+        .fold(0, (offset, character) => offset + character.length);
+  }
+
   String remainderFor(String written, {int composingLength = 0}) {
     _compare(written);
     return _source.skip(_progress + composingLength).join();

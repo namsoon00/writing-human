@@ -152,6 +152,44 @@ class _PageEditorState extends State<PageEditor> {
     }
   }
 
+  double? _centeredLine;
+  bool _centerQueued = false;
+
+  void _followWritingLine() {
+    if (_centerQueued || widget.guidedOriginal == null) return;
+    _centerQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _centerQueued = false;
+      if (!mounted || !scroll.hasClients) return;
+      final anchor = scroll.writingCenter;
+      final position = scroll.position;
+      if (anchor == null || !focus.hasFocus) {
+        _centeredLine = null;
+        final bounded = scroll.offset.clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        );
+        if (bounded != scroll.offset) scroll.jumpTo(bounded);
+        return;
+      }
+      final selection = text.selection;
+      if (_composing || !selection.isValid || !selection.isCollapsed) return;
+      final editable = findEditable(
+        fieldRenderKey.currentContext?.findRenderObject(),
+      );
+      if (editable == null || !editable.hasSize) return;
+      final caret = editable.getLocalRectForCaret(selection.extent);
+      final line = scroll.offset + caret.center.dy;
+      if (_centeredLine != null && (line - _centeredLine!).abs() < 1) return;
+      _centeredLine = line;
+      final target = (line - anchor).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      );
+      if ((target - scroll.offset).abs() >= 1) scroll.jumpTo(target);
+    });
+  }
+
   void _focusChanged() {
     _emitEditingState();
     if (mounted) {
@@ -174,6 +212,9 @@ class _PageEditorState extends State<PageEditor> {
       findEditable(
         fieldRenderKey.currentContext?.findRenderObject(),
       )?.markNeedsLayout();
+    }
+    if (previous.text != next.text || previous.composing != next.composing) {
+      _followWritingLine();
     }
     _save();
     final sound = _sound;
@@ -356,6 +397,25 @@ class _PageEditorState extends State<PageEditor> {
         );
         final source = widget.guidedOriginal;
         final hasChosenGuide = source != null;
+        final paperHeight = math.max(0.0, constraints.maxHeight - overlap);
+        final scaler = MediaQuery.textScalerOf(context);
+        final referenceHeight = scaler.scale(16) * 4 + 12;
+        final referenceGap = math.max(
+          34.0,
+          scaler.scale(23) * 1.8 + visiblePadding.bottom + 4,
+        );
+        final showReference =
+            hasChosenGuide &&
+            focus.hasFocus &&
+            paperHeight / 2 >= referenceHeight + referenceGap;
+        final writingCenter = showReference
+            ? paperHeight / 2 - visiblePadding.top
+            : null;
+        if (scroll.writingCenter != writingCenter) {
+          scroll.writingCenter = writingCenter;
+          _centeredLine = null;
+          _followWritingLine();
+        }
         final guide = source == null
             ? null
             : TranscriptionGuidePainter(
@@ -366,6 +426,7 @@ class _PageEditorState extends State<PageEditor> {
                 fieldKey: fieldRenderKey,
                 bottomPadding: visiblePadding.bottom,
                 layout: _guideLayout,
+                showInline: !showReference,
                 style: writingTextStyle(
                   style.fontIndex,
                   color: const Color(0xff8b8273).withValues(alpha: .58),
@@ -373,175 +434,203 @@ class _PageEditorState extends State<PageEditor> {
                 ),
               );
         scroll.guide = guide;
+        final writing = Stack(
+          fit: hasChosenGuide ? StackFit.expand : StackFit.loose,
+          children: [
+            if (style.guides)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: ExcludeSemantics(
+                    child: AnimatedBuilder(
+                      animation: scroll,
+                      builder: (context, _) => CustomPaint(
+                        painter: WritingGuides(
+                          enabled: style.guides,
+                          top: padding.top,
+                          left: padding.left,
+                          right: padding.right,
+                          lineHeight:
+                              MediaQuery.textScalerOf(context).scale(23) * 1.8,
+                          scroll: scroll.hasClients ? scroll.offset : 0,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            RepaintBoundary(
+              key: fieldRenderKey,
+              child: Padding(
+                padding: hasChosenGuide ? visiblePadding : writingMargins,
+                child: Semantics(
+                  identifier: 'writing-page-body',
+                  child: TextSelectionTheme(
+                    data: TextSelectionThemeData(
+                      selectionColor: const Color(
+                        0xffaa833c,
+                      ).withValues(alpha: .25),
+                      selectionHandleColor: penColors[style.penIndex],
+                    ),
+                    child: InkReveal(
+                      controller: text,
+                      focus: focus,
+                      enabled: style.penMotion,
+                      child: TextField(
+                        key: const ValueKey('page-text'),
+                        controller: text,
+                        scrollController: scroll,
+                        focusNode: focus,
+                        // Keep native input/selection, with a separate ink indicator.
+                        showCursor: false,
+                        maxLines: null,
+                        minLines: null,
+                        expands: true,
+                        textAlignVertical: TextAlignVertical.top,
+                        keyboardType: TextInputType.multiline,
+                        textInputAction: TextInputAction.newline,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        contextMenuBuilder: _selectionMenu,
+                        style: writingTextStyle(
+                          style.fontIndex,
+                          size: 23,
+                          color: penColors[style.penIndex],
+                          useDevelopmentTypeface: style.useDevelopmentTypeface,
+                        ),
+                        cursorColor: brandInk,
+                        cursorWidth: 1.2,
+                        // Keep the native scroll viewport the height of the
+                        // paper, including when the editable has no text.
+                        decoration: hasChosenGuide
+                            ? null
+                            : InputDecoration(
+                                contentPadding: EdgeInsets.only(
+                                  top: visiblePadding.top,
+                                  bottom: visiblePadding.bottom,
+                                ),
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                filled: false,
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned.fill(
+              left: writingMargins.left,
+              right: writingMargins.right,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                excludeFromSemantics: true,
+                supportedDevices: const {PointerDeviceKind.touch},
+                onTapUp: preciseSelection || focus.hasFocus
+                    ? _placeCaret
+                    : null,
+              ),
+            ),
+            if (widget.onHighlight case final highlight?)
+              Positioned.fill(
+                key: const ValueKey('paper-highlighter'),
+                left: writingMargins.left,
+                right: writingMargins.right,
+                child: PaperHighlighter(
+                  controller: text,
+                  scroll: scroll,
+                  editable: () => _editable,
+                  choice: style.bookDetails.pencil,
+                  onStroke: (range) =>
+                      highlight(widget.page.id, range.start, range.end),
+                ),
+              ),
+            Positioned(
+              top: 0,
+              bottom: 0,
+              left: 0,
+              width: padding.left,
+              child: _dismissGutter(),
+            ),
+            Positioned(
+              top: 0,
+              bottom: 0,
+              right: 0,
+              width: padding.right,
+              child: _dismissGutter(),
+            ),
+            if (guide != null)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    key: const ValueKey('transcription-guide'),
+                    painter: guide,
+                  ),
+                ),
+              ),
+            if (_comparison case final comparison?)
+              Positioned.fill(
+                child: TranscriptionMarks(
+                  comparison: comparison,
+                  controller: text,
+                  scroll: scroll,
+                  fieldKey: fieldRenderKey,
+                ),
+              ),
+            if (widget.originals.any((item) => item.reflection != null))
+              Positioned.fill(
+                child: NotebookReflection(
+                  originals: widget.originals,
+                  guided: widget.guidedOriginal,
+                  controller: text,
+                  scroll: scroll,
+                  fieldKey: fieldRenderKey,
+                  padding: visiblePadding,
+                ),
+              ),
+            Positioned.fill(
+              child: WritingPen(
+                controller: text,
+                scroll: scroll,
+                focus: focus,
+                fieldKey: fieldRenderKey,
+                color: penColors[style.penIndex],
+              ),
+            ),
+          ],
+        );
         return Padding(
           padding: EdgeInsets.only(
             bottom: math.min(overlap, constraints.maxHeight),
           ),
-          child: Stack(
-            fit: hasChosenGuide ? StackFit.expand : StackFit.loose,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (style.guides)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: ExcludeSemantics(
-                      child: AnimatedBuilder(
-                        animation: scroll,
-                        builder: (context, _) => CustomPaint(
-                          painter: WritingGuides(
-                            enabled: style.guides,
-                            top: padding.top,
-                            left: padding.left,
-                            right: padding.right,
-                            lineHeight:
-                                MediaQuery.textScalerOf(context).scale(23) *
-                                1.8,
-                            scroll: scroll.hasClients ? scroll.offset : 0,
-                          ),
-                        ),
-                      ),
+              Expanded(child: writing),
+              if (showReference && guide != null)
+                Padding(
+                  padding: EdgeInsets.only(
+                    left: padding.left,
+                    right: padding.right,
+                    bottom: math.max(
+                      0.0,
+                      paperHeight / 2 - referenceHeight - referenceGap,
+                    ),
+                  ),
+                  child: SizedBox(
+                    height: referenceHeight,
+                    child: TranscriptionReference(
+                      key: const ValueKey('transcription-reference'),
+                      guide: guide,
+                      style: writingTextStyle(
+                        style.fontIndex,
+                        size: 16,
+                        color: ink,
+                        useDevelopmentTypeface: style.useDevelopmentTypeface,
+                      ).copyWith(height: 1.35),
                     ),
                   ),
                 ),
-              RepaintBoundary(
-                key: fieldRenderKey,
-                child: Padding(
-                  padding: hasChosenGuide ? visiblePadding : writingMargins,
-                  child: Semantics(
-                    identifier: 'writing-page-body',
-                    child: TextSelectionTheme(
-                      data: TextSelectionThemeData(
-                        selectionColor: const Color(
-                          0xffaa833c,
-                        ).withValues(alpha: .25),
-                        selectionHandleColor: penColors[style.penIndex],
-                      ),
-                      child: InkReveal(
-                        controller: text,
-                        focus: focus,
-                        enabled: style.penMotion,
-                        child: TextField(
-                          key: const ValueKey('page-text'),
-                          controller: text,
-                          scrollController: scroll,
-                          focusNode: focus,
-                          // Keep native input/selection, with a separate ink indicator.
-                          showCursor: false,
-                          maxLines: null,
-                          minLines: null,
-                          expands: true,
-                          textAlignVertical: TextAlignVertical.top,
-                          keyboardType: TextInputType.multiline,
-                          textInputAction: TextInputAction.newline,
-                          autocorrect: false,
-                          enableSuggestions: false,
-                          contextMenuBuilder: _selectionMenu,
-                          style: writingTextStyle(
-                            style.fontIndex,
-                            size: 23,
-                            color: penColors[style.penIndex],
-                            useDevelopmentTypeface:
-                                style.useDevelopmentTypeface,
-                          ),
-                          cursorColor: brandInk,
-                          cursorWidth: 1.2,
-                          // Keep the native scroll viewport the height of the
-                          // paper, including when the editable has no text.
-                          decoration: hasChosenGuide
-                              ? null
-                              : InputDecoration(
-                                  contentPadding: EdgeInsets.only(
-                                    top: visiblePadding.top,
-                                    bottom: visiblePadding.bottom,
-                                  ),
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  filled: false,
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned.fill(
-                left: writingMargins.left,
-                right: writingMargins.right,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  excludeFromSemantics: true,
-                  supportedDevices: const {PointerDeviceKind.touch},
-                  onTapUp: preciseSelection || focus.hasFocus
-                      ? _placeCaret
-                      : null,
-                ),
-              ),
-              if (widget.onHighlight case final highlight?)
-                Positioned.fill(
-                  key: const ValueKey('paper-highlighter'),
-                  left: writingMargins.left,
-                  right: writingMargins.right,
-                  child: PaperHighlighter(
-                    controller: text,
-                    scroll: scroll,
-                    editable: () => _editable,
-                    choice: style.bookDetails.pencil,
-                    onStroke: (range) =>
-                        highlight(widget.page.id, range.start, range.end),
-                  ),
-                ),
-              Positioned(
-                top: 0,
-                bottom: 0,
-                left: 0,
-                width: padding.left,
-                child: _dismissGutter(),
-              ),
-              Positioned(
-                top: 0,
-                bottom: 0,
-                right: 0,
-                width: padding.right,
-                child: _dismissGutter(),
-              ),
-              if (guide != null)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: CustomPaint(
-                      key: const ValueKey('transcription-guide'),
-                      painter: guide,
-                    ),
-                  ),
-                ),
-              if (_comparison case final comparison?)
-                Positioned.fill(
-                  child: TranscriptionMarks(
-                    comparison: comparison,
-                    controller: text,
-                    scroll: scroll,
-                    fieldKey: fieldRenderKey,
-                  ),
-                ),
-              if (widget.originals.any((item) => item.reflection != null))
-                Positioned.fill(
-                  child: NotebookReflection(
-                    originals: widget.originals,
-                    guided: widget.guidedOriginal,
-                    controller: text,
-                    scroll: scroll,
-                    fieldKey: fieldRenderKey,
-                    padding: visiblePadding,
-                  ),
-                ),
-              Positioned.fill(
-                child: WritingPen(
-                  controller: text,
-                  scroll: scroll,
-                  focus: focus,
-                  fieldKey: fieldRenderKey,
-                  color: penColors[style.penIndex],
-                ),
-              ),
             ],
           ),
         );

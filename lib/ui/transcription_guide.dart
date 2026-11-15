@@ -7,6 +7,7 @@ import '../data/model.dart';
 import '../source/originals.dart';
 import '../source/transcription_comparison.dart';
 import 'editable_geometry.dart';
+import 'paper.dart';
 
 /// Draws the next glyphs after the real field's end, in its own paint layer.
 /// The editable's text length, hit testing, selection and IME remain native.
@@ -20,6 +21,7 @@ class TranscriptionGuidePainter extends CustomPainter {
     required this.style,
     required this.bottomPadding,
     required this.layout,
+    this.showInline = true,
   }) : super(repaint: Listenable.merge([controller, scroll]));
 
   final RegisteredOriginal guided;
@@ -30,6 +32,7 @@ class TranscriptionGuidePainter extends CustomPainter {
   final TextStyle style;
   final double bottomPadding;
   final TextPainter layout;
+  final bool showInline;
 
   TextEditingValue? _lastValue;
   String _lastRemainder = '';
@@ -62,6 +65,21 @@ class TranscriptionGuidePainter extends CustomPainter {
               .characters
               .skip(skipped)
               .toString();
+  }
+
+  double centerScrollExtent(double pixels, double anchor) {
+    final editable = findEditable(fieldKey.currentContext?.findRenderObject());
+    if (editable == null || !editable.hasSize) return 0;
+    final lineEnd = editable
+        .getEndpointsForSelection(
+          TextSelection.collapsed(offset: controller.text.length),
+        )
+        .single
+        .point
+        .dy;
+    // Use the local line endpoint during layout. The snapped caret rect
+    // depends on ancestor transforms that may still be laid out.
+    return pixels + lineEnd - editable.preferredLineHeight / 2 - anchor + 2;
   }
 
   double scrollExtent(double pixels) {
@@ -114,6 +132,7 @@ class TranscriptionGuidePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (!showInline) return;
     final field = fieldKey.currentContext?.findRenderObject();
     final editable = findEditable(field);
     if (field == null || editable == null || !editable.hasSize) return;
@@ -138,7 +157,86 @@ class TranscriptionGuidePainter extends CustomPainter {
       controller != oldDelegate.controller ||
       scroll != oldDelegate.scroll ||
       fieldKey != oldDelegate.fieldKey ||
-      bottomPadding != oldDelegate.bottomPadding;
+      bottomPadding != oldDelegate.bottomPadding ||
+      showInline != oldDelegate.showInline;
+}
+
+/// Shows the current source line and a little of what follows.
+class TranscriptionReference extends StatelessWidget {
+  const TranscriptionReference({
+    super.key,
+    required this.guide,
+    required this.style,
+  });
+  final TranscriptionGuidePainter guide;
+  final TextStyle style;
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) => ValueListenableBuilder<TextEditingValue>(
+    valueListenable: guide.controller,
+    builder: (context, value, _) {
+      final source = guide.guided;
+      final passage = source.text
+          .substring(source.writingRange?.start ?? 0, source.writingRange?.end)
+          .trimLeft();
+      if (passage.isEmpty) return const SizedBox.shrink();
+      final caret = value.selection.extentOffset.clamp(0, value.text.length);
+      final committed =
+          value.isComposingRangeValid && !value.composing.isCollapsed
+          ? math.min(caret, value.composing.start)
+          : caret;
+      final offset = guide.comparison.sourceOffsetFor(
+        value.text.substring(0, committed),
+      );
+      final start = offset == 0 ? 0 : passage.lastIndexOf('\n', offset - 1) + 1;
+      final nextLine = passage.indexOf('\n', offset);
+      final end = nextLine < 0 ? passage.length : nextLine;
+
+      final read = passage.substring(start, offset).characters;
+      return DecoratedBox(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: line)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: Semantics(
+            label: '따라 쓰는 원문',
+            child: Text.rich(
+              TextSpan(
+                style: style,
+                children: [
+                  TextSpan(
+                    text: read.skip(math.max(0, read.length - 14)).toString(),
+                    style: const TextStyle(color: muted),
+                  ),
+                  TextSpan(
+                    text: passage
+                        .substring(offset, end)
+                        .characters
+                        .take(180)
+                        .toString(),
+                  ),
+                  if (nextLine >= 0)
+                    TextSpan(
+                      text: passage
+                          .substring(nextLine)
+                          .characters
+                          .take(140)
+                          .toString(),
+                      style: const TextStyle(color: muted),
+                    ),
+                ],
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }
 
 /// Adds the painted guide to the native editable's scrollable range.
@@ -146,6 +244,7 @@ class TranscriptionScrollController extends ScrollController {
   TranscriptionScrollController({required super.initialScrollOffset});
 
   TranscriptionGuidePainter? guide;
+  double? writingCenter;
 
   @override
   ScrollPosition createScrollPosition(
@@ -176,10 +275,17 @@ class _TranscriptionScrollPosition extends ScrollPositionWithSingleContext {
 
   @override
   bool applyContentDimensions(double minScrollExtent, double maxScrollExtent) {
-    final guideExtent = controller.guide?.scrollExtent(pixels) ?? 0;
+    final guide = controller.guide;
+    final center = controller.writingCenter;
+    if (center != null && guide != null) {
+      return super.applyContentDimensions(
+        math.min(minScrollExtent, -center),
+        math.max(maxScrollExtent, guide.centerScrollExtent(pixels, center)),
+      );
+    }
     return super.applyContentDimensions(
       minScrollExtent,
-      math.max(maxScrollExtent, guideExtent),
+      math.max(maxScrollExtent, guide?.scrollExtent(pixels) ?? 0),
     );
   }
 }

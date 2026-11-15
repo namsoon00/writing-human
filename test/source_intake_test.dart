@@ -1864,7 +1864,10 @@ void main() {
       expect(field.controller!.text, isEmpty);
       expect(field.focusNode!.hasFocus, isTrue);
       expect(painter.remainderFor(field.controller!.value), original);
-      expect(painter.layout.computeLineMetrics().length, greaterThan(1));
+      expect(
+        find.byKey(const ValueKey('transcription-reference')),
+        findsOneWidget,
+      );
       expect(store.data.pages.single.text, isEmpty);
       await tester.enterText(bodyField, '한 문쟝을');
       await tester.pumpAndSettle();
@@ -2006,6 +2009,88 @@ void main() {
       expect(store.data.activePage!.text, '한 문장을 계속');
     },
   );
+
+  testWidgets('Guided writing follows the line above the source reference', (
+    tester,
+  ) async {
+    const first = '첫 줄을 옮겨 적는다.';
+    const second = '두 번째 줄을 따라 쓴다.';
+    const third = '다음 줄을 읽는다.';
+    final store = MemoryStore()
+      ..data = const Library(
+        records: [
+          WritingRecord(
+            id: 'r',
+            title: '필사',
+            originals: [RegisteredOriginal('o', '$first\n$second\n$third')],
+          ),
+        ],
+        pages: [
+          WritingPage(id: 'p', recordId: 'r', number: 1, guidedOriginalId: 'o'),
+        ],
+        activePageId: 'p',
+        writing: true,
+      );
+    await open(tester, store, FakeIntake());
+    final reference = find.byKey(const ValueKey('transcription-reference'));
+    expect(reference, findsNothing);
+    const keyboard = 290.0;
+    tester.view.viewInsets = const FakeViewPadding(bottom: keyboard);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.showKeyboard(bodyField);
+    await tester.pumpAndSettle();
+    expect(reference, findsOneWidget);
+    final editable = tester
+        .state<EditableTextState>(
+          find.descendant(of: bodyField, matching: find.byType(EditableText)),
+        )
+        .renderEditable;
+    final field = tester.widget<TextField>(bodyField);
+    final rect = tester.getRect(find.byKey(const ValueKey('writing-surface')));
+    final middle = rect.top + (rect.height - keyboard) / 2;
+    double caretY() => editable
+        .localToGlobal(
+          editable
+              .getLocalRectForCaret(field.controller!.selection.extent)
+              .center,
+        )
+        .dy;
+    expect(caretY(), closeTo(middle, 5));
+    expect(tester.getTopLeft(reference).dy, greaterThan(caretY()));
+    expect(
+      find.descendant(of: reference, matching: find.textContaining(second)),
+      findsOneWidget,
+    );
+
+    await tester.enterText(bodyField, '$first\n');
+    await tester.pumpAndSettle();
+    expect(caretY(), closeTo(middle, 5));
+    expect(
+      find.descendant(of: reference, matching: find.textContaining(third)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: reference, matching: find.textContaining(first)),
+      findsNothing,
+    );
+    const draft = '$first\n두';
+    final composing = TextEditingValue(
+      text: draft,
+      selection: TextSelection.collapsed(offset: draft.length),
+      composing: TextRange(start: draft.length - 1, end: draft.length),
+    );
+    final offset = field.scrollController!.offset;
+    tester.testTextInput.updateEditingValue(composing);
+    await tester.pumpAndSettle();
+    expect(field.controller!.value, composing);
+    expect(field.scrollController!.offset, offset);
+    tester.testTextInput.updateEditingValue(
+      composing.copyWith(composing: TextRange.empty),
+    );
+    await tester.pumpAndSettle();
+    expect(store.data.activePage!.text, draft);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('A long chosen original scrolls beyond the written text', (
     tester,

@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../data/book_detail_style.dart';
 import 'book_detail_design.dart';
-import 'ink_mark.dart';
 import 'reading_details.dart';
 import 'paper_palette.dart';
 
@@ -596,8 +595,6 @@ class Bookplate extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (choice.enabled) ...[
-                InkMark(size: 20, color: color),
-                const SizedBox(height: 10),
                 Text(
                   '나의 장서표',
                   style: TextStyle(
@@ -663,6 +660,15 @@ class Bookplate extends StatelessWidget {
                   ),
                 ),
               ),
+              if (choice.enabled)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Image.asset(
+                    'assets/images/bookplate-stamp.png',
+                    height: 48,
+                    excludeFromSemantics: true,
+                  ),
+                ),
               if (flower.enabled)
                 Padding(
                   padding: const EdgeInsets.only(top: 6),

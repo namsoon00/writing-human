@@ -1479,3 +1479,9 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   테두리가 표시되는 것을 육안 확인했다. Android Debug APK를 패키징해
   적응형 XML과 밀도별 아이콘을 확인했다. iOS·Android 실기기 및 Android
   홈 화면에서의 표시 여부는 검증하지 않았다.
+
+## 장서표 하단의 도장
+
+- 격리 체크아웃에서 Dart 포맷 검사와 Flutter 정적 분석을 통과했다. 합성
+  장서표에서 압화 위치가 오른쪽·왼쪽·가운데일 때 각각 도장이 소유자 이름
+  아래 왼쪽에 있고 압화와 겹치지 않는 것을 위젯 검사로 확인했다.

@@ -661,44 +661,12 @@ class Bookplate extends StatelessWidget {
                   ),
                 ),
               ),
-              if (choice.enabled)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: ExcludeSemantics(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        border: Border.fromBorderSide(
-                          BorderSide(color: _bookplateStampInk, width: 1.6),
-                        ),
-                        borderRadius: BorderRadius.all(Radius.circular(2)),
-                      ),
-                      child: SizedBox(
-                        width: 45,
-                        height: 48,
-                        child: Center(
-                          child: Text(
-                            '쓰는\n인간',
-                            textAlign: TextAlign.center,
-                            textScaler: TextScaler.noScaling,
-                            style: TextStyle(
-                              fontFamily: appFontFamily,
-                              fontFamilyFallback: appFontFallback,
-                              color: _bookplateStampInk,
-                              fontSize: 15,
-                              height: 1,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              if (flower.enabled)
+              if (choice.enabled || flower.enabled)
                 Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Align(
-                    alignment: flowerAlignment(flower),
-                    child: PressedFlower(choice: flower, size: 58),
+                  padding: const EdgeInsets.only(top: 12),
+                  child: _BookplateImprints(
+                    showStamp: choice.enabled,
+                    flower: flower,
                   ),
                 ),
             ],
@@ -707,6 +675,76 @@ class Bookplate extends StatelessWidget {
       ),
     );
   }
+}
+
+class _BookplateImprints extends StatelessWidget {
+  const _BookplateImprints({required this.showStamp, required this.flower});
+
+  final bool showStamp;
+  final BookDetailChoice flower;
+
+  @override
+  Widget build(BuildContext context) {
+    final alignment = flowerAlignment(flower);
+    final separateFlower =
+        flower.enabled && showStamp && alignment != Alignment.bottomRight;
+    final flowerMark = Align(
+      alignment: alignment,
+      child: PressedFlower(choice: flower, size: 58),
+    );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (separateFlower)
+          Padding(padding: const EdgeInsets.only(bottom: 6), child: flowerMark),
+        Stack(
+          alignment: Alignment.bottomLeft,
+          children: [
+            if (flower.enabled && !separateFlower) flowerMark,
+            if (showStamp)
+              const Align(
+                alignment: Alignment.bottomLeft,
+                child: _BookplateStamp(),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _BookplateStamp extends StatelessWidget {
+  const _BookplateStamp();
+
+  @override
+  Widget build(BuildContext context) => const ExcludeSemantics(
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.fromBorderSide(
+          BorderSide(color: _bookplateStampInk, width: 1.6),
+        ),
+        borderRadius: BorderRadius.all(Radius.circular(2)),
+      ),
+      child: SizedBox(
+        width: 45,
+        height: 48,
+        child: Center(
+          child: Text(
+            '쓰는\n인간',
+            textAlign: TextAlign.center,
+            textScaler: TextScaler.noScaling,
+            style: TextStyle(
+              fontFamily: appFontFamily,
+              fontFamilyFallback: appFontFallback,
+              color: _bookplateStampInk,
+              fontSize: 15,
+              height: 1,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _PlateStock extends CustomPainter {

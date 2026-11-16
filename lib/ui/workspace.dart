@@ -584,9 +584,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         controller: c,
         bookId: book?.id,
         paperTool: _toolFor(_paperStyle(book)),
-        onToolSelected: (tool) => _afterSheet(() async {
+        onToolSelected: (tool) {
+          if (_activePanel?.isCurrent != true || _accountLocked) return;
           setState(() => _paperTool = tool);
-        }),
+          Navigator.of(context).pop();
+        },
         onReadAloud: (context) {
           if (!_canLeaveInput()) return;
           showReadAloud(

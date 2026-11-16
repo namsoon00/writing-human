@@ -11,6 +11,7 @@ import 'book_details.dart';
 import 'book_appearance.dart';
 import 'bookshelf.dart';
 import 'reading_details.dart';
+import 'read_aloud_screen.dart';
 import 'new_book_dialog.dart';
 import 'writing_sheet_preview.dart';
 
@@ -144,6 +145,15 @@ class _CollectionSheetState extends State<CollectionSheet> {
       itemBuilder: (_) => [
         if (canSearch)
           PopupMenuItem(value: _toggleSearch, child: const Text('이 책에서 찾기')),
+        PopupMenuItem(
+          value: () => showReadAloud(
+            context,
+            library: c.library,
+            book: book,
+            color: panelPaperColor(paperColors[c.styleFor(book).paperIndex]),
+          ),
+          child: const Text('책 낭독'),
+        ),
         PopupMenuItem(value: () => _rename(book), child: const Text('책 이름 변경')),
         PopupMenuItem(
           value: () => _showBookplate(book, summary),

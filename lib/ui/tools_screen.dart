@@ -12,6 +12,7 @@ class ToolsScreen extends StatelessWidget {
     super.key,
     required this.controller,
     this.bookId,
+    this.onReadAloud,
     required this.onBind,
     required this.onArchive,
     this.onSync,
@@ -19,6 +20,7 @@ class ToolsScreen extends StatelessWidget {
   final LibraryController controller;
   final String? bookId;
   final VoidCallback? onSync;
+  final ValueChanged<BuildContext>? onReadAloud;
   final VoidCallback onBind, onArchive;
 
   @override
@@ -178,6 +180,13 @@ class ToolsScreen extends StatelessWidget {
                     ],
                   ),
                   const Divider(color: line),
+                  if (onReadAloud != null)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(CupertinoIcons.speaker_2, size: 20),
+                      title: const Text('낭독'),
+                      onTap: () => onReadAloud!(context),
+                    ),
                   Padding(
                     padding: const EdgeInsets.only(top: 8, bottom: 2),
                     child: Semantics(

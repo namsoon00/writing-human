@@ -20,6 +20,7 @@ import 'editor.dart';
 import 'new_book_dialog.dart';
 import 'paper.dart';
 import 'paper_panel.dart';
+import 'read_aloud_screen.dart';
 import 'tools_screen.dart';
 import 'writing_chrome.dart';
 import 'page_turn.dart';
@@ -575,6 +576,16 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       ToolsScreen(
         controller: c,
         bookId: book?.id,
+        onReadAloud: (context) {
+          if (!_canLeaveInput()) return;
+          showReadAloud(
+            context,
+            library: c.library,
+            book: book,
+            page: page,
+            color: panelPaperColor(paperColors[_paperStyle(book).paperIndex]),
+          );
+        },
         onBind: () => _afterSheet(_bind),
         onArchive: () => _afterSheet(_archive),
         onSync: widget.sync?.available == true

@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,7 +29,7 @@ class MemoryStore implements LibraryStore {
 
 void main() {
   testWidgets(
-    'A hold and drag paints the paper without changing the caret',
+    'Paper tools mark and erase a stroke without moving the caret or page',
     (tester) async {
       const sentence = '햇빛이 책장에\n\n다음 줄';
       final store = MemoryStore()
@@ -45,20 +44,13 @@ void main() {
       await tester.pumpWidget(WritingHumanApp(store: store));
       await tester.pumpAndSettle();
       final field = find.byKey(const ValueKey('page-text'));
-      final editor = tester.state<EditableTextState>(find.byType(EditableText));
-      final render = editor.renderEditable;
+      final render = tester
+          .state<EditableTextState>(find.byType(EditableText))
+          .renderEditable;
       final controller = tester.widget<TextField>(field).controller!;
-      Offset pointAt(int offset) => render.localToGlobal(
+      Offset caret(int offset) => render.localToGlobal(
         render.getLocalRectForCaret(TextPosition(offset: offset)).center,
       );
-      final menu = find.byKey(const ValueKey('paper-selection-menu'));
-      expect(tester.testTextInput.isVisible, isFalse);
-      await tester.tapAt(pointAt(1));
-      await tester.pumpAndSettle();
-      expect(controller.selection.isCollapsed, isTrue);
-      expect(controller.selection.extentOffset, 1);
-      expect(tester.widget<TextField>(field).focusNode!.hasFocus, isTrue);
-      expect(tester.testTextInput.isVisible, isTrue);
       Offset glyph(int offset) => render.localToGlobal(
         render
             .getBoxesForSelection(
@@ -68,59 +60,25 @@ void main() {
             .toRect()
             .center,
       );
-      final preview = find.byKey(const ValueKey('paper-highlight-preview'));
-      final before = controller.value;
-      final writes = store.writes;
-      await tester.longPressAt(glyph(1));
-      await tester.pumpAndSettle();
-      expect(controller.value, before);
-      expect(store.writes, writes);
-      expect(menu, findsNothing);
-      expect(preview, findsNothing);
+      final selectionMenu = find.byKey(const ValueKey('paper-selection-menu'));
+      final highlightPreview = find.byKey(
+        const ValueKey('paper-highlight-preview'),
+      );
+      final erasePreview = find.byKey(const ValueKey('paper-eraser-preview'));
+      final activeTool = find.byKey(const ValueKey('active-paper-tool'));
+      Future<void> choose(String label) async {
+        await tester.tap(
+          activeTool.evaluate().isEmpty ? find.text('쓰기 도구') : activeTool,
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(label).hitTestable());
+        await tester.pumpAndSettle();
+        expect(find.byType(ToolsScreen), findsNothing);
+      }
 
-      final cancelled = await tester.startGesture(glyph(5));
-      await tester.pump(kLongPressTimeout);
-      await cancelled.moveTo(glyph(1));
-      await tester.pump();
-      expect(preview, findsOneWidget);
-      await cancelled.cancel();
+      await tester.tapAt(caret(2));
       await tester.pumpAndSettle();
-      expect(preview, findsNothing);
-      expect(store.writes, writes);
-
-      final drag = await tester.startGesture(glyph(1));
-      await tester.pump(kLongPressTimeout);
-      await drag.moveTo(glyph(5));
-      await tester.pump();
-      expect(controller.value, before);
-      expect(menu, findsNothing);
-      expect(preview, findsOneWidget);
-      expect(store.writes, writes);
-      await drag.up();
-      await tester.pumpAndSettle();
-      expect(preview, findsNothing);
-      expect(menu, findsNothing);
-      expect(controller.value, before);
-      final saved = store.data.pages.single.pencilMarks.single;
-      expect(sentence.substring(saved.start, saved.end), '빛이 책장');
-
-      final repeat = await tester.startGesture(glyph(5));
-      await tester.pump(kLongPressTimeout);
-      await repeat.moveTo(glyph(1));
-      await repeat.up();
-      await tester.pumpAndSettle();
-      final repeated = store.data.pages.single.pencilMarks.single;
-      expect((repeated.start, repeated.end), (saved.start, saved.end));
-      expect(store.writes, writes + 1);
-      expect(controller.value, before);
-
-      await tester.tapAt(pointAt(2));
-      await tester.pumpAndSettle();
-      expect(controller.selection.isCollapsed, isTrue);
-      expect(controller.selection.extentOffset, 2);
-      await tester.longPressAt(pointAt(sentence.indexOf('\n') + 1));
-      await tester.pumpAndSettle();
-      expect(controller.selection.extentOffset, 2);
+      expect(tester.testTextInput.isVisible, isTrue);
       const composing = TextEditingValue(
         text: sentence,
         selection: TextSelection.collapsed(offset: 2),
@@ -128,29 +86,80 @@ void main() {
       );
       tester.testTextInput.updateEditingValue(composing);
       await tester.pumpAndSettle();
-      await tester.tapAt(pointAt(5));
-      final composingDrag = await tester.startGesture(glyph(5));
-      await tester.pump(kLongPressTimeout);
-      await composingDrag.moveTo(glyph(1));
-      await tester.pump();
-      expect(preview, findsNothing);
-      await composingDrag.up();
+      await tester.tap(find.text('쓰기 도구'));
       await tester.pumpAndSettle();
+      expect(find.byType(ToolsScreen), findsNothing);
       expect(controller.value, composing);
-      expect(menu, findsNothing);
-      expect(store.data.pages.single.pencilMarks.length, 1);
-
       final committed = composing.copyWith(composing: TextRange.empty);
       tester.testTextInput.updateEditingValue(committed);
       await tester.pumpAndSettle();
-      await tester.longPressAt(glyph(2));
+
+      await choose('형광펜');
+      expect(find.text('형광펜').hitTestable(), findsOneWidget);
+      expect(find.text('글쓰기로').hitTestable(), findsOneWidget);
+      final writes = store.writes;
+      List<(int, int)> ranges() => store.data.pages.single.pencilMarks
+          .map((m) => (m.start, m.end))
+          .toList();
+      await tester.tapAt(glyph(1));
+      await tester.longPressAt(glyph(1));
       await tester.pumpAndSettle();
-      expect(find.text('밑칠 지우기').hitTestable(), findsOneWidget);
+      expect(selectionMenu, findsNothing);
+      expect(highlightPreview, findsNothing);
+      expect(tester.testTextInput.isVisible, isFalse);
       expect(controller.value, committed);
-      await tester.tap(find.text('밑칠 지우기'));
+      expect(store.writes, writes);
+
+      final cancelled = await tester.startGesture(glyph(5));
+      await cancelled.moveTo(glyph(1));
+      await tester.pump();
+      expect(highlightPreview, findsOneWidget);
+      await cancelled.cancel();
       await tester.pumpAndSettle();
-      expect(store.data.pages.single.pencilMarks, isEmpty);
+      expect(highlightPreview, findsNothing);
+      expect(store.writes, writes);
+
+      final highlight = await tester.startGesture(glyph(1));
+      await highlight.moveTo(glyph(5));
+      await tester.pump();
+      expect(highlightPreview, findsOneWidget);
+      expect(store.writes, writes);
+      await highlight.moveTo(glyph(3));
+      await highlight.up();
+      await tester.pumpAndSettle();
+      expect(highlightPreview, findsNothing);
+      expect(ranges(), [(1, 6)]);
       expect(controller.value, committed);
+
+      final repeat = await tester.startGesture(glyph(5));
+      await repeat.moveTo(glyph(1));
+      await repeat.up();
+      await tester.pumpAndSettle();
+      expect(ranges(), [(1, 6)]);
+      expect(store.writes, writes + 1);
+
+      await choose('지우개');
+      expect(find.text('지우개').hitTestable(), findsOneWidget);
+      final erase = await tester.startGesture(glyph(2));
+      await erase.moveTo(glyph(4));
+      await tester.pump();
+      expect(erasePreview, findsOneWidget);
+      expect(ranges(), [(1, 6)]);
+      await erase.up();
+      await tester.pumpAndSettle();
+      expect(erasePreview, findsNothing);
+      expect(ranges(), [(1, 2), (5, 6)]);
+      expect(store.data.activePageId, 'p');
+      expect(controller.value, committed);
+      expect(tester.testTextInput.isVisible, isFalse);
+
+      await tester.tap(find.text('글쓰기로'));
+      await tester.pumpAndSettle();
+      await tester.tapAt(caret(1));
+      await tester.pumpAndSettle();
+      expect(controller.selection.isCollapsed, isTrue);
+      expect(controller.selection.extentOffset, 1);
+      expect(tester.testTextInput.isVisible, isTrue);
     },
     variant: TargetPlatformVariant({
       TargetPlatform.iOS,

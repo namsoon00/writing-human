@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'paper.dart';
 import 'paper_swipe.dart';
+import 'paper_tool.dart';
 import 'book_details.dart';
 import '../data/book_detail_style.dart';
 
@@ -94,6 +95,8 @@ class WritingFooter extends StatelessWidget {
     super.key,
     required this.status,
     required this.onMenu,
+    this.paperTool = PaperTool.writing,
+    this.onResumeWriting,
     this.pageLabel,
     this.pageCount = 1,
     this.onPages,
@@ -111,6 +114,9 @@ class WritingFooter extends StatelessWidget {
   });
   final String status;
   final VoidCallback onMenu;
+  final PaperTool paperTool;
+  final VoidCallback? onResumeWriting;
+  bool get _marking => paperTool != PaperTool.writing;
   final VoidCallback? onPages, onPrevious, onNext, onSource;
   final bool showKeyboardDismiss;
   final VoidCallback? onKeyboardDismiss;
@@ -161,14 +167,14 @@ class WritingFooter extends StatelessWidget {
             top: 0,
             bottom: 0,
             child: Semantics(
-              label: '$pageLabel쪽, 전체 $pageCount쪽',
+              label: _marking ? '선택한 도구' : '$pageLabel쪽, 전체 $pageCount쪽',
               onIncrease: onNext,
               onDecrease: onPrevious,
               child: Tooltip(
-                message: '페이지 목록',
+                message: _marking ? '쓰기 도구' : '페이지 목록',
                 child: TextButton(
-                  key: const ValueKey('page-number'),
-                  onPressed: onPages,
+                  key: ValueKey(_marking ? 'active-paper-tool' : 'page-number'),
+                  onPressed: _marking ? onMenu : onPages,
                   style: TextButton.styleFrom(
                     minimumSize: const Size(48, 48),
                     foregroundColor: muted,
@@ -180,13 +186,16 @@ class WritingFooter extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      PageOrnament(
-                        choice: ornament,
-                        child: Text(
-                          pageLabel ?? '',
-                          style: const TextStyle(fontSize: 13),
+                      if (_marking)
+                        _PaperActionLabel(paperTool.label, paperTool.icon)
+                      else
+                        PageOrnament(
+                          choice: ornament,
+                          child: Text(
+                            pageLabel ?? '',
+                            style: const TextStyle(fontSize: 13),
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 3),
                       Semantics(
                         liveRegion: failed,
@@ -230,18 +239,23 @@ class WritingFooter extends StatelessWidget {
                 : ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: _pageSideInset),
                     child: Tooltip(
-                      message: '쓰기 도구',
+                      message: _marking ? '글쓰기로' : '쓰기 도구',
                       excludeFromSemantics: true,
                       child: TextButton(
-                        onPressed: onMenu,
+                        onPressed: _marking ? onResumeWriting : onMenu,
                         style: TextButton.styleFrom(
                           minimumSize: const Size(48, 48),
                           padding: const EdgeInsets.symmetric(horizontal: 4),
                         ),
-                        child: const _PaperActionLabel(
-                          '쓰기 도구',
-                          CupertinoIcons.slider_horizontal_3,
-                        ),
+                        child: _marking
+                            ? const _PaperActionLabel(
+                                '글쓰기로',
+                                Icons.edit_outlined,
+                              )
+                            : const _PaperActionLabel(
+                                '쓰기 도구',
+                                CupertinoIcons.slider_horizontal_3,
+                              ),
                       ),
                     ),
                   ),

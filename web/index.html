@@ -46,6 +46,13 @@
        Leave pan arbitration to the editor and paper recognizers. */
     flutter-view [flt-semantics-identifier="writing-page-body"] textarea { touch-action: none; }
 
+    /* In marking mode the read-only field stays in the accessibility tree.
+       Route pointers to Flutter's paper overlay. */
+    flutter-view [flt-semantics-identifier="writing-page-marking"],
+    flutter-view [flt-semantics-identifier="writing-page-marking"] * {
+      pointer-events: none !important;
+    }
+
     /* Flutter positions the caret from the painted glyphs on touch screens.
        Its semantic inputs stay focusable for the keyboard and assistive tools. */
     .paper-touch-input flutter-view [flt-semantics-identifier="writing-keyboard-dismiss"],

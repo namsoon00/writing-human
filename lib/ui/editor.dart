@@ -10,6 +10,7 @@ import 'notebook_reflection.dart';
 import 'paper.dart';
 import 'ink_reveal.dart';
 import 'paper_highlighter.dart';
+import 'paper_tool.dart';
 import 'paper_selection_menu.dart';
 import 'writing_pen.dart';
 import 'writing_sound.dart';
@@ -28,6 +29,7 @@ class PageEditor extends StatefulWidget {
     this.onEditingState,
     this.onEraseHighlight,
     this.onHighlight,
+    this.paperTool = PaperTool.writing,
     this.keyboardOverlap = 0,
     this.originals = const [],
     this.guidedOriginal,
@@ -40,6 +42,7 @@ class PageEditor extends StatefulWidget {
   final WritingStyle style;
   final void Function(String, String, int, int, double) onChanged;
   final void Function(String, int, int)? onEraseHighlight, onHighlight;
+  final PaperTool paperTool;
   final List<RegisteredOriginal> originals;
   final RegisteredOriginal? guidedOriginal;
   final double keyboardOverlap;
@@ -415,6 +418,11 @@ class _PageEditorState extends State<PageEditor> {
   @override
   Widget build(BuildContext context) {
     final style = widget.style;
+    final tool = widget.paperTool;
+    final marking = tool != PaperTool.writing;
+    final stroke = tool == PaperTool.eraser
+        ? widget.onEraseHighlight
+        : widget.onHighlight;
     final preciseSelection = defaultTargetPlatform == TargetPlatform.iOS;
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -476,7 +484,9 @@ class _PageEditorState extends State<PageEditor> {
               child: Padding(
                 padding: hasChosenGuide ? visiblePadding : writingMargins,
                 child: Semantics(
-                  identifier: 'writing-page-body',
+                  identifier: marking
+                      ? 'writing-page-marking'
+                      : 'writing-page-body',
                   child: TextSelectionTheme(
                     data: TextSelectionThemeData(
                       selectionColor: const Color(
@@ -495,6 +505,9 @@ class _PageEditorState extends State<PageEditor> {
                         focusNode: focus,
                         // Keep native input/selection, with a separate ink indicator.
                         showCursor: false,
+                        readOnly: marking,
+                        canRequestFocus: !marking,
+                        enableInteractiveSelection: !marking,
                         maxLines: null,
                         minLines: null,
                         expands: true,
@@ -544,26 +557,17 @@ class _PageEditorState extends State<PageEditor> {
                     : null,
               ),
             ),
-            if (widget.onHighlight case final highlight?)
+            if (marking && stroke != null)
               Positioned.fill(
-                key: const ValueKey('paper-highlighter'),
-                left: writingMargins.left,
-                right: writingMargins.right,
+                key: ValueKey(tool),
                 child: PaperHighlighter(
                   controller: text,
                   scroll: scroll,
                   editable: () => _editable,
                   choice: style.bookDetails.pencil,
-                  marks: widget.page.pencilMarks,
-                  onErase: widget.onEraseHighlight == null
-                      ? null
-                      : (mark) => widget.onEraseHighlight!(
-                          widget.page.id,
-                          mark.start,
-                          mark.end,
-                        ),
+                  tool: tool,
                   onStroke: (range) =>
-                      highlight(widget.page.id, range.start, range.end),
+                      stroke(widget.page.id, range.start, range.end),
                 ),
               ),
             Positioned(

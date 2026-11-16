@@ -20,6 +20,7 @@ import 'editor.dart';
 import 'new_book_dialog.dart';
 import 'paper.dart';
 import 'paper_panel.dart';
+import 'paper_tool.dart';
 import 'read_aloud_screen.dart';
 import 'tools_screen.dart';
 import 'writing_chrome.dart';
@@ -76,6 +77,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   int _directPageChange = 0;
   bool _openingFromPanel = false;
   bool _editorComposing = false;
+  PaperTool _paperTool = PaperTool.writing;
   String? _editingPageId;
   ({String pageId, int offset, int request})? _reveal;
   int _revealRequest = 0;
@@ -355,6 +357,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
 
   WritingStyle _paperStyle(Book? book) => c.styleFor(book);
 
+  PaperTool _toolFor(WritingStyle style) =>
+      style.bookDetails.pencil.enabled ? _paperTool : PaperTool.writing;
+
   @override
   void initState() {
     super.initState();
@@ -377,6 +382,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       widget.sync?.addListener(_changed);
       editorFocus.unfocus();
       _editingPageId = null;
+      _paperTool = PaperTool.writing;
       _originalByPage.clear();
       _originalByVolume.clear();
       _bookLeaf = null;
@@ -571,11 +577,16 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   }
 
   void _menu() {
+    if (_editorComposing || c.composing) return;
     _blur();
     _openPanel(
       ToolsScreen(
         controller: c,
         bookId: book?.id,
+        paperTool: _toolFor(_paperStyle(book)),
+        onToolSelected: (tool) => _afterSheet(() async {
+          setState(() => _paperTool = tool);
+        }),
         onReadAloud: (context) {
           if (!_canLeaveInput()) return;
           showReadAloud(
@@ -1409,7 +1420,10 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         !_editorComposing &&
         !c.composing &&
         c.saveError == null;
-    final canSwipe = navigationEnabled && !editorFocus.hasFocus;
+    final canSwipe =
+        navigationEnabled &&
+        !editorFocus.hasFocus &&
+        (showingLeaf || _toolFor(_paperStyle(book)) == PaperTool.writing);
     final compact = MediaQuery.sizeOf(context).height < 520;
     Widget paper(WritingPage target, int index, {bool preview = true}) =>
         _paperSurface(
@@ -1662,8 +1676,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.iOS ||
             defaultTargetPlatform == TargetPlatform.android);
+    final tool = preview ? PaperTool.writing : _toolFor(style);
     final showKeyboardDismiss =
-        !preview && (keyboardInset > 0 || (mobileWeb && editorFocus.hasFocus));
+        !preview &&
+        tool == PaperTool.writing &&
+        (keyboardInset > 0 || (mobileWeb && editorFocus.hasFocus));
     final originals = preview
         ? const <RegisteredOriginal>[]
         : originalsFor(
@@ -1819,6 +1836,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         onChanged: _edit,
                         onEraseHighlight: c.erasePencilMark,
                         onHighlight: c.addPencilMark,
+                        paperTool: tool,
                         onEditingState: (focused, composing) {
                           if (focused) _editingPageId = currentPage.id;
                           _editorComposing = composing;
@@ -1834,6 +1852,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 child: WritingFooter(
                   ornament: style.bookDetails.ornament,
                   onMenu: _menu,
+                  paperTool: tool,
+                  onResumeWriting: () =>
+                      setState(() => _paperTool = PaperTool.writing),
                   showKeyboardDismiss: showKeyboardDismiss,
                   onKeyboardDismiss: _editorComposing || c.composing
                       ? null

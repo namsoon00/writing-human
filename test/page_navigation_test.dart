@@ -210,21 +210,24 @@ void main() {
     },
   );
 
-  testWidgets('A stationary hold leaves the page and editing value alone', (
-    tester,
-  ) async {
-    final store = MemoryStore()..data = twoPages();
-    await open(tester, store);
-    final controller = tester.widget<TextField>(field).controller!;
-    final original = controller.value;
-    await tester.longPressAt(tester.getTopLeft(field) + const Offset(90, 80));
-    await tester.pumpAndSettle();
-    expect(store.data.activePageId, 'one');
-    expect(tester.widget<TextField>(field).controller, same(controller));
-    expect(controller.value, original);
-    expect(store.data.pages.first.pencilMarks, isEmpty);
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'A stationary hold in writing mode selects text on the current page',
+    (tester) async {
+      final store = MemoryStore()..data = twoPages();
+      await open(tester, store);
+      final controller = tester.widget<TextField>(field).controller!;
+      final original = controller.value;
+      await tester.longPressAt(tester.getTopLeft(field) + const Offset(90, 80));
+      await tester.pumpAndSettle();
+      expect(store.data.activePageId, 'one');
+      expect(tester.widget<TextField>(field).controller, same(controller));
+      expect(controller.text, original.text);
+      expect(controller.value.composing, original.composing);
+      expect(controller.selection.isCollapsed, isFalse);
+      expect(store.data.pages.first.pencilMarks, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   for (final size in [const Size(390, 844), const Size(1440, 1000)]) {
     testWidgets('Held drag reveals exactly the distance moved at $size', (

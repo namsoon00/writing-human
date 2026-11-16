@@ -1,11 +1,13 @@
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import '../data/model.dart';
-import 'paper_selection_menu.dart';
+import 'paper.dart';
+import 'paper_tool.dart';
 import 'pencil_marks.dart';
 
 /// Holds a transient stroke in page coordinates without selecting any text.
@@ -17,8 +19,7 @@ class PaperHighlighter extends StatefulWidget {
     required this.editable,
     required this.choice,
     required this.onStroke,
-    required this.marks,
-    this.onErase,
+    required this.tool,
   });
 
   final TextEditingController controller;
@@ -26,8 +27,7 @@ class PaperHighlighter extends StatefulWidget {
   final EditableTextState? Function() editable;
   final BookDetailChoice choice;
   final ValueChanged<TextRange> onStroke;
-  final List<PencilMark> marks;
-  final ValueChanged<PencilMark>? onErase;
+  final PaperTool tool;
 
   @override
   State<PaperHighlighter> createState() => _PaperHighlighterState();
@@ -35,29 +35,32 @@ class PaperHighlighter extends StatefulWidget {
 
 class _PaperHighlighterState extends State<PaperHighlighter> {
   final _paintKey = GlobalKey();
-  final _eraseMenu = ContextMenuController();
   final _range = ValueNotifier<TextRange?>(null);
-  ({TextRange character, Offset point, String text})? _origin;
+  ({TextRange character, String text})? _origin;
+  int? _pointer;
+  late Offset _startPosition;
 
   bool get _composing {
     final value = widget.controller.value;
     return value.isComposingRangeValid && !value.composing.isCollapsed;
   }
 
-  void _start(LongPressStartDetails details) {
-    final editor = widget.editable();
-    if (editor == null || _composing) return;
-    editor.hideToolbar();
-    if (!widget.choice.enabled) return;
-
-    final render = editor.renderEditable;
-    final point = details.globalPosition;
+  void _start(PointerDownEvent event) {
+    if (_pointer != null) {
+      _cancel();
+      return;
+    }
+    final render = widget.editable()?.renderEditable;
+    if (event.buttons != kPrimaryButton || render == null || _composing) {
+      return;
+    }
+    final point = event.position;
     final text = widget.controller.text;
     final offset = render.getPositionForPoint(point).offset;
     final character = _characterAt(render, point, offset, text);
-    if (character != null) {
-      _origin = (character: character, point: point, text: text);
-    }
+    _pointer = event.pointer;
+    _startPosition = point;
+    if (character != null) _origin = (character: character, text: text);
   }
 
   TextRange? _characterAt(
@@ -91,81 +94,53 @@ class _PaperHighlighterState extends State<PaperHighlighter> {
     return null;
   }
 
-  void _trace(Offset point) {
+  void _trace(PointerMoveEvent event) {
+    if (_pointer != event.pointer) return;
     final origin = _origin;
-    final render = widget.editable()?.renderEditable;
-    if (origin == null || render == null) return;
-    if (_composing || widget.controller.text != origin.text) {
-      _cancel();
+    if (origin == null) {
+      if ((event.position - _startPosition).distance >= 4) {
+        _scrollBy(-event.delta.dy);
+      }
       return;
     }
-    if (_range.value == null && (point - origin.point).distance < 4) return;
-    final offset = render.getPositionForPoint(point).offset;
-    final boundary = CharacterBoundary(origin.text);
-    final character = _characterAt(render, point, offset, origin.text);
+    final render = widget.editable()?.renderEditable;
+    if (render == null) return;
+    final previous = _range.value;
+    if (previous == null && (event.position - _startPosition).distance < 4) {
+      return;
+    }
+    final offset = render.getPositionForPoint(event.position).offset;
+    final character = _characterAt(render, event.position, offset, origin.text);
+    if (character == null) return;
     _range.value = TextRange(
       start: math.min(
-        origin.character.start,
-        character?.start ?? boundary.getLeadingTextBoundaryAt(offset)!,
+        previous?.start ?? origin.character.start,
+        character.start,
       ),
-      end: math.max(
-        origin.character.end,
-        character?.end ??
-            (offset == 0 ? 0 : boundary.getTrailingTextBoundaryAt(offset - 1)!),
-      ),
+      end: math.max(previous?.end ?? origin.character.end, character.end),
     );
   }
 
-  void _end(LongPressEndDetails details) {
-    _trace(details.globalPosition);
+  void _end(PointerUpEvent event) {
+    if (_pointer != event.pointer) return;
     final range = _range.value;
-    final origin = _origin;
     _cancel();
-    if (!widget.choice.enabled) return;
-    if (range != null) {
-      widget.onStroke(range);
-      return;
+    if (range != null && !_composing) widget.onStroke(range);
+  }
+
+  void _scrollBy(double delta) {
+    if (delta != 0 && widget.scroll.hasClients) {
+      widget.scroll.position.pointerScroll(delta);
     }
-    if (origin == null || widget.onErase == null) return;
-    final mark = widget.marks
-        .where(
-          (mark) =>
-              mark.start < origin.character.end &&
-              origin.character.start < mark.end,
-        )
-        .firstOrNull;
-    if (mark == null) return;
-    _eraseMenu.show(
-      context: context,
-      contextMenuBuilder: (_) => PaperSelectionMenu(
-        anchors: TextSelectionToolbarAnchors(primaryAnchor: origin.point),
-        editActions: const [],
-        writingActions: [
-          ContextMenuButtonItem(
-            label: '밑칠 지우기',
-            onPressed: () {
-              _eraseMenu.remove();
-              if (mounted &&
-                  !_composing &&
-                  widget.controller.text == origin.text) {
-                widget.onErase?.call(mark);
-              }
-            },
-          ),
-        ],
-        otherActions: const [],
-        onTapOutside: (_) => _eraseMenu.remove(),
-      ),
-    );
   }
 
   void _cancel() {
+    _pointer = null;
     _origin = null;
     _range.value = null;
   }
 
   void _inputChanged() {
-    _eraseMenu.remove();
     final origin = _origin;
     if (origin != null &&
         (_composing || widget.controller.text != origin.text)) {
@@ -177,7 +152,6 @@ class _PaperHighlighterState extends State<PaperHighlighter> {
   void initState() {
     super.initState();
     widget.controller.addListener(_inputChanged);
-    widget.scroll.addListener(_eraseMenu.remove);
   }
 
   @override
@@ -188,53 +162,57 @@ class _PaperHighlighterState extends State<PaperHighlighter> {
       widget.controller.addListener(_inputChanged);
       _cancel();
     }
-    if (oldWidget.scroll != widget.scroll) {
-      oldWidget.scroll.removeListener(_eraseMenu.remove);
-      widget.scroll.addListener(_eraseMenu.remove);
-    }
-    if (!widget.choice.enabled) _cancel();
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_inputChanged);
-    widget.scroll.removeListener(_eraseMenu.remove);
-    _eraseMenu.remove();
     _range.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => Listener(
-    behavior: HitTestBehavior.translucent,
-    onPointerCancel: (_) => _cancel(),
-    child: GestureDetector(
-      // The editor below still receives taps and ordinary drag gestures.
-      behavior: HitTestBehavior.translucent,
-      excludeFromSemantics: true,
-      onLongPressStart: _start,
-      onLongPressMoveUpdate: (details) => _trace(details.globalPosition),
-      onLongPressEnd: _end,
-      onLongPressCancel: _cancel,
-      child: IgnorePointer(
-        child: ValueListenableBuilder(
-          valueListenable: _range,
-          builder: (context, range, _) => range == null
-              ? const SizedBox.expand()
-              : CustomPaint(
-                  key: _paintKey,
-                  painter: _StrokePainter(
-                    surfaceKey: _paintKey,
-                    editable: widget.editable,
-                    range: range,
-                    scroll: widget.scroll,
-                    color: passageWashStyle(widget.choice).backgroundColor!,
-                  ),
-                  child: const SizedBox.expand(
-                    key: ValueKey('paper-highlight-preview'),
+    behavior: HitTestBehavior.opaque,
+    onPointerDown: _start,
+    onPointerMove: _trace,
+    onPointerUp: _end,
+    onPointerCancel: (event) {
+      if (_pointer == event.pointer) _cancel();
+    },
+    onPointerSignal: (event) {
+      if (event is PointerScrollEvent && _pointer == null) {
+        GestureBinding.instance.pointerSignalResolver.register(
+          event,
+          (_) => _scrollBy(event.scrollDelta.dy),
+        );
+      }
+    },
+    child: IgnorePointer(
+      child: ValueListenableBuilder(
+        valueListenable: _range,
+        builder: (context, range, _) => range == null
+            ? const SizedBox.expand()
+            : CustomPaint(
+                key: _paintKey,
+                painter: _StrokePainter(
+                  surfaceKey: _paintKey,
+                  editable: widget.editable,
+                  range: range,
+                  scroll: widget.scroll,
+                  color: widget.tool == PaperTool.eraser
+                      ? muted
+                      : passageWashStyle(widget.choice).backgroundColor!,
+                  erasing: widget.tool == PaperTool.eraser,
+                ),
+                child: SizedBox.expand(
+                  key: ValueKey(
+                    widget.tool == PaperTool.eraser
+                        ? 'paper-eraser-preview'
+                        : 'paper-highlight-preview',
                   ),
                 ),
-        ),
+              ),
       ),
     ),
   );
@@ -247,6 +225,7 @@ class _StrokePainter extends CustomPainter {
     required this.range,
     required this.scroll,
     required this.color,
+    required this.erasing,
   }) : super(repaint: scroll);
 
   final GlobalKey surfaceKey;
@@ -254,6 +233,7 @@ class _StrokePainter extends CustomPainter {
   final TextRange range;
   final ScrollController scroll;
   final Color color;
+  final bool erasing;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -265,6 +245,11 @@ class _StrokePainter extends CustomPainter {
     );
     final origin = surface.globalToLocal(render.localToGlobal(Offset.zero));
     final ink = Paint()..color = color;
+    if (erasing) {
+      ink
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1;
+    }
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     for (final box in boxes) {
@@ -282,5 +267,7 @@ class _StrokePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_StrokePainter oldDelegate) =>
-      range != oldDelegate.range || color != oldDelegate.color;
+      range != oldDelegate.range ||
+      color != oldDelegate.color ||
+      erasing != oldDelegate.erasing;
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/library_controller.dart';
 import 'paper.dart';
 import 'paper_panel.dart';
+import 'paper_tool.dart';
 import 'book_detail_tools.dart';
 import 'book_appearance.dart';
 
@@ -11,6 +12,8 @@ class ToolsScreen extends StatelessWidget {
   const ToolsScreen({
     super.key,
     required this.controller,
+    required this.paperTool,
+    required this.onToolSelected,
     this.bookId,
     this.onReadAloud,
     required this.onBind,
@@ -18,6 +21,8 @@ class ToolsScreen extends StatelessWidget {
     this.onSync,
   });
   final LibraryController controller;
+  final PaperTool paperTool;
+  final ValueChanged<PaperTool> onToolSelected;
   final String? bookId;
   final VoidCallback? onSync;
   final ValueChanged<BuildContext>? onReadAloud;
@@ -31,6 +36,7 @@ class ToolsScreen extends StatelessWidget {
       final book = controller.library.books
           .where((b) => b.id == bookId)
           .firstOrNull;
+      final canMark = controller.styleFor(book).bookDetails.pencil.enabled;
       final panel = panelPaperColor(
         paperColors[book?.paperIndex ?? style.paperIndex],
       );
@@ -46,6 +52,23 @@ class ToolsScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
                 children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      for (final tool in PaperTool.values)
+                        ChoiceChip(
+                          avatar: Icon(tool.icon, size: 16),
+                          label: Text(tool.label),
+                          selected: paperTool == tool,
+                          selectedColor: panelSelectedColor(panel),
+                          onSelected: canMark || tool == PaperTool.writing
+                              ? (_) => onToolSelected(tool)
+                              : null,
+                        ),
+                    ],
+                  ),
+                  const Divider(color: line, height: 28),
                   if (book == null) ...[
                     _row(
                       '기본 종이',

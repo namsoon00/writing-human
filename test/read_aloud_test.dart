@@ -66,12 +66,40 @@ void main() {
     final opening = '${List.filled(40, '첫 문장 ').join().substring(0, 101)}.';
     final longWord = List.filled(200, '한').join();
     final text = '$opening\n$longWord👩🏽‍💻 끝';
-    final phrases = readAloudPhrases(text).toList();
+    final phrases = readAloudPhrases(
+      text,
+    ).map((phrase) => phrase.text).toList();
     expect(phrases.first, opening);
     expect(phrases.every((phrase) => phrase.length <= 180), isTrue);
     expect(
       phrases.join().replaceAll(RegExp(r'\s'), ''),
       text.replaceAll(RegExp(r'\s'), ''),
+    );
+  });
+
+  test('행과 연의 호흡이 다르고 인용 문장과 문장부호를 보존한다', () {
+    final phrases = readAloudPhrases(
+      '\n“달이 떴나요?” 별이 떴다.\r\n바람이 불었다.\r\n \r\n다시 밤이 온다.',
+    ).toList();
+    expect(phrases.map((part) => part.text), [
+      '“달이 떴나요?” 별이 떴다.',
+      '바람이 불었다.',
+      '다시 밤이 온다.',
+    ]);
+    expect(phrases[0].pauseBefore, Duration.zero);
+    expect(phrases[1].pauseBefore, greaterThan(Duration.zero));
+    expect(phrases[2].pauseBefore, greaterThan(phrases[1].pauseBefore));
+  });
+
+  test('긴 인용문은 닫는 따옴표까지 한 호흡으로 묶는다', () {
+    final quote = '“${List.filled(50, '가나 ').join().trim()}?”';
+    final continuation = List.filled(90, '다라 ').join().trim();
+    final phrases = readAloudPhrases('$quote $continuation');
+    expect(phrases.first.text, quote);
+    expect(phrases.first.pauseBefore, Duration.zero);
+    expect(
+      phrases.skip(1).every((part) => part.pauseBefore > Duration.zero),
+      isTrue,
     );
   });
 
@@ -96,6 +124,8 @@ void main() {
 
     speech.finish();
     await tester.pump();
+    expect(speech.spoken, ['셋째 쪽입니다.', '첫 쪽입니다.']);
+    await tester.pump(readAloudPagePause);
     expect(speech.spoken, ['셋째 쪽입니다.', '첫 쪽입니다.', '셋째 쪽입니다.']);
     expect(find.text('3쪽 재생 중'), findsOneWidget);
     speech.finish();
@@ -124,6 +154,22 @@ void main() {
     await tester.pumpAndSettle();
     expect(speech.spoken, ['첫 쪽입니다.', '첫 쪽입니다.']);
     expect(speech.stops, 2);
+  });
+
+  testWidgets('쪽 사이에 쉬는 동안 정지하면 다음 쪽은 재생되지 않는다', (tester) async {
+    final speech = _Speech();
+    await _open(tester, speech);
+    await tester.tap(find.text('책 전체'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('재생'));
+    await tester.pump();
+
+    speech.finish();
+    await tester.pump();
+    await tester.tap(find.text('정지'));
+    await tester.pump(readAloudPagePause);
+    expect(speech.spoken, ['첫 쪽입니다.']);
+    expect(speech.stops, 1);
   });
 
   testWidgets('설치된 한국어 음성이 없으면 안내하고 재시도할 수 있다', (tester) async {

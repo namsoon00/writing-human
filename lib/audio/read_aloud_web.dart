@@ -35,8 +35,7 @@ class _WebReadAloud implements ReadAloud {
     final utterance = web.SpeechSynthesisUtterance(text)
       ..voice = voice
       ..lang = voice.lang
-      ..rate = 0.88
-      ..pitch = 0.97
+      ..rate = readAloudRate
       ..onend = ((web.Event _) {
         if (!completion.isCompleted) completion.complete();
       }).toJS

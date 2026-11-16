@@ -126,6 +126,16 @@ class _ReadAloudScreenState extends State<ReadAloudScreen>
     }
   }
 
+  Future<void> _waitForBreath(Duration pause, Completer<void> playback) async {
+    final elapsed = Completer<void>();
+    final timer = Timer(pause, elapsed.complete);
+    try {
+      await Future.any([elapsed.future, playback.future]);
+    } finally {
+      timer.cancel();
+    }
+  }
+
   Future<void> _play() async {
     final selection = _selection;
     final playback = Completer<void>();
@@ -134,11 +144,19 @@ class _ReadAloudScreenState extends State<ReadAloudScreen>
       _message = null;
     });
     try {
-      for (final page in selection) {
+      for (final (index, page) in selection.indexed) {
+        if (index > 0) {
+          await _waitForBreath(readAloudPagePause, playback);
+          if (_playback != playback) return;
+        }
         setState(() => _pageNumber = page.number);
         for (final phrase in readAloudPhrases(page.text)) {
+          if (phrase.pauseBefore != Duration.zero) {
+            await _waitForBreath(phrase.pauseBefore, playback);
+            if (_playback != playback) return;
+          }
           await Future.any([
-            widget.speech.speak(phrase),
+            widget.speech.speak(phrase.text),
             playback.future,
           ]).timeout(const Duration(minutes: 2));
           if (_playback != playback) return;

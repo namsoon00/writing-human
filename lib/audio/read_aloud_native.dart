@@ -43,8 +43,8 @@ class _NativeReadAloud implements ReadAloud {
         1) {
       throw const KoreanVoiceUnavailable();
     }
-    await _tts.setSpeechRate(0.44);
-    await _tts.setPitch(0.97);
+    await _tts.setSpeechRate(readAloudRate / 2);
+    await _tts.setPitch(1.0);
     await _tts.awaitSpeakCompletion(true);
   }
 

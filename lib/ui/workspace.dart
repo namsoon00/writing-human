@@ -1806,7 +1806,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                               )
                             : null,
                         onChanged: _edit,
-                        onPencilMark: c.togglePencilMark,
+                        onEraseHighlight: c.erasePencilMark,
                         onHighlight: c.addPencilMark,
                         onEditingState: (focused, composing) {
                           if (focused) _editingPageId = currentPage.id;

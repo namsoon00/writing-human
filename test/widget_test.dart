@@ -139,6 +139,18 @@ void main() {
       expect(controller.value, composing);
       expect(menu, findsNothing);
       expect(store.data.pages.single.pencilMarks.length, 1);
+
+      final committed = composing.copyWith(composing: TextRange.empty);
+      tester.testTextInput.updateEditingValue(committed);
+      await tester.pumpAndSettle();
+      await tester.longPressAt(glyph(2));
+      await tester.pumpAndSettle();
+      expect(find.text('밑칠 지우기').hitTestable(), findsOneWidget);
+      expect(controller.value, committed);
+      await tester.tap(find.text('밑칠 지우기'));
+      await tester.pumpAndSettle();
+      expect(store.data.pages.single.pencilMarks, isEmpty);
+      expect(controller.value, committed);
     },
     variant: TargetPlatformVariant({
       TargetPlatform.iOS,

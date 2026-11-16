@@ -343,6 +343,24 @@ void main() {
       await tester.pumpAndSettle();
       expect(store.data.activePage!.pencilMarks, isEmpty);
       expect(controller.value, selected);
+
+      tester.state<EditableTextState>(find.byType(EditableText)).showToolbar();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('밑칠하기'));
+      await tester.pumpAndSettle();
+      final overlapping = selected.copyWith(
+        selection: const TextSelection(baseOffset: 4, extentOffset: 9),
+      );
+      tester.testTextInput.updateEditingValue(overlapping);
+      await tester.pumpAndSettle();
+      tester.state<EditableTextState>(find.byType(EditableText)).showToolbar();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('밑칠 지우기'));
+      await tester.pumpAndSettle();
+      expect(ranges(store.data.activePage!.pencilMarks), [
+        [0, 4],
+      ]);
+      expect(controller.value, overlapping);
       final composing = TextEditingValue(
         text: '${controller.text} 사ㄹ',
         selection: TextSelection.collapsed(offset: controller.text.length + 3),

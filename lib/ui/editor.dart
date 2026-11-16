@@ -26,7 +26,7 @@ class PageEditor extends StatefulWidget {
     this.style = const WritingStyle(),
     this.focusNode,
     this.onEditingState,
-    this.onPencilMark,
+    this.onEraseHighlight,
     this.onHighlight,
     this.keyboardOverlap = 0,
     this.originals = const [],
@@ -39,7 +39,7 @@ class PageEditor extends StatefulWidget {
   final WritingPage page;
   final WritingStyle style;
   final void Function(String, String, int, int, double) onChanged;
-  final void Function(String, int, int)? onPencilMark, onHighlight;
+  final void Function(String, int, int)? onEraseHighlight, onHighlight;
   final List<RegisteredOriginal> originals;
   final RegisteredOriginal? guidedOriginal;
   final double keyboardOverlap;
@@ -296,17 +296,18 @@ class _PageEditorState extends State<PageEditor> {
       }
       if (paste != null) otherActions.add(paste);
       if (selectAll != null) otherActions.add(selectAll);
-      if (widget.onPencilMark case final mark?) {
-        final marked = widget.page.pencilMarks.any(
-          (m) => m.start <= selection.start && m.end >= selection.end,
-        );
+      final marked = widget.page.pencilMarks.any(
+        (m) => m.start < selection.end && selection.start < m.end,
+      );
+      final change = marked ? widget.onEraseHighlight : widget.onHighlight;
+      if (change != null) {
         writingActions.add(
           ContextMenuButtonItem(
             label: marked ? '밑칠 지우기' : '밑칠하기',
             onPressed: () {
               if (text.value != value) return;
               state.hideToolbar(false);
-              mark(widget.page.id, selection.start, selection.end);
+              change(widget.page.id, selection.start, selection.end);
             },
           ),
         );
@@ -553,6 +554,14 @@ class _PageEditorState extends State<PageEditor> {
                   scroll: scroll,
                   editable: () => _editable,
                   choice: style.bookDetails.pencil,
+                  marks: widget.page.pencilMarks,
+                  onErase: widget.onEraseHighlight == null
+                      ? null
+                      : (mark) => widget.onEraseHighlight!(
+                          widget.page.id,
+                          mark.start,
+                          mark.end,
+                        ),
                   onStroke: (range) =>
                       highlight(widget.page.id, range.start, range.end),
                 ),

@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import '../data/model.dart';
+import 'paper_selection_menu.dart';
 import 'pencil_marks.dart';
 
 /// Holds a transient stroke in page coordinates without selecting any text.
@@ -16,6 +17,8 @@ class PaperHighlighter extends StatefulWidget {
     required this.editable,
     required this.choice,
     required this.onStroke,
+    required this.marks,
+    this.onErase,
   });
 
   final TextEditingController controller;
@@ -23,6 +26,8 @@ class PaperHighlighter extends StatefulWidget {
   final EditableTextState? Function() editable;
   final BookDetailChoice choice;
   final ValueChanged<TextRange> onStroke;
+  final List<PencilMark> marks;
+  final ValueChanged<PencilMark>? onErase;
 
   @override
   State<PaperHighlighter> createState() => _PaperHighlighterState();
@@ -30,6 +35,7 @@ class PaperHighlighter extends StatefulWidget {
 
 class _PaperHighlighterState extends State<PaperHighlighter> {
   final _paintKey = GlobalKey();
+  final _eraseMenu = ContextMenuController();
   final _range = ValueNotifier<TextRange?>(null);
   ({TextRange character, Offset point, String text})? _origin;
 
@@ -113,8 +119,44 @@ class _PaperHighlighterState extends State<PaperHighlighter> {
   void _end(LongPressEndDetails details) {
     _trace(details.globalPosition);
     final range = _range.value;
+    final origin = _origin;
     _cancel();
-    if (range != null && widget.choice.enabled) widget.onStroke(range);
+    if (!widget.choice.enabled) return;
+    if (range != null) {
+      widget.onStroke(range);
+      return;
+    }
+    if (origin == null || widget.onErase == null) return;
+    final mark = widget.marks
+        .where(
+          (mark) =>
+              mark.start < origin.character.end &&
+              origin.character.start < mark.end,
+        )
+        .firstOrNull;
+    if (mark == null) return;
+    _eraseMenu.show(
+      context: context,
+      contextMenuBuilder: (_) => PaperSelectionMenu(
+        anchors: TextSelectionToolbarAnchors(primaryAnchor: origin.point),
+        editActions: const [],
+        writingActions: [
+          ContextMenuButtonItem(
+            label: '밑칠 지우기',
+            onPressed: () {
+              _eraseMenu.remove();
+              if (mounted &&
+                  !_composing &&
+                  widget.controller.text == origin.text) {
+                widget.onErase?.call(mark);
+              }
+            },
+          ),
+        ],
+        otherActions: const [],
+        onTapOutside: (_) => _eraseMenu.remove(),
+      ),
+    );
   }
 
   void _cancel() {
@@ -123,6 +165,7 @@ class _PaperHighlighterState extends State<PaperHighlighter> {
   }
 
   void _inputChanged() {
+    _eraseMenu.remove();
     final origin = _origin;
     if (origin != null &&
         (_composing || widget.controller.text != origin.text)) {
@@ -134,6 +177,7 @@ class _PaperHighlighterState extends State<PaperHighlighter> {
   void initState() {
     super.initState();
     widget.controller.addListener(_inputChanged);
+    widget.scroll.addListener(_eraseMenu.remove);
   }
 
   @override
@@ -144,12 +188,18 @@ class _PaperHighlighterState extends State<PaperHighlighter> {
       widget.controller.addListener(_inputChanged);
       _cancel();
     }
+    if (oldWidget.scroll != widget.scroll) {
+      oldWidget.scroll.removeListener(_eraseMenu.remove);
+      widget.scroll.addListener(_eraseMenu.remove);
+    }
     if (!widget.choice.enabled) _cancel();
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_inputChanged);
+    widget.scroll.removeListener(_eraseMenu.remove);
+    _eraseMenu.remove();
     _range.dispose();
     super.dispose();
   }

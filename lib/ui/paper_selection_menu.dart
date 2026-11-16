@@ -14,9 +14,11 @@ class PaperSelectionMenu extends StatefulWidget {
     required this.editActions,
     required this.writingActions,
     required this.otherActions,
+    this.onTapOutside,
   });
 
   final TextSelectionToolbarAnchors anchors;
+  final TapRegionCallback? onTapOutside;
   final List<ContextMenuButtonItem> editActions, writingActions, otherActions;
 
   @override
@@ -89,58 +91,63 @@ class _PaperSelectionMenuState extends State<PaperSelectionMenu> {
           ),
           LayoutId(
             id: _SlipPart.menu,
-            child: TextFieldTapRegion(
-              child: Material(
-                key: const ValueKey('paper-selection-menu'),
-                color: _slip,
-                elevation: 3,
-                shadowColor: const Color(0x48493117),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(7),
-                  side: const BorderSide(color: _edge),
-                ),
-                child: SingleChildScrollView(
-                  primary: false,
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          ...widget.editActions.map(_action),
-                          if (widget.editActions.isNotEmpty &&
-                              widget.writingActions.isNotEmpty)
-                            const SizedBox(
-                              height: 21,
-                              width: 1,
-                              child: ColoredBox(color: _edge),
-                            ),
-                          ...widget.writingActions.map(_action),
-                          if (widget.otherActions.isNotEmpty)
-                            IconButton(
-                              tooltip: expanded ? '편집 메뉴 접기' : '편집 메뉴 더 보기',
-                              onPressed: () =>
-                                  setState(() => expanded = !expanded),
-                              constraints: const BoxConstraints.tightFor(
-                                width: 44,
-                                height: 44,
-                              ),
-                              color: brandInk,
-                              icon: Icon(
-                                expanded ? Icons.expand_less : Icons.more_horiz,
-                                size: 19,
-                              ),
-                            ),
-                        ],
-                      ),
-                      if (expanded && widget.otherActions.isNotEmpty)
+            child: TapRegion(
+              onTapOutside: widget.onTapOutside,
+              child: TextFieldTapRegion(
+                child: Material(
+                  key: const ValueKey('paper-selection-menu'),
+                  color: _slip,
+                  elevation: 3,
+                  shadowColor: const Color(0x48493117),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(7),
+                    side: const BorderSide(color: _edge),
+                  ),
+                  child: SingleChildScrollView(
+                    primary: false,
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                         Wrap(
                           alignment: WrapAlignment.center,
-                          children: widget.otherActions.map(_action).toList(),
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            ...widget.editActions.map(_action),
+                            if (widget.editActions.isNotEmpty &&
+                                widget.writingActions.isNotEmpty)
+                              const SizedBox(
+                                height: 21,
+                                width: 1,
+                                child: ColoredBox(color: _edge),
+                              ),
+                            ...widget.writingActions.map(_action),
+                            if (widget.otherActions.isNotEmpty)
+                              IconButton(
+                                tooltip: expanded ? '편집 메뉴 접기' : '편집 메뉴 더 보기',
+                                onPressed: () =>
+                                    setState(() => expanded = !expanded),
+                                constraints: const BoxConstraints.tightFor(
+                                  width: 44,
+                                  height: 44,
+                                ),
+                                color: brandInk,
+                                icon: Icon(
+                                  expanded
+                                      ? Icons.expand_less
+                                      : Icons.more_horiz,
+                                  size: 19,
+                                ),
+                              ),
+                          ],
                         ),
-                    ],
+                        if (expanded && widget.otherActions.isNotEmpty)
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            children: widget.otherActions.map(_action).toList(),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),

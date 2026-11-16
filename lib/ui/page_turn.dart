@@ -37,6 +37,9 @@ class PageTurnView extends StatefulWidget {
     this.isBackCover = false,
     this.previousIsCover = false,
     this.nextIsCover = false,
+    this.previousDirect = false,
+    this.nextDirect = false,
+    this.directIncoming = false,
     this.coverSurface,
   });
   final WritingPage page;
@@ -50,6 +53,7 @@ class PageTurnView extends StatefulWidget {
   final Widget? previous, next;
   final bool isCover, isBackCover, previousIsCover, nextIsCover;
   final Widget? coverSurface;
+  final bool previousDirect, nextDirect, directIncoming;
   final Future<bool> Function(bool forward) onTurn;
   @override
   State<PageTurnView> createState() => _PageTurnViewState();
@@ -62,6 +66,7 @@ class _PageTurnViewState extends State<PageTurnView>
   bool _resetting = false;
   bool _dragging = false, _ending = false, _committing = false;
   bool _dragForward = true;
+  bool _directDrag = false;
   int _gestureVersion = 0;
   Widget? _preview;
   Size _surfaceSize = Size.zero;
@@ -109,6 +114,7 @@ class _PageTurnViewState extends State<PageTurnView>
     dragProgress.stop();
     _dragging = _ending = _committing = false;
     _preview = null;
+    _directDrag = false;
     _dragOrigin = null;
     _resetting = true;
     dragProgress.value = 0;
@@ -139,6 +145,7 @@ class _PageTurnViewState extends State<PageTurnView>
         : _dragForward
         ? widget.next
         : widget.previous;
+    _directDrag = _dragForward ? widget.nextDirect : widget.previousDirect;
     final turnsFrontCover =
         (widget.isCover && !widget.isBackCover) ||
         (!_dragForward && widget.previousIsCover);
@@ -158,7 +165,7 @@ class _PageTurnViewState extends State<PageTurnView>
   }
 
   Future<void> _easeTo(double value) async {
-    if (reduced || !widget.style.pageMotion) {
+    if (_directDrag || reduced || !widget.style.pageMotion) {
       dragProgress.value = value;
       return;
     }
@@ -275,6 +282,7 @@ class _PageTurnViewState extends State<PageTurnView>
     if (!moved) return;
     _stopImage();
     if (reduced ||
+        widget.directIncoming ||
         !widget.style.pageMotion ||
         oldWidget.page.text.length > 20000) {
       return;
@@ -400,6 +408,7 @@ class _PageTurnViewState extends State<PageTurnView>
       );
       final revealing =
           _preview != null &&
+          !_directDrag &&
           dragProgress.value > 0 &&
           !reduced &&
           widget.style.pageMotion;

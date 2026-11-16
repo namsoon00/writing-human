@@ -245,6 +245,7 @@ class TranscriptionScrollController extends ScrollController {
 
   TranscriptionGuidePainter? guide;
   double? writingCenter;
+  double Function(double pixels)? layoutOffset;
 
   @override
   ScrollPosition createScrollPosition(
@@ -277,15 +278,25 @@ class _TranscriptionScrollPosition extends ScrollPositionWithSingleContext {
   bool applyContentDimensions(double minScrollExtent, double maxScrollExtent) {
     final guide = controller.guide;
     final center = controller.writingCenter;
-    if (center != null && guide != null) {
-      return super.applyContentDimensions(
-        math.min(minScrollExtent, -center),
-        math.max(maxScrollExtent, guide.centerScrollExtent(pixels, center)),
-      );
-    }
-    return super.applyContentDimensions(
-      minScrollExtent,
-      math.max(maxScrollExtent, guide?.scrollExtent(pixels) ?? 0),
+    final min = center == null || guide == null
+        ? minScrollExtent
+        : math.min(minScrollExtent, -center);
+    final max = math.max(
+      maxScrollExtent,
+      guide == null
+          ? 0.0
+          : center == null
+          ? guide.scrollExtent(pixels)
+          : guide.centerScrollExtent(pixels, center),
     );
+
+    // Resolve the requested position before RenderEditable paints the page.
+    final restore = controller.layoutOffset;
+    controller.layoutOffset = null;
+    if (restore != null || !hasContentDimensions) {
+      final target = (restore?.call(pixels) ?? pixels).clamp(min, max);
+      if (target != pixels) correctPixels(target);
+    }
+    return super.applyContentDimensions(min, max);
   }
 }

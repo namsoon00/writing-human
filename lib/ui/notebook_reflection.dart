@@ -112,7 +112,9 @@ class _NotebookReflectionState extends State<NotebookReflection> {
     final lineBottom = bottomOf(offset, TextAffinity.upstream);
     final lineTop = origin.dy + lineBottom - writingLine;
     final anchorBottom = origin.dy + lineBottom;
-    if (anchorBottom <= origin.dy || lineTop >= size.height) return null;
+    // An icon should never float at an edge after its writing line scrolls out.
+    final bottom = math.min(size.height, origin.dy + editable.size.height);
+    if (lineTop < origin.dy - .5 || anchorBottom > bottom + .5) return null;
 
     final noteTop = anchorBottom + 5;
     var available = size.height - 4 - noteTop;
@@ -153,7 +155,7 @@ class _NotebookReflectionState extends State<NotebookReflection> {
     }
 
     // When another written line occupies the space, leave a pencil mark beside
-    // the original line so its reflection can still be opened.
+    // the written line to show that a reflection is attached to it.
     final top = math.max(0.0, lineTop);
     final height = math.min(anchorBottom - top, size.height - top);
     if (height <= 0 || widget.padding.left < 18) return null;

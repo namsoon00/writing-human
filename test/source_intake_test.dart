@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -904,6 +905,49 @@ void main() {
       expect(attachment.offset, 3);
     },
   );
+
+  testWidgets('A margin pencil leaves with the clipped writing line', (
+    tester,
+  ) async {
+    const first = '책장에 햇빛이 내려앉았다.';
+    const note = '천천히 읽고 싶다.';
+    final store = MemoryStore()
+      ..data = Library(
+        records: const [
+          WritingRecord(
+            id: 'r',
+            title: '필사',
+            originals: [
+              RegisteredOriginal(
+                'o',
+                first,
+                reflection: OriginalReflection(note, mark: PencilMark(0, 3)),
+              ),
+            ],
+          ),
+        ],
+        pages: [
+          WritingPage(
+            id: 'p',
+            recordId: 'r',
+            number: 1,
+            text: '$first\n${List.filled(25, '다른 필사 줄').join('\n')}',
+          ),
+        ],
+        activePageId: 'p',
+        writing: true,
+      );
+    await open(tester, store, FakeIntake());
+    final marker = find.descendant(
+      of: find.byKey(const ValueKey('writing-reflection')),
+      matching: find.byIcon(CupertinoIcons.pencil),
+    );
+    expect(marker, findsOneWidget);
+    tester.widget<TextField>(bodyField).scrollController!.jumpTo(12);
+    await tester.pumpAndSettle();
+    expect(marker, findsNothing);
+    expect(store.data.records.single.originals.single.reflection!.text, note);
+  });
 
   testWidgets('Book originals can open from another record', (tester) async {
     const title = '함께 읽는 책';

@@ -725,6 +725,29 @@ void main() {
     },
   );
 
+  testWidgets('A scrolled destination opens directly at its saved position', (
+    tester,
+  ) async {
+    final store = MemoryStore()..data = twoPages().copy(activePageId: 'two');
+    await open(tester, store);
+    final gesture = await tester.startGesture(tester.getCenter(field));
+    await gesture.moveBy(const Offset(162, 0));
+    await tester.pump();
+    expect(reveal, findsNothing);
+    expect(tester.widget<TextField>(field).controller!.text, '둘째 페이지');
+    await gesture.up();
+    for (var frame = 0; frame < 10; frame++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      final editor = tester.widget<TextField>(field);
+      if (editor.controller!.text == '둘째 페이지') continue;
+      expect(editor.scrollController!.offset, 180);
+      expect(overlay, findsNothing);
+    }
+    expect(store.data.activePageId, 'one');
+    expect(store.data.activePage!.scroll, 180);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Previous and next restore each page selection and scroll', (
     tester,
   ) async {

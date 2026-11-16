@@ -85,6 +85,7 @@ class _PageEditorState extends State<PageEditor> {
     );
     final initialOffset = widget.startAtTopRequest == null ? p.scroll : 0.0;
     scroll = TranscriptionScrollController(initialScrollOffset: initialOffset);
+    _prepareReveal();
     if (widget.style.writingSound) _sound = WritingSound();
     _observedText = text.value;
     text.addListener(_textChanged);
@@ -93,10 +94,6 @@ class _PageEditorState extends State<PageEditor> {
       if (!mounted) {
         return;
       }
-      if (scroll.hasClients) {
-        scroll.jumpTo(initialOffset.clamp(0, scroll.position.maxScrollExtent));
-      }
-      _reveal();
       restoring = false;
       _emitEditingState();
     });
@@ -122,43 +119,42 @@ class _PageEditorState extends State<PageEditor> {
       }
     }
     if (widget.reveal != null && widget.reveal != oldWidget.reveal) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _reveal();
-      });
-    } else if (widget.startAtTopRequest != oldWidget.startAtTopRequest) {
-      final request = widget.startAtTopRequest;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted ||
-            !scroll.hasClients ||
-            focus.hasFocus ||
-            request != widget.startAtTopRequest) {
-          return;
-        }
-        final previousRestoring = restoring;
-        restoring = true;
-        final offset = request == null ? widget.page.scroll : 0.0;
-        scroll.jumpTo(offset.clamp(0, scroll.position.maxScrollExtent));
-        restoring = previousRestoring;
-      });
+      _prepareReveal();
+    } else if (widget.startAtTopRequest != oldWidget.startAtTopRequest &&
+        !focus.hasFocus) {
+      final offset = widget.startAtTopRequest == null
+          ? widget.page.scroll
+          : 0.0;
+      scroll.layoutOffset = (_) => offset;
+      _markEditableForLayout();
     }
   }
 
-  void _reveal() {
-    final reveal = widget.reveal;
-    if (reveal == null || !scroll.hasClients || focus.hasFocus) return;
-    final editable = findEditable(
+  void _markEditableForLayout() {
+    findEditable(
       fieldRenderKey.currentContext?.findRenderObject(),
-    );
-    if (editable == null || !editable.hasSize) return;
-    final caret = editable.getLocalRectForCaret(
-      TextPosition(offset: reveal.offset.clamp(0, text.text.length)),
-    );
-    final target = (scroll.offset + caret.top - 16).clamp(
-      0.0,
-      scroll.position.maxScrollExtent,
-    );
-    // Scroll to the result without changing selection, focus, or composition.
-    scroll.jumpTo(target);
+    )?.markNeedsLayout();
+  }
+
+  void _prepareReveal() {
+    final reveal = widget.reveal;
+    if (reveal == null || focus.hasFocus) return;
+    scroll.layoutOffset = (pixels) {
+      final editable = findEditable(
+        fieldRenderKey.currentContext?.findRenderObject(),
+      );
+      if (editable == null || !editable.hasSize) return pixels;
+      final endpoint = editable
+          .getEndpointsForSelection(
+            TextSelection.collapsed(
+              offset: reveal.offset.clamp(0, text.text.length),
+            ),
+          )
+          .single
+          .point;
+      return pixels + endpoint.dy - editable.preferredLineHeight - 16;
+    };
+    _markEditableForLayout();
   }
 
   void _emitEditingState() {
@@ -459,18 +455,16 @@ class _PageEditorState extends State<PageEditor> {
               Positioned.fill(
                 child: IgnorePointer(
                   child: ExcludeSemantics(
-                    child: AnimatedBuilder(
-                      animation: scroll,
-                      builder: (context, _) => CustomPaint(
-                        painter: WritingGuides(
-                          enabled: style.guides,
-                          top: padding.top,
-                          left: padding.left,
-                          right: padding.right,
-                          lineHeight:
-                              MediaQuery.textScalerOf(context).scale(23) * 1.8,
-                          scroll: scroll.hasClients ? scroll.offset : 0,
-                        ),
+                    child: CustomPaint(
+                      painter: WritingGuides(
+                        enabled: style.guides,
+                        top: padding.top,
+                        left: padding.left,
+                        right: padding.right,
+                        lineHeight:
+                            MediaQuery.textScalerOf(context).scale(23) * 1.8,
+                        scroll: 0,
+                        controller: scroll,
                       ),
                     ),
                   ),

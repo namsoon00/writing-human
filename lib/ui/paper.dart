@@ -152,23 +152,27 @@ DecorationImage paperGrain(Color color, double opacity) => DecorationImage(
 /// Guides follow the actual text padding, line height and scroll without
 /// changing the editor controller, selection or composing range.
 class WritingGuides extends CustomPainter {
-  const WritingGuides({
+  WritingGuides({
     required this.top,
     required this.left,
     required this.right,
     required this.lineHeight,
     required this.scroll,
     required this.enabled,
-  });
+    this.controller,
+  }) : super(repaint: controller);
   final double top, left, right, lineHeight, scroll;
   final bool enabled;
+  final ScrollController? controller;
   @override
   void paint(Canvas canvas, Size size) {
     if (!enabled) return;
     final paint = Paint()
       ..color = const Color(0x188c765d)
       ..strokeWidth = .6;
-    final first = top + lineHeight * .83 - scroll;
+    final position = controller;
+    final offset = position?.hasClients == true ? position!.offset : scroll;
+    final first = top + lineHeight * .83 - offset;
     final start = first < 0
         ? first + ((-first / lineHeight).ceil() * lineHeight)
         : first;
@@ -184,7 +188,8 @@ class WritingGuides extends CustomPainter {
       old.right != right ||
       old.lineHeight != lineHeight ||
       old.scroll != scroll ||
-      old.enabled != enabled;
+      old.enabled != enabled ||
+      old.controller != controller;
 }
 
 const coverNames = ['밤색 리넨', '아이보리 리넨', '푸른 리넨'];

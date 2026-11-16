@@ -42,12 +42,15 @@ void main() {
       expect(controller.saveError, isNull);
     }
 
-    Future<void> turn(double distance) async {
+    Future<void> turn(double distance, {bool preview = true}) async {
       final number = find.byKey(const ValueKey('page-number'));
       final gesture = await tester.startGesture(tester.getCenter(number));
       await gesture.moveBy(Offset(distance, 0));
       await tester.pump();
-      expect(find.byKey(const ValueKey('page-turn-reveal')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('page-turn-reveal')),
+        preview ? findsOneWidget : findsNothing,
+      );
       await gesture.up();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 240));
@@ -252,7 +255,7 @@ void main() {
     expect(controller.library.activePageId, secondId);
     expect(find.text('2'), findsOneWidget);
     expect(tester.widget<TextField>(field).controller!.value, next);
-    await turn(160);
+    await turn(160, preview: false);
     expect(controller.library.activePageId, pageId);
     expect(tester.widget<TextField>(field).controller!.text, body);
     expect(

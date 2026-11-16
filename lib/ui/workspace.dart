@@ -1459,6 +1459,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             recordId: current.recordId,
             number: current.number + 1,
           );
+    // A scrolled or guided destination needs the real editor's viewport.
+    // A read-only neighbour lacks the guide and can wrap or clamp differently.
+    bool needsLivePage(WritingPage target) =>
+        target.scroll > 0 || target.guidedOriginalId != null;
+    final firstPage = displayPages.firstOrNull;
     return Scaffold(
       backgroundColor: appPaper,
       resizeToAvoidBottomInset: false,
@@ -1483,6 +1488,22 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             (leaf == null && hasBook && !hasBookplate && index == 0),
         nextIsCover:
             hasBook && !showingLeaf && !fresh && index == pages.length - 1,
+        previousDirect: switch (leaf) {
+          _BookLeaf.backCover => needsLivePage(current),
+          null => index > 0 && needsLivePage(pages[index - 1]),
+          _ => false,
+        },
+        nextDirect: switch (leaf) {
+          _BookLeaf.bookplate => firstPage?.guidedOriginalId != null,
+          _BookLeaf.frontCover =>
+            !hasBookplate && firstPage?.guidedOriginalId != null,
+          null => index + 1 < pages.length && needsLivePage(nextPage),
+          _ => false,
+        },
+        directIncoming:
+            !showingLeaf &&
+            (current.guidedOriginalId != null ||
+                (current.scroll > 0 && _firstPageView?.pageId != current.id)),
         editing: c.editorFocused,
         composing: _editorComposing || c.composing,
         onTurn: _commitTurn,

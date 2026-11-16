@@ -14,7 +14,7 @@ import 'paper_selection_menu.dart';
 import 'writing_pen.dart';
 import 'writing_sound.dart';
 import 'pencil_marks.dart';
-import 'transcription_guide.dart';
+import 'transcription_reference.dart';
 import 'transcription_marks.dart';
 import 'editable_geometry.dart';
 
@@ -51,10 +51,9 @@ class PageEditor extends StatefulWidget {
 
 class _PageEditorState extends State<PageEditor> {
   late final PencilTextController text;
-  late final TranscriptionScrollController scroll;
+  late final _WritingScrollController scroll;
   late TextEditingValue _observedText;
   WritingSound? _sound;
-  final _guideLayout = TextPainter();
   late TranscriptionComparison? _comparison = _compareChosen();
 
   TranscriptionComparison? _compareChosen() {
@@ -84,7 +83,10 @@ class _PageEditorState extends State<PageEditor> {
       ),
     );
     final initialOffset = widget.startAtTopRequest == null ? p.scroll : 0.0;
-    scroll = TranscriptionScrollController(initialScrollOffset: initialOffset);
+    scroll = _WritingScrollController(
+      initialScrollOffset: initialOffset,
+      lastLineExtent: _lastLineExtent,
+    );
     _prepareReveal();
     if (widget.style.writingSound) _sound = WritingSound();
     _observedText = text.value;
@@ -202,6 +204,22 @@ class _PageEditorState extends State<PageEditor> {
       );
       if ((target - scroll.offset).abs() >= 1) scroll.jumpTo(target);
     });
+  }
+
+  double _lastLineExtent(double pixels, double anchor) {
+    final editable = findEditable(
+      fieldRenderKey.currentContext?.findRenderObject(),
+    );
+    if (editable == null || !editable.hasSize) return 0;
+    final lineEnd = editable
+        .getEndpointsForSelection(
+          TextSelection.collapsed(offset: text.text.length),
+        )
+        .single
+        .point
+        .dy;
+    // The line endpoint is available while parent transforms are still in layout.
+    return pixels + lineEnd - editable.preferredLineHeight / 2 - anchor + 2;
   }
 
   void _focusChanged() {
@@ -387,7 +405,6 @@ class _PageEditorState extends State<PageEditor> {
     scroll.removeListener(_save);
     text.dispose();
     scroll.dispose();
-    _guideLayout.dispose();
     focus.removeListener(_focusChanged);
     if (widget.focusNode == null) {
       focus.dispose();
@@ -414,16 +431,17 @@ class _PageEditorState extends State<PageEditor> {
         final hasChosenGuide = source != null;
         final paperHeight = math.max(0.0, constraints.maxHeight - overlap);
         final scaler = MediaQuery.textScalerOf(context);
-        final referenceHeight = scaler.scale(16) * 4 + 12;
-        final referenceGap = math.max(
-          34.0,
-          scaler.scale(23) * 1.8 + visiblePadding.bottom + 4,
+        final referenceHeight = math.min(
+          scaler.scale(16) * 4 + 12,
+          paperHeight * .34,
         );
-        final showReference =
+        final lineHeight = scaler.scale(23) * 1.8;
+        final canCenter =
             hasChosenGuide &&
             focus.hasFocus &&
-            paperHeight / 2 >= referenceHeight + referenceGap;
-        final writingCenter = showReference
+            paperHeight / 2 >=
+                referenceHeight + lineHeight + visiblePadding.bottom;
+        final writingCenter = canCenter
             ? paperHeight / 2 - visiblePadding.top
             : null;
         if (scroll.writingCenter != writingCenter) {
@@ -431,24 +449,6 @@ class _PageEditorState extends State<PageEditor> {
           _centeredLine = null;
           _followWritingLine();
         }
-        final guide = source == null
-            ? null
-            : TranscriptionGuidePainter(
-                guided: source,
-                comparison: _comparison!,
-                controller: text,
-                scroll: scroll,
-                fieldKey: fieldRenderKey,
-                bottomPadding: visiblePadding.bottom,
-                layout: _guideLayout,
-                showInline: !showReference,
-                style: writingTextStyle(
-                  style.fontIndex,
-                  color: const Color(0xff8b8273).withValues(alpha: .58),
-                  useDevelopmentTypeface: style.useDevelopmentTypeface,
-                ),
-              );
-        scroll.guide = guide;
         final writing = Stack(
           fit: hasChosenGuide ? StackFit.expand : StackFit.loose,
           children: [
@@ -580,15 +580,6 @@ class _PageEditorState extends State<PageEditor> {
               width: padding.right,
               child: _dismissGutter(),
             ),
-            if (guide != null)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: CustomPaint(
-                    key: const ValueKey('transcription-guide'),
-                    painter: guide,
-                  ),
-                ),
-              ),
             if (_comparison case final comparison?)
               Positioned.fill(
                 child: TranscriptionMarks(
@@ -628,21 +619,16 @@ class _PageEditorState extends State<PageEditor> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(child: writing),
-              if (showReference && guide != null)
+              if (source != null && referenceHeight > 0)
                 Padding(
-                  padding: EdgeInsets.only(
-                    left: padding.left,
-                    right: padding.right,
-                    bottom: math.max(
-                      0.0,
-                      paperHeight / 2 - referenceHeight - referenceGap,
-                    ),
-                  ),
+                  padding: writingMargins,
                   child: SizedBox(
                     height: referenceHeight,
                     child: TranscriptionReference(
                       key: const ValueKey('transcription-reference'),
-                      guide: guide,
+                      original: source,
+                      comparison: _comparison!,
+                      controller: text,
                       style: writingTextStyle(
                         style.fontIndex,
                         size: 16,
@@ -657,5 +643,63 @@ class _PageEditorState extends State<PageEditor> {
         );
       },
     );
+  }
+}
+
+class _WritingScrollController extends ScrollController {
+  _WritingScrollController({
+    required super.initialScrollOffset,
+    required this.lastLineExtent,
+  });
+
+  final double Function(double pixels, double anchor) lastLineExtent;
+  double? writingCenter;
+  double Function(double pixels)? layoutOffset;
+
+  @override
+  ScrollPosition createScrollPosition(
+    ScrollPhysics physics,
+    ScrollContext context,
+    ScrollPosition? oldPosition,
+  ) => _WritingScrollPosition(
+    controller: this,
+    physics: physics,
+    context: context,
+    initialPixels: initialScrollOffset,
+    keepScrollOffset: keepScrollOffset,
+    oldPosition: oldPosition,
+  );
+}
+
+class _WritingScrollPosition extends ScrollPositionWithSingleContext {
+  _WritingScrollPosition({
+    required this.controller,
+    required super.physics,
+    required super.context,
+    required super.initialPixels,
+    required super.keepScrollOffset,
+    super.oldPosition,
+  });
+
+  final _WritingScrollController controller;
+
+  @override
+  bool applyContentDimensions(double minScrollExtent, double maxScrollExtent) {
+    final center = controller.writingCenter;
+    final min = center == null
+        ? minScrollExtent
+        : math.min(minScrollExtent, -center);
+    final max = center == null
+        ? maxScrollExtent
+        : math.max(maxScrollExtent, controller.lastLineExtent(pixels, center));
+
+    // Resolve the requested position before RenderEditable paints the page.
+    final restore = controller.layoutOffset;
+    controller.layoutOffset = null;
+    if (restore != null || !hasContentDimensions) {
+      final target = (restore?.call(pixels) ?? pixels).clamp(min, max);
+      if (target != pixels) correctPixels(target);
+    }
+    return super.applyContentDimensions(min, max);
   }
 }

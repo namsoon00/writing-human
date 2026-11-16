@@ -24,7 +24,6 @@ import 'package:writing_human/ui/paper_panel.dart';
 import 'package:writing_human/ui/reading_details.dart';
 import 'package:writing_human/ui/source_import_sheet.dart';
 import 'package:writing_human/ui/source_reading.dart';
-import 'package:writing_human/ui/transcription_guide.dart';
 import 'package:writing_human/ui/transcription_marks.dart';
 
 import 'widget_test.dart' show MemoryStore;
@@ -35,6 +34,23 @@ final confirm = find.byKey(const ValueKey('source-confirm'));
 final place = find.byKey(const ValueKey('writing-originals'));
 final reading = find.byType(SourceReading);
 final readingText = find.byKey(const ValueKey('source-reading-text'));
+final transcriptionReference = find.byKey(
+  const ValueKey('transcription-reference'),
+);
+
+TextSpan referenceText(WidgetTester tester) =>
+    tester
+            .widget<RichText>(
+              find.descendant(
+                of: transcriptionReference,
+                matching: find.byType(RichText),
+              ),
+            )
+            .text
+        as TextSpan;
+
+String remainingReference(WidgetTester tester) =>
+    referenceText(tester).children!.last.toPlainText();
 
 Finder closeIn(Finder parent) =>
     find.descendant(of: parent, matching: find.byTooltip('닫기'));
@@ -1020,7 +1036,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(store.data.activePageId, 'p2');
 
-    final overlay = find.byKey(const ValueKey('transcription-guide'));
+    final overlay = transcriptionReference;
     final body = tester.widget<TextField>(bodyField).controller!;
     await tester.enterText(bodyField, '책장에');
     await tester.pumpAndSettle();
@@ -1394,7 +1410,7 @@ void main() {
       expect(store.data.activePage!.text, isEmpty);
       expect(tester.widget<TextField>(bodyField).controller, same(body));
       expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isFalse);
-      expect(find.byKey(const ValueKey('transcription-guide')), findsNothing);
+      expect(transcriptionReference, findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
@@ -1653,7 +1669,7 @@ void main() {
     await tester.pump();
     expect(tester.widget<TextButton>(place).onPressed, isNull);
     expect(field.controller!.value, composing);
-    expect(find.byKey(const ValueKey('transcription-guide')), findsNothing);
+    expect(transcriptionReference, findsNothing);
 
     const committed = TextEditingValue(
       text: '햇빛이 책장에',
@@ -1898,42 +1914,30 @@ void main() {
       await tester.tap(confirm);
       await settleSourceSheets(tester);
       final field = tester.widget<TextField>(bodyField);
-      final painter =
-          tester
-                  .widget<CustomPaint>(
-                    find.byKey(const ValueKey('transcription-guide')),
-                  )
-                  .painter!
-              as TranscriptionGuidePainter;
       expect(field.controller!.text, isEmpty);
       expect(field.focusNode!.hasFocus, isTrue);
-      expect(painter.remainderFor(field.controller!.value), original);
-      expect(
-        find.byKey(const ValueKey('transcription-reference')),
-        findsOneWidget,
-      );
+      expect(remainingReference(tester), original);
       expect(store.data.pages.single.text, isEmpty);
       await tester.enterText(bodyField, '한 문쟝을');
       await tester.pumpAndSettle();
-      expect(painter.remainderFor(field.controller!.value), ' 옮겨 쓴다.\n$second');
+      expect(remainingReference(tester), ' 옮겨 쓴다.\n$second');
       expect(store.data.pages.single.text, '한 문쟝을');
-      expect(
-        painter.remainderFor(
-          const TextEditingValue(
-            text: '한 문쟝을 ㅇ',
-            selection: TextSelection.collapsed(offset: 7),
-            composing: TextRange(start: 6, end: 7),
-          ),
-        ),
-        '겨 쓴다.\n$second',
+      const composing = TextEditingValue(
+        text: '한 문쟝을 ㅇ',
+        selection: TextSelection.collapsed(offset: 7),
+        composing: TextRange(start: 6, end: 7),
       );
+      tester.testTextInput.updateEditingValue(composing);
+      await tester.pumpAndSettle();
+      expect(remainingReference(tester), '옮겨 쓴다.\n$second');
+      expect(field.controller!.value, composing);
       await tester.enterText(bodyField, '한 문장을');
       await tester.pumpAndSettle();
       expect(find.text('느낀 점'), findsNothing);
       expect(store.data.pages.single.text, '한 문장을');
       await tester.enterText(bodyField, '$first\n');
       await tester.pumpAndSettle();
-      expect(painter.remainderFor(field.controller!.value), second);
+      expect(remainingReference(tester), second);
       expect(store.data.pages.single.text, '$first\n');
       const mistyped = '한 문쟝을 옮겨 쓴다.\n';
       await tester.enterText(bodyField, mistyped);
@@ -1952,16 +1956,9 @@ void main() {
       );
       await tester.pumpAndSettle();
       final reopened = tester.widget<TextField>(bodyField);
-      final guide =
-          tester
-                  .widget<CustomPaint>(
-                    find.byKey(const ValueKey('transcription-guide')),
-                  )
-                  .painter!
-              as TranscriptionGuidePainter;
       expect(reopened.controller!.text, mistyped);
       expect(reopened.controller!.selection.extentOffset, first.length + 1);
-      expect(guide.remainderFor(reopened.controller!.value), second);
+      expect(remainingReference(tester), second);
       expect(reopened.focusNode!.hasFocus, isFalse);
     },
   );
@@ -2076,8 +2073,9 @@ void main() {
         writing: true,
       );
     await open(tester, store, FakeIntake());
-    final reference = find.byKey(const ValueKey('transcription-reference'));
-    expect(reference, findsNothing);
+    final reference = transcriptionReference;
+    expect(reference, findsOneWidget);
+    expect(remainingReference(tester), '$first\n$second\n$third');
     const keyboard = 290.0;
     tester.view.viewInsets = const FakeViewPadding(bottom: keyboard);
     addTearDown(tester.view.resetViewInsets);
@@ -2101,22 +2099,10 @@ void main() {
         .dy;
     expect(caretY(), closeTo(middle, 5));
     expect(tester.getTopLeft(reference).dy, greaterThan(caretY()));
-    expect(
-      find.descendant(of: reference, matching: find.textContaining(second)),
-      findsOneWidget,
-    );
-
     await tester.enterText(bodyField, '$first\n');
     await tester.pumpAndSettle();
     expect(caretY(), closeTo(middle, 5));
-    expect(
-      find.descendant(of: reference, matching: find.textContaining(third)),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(of: reference, matching: find.textContaining(first)),
-      findsNothing,
-    );
+    expect(remainingReference(tester), '$second\n$third');
     const draft = '$first\n두';
     final composing = TextEditingValue(
       text: draft,
@@ -2136,67 +2122,80 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('A long chosen original scrolls beyond the written text', (
-    tester,
-  ) async {
-    final source = List.filled(32, '긴 원문을 한 줄씩 천천히 읽어 보는 문장입니다.').join('\n');
-    final store = MemoryStore()
-      ..data = Library(
-        records: [
-          WritingRecord(
-            id: 'r',
-            title: '필사',
-            originals: [RegisteredOriginal('source', source)],
-          ),
-        ],
-        pages: const [
-          WritingPage(
-            id: 'p',
-            recordId: 'r',
-            number: 1,
-            guidedOriginalId: 'source',
-          ),
-        ],
-        activePageId: 'p',
-        writing: true,
-      );
-    await open(tester, store, FakeIntake());
-    final field = tester.widget<TextField>(bodyField);
-    final scroll = field.scrollController!;
-    final painter =
-        tester
-                .widget<CustomPaint>(
-                  find.byKey(const ValueKey('transcription-guide')),
-                )
-                .painter!
-            as TranscriptionGuidePainter;
-    expect(source.length, greaterThan(400));
-    expect(painter.remainderFor(field.controller!.value), source);
-    expect(painter.layout.computeLineMetrics().length, greaterThan(6));
-    expect(scroll.position.maxScrollExtent, greaterThan(500));
-    final initialValue = field.controller!.value;
-    final start = tester.getTopLeft(bodyField) + const Offset(160, 360);
-    final drag = await tester.startGesture(start);
-    await drag.moveBy(const Offset(0, -60));
-    await tester.pump(const Duration(milliseconds: 100));
-    await drag.moveBy(const Offset(0, -290));
-    await tester.pump(const Duration(milliseconds: 100));
-    await drag.up();
-    await tester.pumpAndSettle();
-    expect(scroll.offset, greaterThan(200));
-    expect(field.controller!.value, initialValue);
-    expect(store.data.activePage!.text, isEmpty);
-    final savedOffset = store.data.activePage!.scroll;
-    expect(savedOffset, closeTo(scroll.offset, 1));
+  testWidgets(
+    'A long original scrolls in the bottom reference on a compact screen',
+    (tester) async {
+      final lines = List.generate(32, (i) => '${i + 1}번째 줄을 천천히 옮겨 적는다.');
+      final source = lines.join('\n');
+      final store = MemoryStore()
+        ..data = Library(
+          records: [
+            WritingRecord(
+              id: 'r',
+              title: '필사',
+              originals: [RegisteredOriginal('source', source)],
+            ),
+          ],
+          pages: const [
+            WritingPage(
+              id: 'p',
+              recordId: 'r',
+              number: 1,
+              guidedOriginalId: 'source',
+            ),
+          ],
+          activePageId: 'p',
+          writing: true,
+        );
+      await open(tester, store, FakeIntake());
+      tester.view.physicalSize = const Size(320, 640);
+      await tester.pumpAndSettle();
+      final field = tester.widget<TextField>(bodyField);
+      expect(transcriptionReference, findsOneWidget);
+      expect(remainingReference(tester), source);
+      expect(field.controller!.text, isEmpty);
 
-    await tester.pumpWidget(const SizedBox());
-    await tester.pumpAndSettle();
-    await open(tester, store, FakeIntake());
-    final reopened = tester.widget<TextField>(bodyField);
-    expect(reopened.scrollController!.offset, closeTo(savedOffset, 1));
-    expect(reopened.controller!.value, initialValue);
-    expect(tester.takeException(), isNull);
-  });
+      tester.view.viewInsets = const FakeViewPadding(bottom: 290);
+      await tester.showKeyboard(bodyField);
+      await tester.pumpAndSettle();
+      expect(transcriptionReference, findsOneWidget);
+      expect(
+        tester.getTopLeft(transcriptionReference).dy,
+        greaterThanOrEqualTo(tester.getBottomLeft(bodyField).dy),
+      );
+      expect(tester.getBottomLeft(transcriptionReference).dy, lessThan(350));
+
+      final viewport = find.descendant(
+        of: transcriptionReference,
+        matching: find.byType(SingleChildScrollView),
+      );
+      final scroll = tester.widget<SingleChildScrollView>(viewport).controller!;
+      expect(scroll.position.maxScrollExtent, greaterThan(500));
+      final initial = field.controller!.value;
+      final editorOffset = field.scrollController!.offset;
+      await tester.drag(viewport, const Offset(0, -380));
+      await tester.pumpAndSettle();
+      expect(scroll.offset, greaterThan(200));
+      expect(field.controller!.value, initial);
+      expect(field.scrollController!.offset, editorOffset);
+      expect(store.data.activePage!.text, isEmpty);
+
+      final written = '${lines.take(8).join('\n')}\n';
+      await tester.enterText(bodyField, written);
+      await tester.pumpAndSettle();
+      expect(remainingReference(tester), lines.skip(8).join('\n'));
+      expect(scroll.offset, greaterThan(140));
+      expect(scroll.offset, lessThan(scroll.position.maxScrollExtent));
+
+      field.focusNode!.unfocus();
+      tester.view.resetViewInsets();
+      await tester.pumpAndSettle();
+      expect(transcriptionReference, findsOneWidget);
+      expect(referenceText(tester).toPlainText(), source);
+      expect(field.controller!.text, written);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'Save and transcribe from the original panel preserves the existing page',

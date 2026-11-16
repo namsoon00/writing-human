@@ -813,7 +813,7 @@ void main() {
     final field = tester.widget<TextField>(editor);
     expect(field.controller!.text, written);
     expect(field.focusNode!.hasFocus, isFalse);
-    expect(find.byKey(const ValueKey('transcription-guide')), findsNothing);
+    expect(find.byKey(const ValueKey('transcription-reference')), findsNothing);
     expect(store.data.books.single.originals.single.text, source);
     await tester.tap(find.byKey(const ValueKey('writing-originals')));
     await tester.pumpAndSettle();

@@ -1636,3 +1636,16 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - GitHub Pages용 웹 빌드를 생성했다. Chrome 390×844에서 한국어 음성 엔진을
   모의해 문장부호, 재생 속도, 행·연·쪽의 쉼 길이와 쉼 중 정지를 확인했다.
 - iOS·Android 및 Safari 실기기의 음색과 억양은 청취 검증하지 않았다.
+
+## 2026-11-20 · 넓은 종이에서 원문 밑글씨 함께 보기
+
+- 배포 체크아웃에서 Dart 포맷, Flutter 정적 분석과 Flutter 테스트 160개를
+  통과했다. 작업 폴더에서도 앱 소스·테스트 분석과 Flutter 테스트 160개를 통과했다.
+- 위젯 테스트에서 종이 높이가 바뀔 때 밑글씨가 숨거나 다시 나타나며 하단 원문은
+  유지되는 것을 확인했다. 선택 범위, 긴 원문의 스크롤 범위, 오타 이후의 원문과
+  화면 전환 중 한글 조합·선택 영역 보존을 검사했다.
+- Chrome 390×844와 320×430에서 표시를 확인했다. 종이 위 원문을 터치로
+  스크롤한 뒤 저장된 필사 본문·선택 영역이 같은 것을 확인했다.
+- 작업 폴더 전체 분석에는 이전 artifacts/button-style-release와
+  artifacts/source-footer-publish의 캡처 도구에 미사용 경고 6개가 남는다.
+- iOS·Android와 Safari 실기기의 키보드 전환은 이번 변경에서 검증하지 않았다.

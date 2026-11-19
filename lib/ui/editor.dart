@@ -16,6 +16,7 @@ import 'writing_pen.dart';
 import 'writing_sound.dart';
 import 'pencil_marks.dart';
 import 'transcription_reference.dart';
+import 'transcription_guide.dart';
 import 'transcription_marks.dart';
 import 'editable_geometry.dart';
 
@@ -57,6 +58,7 @@ class _PageEditorState extends State<PageEditor> {
   late final _WritingScrollController scroll;
   late TextEditingValue _observedText;
   WritingSound? _sound;
+  final _guideLayout = TextPainter();
   late TranscriptionComparison? _comparison = _compareChosen();
 
   TranscriptionComparison? _compareChosen() {
@@ -413,6 +415,7 @@ class _PageEditorState extends State<PageEditor> {
     scroll.removeListener(_save);
     text.dispose();
     scroll.dispose();
+    _guideLayout.dispose();
     focus.removeListener(_focusChanged);
     if (widget.focusNode == null) {
       focus.dispose();
@@ -461,6 +464,27 @@ class _PageEditorState extends State<PageEditor> {
           _centeredLine = null;
           _followWritingLine();
         }
+        final showInlineGuide =
+            _comparison != null &&
+            paperHeight - referenceHeight - visiblePadding.vertical >=
+                lineHeight * 5;
+        final guide = showInlineGuide
+            ? TranscriptionGuidePainter(
+                comparison: _comparison!,
+                controller: text,
+                scroll: scroll,
+                fieldKey: fieldRenderKey,
+                style: writingTextStyle(
+                  style.fontIndex,
+                  size: 23,
+                  color: const Color(0xff8b8273).withValues(alpha: .58),
+                  useDevelopmentTypeface: style.useDevelopmentTypeface,
+                ),
+                bottomPadding: visiblePadding.bottom,
+                layout: _guideLayout,
+              )
+            : null;
+        scroll.guide = guide;
         final writing = Stack(
           fit: hasChosenGuide ? StackFit.expand : StackFit.loose,
           children: [
@@ -588,6 +612,17 @@ class _PageEditorState extends State<PageEditor> {
               width: padding.right,
               child: _dismissGutter(),
             ),
+            if (guide != null)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: ExcludeSemantics(
+                    child: CustomPaint(
+                      key: const ValueKey('transcription-guide'),
+                      painter: guide,
+                    ),
+                  ),
+                ),
+              ),
             if (_comparison case final comparison?)
               Positioned.fill(
                 child: TranscriptionMarks(
@@ -664,6 +699,7 @@ class _WritingScrollController extends ScrollController {
   });
 
   final double Function(double pixels, double anchor) lastLineExtent;
+  TranscriptionGuidePainter? guide;
   double? writingCenter;
   double Function(double pixels)? layoutOffset;
 
@@ -700,9 +736,15 @@ class _WritingScrollPosition extends ScrollPositionWithSingleContext {
     final min = center == null
         ? minScrollExtent
         : math.min(minScrollExtent, -center);
-    final max = center == null
-        ? maxScrollExtent
-        : math.max(maxScrollExtent, controller.lastLineExtent(pixels, center));
+    final max = math.max(
+      controller.guide?.scrollExtent(pixels) ?? 0,
+      center == null
+          ? maxScrollExtent
+          : math.max(
+              maxScrollExtent,
+              controller.lastLineExtent(pixels, center),
+            ),
+    );
 
     // Resolve the requested position before RenderEditable paints the page.
     final restore = controller.layoutOffset;

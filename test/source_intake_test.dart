@@ -25,6 +25,7 @@ import 'package:writing_human/ui/reading_details.dart';
 import 'package:writing_human/ui/source_import_sheet.dart';
 import 'package:writing_human/ui/source_reading.dart';
 import 'package:writing_human/ui/transcription_marks.dart';
+import 'package:writing_human/ui/transcription_guide.dart';
 
 import 'widget_test.dart' show MemoryStore;
 
@@ -2129,6 +2130,97 @@ void main() {
     expect(store.data.activePage!.text, draft);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'The remaining source returns to roomy paper without changing input',
+    (tester) async {
+      final passage = [
+        '첫 줄을 옮겨 적는다.',
+        ...List.generate(30, (i) => '${i + 1}번째 줄을 천천히 옮겨 적는다.'),
+      ].join('\n');
+      const heading = '머리말\n';
+      final store = MemoryStore()
+        ..data = Library(
+          records: [
+            WritingRecord(
+              id: 'r',
+              title: '필사',
+              originals: [
+                RegisteredOriginal(
+                  'o',
+                  '$heading$passage\n꼬리말',
+                  isFullPage: true,
+                  writingRange: PencilMark(
+                    heading.length,
+                    heading.length + passage.length,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          pages: const [
+            WritingPage(
+              id: 'p',
+              recordId: 'r',
+              number: 1,
+              guidedOriginalId: 'o',
+            ),
+          ],
+          activePageId: 'p',
+          writing: true,
+        );
+      await open(tester, store, FakeIntake());
+      final guide = find.byKey(const ValueKey('transcription-guide'));
+      TranscriptionGuidePainter painter() =>
+          tester.widget<CustomPaint>(guide).painter!
+              as TranscriptionGuidePainter;
+      final field = tester.widget<TextField>(bodyField);
+      expect(guide, findsOneWidget);
+      expect(transcriptionReference, findsOneWidget);
+      expect(painter().remainderFor(field.controller!.value), passage);
+      expect(field.controller!.text, isEmpty);
+      expect(
+        field.scrollController!.position.maxScrollExtent,
+        greaterThan(500),
+      );
+
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 290);
+      await tester.showKeyboard(bodyField);
+      await tester.pumpAndSettle();
+      expect(guide, findsNothing);
+      expect(transcriptionReference, findsOneWidget);
+      expect(field.controller!.text, isEmpty);
+
+      const composing = TextEditingValue(
+        text: '첫 줄을 ㅇ',
+        selection: TextSelection.collapsed(offset: 6),
+        composing: TextRange(start: 5, end: 6),
+      );
+      tester.testTextInput.updateEditingValue(composing);
+      await tester.pumpAndSettle();
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.resetViewInsets();
+      await tester.pumpAndSettle();
+      expect(guide, findsOneWidget);
+      expect(transcriptionReference, findsOneWidget);
+      expect(field.controller!.value, composing);
+      expect(painter().remainderFor(composing), passage.substring(6));
+
+      await tester.enterText(bodyField, '첫 줄윽');
+      await tester.pumpAndSettle();
+      field.focusNode!.unfocus();
+      await tester.pumpAndSettle();
+      expect(guide, findsOneWidget);
+      expect(
+        painter().remainderFor(field.controller!.value),
+        passage.substring(4),
+      );
+      expect(store.data.activePage!.text, '첫 줄윽');
+      expect(store.data.activePage!.guidedOriginalId, 'o');
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'A long original scrolls in the bottom reference on a compact screen',

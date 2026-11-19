@@ -444,10 +444,9 @@ class _PageEditorState extends State<PageEditor> {
         final hasChosenGuide = source != null;
         final paperHeight = math.max(0.0, constraints.maxHeight - overlap);
         final scaler = MediaQuery.textScalerOf(context);
-        final referenceHeight = math.min(
-          scaler.scale(16) * 4 + 12,
-          paperHeight * .34,
-        );
+        final referenceHeight = source?.photoId == null
+            ? math.min(scaler.scale(16) * 4 + 12, paperHeight * .34)
+            : math.min(232.0, paperHeight * .40);
         final lineHeight = scaler.scale(23) * 1.8;
         final canCenter =
             hasChosenGuide &&

@@ -62,6 +62,12 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
     });
   }
 
+  void _openPhoto(String id) => showOriginalPhoto(
+    context,
+    id,
+    color: widget.photoPanelColor,
+  );
+
   @override
   Widget build(BuildContext context) {
     final source = widget.original;
@@ -98,20 +104,19 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
                                     child: Text(_showPhoto ? '글 보기' : '사진 보기'),
                                   ),
                                 TextButton(
-                                  onPressed: () => showOriginalPhoto(
-                                    context,
-                                    source.photoId!,
-                                    color: widget.photoPanelColor,
-                                  ),
+                                  onPressed: () => _openPhoto(source.photoId!),
                                   child: const Text('사진 크게 보기'),
                                 ),
                               ],
                             ),
                           Expanded(
                             child: _showPhoto || passage.isEmpty
-                                ? OriginalPhoto(
-                                    id: source.photoId!,
-                                    region: source.photoRegion,
+                                ? InkWell(
+                                    onTap: () => _openPhoto(source.photoId!),
+                                    child: OriginalPhoto(
+                                      id: source.photoId!,
+                                      region: source.photoRegion,
+                                    ),
                                   )
                                 : _textReference(passage, scaler),
                           ),

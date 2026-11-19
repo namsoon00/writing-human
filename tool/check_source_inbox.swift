@@ -23,6 +23,17 @@ struct CheckSourceInbox {
       try inbox.append(String(repeating: "한", count: SourceInbox.textLimit + 1))
       fatalError("Oversize delivery was accepted")
     } catch SourceInbox.InboxError.invalidText {}
+    let photo = Data([1, 2, 3])
+    try inbox.append("", photo: photo)
+    let item = try SourceInbox(file: file).pending().last!
+    precondition(item.text.isEmpty && item.hasPhoto == true)
+    let photoURL = try inbox.sharedPhoto(item.id)!
+    let fileBytes = try Data(contentsOf: photoURL)
+    precondition(fileBytes == photo)
+    try inbox.acknowledge(item.id)
+    precondition(!FileManager.default.fileExists(atPath: photoURL.path))
+    let acknowledged = try inbox.sharedPhoto(item.id)
+    precondition(acknowledged == nil)
     let malformed = Data("not-json".utf8)
     try malformed.write(to: file)
     do {

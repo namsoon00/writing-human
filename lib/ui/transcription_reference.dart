@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart' show RenderParagraph;
 import '../data/model.dart';
 import '../source/transcription_comparison.dart';
 import 'paper.dart';
+import 'original_photo.dart';
 
 /// Scrolls the selected original independently of the editable paper.
 class TranscriptionReference extends StatefulWidget {
@@ -13,12 +14,14 @@ class TranscriptionReference extends StatefulWidget {
     super.key,
     required this.original,
     required this.comparison,
+    required this.photoPanelColor,
     required this.controller,
     required this.style,
   });
 
   final RegisteredOriginal original;
-  final TranscriptionComparison comparison;
+  final TranscriptionComparison? comparison;
+  final Color photoPanelColor;
   final TextEditingController controller;
   final TextStyle style;
 
@@ -30,6 +33,13 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
   final _scroll = ScrollController(keepScrollOffset: false);
   final _paragraph = GlobalKey();
   Object? _lastPosition;
+  bool _showPhoto = false;
+
+  @override
+  void didUpdateWidget(TranscriptionReference oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.original.id != widget.original.id) _showPhoto = false;
+  }
 
   @override
   void dispose() {
@@ -67,53 +77,96 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Semantics(
           label: '따라 쓰는 원문',
-          child: LayoutBuilder(
-            builder: (context, constraints) =>
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: widget.controller,
-                  builder: (context, value, _) {
-                    final caret = value.selection.extentOffset.clamp(
-                      0,
-                      value.text.length,
-                    );
-                    final committed =
-                        value.isComposingRangeValid &&
-                            !value.composing.isCollapsed
-                        ? math.min(caret, value.composing.start)
-                        : caret;
-                    final offset = widget.comparison.sourceOffsetFor(
-                      value.text.substring(0, committed),
-                    );
-                    _follow(offset, (
-                      offset,
-                      passage,
-                      constraints.biggest,
-                      scaler,
-                      widget.style,
-                    ));
-                    return SingleChildScrollView(
-                      controller: _scroll,
-                      primary: false,
-                      child: RichText(
-                        key: _paragraph,
-                        textScaler: scaler,
-                        text: TextSpan(
-                          style: widget.style,
-                          children: [
-                            TextSpan(
-                              text: passage.substring(0, offset),
-                              style: const TextStyle(color: muted),
+          child: source.photoId == null
+              ? _textReference(passage, scaler)
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxHeight < 64 && passage.isNotEmpty) {
+                      return _textReference(passage, scaler);
+                    }
+                    return TextFieldTapRegion(
+                      child: Column(
+                        children: [
+                          if (constraints.maxHeight >= 64)
+                            Row(
+                              children: [
+                                if (passage.isNotEmpty)
+                                  TextButton(
+                                    onPressed: () => setState(
+                                      () => _showPhoto = !_showPhoto,
+                                    ),
+                                    child: Text(_showPhoto ? '글 보기' : '사진 보기'),
+                                  ),
+                                TextButton(
+                                  onPressed: () => showOriginalPhoto(
+                                    context,
+                                    source.photoId!,
+                                    color: widget.photoPanelColor,
+                                  ),
+                                  child: const Text('사진 크게 보기'),
+                                ),
+                              ],
                             ),
-                            TextSpan(text: passage.substring(offset)),
-                          ],
-                        ),
+                          Expanded(
+                            child: _showPhoto || passage.isEmpty
+                                ? OriginalPhoto(
+                                    id: source.photoId!,
+                                    region: source.photoRegion,
+                                  )
+                                : _textReference(passage, scaler),
+                          ),
+                        ],
                       ),
                     );
                   },
                 ),
-          ),
         ),
       ),
     );
   }
+
+  Widget _textReference(String passage, TextScaler scaler) => LayoutBuilder(
+    builder: (context, constraints) => ValueListenableBuilder<TextEditingValue>(
+      valueListenable: widget.controller,
+      builder: (context, value, _) {
+        final caret = value.selection.extentOffset.clamp(0, value.text.length);
+        final committed =
+            value.isComposingRangeValid && !value.composing.isCollapsed
+            ? math.min(caret, value.composing.start)
+            : caret;
+        final offset =
+            widget.comparison?.sourceOffsetFor(
+              value.text.substring(0, committed),
+            ) ??
+            0;
+        if (widget.comparison != null) {
+          _follow(offset, (
+            offset,
+            passage,
+            constraints.biggest,
+            scaler,
+            widget.style,
+          ));
+        }
+        return SingleChildScrollView(
+          controller: _scroll,
+          primary: false,
+          child: RichText(
+            key: _paragraph,
+            textScaler: scaler,
+            text: TextSpan(
+              style: widget.style,
+              children: [
+                TextSpan(
+                  text: passage.substring(0, offset),
+                  style: const TextStyle(color: muted),
+                ),
+                TextSpan(text: passage.substring(offset)),
+              ],
+            ),
+          ),
+        );
+      },
+    ),
+  );
 }

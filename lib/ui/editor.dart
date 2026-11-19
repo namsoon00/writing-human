@@ -61,7 +61,11 @@ class _PageEditorState extends State<PageEditor> {
 
   TranscriptionComparison? _compareChosen() {
     final source = widget.guidedOriginal;
-    return source == null ? null : TranscriptionComparison(source);
+    return source == null ||
+            widget.page.referenceOnly ||
+            source.text.trim().isEmpty
+        ? null
+        : TranscriptionComparison(source);
   }
 
   late final focus = widget.focusNode ?? FocusNode();
@@ -110,7 +114,8 @@ class _PageEditorState extends State<PageEditor> {
     text.annotatedText = widget.page.text;
     text.marks = widget.page.pencilMarks;
     text.choice = widget.style.bookDetails.pencil;
-    if (oldWidget.guidedOriginal != widget.guidedOriginal) {
+    if (oldWidget.guidedOriginal != widget.guidedOriginal ||
+        oldWidget.page.referenceOnly != widget.page.referenceOnly) {
       _comparison = _compareChosen();
       findEditable(
         fieldRenderKey.currentContext?.findRenderObject(),
@@ -631,7 +636,10 @@ class _PageEditorState extends State<PageEditor> {
                     child: TranscriptionReference(
                       key: const ValueKey('transcription-reference'),
                       original: source,
-                      comparison: _comparison!,
+                      comparison: _comparison,
+                      photoPanelColor: panelPaperColor(
+                        paperColors[style.paperIndex],
+                      ),
                       controller: text,
                       style: writingTextStyle(
                         style.fontIndex,

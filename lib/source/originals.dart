@@ -59,8 +59,14 @@ Iterable<_ScopedOriginal> _scopedOriginals(
   }
 }
 
-(String, String, String?) _originalContent(RegisteredOriginal original) =>
-    (original.text, original.citation, original.photoId);
+(String, String, String?, String?) _originalContent(
+  RegisteredOriginal original,
+) => (
+  original.text,
+  original.citation,
+  original.photoId,
+  original.photoRegion?.join(','),
+);
 
 List<RegisteredOriginal> originalsFor(
   Library library, {
@@ -68,7 +74,7 @@ List<RegisteredOriginal> originalsFor(
   String? recordId,
 }) {
   final removed = library.originalRemovals.toSet();
-  final originals = <(String, String, String?), RegisteredOriginal>{};
+  final originals = <(String, String, String?, String?), RegisteredOriginal>{};
   for (final item in _scopedOriginals(
     library,
     bookId: bookId,
@@ -76,8 +82,7 @@ List<RegisteredOriginal> originalsFor(
   )) {
     final original = item.original;
     if (!removed.contains(item.key) &&
-        (original.text.trim().isNotEmpty ||
-            original.citation.trim().isNotEmpty)) {
+        (original.canTranscribe || original.citation.trim().isNotEmpty)) {
       originals.putIfAbsent(_originalContent(original), () => original);
     }
   }
@@ -174,13 +179,16 @@ Library editOriginalInScope(
         (item) =>
             item.text == text &&
             item.citation == citation &&
-            item.photoId == original.photoId,
+            item.photoId == original.photoId &&
+            item.photoRegion?.join(',') == original.photoRegion?.join(','),
       );
   final previousIds = keys.map((item) => item.originalId).toSet();
   WritingPage relinkGuide(WritingPage page) =>
       previousIds.contains(page.guidedOriginalId) &&
           scopedRecords.contains(page.recordId)
-      ? page.withDetails(guidedOriginalId: selected.id)
+      ? page
+            .rememberOriginalCitation(original.citation)
+            .withDetails(guidedOriginalId: selected.id)
       : page;
   return applyOriginalRemovals(
     changed.copy(
@@ -240,7 +248,18 @@ Map<String, ({Passage passage, bool marked})> originalWritingLocations(
   Iterable<WritingPage> pages,
 ) {
   final locations = <String, ({Passage passage, bool marked})>{};
+  final originalIds = originals.map((original) => original.id).toSet();
   for (final page in pages) {
+    if (page.guidedOriginalId case final String id
+        when page.text.trim().isNotEmpty && originalIds.contains(id)) {
+      final previous = locations[id];
+      if (previous?.marked != true) {
+        locations[id] = (
+          passage: Passage(page, '', page.text.trim(), offset: page.extent),
+          marked: false,
+        );
+      }
+    }
     // A mark can cover a single word or more than one line.
     for (final mark in page.pencilMarks) {
       if (mark.start < 0 ||

@@ -78,7 +78,7 @@ class FakeIntake extends SourceIntake {
   final acknowledged = <String>[];
   List<String> blocks = ['첫 문단입니다.', '둘째 문단입나다.'];
   Completer<List<String>>? reading;
-  int photos = 0, cancellations = 0;
+  int photos = 0, cancellations = 0, scans = 0;
   bool cancelPicker = false;
   SourcePhoto? recovered;
   SourceScan? positioned;
@@ -105,6 +105,9 @@ class FakeIntake extends SourceIntake {
   }
 
   @override
+  Future<SourcePhoto> readSharedPhoto(String id) async => photo;
+
+  @override
   Future<SourcePhoto?> recoverPhoto() async => recovered;
   @override
   Future<SourceScan> scan(
@@ -112,6 +115,7 @@ class FakeIntake extends SourceIntake {
     Rect? region,
     List<Rect> mask = const [],
   }) async {
+    scans++;
     recognizedRegion = region;
     recognizedMask = mask;
     if (region == null && positioned != null) return positioned!;
@@ -289,15 +293,19 @@ void main() {
   });
 
   testWidgets(
-    'Original deletion confirms, keeps failed edits and leaves writing intact',
+    'Original deletion retains a prior citation and leaves writing intact',
     (tester) async {
       const original = RegisteredOriginal(
         'remove',
         '지울 원문',
+        citation: '이전에 읽은 책',
         reflection: OriginalReflection('함께 지울 느낀 점'),
       );
       final store = MemoryStore()
         ..data = existing().copy(
+          pages: [
+            existing().pages.first.withDetails(guidedOriginalId: 'remove'),
+          ],
           records: const [
             WritingRecord(
               id: 'r',
@@ -309,8 +317,6 @@ void main() {
       final writing = store.data.activePage!.text;
       await open(tester, store, FakeIntake());
       await tester.tap(place);
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('remove')));
       await tester.pumpAndSettle();
 
       Future<void> askToDelete() async {
@@ -344,6 +350,8 @@ void main() {
       expect(find.text('지울 원문'), findsNothing);
       expect(store.data.records.single.originals.single.id, 'keep');
       expect(store.data.activePage!.text, writing);
+      expect(store.data.activePage!.guidedOriginalId, isNull);
+      expect(store.data.activePage!.originalCitations, ['이전에 읽은 책']);
     },
   );
 
@@ -2243,15 +2251,93 @@ void main() {
 
       expect(reading, findsNothing);
       expect(store.data.pages.first.text, '이미 쓴 글');
-      expect(store.data.activePageId, isNot('p'));
+      expect(store.data.pages, hasLength(1));
+      expect(store.data.activePageId, 'p');
       expect(store.data.activeBook!.id, 'b');
-      expect(store.data.activePage!.text, isEmpty);
+      expect(store.data.activePage!.text, '이미 쓴 글');
+      expect(store.data.activePage!.referenceOnly, isTrue);
       expect(
         store.data.activePage!.guidedOriginalId,
         store.data.activeBook!.originals.last.id,
       );
     },
   );
+
+  testWidgets(
+    'Shared photo opens as a guide without recognition or prefilled writing',
+    (tester) async {
+      await preparePhotoStorage(tester);
+      final store = MemoryStore()
+        ..data = const Library(
+          books: [Book(id: 'b', title: '노트')],
+          records: [WritingRecord(id: 'r', bookId: 'b', title: '필사')],
+          pages: [WritingPage(id: 'p', recordId: 'r', number: 1)],
+          activePageId: 'p',
+          writing: true,
+        );
+      final intake = FakeIntake()
+        ..shares.add(const IncomingSource('image-share', '', hasPhoto: true));
+      await open(tester, store, intake);
+      expect(
+        find.byKey(const ValueKey('original-photo-preview')),
+        findsOneWidget,
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('original-citation')),
+        '책 72쪽',
+      );
+      await tester.pumpAndSettle();
+      await saveWithPhoto(tester);
+      final original = store.data.books.single.originals.single;
+      expect(original.text, isEmpty);
+      expect(original.photoId, isNotNull);
+      expect(intake.scans, 0);
+      expect(intake.acknowledged, ['image-share']);
+      expect(
+        await tester.runAsync(
+          () => const OriginalPhotoStore().load(original.photoId!),
+        ),
+        intake.photo.bytes,
+      );
+
+      await tester.tap(place);
+      await tester.pumpAndSettle();
+      Future<void> loadPhotoAfter(Finder target) async {
+        await tester.runAsync(() async {
+          await tester.tap(target);
+          for (var frame = 0; frame < 20; frame++) {
+            await tester.pump(const Duration(milliseconds: 30));
+            await Future<void>.delayed(const Duration(milliseconds: 10));
+          }
+        });
+        await tester.pumpAndSettle();
+      }
+
+      await loadPhotoAfter(find.text('원본 사진').last);
+      await loadPhotoAfter(find.text('이 구절 필사하기'));
+      expect(store.data.activePageId, 'p');
+      expect(store.data.activePage!.text, isEmpty);
+      expect(store.data.activePage!.guidedOriginalId, original.id);
+      expect(store.data.activePage!.originalCitations, ['책 72쪽']);
+      expect(find.text('사진 크게 보기'), findsOneWidget);
+    },
+  );
+
+  testWidgets('A shared URL saves as a link without body text', (tester) async {
+    final store = MemoryStore()..data = existing();
+    const url = 'https://example.com/reading';
+    final intake = FakeIntake()
+      ..shares.add(const IncomingSource('url-share', url));
+    await open(tester, store, intake);
+    expect(tester.widget<TextField>(sourceField).controller!.text, isEmpty);
+    await tester.tap(confirm);
+    await tester.pumpAndSettle();
+    final original = store.data.records.last.originals.single;
+    expect(original.text, isEmpty);
+    expect(original.citation, url);
+    expect(original.canTranscribe, isFalse);
+    expect(intake.acknowledged, ['url-share']);
+  });
 
   testWidgets('Pencil filter opens the page containing the marked original', (
     tester,

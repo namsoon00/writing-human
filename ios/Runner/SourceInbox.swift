@@ -3,6 +3,7 @@ import Foundation
 struct SourceDelivery: Codable {
   let id: String
   let text: String
+  var hasPhoto: Bool? = nil
 }
 
 /// The extension and host coordinate the same private file. Confirmation in
@@ -10,10 +11,11 @@ struct SourceDelivery: Codable {
 struct SourceInbox {
   static let group = "group.com.writinghuman.writingHuman"
   static let textLimit = 50_000
+  static let photoLimit = 20 * 1024 * 1024
   private let file: URL
 
   enum InboxError: Error {
-    case unavailable, invalidText, full, coordination
+    case unavailable, invalidText, invalidPhoto, full, coordination
   }
 
   init(file: URL? = nil) throws {
@@ -62,18 +64,45 @@ struct SourceInbox {
     try result.get()
   }
 
-  func append(_ raw: String) throws {
+  func append(_ raw: String, photo: Data? = nil) throws {
     let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !text.isEmpty && text.utf16.count <= Self.textLimit else {
+    guard (!text.isEmpty || photo != nil) && text.utf16.count <= Self.textLimit else {
       throw InboxError.invalidText
     }
-    try update { items in
-      guard items.count < 20 else { throw InboxError.full }
-      return items + [SourceDelivery(id: UUID().uuidString, text: text)]
+    if let photo = photo, photo.isEmpty || photo.count > Self.photoLimit {
+      throw InboxError.invalidPhoto
     }
+    let id = UUID().uuidString
+    let photoFile = photoURL(id)
+    do {
+      try update { items in
+        guard items.count < 20 else { throw InboxError.full }
+        if let photo = photo {
+          try photo.write(to: photoFile, options: .atomic)
+        }
+        return items + [SourceDelivery(id: id, text: text, hasPhoto: photo == nil ? nil : true)]
+      }
+    } catch {
+      try? FileManager.default.removeItem(at: photoFile)
+      throw error
+    }
+  }
+
+  private func photoURL(_ id: String) -> URL {
+    file.deletingLastPathComponent().appendingPathComponent("source-\(id).photo")
+  }
+
+  func sharedPhoto(_ id: String) throws -> URL? {
+    guard UUID(uuidString: id) != nil,
+          try pending().contains(where: { $0.id == id && $0.hasPhoto == true })
+    else { return nil }
+    return photoURL(id)
   }
 
   func acknowledge(_ id: String) throws {
     try update { $0.filter { $0.id != id } }
+    if UUID(uuidString: id) != nil {
+      try? FileManager.default.removeItem(at: photoURL(id))
+    }
   }
 }

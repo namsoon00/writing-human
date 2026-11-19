@@ -28,8 +28,9 @@ class SourcePhoto {
 }
 
 class IncomingSource {
-  const IncomingSource(this.id, this.text);
+  const IncomingSource(this.id, this.text, {this.hasPhoto = false});
   final String id, text;
+  final bool hasPhoto;
 }
 
 class SourceIntakeException implements Exception {
@@ -52,6 +53,11 @@ abstract class SourceIntake {
   }
 
   Future<SourcePhoto?> recoverPhoto() async => null;
+
+  Future<SourcePhoto> readSharedPhoto(String id) async {
+    throw const SourceIntakeException('받은 사진을 열지 못했어요.');
+  }
+
   Future<SourcePhoto> readPhoto(XFile file) async {
     if (await file.length() > _photoSizeLimit) {
       throw const SourceIntakeException('20MB보다 작은 사진을 골라 주세요.');

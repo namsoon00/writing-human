@@ -15,12 +15,16 @@ final class SourcePlatform: NSObject, FlutterPlugin {
   func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     let finish: (Any?) -> Void = { value in DispatchQueue.main.async { result(value) } }
     switch call.method {
-    case "pendingShares", "acknowledgeShare":
+    case "pendingShares", "acknowledgeShare", "sharedPhoto":
       Self.inboxQueue.async {
         do {
           let inbox = try SourceInbox()
           if call.method == "pendingShares" {
-            finish(try inbox.pending().map { ["id": $0.id, "text": $0.text] })
+            finish(try inbox.pending().map {
+              ["id": $0.id, "text": $0.text, "hasPhoto": $0.hasPhoto == true] as [String: Any]
+            })
+          } else if call.method == "sharedPhoto", let id = call.arguments as? String {
+            finish(try inbox.sharedPhoto(id)?.path)
           } else if let id = call.arguments as? String {
             try inbox.acknowledge(id)
             finish(nil)

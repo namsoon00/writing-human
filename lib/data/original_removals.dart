@@ -61,7 +61,23 @@ Library applyOriginalRemovals(
               )
               .toList();
     if (!clearGuide && passages.length == page.passages.length) return page;
-    return page.withDetails(clearGuide: clearGuide, passages: passages);
+    final bookId = booksByRecord[page.recordId];
+    final removedOriginal = clearGuide
+        ? [
+            for (final book in library.books)
+              if (book.id == bookId) ...book.originals,
+            for (final record in library.records)
+              if (record.id == page.recordId ||
+                  (bookId != null && record.bookId == bookId))
+                ...record.originals,
+          ].where((item) => item.id == guide).firstOrNull
+        : null;
+    final preserved = [
+      if (removedOriginal != null) removedOriginal.citation,
+      for (final entry in page.passages)
+        if (!passages.contains(entry)) entry.citation,
+    ].fold(page, (page, citation) => page.rememberOriginalCitation(citation));
+    return preserved.withDetails(clearGuide: clearGuide, passages: passages);
   }
 
   final ordered = removals.toList()

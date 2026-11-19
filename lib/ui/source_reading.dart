@@ -13,6 +13,8 @@ import 'book_details.dart';
 import 'paper.dart';
 import 'paper_panel.dart';
 import 'original_edit.dart';
+import 'original_photo.dart';
+import 'source_browser.dart';
 import 'paper_search_field.dart';
 import 'original_range_sheet.dart';
 import 'pencil_marks.dart';
@@ -27,6 +29,7 @@ class SourceReading extends StatefulWidget {
     required this.originals,
     this.match,
     this.initialOriginalId,
+    this.previousCitations = const [],
     this.onReadOriginal,
     this.style = const WritingStyle(),
     this.onRegister,
@@ -43,6 +46,7 @@ class SourceReading extends StatefulWidget {
   final List<RegisteredOriginal> originals;
   final OriginalMatch? match;
   final String? initialOriginalId;
+  final List<String> previousCitations;
   final ValueChanged<String>? onReadOriginal;
   final WritingStyle style;
   final Future<RegisteredOriginal?> Function()? onRegister;
@@ -373,56 +377,27 @@ class _SourceReadingState extends State<SourceReading> {
     }
   }
 
-  Future<void> _showPhoto(String id) async {
-    final bytes = const OriginalPhotoStore().load(id);
-    await Navigator.of(context).push<void>(
-      paperPanelRoute(
-        (_) => PaperPanel(
-          color: panelPaperColor(paperColors[widget.style.paperIndex]),
-          child: Column(
-            children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 8, 12, 0),
-                child: PaperPanelHeader('원본 사진'),
-              ),
-              Expanded(
-                child: FutureBuilder(
-                  future: bytes,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState != ConnectionState.done) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    final image = snapshot.data;
-                    if (image == null) {
-                      return Center(
-                        child: Text(
-                          snapshot.hasError
-                              ? '사진을 읽지 못했어요.'
-                              : '이 기기에 보관된 사진이 없어요.',
-                        ),
-                      );
-                    }
-                    return Center(
-                      child: InteractiveViewer(
-                        maxScale: 6,
-                        child: Image.memory(
-                          image,
-                          key: const ValueKey('saved-original-photo'),
-                          semanticLabel: '저장한 원본 사진',
-                          errorBuilder: (_, _, _) =>
-                              const Text('이 사진을 표시할 수 없어요.'),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
+  Future<void> _showPhoto(String id) => showOriginalPhoto(
+    context,
+    id,
+    color: panelPaperColor(paperColors[widget.style.paperIndex]),
+  );
+
+  Future<void> _showCitations() => showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('이 쪽에 남긴 출처'),
+      content: SingleChildScrollView(
+        child: SelectableText(widget.previousCitations.join('\n\n')),
       ),
-    );
-  }
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('닫기'),
+        ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -653,17 +628,39 @@ class _SourceReadingState extends State<SourceReading> {
                   onPressed: widget.onRetry,
                   child: const Text('저장 실패 · 다시 저장'),
                 ),
+              if (original == null && widget.previousCitations.isNotEmpty)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: _showCitations,
+                    child: const Text('이 쪽에 남긴 출처'),
+                  ),
+                ),
               Expanded(
                 child: original != null
-                    ? _OriginalText(
-                        key: ValueKey(original.id),
-                        original: original,
-                        style: style,
-                        match: match,
-                        mark: mark,
-                        note: note,
-                        editing: editing,
-                      )
+                    ? original.text.trim().isEmpty && original.photoId != null
+                          ? Semantics(
+                              button: true,
+                              label: '원본 사진 크게 보기',
+                              child: InkWell(
+                                onTap: saving
+                                    ? null
+                                    : () => _showPhoto(original.photoId!),
+                                child: OriginalPhoto(
+                                  id: original.photoId!,
+                                  region: original.photoRegion,
+                                ),
+                              ),
+                            )
+                          : _OriginalText(
+                              key: ValueKey(original.id),
+                              original: original,
+                              style: style,
+                              match: match,
+                              mark: mark,
+                              note: note,
+                              editing: editing,
+                            )
                     : visibleOriginals.isEmpty
                     ? Center(
                         child: Text(
@@ -711,7 +708,8 @@ class _SourceReadingState extends State<SourceReading> {
                                     ),
                                     subtitle:
                                         item.citation.isEmpty ||
-                                            item.text.isEmpty
+                                            (!item.canTranscribe &&
+                                                item.text.isEmpty)
                                         ? null
                                         : Text(
                                             item.citation,
@@ -732,8 +730,19 @@ class _SourceReadingState extends State<SourceReading> {
                   child: Wrap(
                     spacing: 8,
                     children: [
-                      if (widget.onTranscribe != null &&
-                          original.text.trim().isNotEmpty)
+                      if (RegisteredOriginal.webLink(original.citation)
+                          case final Uri link when original.text.trim().isEmpty)
+                        TextButton(
+                          onPressed: () => openSourceBrowser(
+                            context,
+                            url: link,
+                            title: '원문 링크',
+                            launchLabel: '링크 열기',
+                            hasCitation: true,
+                          ),
+                          child: const Text('링크 열기'),
+                        ),
+                      if (widget.onTranscribe != null && original.canTranscribe)
                         TextButton(
                           onPressed: saving
                               ? null
@@ -791,7 +800,10 @@ final _sentenceEnd = RegExp(r'[.!?。！？]+|\n');
 final _previewWhitespace = RegExp(r'\s+');
 
 String _originalPreview(RegisteredOriginal item, RegExp? pattern) {
-  if (item.text.isEmpty) return item.citation;
+  if (item.text.trim().isEmpty) {
+    if (item.photoId != null) return '원본 사진';
+    return item.citation;
+  }
   final text = item.text.replaceAll(_previewWhitespace, ' ').trim();
   final match = pattern?.firstMatch(text);
   return match == null ? text : searchExcerpt(text, match.start, match.end);

@@ -261,6 +261,9 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
               'writtenOn': p.writtenOn,
               if (p.guidedOriginalId != null)
                 'guidedOriginalId': p.guidedOriginalId,
+              if (p.referenceOnly) 'referenceOnly': true,
+              if (p.originalCitations.isNotEmpty)
+                'originalCitations': p.originalCitations,
               if (p.passages.isNotEmpty)
                 'passages': p.passages.map((entry) => entry.toJson()).toList(),
             },
@@ -294,6 +297,8 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         pencilMarks: p.pencilMarks,
         passages: p.passages,
         guidedOriginalId: p.guidedOriginalId,
+        referenceOnly: p.referenceOnly,
+        originalCitations: p.originalCitations,
       );
     }
     copies++;
@@ -367,6 +372,10 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
       l.guidedOriginalId,
       r.guidedOriginalId,
     );
+    final referenceOnly = l.guidedOriginalId == guide
+        ? l.referenceOnly
+        : r.referenceOnly;
+    final citations = {...l.originalCitations, ...r.originalCitations}.toList();
     if (l.text == r.text) {
       final useRemotePosition =
           b != null &&
@@ -379,6 +388,8 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         pencilMarks: _mergeMarks(b, l, r, l.text),
         passages: _mergePassages(b, l, r, l.text),
         guidedOriginalId: guide,
+        referenceOnly: referenceOnly,
+        originalCitations: citations,
         clearGuide: guide == null,
       );
     } else if (b != null && l.text == b.text) {
@@ -387,6 +398,8 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         pencilMarks: _mergeMarks(b, l, r, r.text),
         passages: _mergePassages(b, l, r, r.text),
         guidedOriginalId: guide,
+        referenceOnly: referenceOnly,
+        originalCitations: citations,
         clearGuide: guide == null,
       );
     } else {
@@ -402,9 +415,11 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
               pencilMarks: _mergeMarks(b, l, r, l.text),
               passages: _mergePassages(b, l, r, l.text),
               guidedOriginalId: guide,
+              referenceOnly: referenceOnly,
+              originalCitations: citations,
               clearGuide: guide == null,
             )
-          : l;
+          : l.withDetails(originalCitations: citations);
     }
   }
 
@@ -454,6 +469,8 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         pencilMarks: p.pencilMarks,
         passages: p.passages,
         guidedOriginalId: p.guidedOriginalId,
+        referenceOnly: p.referenceOnly,
+        originalCitations: p.originalCitations,
       ),
   ];
   final allFavorites = {

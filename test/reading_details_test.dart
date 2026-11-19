@@ -177,9 +177,11 @@ void main() {
       LibraryController? c;
       try {
         final migrated = await store.load();
-        expect(await store.db.getVersion(), 11);
+        expect(await store.db.getVersion(), 12);
         expect(migrated.encode(), original.encode());
         expect(migrated.pages.single.passages, isEmpty);
+        expect(migrated.pages.single.originalCitations, isEmpty);
+        expect(migrated.pages.single.referenceOnly, isFalse);
         final settings = original.style.toJson();
         (settings['bookDetails'] as Json)['indexTab'] = {'enabled': true};
         await store.db.update('app_state', {'settings': jsonEncode(settings)});
@@ -221,7 +223,12 @@ void main() {
             writingSound: true,
           ),
         );
-        c.registerOriginal(bookId: 'b', text: '책의 원문', citation: '12쪽');
+        final originalOnPage = c.registerOriginal(
+          bookId: 'b',
+          text: '책의 원문',
+          citation: '12쪽',
+        )!;
+        c.guidePage(migrated.pages.single.id, originalOnPage);
         c.registerOriginal(
           page: migrated.pages.single,
           text: '기록의 원문',
@@ -252,6 +259,8 @@ void main() {
         expect(restored.encode(), expected);
         expect(restored.books.single.originals.single.text, '책의 원문');
         expect(restored.books.single.originals.single.citation, '12쪽');
+        expect(restored.pages.single.originalCitations, ['12쪽']);
+        expect(restored.pages.single.referenceOnly, isTrue);
         expect(
           restored.books.single.originals.single.reflection!.toJson(),
           reflection.toJson(),

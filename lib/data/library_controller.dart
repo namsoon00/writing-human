@@ -201,6 +201,7 @@ class LibraryController extends ChangeNotifier {
     required String text,
     required String citation,
     String? photoId,
+    List<double>? photoRegion,
     bool isFullPage = false,
     PencilMark? writingRange,
     List<OriginalPhotoLine> photoLines = const [],
@@ -213,6 +214,7 @@ class LibraryController extends ChangeNotifier {
       citation: citation,
       deliveryId: id,
       photoId: photoId,
+      photoRegion: photoRegion,
       isFullPage: isFullPage,
       writingRange: writingRange,
       photoLines: photoLines,
@@ -233,6 +235,7 @@ class LibraryController extends ChangeNotifier {
     required String citation,
     String? deliveryId,
     String? photoId,
+    List<double>? photoRegion,
     bool isFullPage = false,
     PencilMark? writingRange,
     List<OriginalPhotoLine> photoLines = const [],
@@ -246,6 +249,7 @@ class LibraryController extends ChangeNotifier {
           citation: citation,
           registeredAt: registeredAt,
           photoId: photoId,
+          photoRegion: photoRegion,
           isFullPage: isFullPage,
           writingRange: writingRange,
           photoLines: photoLines,
@@ -739,15 +743,24 @@ class LibraryController extends ChangeNotifier {
     }
   }
 
-  void guidePage(String pageId, String originalId) {
+  void guidePage(String pageId, RegisteredOriginal original) {
     final page = library.pages.where((item) => item.id == pageId).firstOrNull;
-    if (page == null || page.guidedOriginalId == originalId) return;
+    if (page == null) return;
+    final changed = page.rememberOriginalCitation(original.citation);
+    if (page.guidedOriginalId == original.id && identical(page, changed)) {
+      return;
+    }
     _publish(
       library.copy(
         pages: [
           for (final item in library.pages)
             if (item.id == pageId)
-              item.withDetails(guidedOriginalId: originalId)
+              changed.withDetails(
+                guidedOriginalId: original.id,
+                referenceOnly: page.guidedOriginalId == original.id
+                    ? page.referenceOnly
+                    : page.text.isNotEmpty,
+              )
             else
               item,
         ],

@@ -52,6 +52,27 @@ test('Source paragraph is optional and accepts a nonnegative integer', () => {
   }
 });
 
+test('Photo and URL captures can sync independently of transcription', () => {
+  const library = empty();
+  const photo = {
+    id: 'image', text: '', citation: '책 · 72쪽',
+    photoId: 'a'.repeat(64), photoRegion: [.1, .2, .8, .9],
+  };
+  const link = {id: 'link', text: '', citation: 'https://example.com/reading'};
+  const record = {id: 'r', bookId: null, title: '필사', source: '', originals: [photo, link]};
+  library.records = [record];
+  library.pages = [{
+    id: 'p', recordId: 'r', number: 1, text: '필사', base: 0, extent: 0, scroll: 0,
+    referenceOnly: true, originalCitations: ['이전 판본 · 72쪽'],
+  }];
+  assert.equal(validLibrary(library), true);
+  photo.photoRegion = [.8, .2, .1, .9];
+  assert.equal(validLibrary(library), false);
+  delete photo.photoRegion;
+  link.citation = '출처만 입력';
+  assert.equal(validLibrary(library), false);
+});
+
 test('Registered originals round-trip in book and record snapshots', () => {
   const library = empty();
   const original = {id: 'o', text: '옮겨 적는 원문', citation: '책 · 12쪽', reflection: {text: '연필 메모', mark: {start: 0, end: 2}}};

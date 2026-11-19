@@ -7,6 +7,15 @@ const id = v => typeof v === 'string' && v.length > 0 && v.length <= 250;
 const text = (v, max = MAX_BYTES) => typeof v === 'string' && v.length <= max;
 const integer = v => Number.isSafeInteger(v);
 const photoId = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
+const webLink = value => {
+  if (!/^https?:\/\//i.test(value.trim()) || /\s/.test(value.trim())) return false;
+  try {
+    const url = new URL(value.trim());
+    return (url.protocol === 'http:' || url.protocol === 'https:') && Boolean(url.hostname);
+  } catch {
+    return false;
+  }
+};
 const writingRange = (range, original) => object(range) &&
   integer(range.start) && integer(range.end) && range.start >= 0 &&
   range.end > range.start && range.end <= original.length &&
@@ -37,9 +46,15 @@ const reflection = (value, original) => object(value) && text(value.text) &&
 const originals = values => Array.isArray(values) &&
   new Set(values.map(value => value?.id)).size === values.length &&
   values.every(value => object(value) && id(value.id) && text(value.text, 50000) &&
-    value.text.trim().length > 0 && text(value.citation, 500) &&
+    text(value.citation, 500) &&
+    (value.text.trim().length > 0 || photoId(value.photoId) || webLink(value.citation)) &&
     (!('registeredAt' in value) || (Number.isSafeInteger(value.registeredAt) && value.registeredAt > 0)) &&
     (!('photoId' in value) || photoId(value.photoId)) &&
+    (!('photoRegion' in value) || (photoId(value.photoId) &&
+      Array.isArray(value.photoRegion) && value.photoRegion.length === 4 &&
+      value.photoRegion.every(n => typeof n === 'number' && n >= 0 && n <= 1) &&
+      value.photoRegion[0] < value.photoRegion[2] &&
+      value.photoRegion[1] < value.photoRegion[3])) &&
     (!('isFullPage' in value) || typeof value.isFullPage === 'boolean') &&
     (!('writingRange' in value) ||
       (value.isFullPage === true && writingRange(value.writingRange, value.text))) &&
@@ -89,6 +104,9 @@ export function validLibrary(l) {
       if ('writtenOn' in p && (typeof p.writtenOn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(p.writtenOn) || !Number.isFinite(Date.parse(p.writtenOn)) || new Date(p.writtenOn).toISOString().slice(0, 10) !== p.writtenOn)) return false;
       if ('pencilMarks' in p && (!Array.isArray(p.pencilMarks) || p.pencilMarks.length > p.text.length || p.pencilMarks.some(m => !object(m) || !integer(m.start) || !integer(m.end) || m.start < 0 || m.end <= m.start || m.end > p.text.length))) return false;
       if ('guidedOriginalId' in p && !id(p.guidedOriginalId)) return false;
+      if ('referenceOnly' in p && typeof p.referenceOnly !== 'boolean') return false;
+      if ('originalCitations' in p && (!Array.isArray(p.originalCitations) ||
+        p.originalCitations.some(value => !text(value, 500) || !value.trim()))) return false;
       if ('passages' in p && (!Array.isArray(p.passages) ||
         new Set(p.passages.map(entry => entry?.id)).size !== p.passages.length ||
         p.passages.some(entry => !object(entry) || !id(entry.id) ||

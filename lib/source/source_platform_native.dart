@@ -78,12 +78,27 @@ class _NativeSourceIntake extends SourceIntake {
         await channel.invokeListMethod<Object?>('pendingShares') ?? const [];
     return [
       for (final item in values)
-        if (item case {'id': final String id, 'text': final String text})
-          if (id.isNotEmpty &&
-              text.length <= sourceLengthLimit &&
-              normalizeSource(text).isNotEmpty)
-            IncomingSource(id, text),
+        if (item case final Map data)
+          if (data case {'id': final String id, 'text': final String text}
+              when id.isNotEmpty &&
+                  text.length <= sourceLengthLimit &&
+                  (normalizeSource(text).isNotEmpty ||
+                      data['hasPhoto'] == true))
+            IncomingSource(id, text, hasPhoto: data['hasPhoto'] == true),
     ];
+  }
+
+  @override
+  Future<SourcePhoto> readSharedPhoto(String id) async {
+    try {
+      final path = await channel.invokeMethod<String>('sharedPhoto', id);
+      if (path != null) return await readPhoto(XFile(path));
+    } on PlatformException {
+      throw const SourceIntakeException('받은 사진을 열지 못했어요.');
+    } on FileSystemException {
+      throw const SourceIntakeException('받은 사진을 열지 못했어요.');
+    }
+    throw const SourceIntakeException('받은 사진을 열지 못했어요.');
   }
 
   @override

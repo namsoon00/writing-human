@@ -37,15 +37,30 @@ class RegisteredOriginal {
     this.registeredAt,
     this.reflection,
     this.photoId,
+    this.photoRegion,
     this.isFullPage = false,
     this.writingRange,
     this.photoLines = const [],
   });
 
   final String id, text, citation;
+
+  bool get canTranscribe => text.trim().isNotEmpty || photoId != null;
+
+  static Uri? webLink(String value) {
+    final link = Uri.tryParse(value.trim());
+    return link != null &&
+            (link.scheme == 'https' || link.scheme == 'http') &&
+            link.host.isNotEmpty &&
+            !RegExp(r'\s').hasMatch(value.trim())
+        ? link
+        : null;
+  }
+
   final int? registeredAt;
   final OriginalReflection? reflection;
   final String? photoId;
+  final List<double>? photoRegion;
   final bool isFullPage;
   final PencilMark? writingRange;
   final List<OriginalPhotoLine> photoLines;
@@ -64,6 +79,7 @@ class RegisteredOriginal {
     registeredAt: registeredAt ?? this.registeredAt,
     reflection: reflection,
     photoId: photoId ?? this.photoId,
+    photoRegion: photoRegion,
     isFullPage: isFullPage ?? this.isFullPage,
     writingRange: writingRange,
     photoLines: photoLines ?? this.photoLines,
@@ -91,6 +107,7 @@ class RegisteredOriginal {
           ? note
           : OriginalReflection(note.text, mark: change.unchangedRange(mark)),
       photoId: photoId,
+      photoRegion: photoRegion,
       isFullPage: isFullPage,
       writingRange: range != null && validOriginalRange(text, range)
           ? range
@@ -119,6 +136,7 @@ class RegisteredOriginal {
     if (registeredAt != null) 'registeredAt': registeredAt,
     if (reflection != null) 'reflection': reflection!.toJson(),
     if (photoId != null) 'photoId': photoId,
+    if (photoRegion != null) 'photoRegion': photoRegion,
     if (isFullPage) 'isFullPage': true,
     if (writingRange != null) 'writingRange': writingRange!.toJson(),
     if (photoLines.isNotEmpty)
@@ -134,6 +152,9 @@ class RegisteredOriginal {
         ? null
         : OriginalReflection.fromJson(j['reflection'] as Json),
     photoId: j['photoId'] as String?,
+    photoRegion: (j['photoRegion'] as List?)
+        ?.map((value) => (value as num).toDouble())
+        .toList(),
     isFullPage: j['isFullPage'] as bool? ?? false,
     writingRange: j['writingRange'] == null
         ? null
@@ -155,11 +176,14 @@ class RegisteredOriginal {
         (value) =>
             value.id.isNotEmpty &&
             value.id.length <= 250 &&
-            value.text.trim().isNotEmpty &&
+            (value.canTranscribe || webLink(value.citation) != null) &&
             value.text.length <= 50000 &&
             value.citation.length <= 500 &&
             (value.registeredAt == null || value.registeredAt! > 0) &&
             (value.photoId == null || _photoId.hasMatch(value.photoId!)) &&
+            (value.photoRegion == null ||
+                (value.photoId != null &&
+                    validPhotoRegion(value.photoRegion!))) &&
             (value.writingRange == null ||
                 (value.isFullPage &&
                     validOriginalRange(value.text, value.writingRange!))) &&
@@ -173,6 +197,12 @@ class RegisteredOriginal {
             (value.reflection?.isValidFor(value.text) ?? true),
       );
 }
+
+bool validPhotoRegion(List<double> values) =>
+    values.length == 4 &&
+    values.every((value) => value >= 0 && value <= 1) &&
+    values[0] < values[2] &&
+    values[1] < values[3];
 
 final _photoId = RegExp(r'^[a-f0-9]{64}$');
 
@@ -571,6 +601,8 @@ class WritingPage {
     this.pencilMarks = const [],
     this.passages = const [],
     this.guidedOriginalId,
+    this.referenceOnly = false,
+    this.originalCitations = const [],
   });
   final String id, recordId, text;
   final int number, base, extent;
@@ -579,6 +611,13 @@ class WritingPage {
   final List<PencilMark> pencilMarks;
   final List<PagePassage> passages;
   final String? guidedOriginalId;
+  final bool referenceOnly;
+  final List<String> originalCitations;
+
+  WritingPage rememberOriginalCitation(String citation) =>
+      citation.trim().isEmpty || originalCitations.contains(citation)
+      ? this
+      : withDetails(originalCitations: [...originalCitations, citation]);
 
   PagePassage? passageAt(int offset) {
     PagePassage? active;
@@ -597,6 +636,8 @@ class WritingPage {
     List<PagePassage>? passages,
     String? guidedOriginalId,
     bool clearGuide = false,
+    bool? referenceOnly,
+    List<String>? originalCitations,
   }) => WritingPage(
     id: id,
     recordId: recordId,
@@ -611,6 +652,8 @@ class WritingPage {
     guidedOriginalId: clearGuide
         ? null
         : guidedOriginalId ?? this.guidedOriginalId,
+    referenceOnly: !clearGuide && (referenceOnly ?? this.referenceOnly),
+    originalCitations: originalCitations ?? this.originalCitations,
   );
   WritingPage edited({
     required String text,
@@ -629,6 +672,8 @@ class WritingPage {
     pencilMarks: PencilMark.afterEdit(this.text, text, pencilMarks),
     passages: PagePassage.afterEdit(this.text, text, passages),
     guidedOriginalId: guidedOriginalId,
+    referenceOnly: referenceOnly,
+    originalCitations: originalCitations,
   );
   Json toJson() => {
     'id': id,
@@ -641,6 +686,8 @@ class WritingPage {
     if (writtenOn != null) 'writtenOn': writtenOn,
     'pencilMarks': pencilMarks.map((m) => m.toJson()).toList(),
     if (guidedOriginalId != null) 'guidedOriginalId': guidedOriginalId,
+    if (referenceOnly) 'referenceOnly': true,
+    if (originalCitations.isNotEmpty) 'originalCitations': originalCitations,
     if (passages.isNotEmpty)
       'passages': passages.map((entry) => entry.toJson()).toList(),
   };
@@ -654,6 +701,8 @@ class WritingPage {
     scroll: (j['scroll'] as num).toDouble(),
     writtenOn: j['writtenOn'] as String?,
     guidedOriginalId: j['guidedOriginalId'] as String?,
+    referenceOnly: j['referenceOnly'] as bool? ?? false,
+    originalCitations: List<String>.from(j['originalCitations'] as List? ?? []),
     passages: (j['passages'] as List? ?? [])
         .map((entry) => PagePassage.fromJson(entry as Json))
         .toList(),
@@ -1009,6 +1058,9 @@ class Library {
           (p) =>
               !recordIds.contains(p.recordId) ||
               p.number < 1 ||
+              p.originalCitations.any(
+                (item) => item.trim().isEmpty || item.length > 500,
+              ) ||
               (p.guidedOriginalId != null &&
                   (p.guidedOriginalId!.isEmpty ||
                       p.guidedOriginalId!.length > 250)) ||

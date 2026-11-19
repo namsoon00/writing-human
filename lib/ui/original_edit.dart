@@ -38,7 +38,9 @@ class _OriginalEditState extends State<OriginalEdit> {
   bool get canSave =>
       !saving &&
       !composing &&
-      text.text.trim().isNotEmpty &&
+      (text.text.trim().isNotEmpty ||
+          widget.original.photoId != null ||
+          RegisteredOriginal.webLink(citation.text) != null) &&
       !textTooLong &&
       !citationTooLong;
 

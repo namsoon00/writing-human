@@ -735,12 +735,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         .firstOrNull;
     final style = _paperStyle(targetBook);
     final sharedText = shared?.text.trim() ?? '';
-    final link = Uri.tryParse(sharedText);
-    final linkOnly =
-        link != null &&
-        (link.scheme == 'http' || link.scheme == 'https') &&
-        link.host.isNotEmpty &&
-        !RegExp(r'\s').hasMatch(sharedText);
+    final linkOnly = RegisteredOriginal.webLink(sharedText) != null;
+    final photo = shared?.hasPhoto == true
+        ? await _intake.readSharedPhoto(shared!.id)
+        : initialPhoto;
+    if (!mounted) return null;
     final route = MaterialPageRoute<SourceImportResult>(
       fullscreenDialog: true,
       builder: (_) => Scaffold(
@@ -752,7 +751,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               intake: _intake,
               initialText: linkOnly ? '' : sharedText,
               initialCitation: linkOnly ? sharedText : '',
-              initialPhoto: initialPhoto,
+              initialPhoto: photo,
+              initialPhotoOnly: shared?.hasPhoto == true,
               choice: style.bookDetails.sourceSlip,
               penColor: penColors[style.penIndex],
               paperColor: paperColors[style.paperIndex],
@@ -812,6 +812,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         text: result.text,
         citation: result.citation,
         photoId: result.photoId,
+        photoRegion: result.photoRegion,
         isFullPage: result.isFullPage,
         writingRange: result.writingRange,
         photoLines: result.photoLines,
@@ -874,7 +875,13 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         await _pollSources();
         return;
       }
-      final result = await _reviewOriginal(shared: shared);
+      final SourceImportResult? result;
+      try {
+        result = await _reviewOriginal(shared: shared, bookId: book?.id);
+      } on SourceIntakeException catch (error) {
+        if (mounted) _sourceNotice(error.message);
+        return;
+      }
       if (result == null ||
           !mounted ||
           c != owner ||
@@ -895,6 +902,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           passages: [result.text],
           citation: result.citation,
           deliveryId: id,
+          photoId: result.photoId,
+          photoRegion: result.photoRegion,
+          isFullPage: result.isFullPage,
+          writingRange: result.writingRange,
+          photoLines: result.photoLines,
         );
       } else {
         fresh = false;
@@ -904,6 +916,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           passages: [result.text],
           citation: result.citation,
           deliveryId: id,
+          photoId: result.photoId,
+          photoRegion: result.photoRegion,
+          isFullPage: result.isFullPage,
+          writingRange: result.writingRange,
+          photoLines: result.photoLines,
         );
       }
       await owner.settled;
@@ -956,44 +973,48 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           !c.library.records.any((item) => item.id == origin.recordId)) {
         return;
       }
+      final originals = originalsFor(
+        owner.library,
+        bookId: bookId,
+        recordId: origin.recordId,
+      );
       final source =
-          originalsFor(owner.library, bookId: bookId, recordId: origin.recordId)
+          originals.where((item) => item.id == original.id).firstOrNull ??
+          originals
               .where(
                 (item) =>
-                    item.id == original.id ||
-                    (item.text == original.text &&
-                        item.citation == original.citation &&
-                        item.photoId == original.photoId),
+                    item.text == original.text &&
+                    item.citation == original.citation &&
+                    item.photoId == original.photoId &&
+                    listEquals(item.photoRegion, original.photoRegion),
               )
               .firstOrNull;
-      if (source == null || source.text.trim().isEmpty) return;
-      if ((page.text.isEmpty || page.guidedOriginalId == source.id) &&
-          (bookId != null
-              ? book?.id == bookId
-              : page.recordId == origin.recordId)) {
+      if (source == null || !source.canTranscribe) return;
+      if (bookId == null
+          ? page.recordId == origin.recordId
+          : book?.id == bookId) {
         _bookLeaf = null;
         if (fresh) {
           fresh = false;
           userFresh = false;
           c.saveDraft(
-            draft.withDetails(guidedOriginalId: source.id),
+            draft
+                .rememberOriginalCitation(source.citation)
+                .withDetails(guidedOriginalId: source.id),
             bookId: bookId,
             keepBlank: true,
           );
         } else {
-          c.guidePage(page.id, source.id);
+          c.guidePage(page.id, source);
         }
-      } else if (bookId == null) {
-        fresh = false;
-        userFresh = false;
-        _bookLeaf = null;
-        c.addPage(recordId: origin.recordId, guidedOriginalId: source.id);
       } else {
         _bookLeaf = null;
         fresh = false;
         userFresh = false;
         c.saveDraft(
-          _blank().withDetails(guidedOriginalId: source.id),
+          _blank()
+              .rememberOriginalCitation(source.citation)
+              .withDetails(guidedOriginalId: source.id),
           bookId: bookId,
           keepBlank: true,
         );
@@ -1041,7 +1062,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
 
     try {
       final available = originals();
-      if (bookDetails == null && available.isEmpty) {
+      if (bookDetails == null &&
+          available.isEmpty &&
+          selectedPage.originalCitations.isEmpty) {
         final saved = await register();
         if (saved != null) {
           await _afterOriginalSave(selectedPage, saved);
@@ -1077,6 +1100,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             listenable: owner,
             builder: (context, _) => SourceReading(
               originals: originals(),
+              previousCitations: bookDetails == null
+                  ? selectedPage.originalCitations
+                  : const [],
               initialOriginalId: initialId,
               match: match,
               onReadOriginal: (id) {

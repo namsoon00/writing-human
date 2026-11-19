@@ -62,11 +62,8 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
     });
   }
 
-  void _openPhoto(String id) => showOriginalPhoto(
-    context,
-    id,
-    color: widget.photoPanelColor,
-  );
+  void _openPhoto(String id) =>
+      showOriginalPhoto(context, id, color: widget.photoPanelColor);
 
   @override
   Widget build(BuildContext context) {

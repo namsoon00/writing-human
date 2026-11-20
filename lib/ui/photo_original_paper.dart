@@ -273,25 +273,41 @@ class _PhotoOriginalPaperState extends State<PhotoOriginalPaper> {
               painter: _SelectionInk(rects, start, end, widget.ink),
             ),
           ),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTapUp: enabled ? (details) => _tap(details.globalPosition) : null,
-            onLongPressStart: enabled
-                ? (details) => _startPassage(details.globalPosition)
+          Semantics(
+            customSemanticsActions: enabled
+                ? {
+                    const CustomSemanticsAction(label: '전체 선택'): () =>
+                        widget.onSelection?.call(
+                          TextSelection(
+                            baseOffset: 0,
+                            extentOffset: widget.text.length,
+                          ),
+                        ),
+                  }
                 : null,
-            onLongPressMoveUpdate: enabled
-                ? (details) => _move(details.globalPosition)
-                : null,
-            onLongPressEnd: enabled ? (_) => _stop() : null,
-            onLongPressCancel: enabled ? _stop : null,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: _inset),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 120),
-                child: Text(
-                  widget.text,
-                  style: widget.style,
-                  textScaler: scaler,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              excludeFromSemantics: true,
+              onTapUp: enabled
+                  ? (details) => _tap(details.globalPosition)
+                  : null,
+              onLongPressStart: enabled
+                  ? (details) => _startPassage(details.globalPosition)
+                  : null,
+              onLongPressMoveUpdate: enabled
+                  ? (details) => _move(details.globalPosition)
+                  : null,
+              onLongPressEnd: enabled ? (_) => _stop() : null,
+              onLongPressCancel: enabled ? _stop : null,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: _inset),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 120),
+                  child: Text(
+                    widget.text,
+                    style: widget.style,
+                    textScaler: scaler,
+                  ),
                 ),
               ),
             ),

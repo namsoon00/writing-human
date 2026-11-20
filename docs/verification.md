@@ -1846,3 +1846,17 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - Flutter 웹 release, iOS 시뮬레이터 빌드 및 Android debug APK를 생성했다.
   모바일 실기기 청취, 모바일 Safari의 최초 모델 다운로드·재생 및 운영 배포는
   이번 검증에 포함하지 않았다.
+
+## 2026-11-20 · 저장 안내와 고른 구절 미리보기
+
+- Dart 포맷 검사와 Flutter 정적 분석, Flutter 테스트 180개를 통과했다.
+- 위젯 테스트에서 저장 실패 안내 뒤 다시 저장하면 입력한 글과 느낀 점이 보존되고,
+  사진에서 읽은 글을 검수할 때 고른 구절의 첫 줄이 표시되는 것을 확인했다.
+- GitHub Pages용 웹 빌드를 생성했다. 로컬 Chrome 390×844와 320×640에서
+  브라우저 저장 실패를 재현하고 입력한 글을 다시 저장했다. 320×640에서 원문
+  목록을 통해 읽기 화면을 열어 고른 구절의 첫 줄과 원본 사진이 없을 때의 안내를
+  확인했다. 실패한 내용과 다음 행동은 문장 단위로 줄을 나눴다.
+- [GitHub Pages 배포 44705505839](https://github.com/namsoon00/writing-human/actions/runs/44705505839)
+  후 공개 웹의 Chrome 320×640에서 저장 실패·다시 저장·사진 열기 안내를,
+  390×844에서 원문의 선택 구절 미리보기를 다시 확인했다.
+- iOS·Android 및 Safari 실기기는 이번 변경에서 검증하지 않았다.

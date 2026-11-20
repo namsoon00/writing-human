@@ -3035,7 +3035,7 @@ void main() {
         greaterThanOrEqualTo(bodyStyle.fontSize! * bodyStyle.height!),
       );
       expect(titleMark, findsNothing);
-      expect(find.text(citationLabel), findsOneWidget);
+      expect(find.text(citationLabel), findsNothing);
 
       final viewport = find.descendant(
         of: transcriptionReference,

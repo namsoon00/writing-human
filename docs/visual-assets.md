@@ -20,7 +20,7 @@ PaperBackdrop을 공유한다. 기본 종이는 #F7F2E8, 브랜드 잉크는 #70
 소재다. 종이 시안의 작은 잉크 자국을 참조해 투명 배경으로 재현했다. 원본은
 Codex generated_images의 `exec-f867c256-feff-4053-93dc-cac35c2fee98.png`에
 보존하고 sips로 화면용 크기만 최적화했다. 알파 범위 0–255를 확인했다.
-텍스트·조작부를 이미지로 굳히지 않으며 본문은 현재 나눔명조다.
+텍스트·조작부를 이미지로 굳히지 않으며 기본 본문은 쓰는 인간체이며 선택한 본문 글꼴을 적용한다.
 
 새 화면은 `flutter test tool/capture_preview_test.dart --no-pub`로 재현한다.
 `artifacts/paper-v1-{blank,writing,pen-stroke,keyboard,resting,tools,collection,desktop}.png`

@@ -362,18 +362,23 @@ class ToolsScreen extends StatelessWidget {
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: Column(
-                          children: [
-                            StationeryTool(tool: tool, color: inkColor),
-                            const SizedBox(height: 8),
-                            Text(
-                              tool.label,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: brandInk,
+                        child: Opacity(
+                          opacity: canMark || tool == PaperTool.writing
+                              ? 1
+                              : .45,
+                          child: Column(
+                            children: [
+                              StationeryTool(tool: tool, color: inkColor),
+                              const SizedBox(height: 8),
+                              Text(
+                                tool.label,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: brandInk,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),

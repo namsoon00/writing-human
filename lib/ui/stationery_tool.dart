@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'paper_palette.dart';
 import 'paper_tool.dart';
 
-/// Small stationery drawings shared by the tool chooser and writing footer.
+/// Small stationery drawings for choosing a tool on the writing paper.
 class StationeryTool extends StatelessWidget {
   const StationeryTool({
     super.key,

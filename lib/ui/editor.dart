@@ -548,21 +548,71 @@ class _PageEditorState extends State<PageEditor> {
         final hasChosenGuide = source != null;
         final paperHeight = math.max(0.0, constraints.maxHeight - overlap);
         final scaler = MediaQuery.textScalerOf(context);
-        final referenceHeight = math.min(
-          scaler.scale((style.fontSize * .8).clamp(14, 22)) * 4 + 12,
-          paperHeight * .34,
-        );
+        final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+        final showInlineGuide =
+            _comparison != null &&
+            !keyboardVisible &&
+            active?.id == passages.lastOrNull?.id &&
+            end == text.text.length;
+        final referenceStyle = writingTextStyle(
+          style.fontIndex,
+          size: (style.fontSize * .8).clamp(14, 22),
+          color: ink,
+          useDevelopmentTypeface: style.useDevelopmentTypeface,
+        ).copyWith(height: 1.35);
         final lineHeight = scaler.scale(style.fontSize) * 1.8;
         final visiblePadding = padding.copyWith(
+          top: hasChosenGuide && keyboardVisible
+              ? math.min(
+                  writingPagePadding(
+                    Size(constraints.maxWidth, paperHeight),
+                  ).top,
+                  paperHeight / 8,
+                )
+              : padding.top,
           bottom: overlap > 0 ? 12 : padding.bottom,
         );
-        final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+        final minimumWritingHeight = visiblePadding.vertical + lineHeight;
+        final referenceBudget = math.min(
+          paperHeight * .34,
+          math.max(0.0, paperHeight - minimumWritingHeight),
+        );
+        final referenceHeight = showInlineGuide || source == null
+            ? 0.0
+            : source.canTranscribe
+            ? TranscriptionReference.heightForText(
+                style: referenceStyle,
+                scaler: scaler,
+                availableHeight: referenceBudget,
+              )
+            : math.min(
+                scaler.scale(referenceStyle.fontSize!) * 4 + 12,
+                referenceBudget,
+              );
+        final citation = source?.citation.trim() ?? '';
+        final linkSeparator = citation.lastIndexOf(' · ');
+        final displayCitation =
+            linkSeparator >= 0 &&
+                RegisteredOriginal.webLink(
+                      citation.substring(linkSeparator + 3),
+                    ) !=
+                    null
+            ? citation.substring(0, linkSeparator)
+            : citation;
+        final selectorHeight = math.max(48.0, scaler.scale(13) + 20);
+        final showOriginalSelector =
+            linked.isNotEmpty &&
+            paperHeight - referenceHeight >=
+                minimumWritingHeight + selectorHeight;
         final canCenter =
             hasChosenGuide &&
             keyboardVisible &&
             focus.hasFocus &&
             paperHeight / 2 >=
-                referenceHeight + lineHeight + visiblePadding.bottom;
+                referenceHeight +
+                    (showOriginalSelector ? selectorHeight : 0) +
+                    lineHeight +
+                    visiblePadding.bottom;
         final writingCenter = canCenter
             ? paperHeight / 2 - visiblePadding.top
             : null;
@@ -570,11 +620,6 @@ class _PageEditorState extends State<PageEditor> {
           scroll.writingCenter = writingCenter;
           _centeredLine = null;
         }
-        final showInlineGuide =
-            _comparison != null &&
-            !keyboardVisible &&
-            active?.id == passages.lastOrNull?.id &&
-            end == text.text.length;
         final guide = showInlineGuide
             ? TranscriptionGuidePainter(
                 comparison: _comparison!,
@@ -794,7 +839,7 @@ class _PageEditorState extends State<PageEditor> {
                   child: writing,
                 ),
               ),
-              if (linked.isNotEmpty && paperHeight >= scaler.scale(14) + 52)
+              if (showOriginalSelector)
                 Padding(
                   padding: writingMargins,
                   child: TextFieldTapRegion(
@@ -807,7 +852,7 @@ class _PageEditorState extends State<PageEditor> {
                             child: Text(
                               source == null
                                   ? '이 쪽의 원문 ${linked.length}개'
-                                  : '${linked.length > 1 ? "$number/${linked.length}" : "$number"} · ${source.citation.trim().isEmpty ? (source.text.trim().isEmpty ? "사진 원문" : source.text.trim().split("\n").first) : source.citation}',
+                                  : '${linked.length > 1 ? "$number/${linked.length}" : "$number"} · ${displayCitation.isEmpty ? (source.text.trim().isEmpty ? "사진 원문" : source.text.trim().split("\n").first) : displayCitation}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -823,7 +868,7 @@ class _PageEditorState extends State<PageEditor> {
                     ),
                   ),
                 ),
-              if (!showInlineGuide && source != null && referenceHeight > 0)
+              if (source != null && referenceHeight > 0)
                 Padding(
                   padding: writingMargins,
                   child: SizedBox(
@@ -836,12 +881,7 @@ class _PageEditorState extends State<PageEditor> {
                       startOffset: start,
                       endOffset: end,
                       controller: text,
-                      style: writingTextStyle(
-                        style.fontIndex,
-                        size: (style.fontSize * .8).clamp(14, 22),
-                        color: ink,
-                        useDevelopmentTypeface: style.useDevelopmentTypeface,
-                      ).copyWith(height: 1.35),
+                      style: referenceStyle,
                     ),
                   ),
                 ),

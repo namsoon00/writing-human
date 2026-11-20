@@ -30,6 +30,7 @@ import 'package:writing_human/ui/reading_details.dart';
 import 'package:writing_human/ui/source_import_sheet.dart';
 import 'package:writing_human/ui/source_reading.dart';
 import 'package:writing_human/ui/transcription_marks.dart';
+import 'package:writing_human/ui/writing_chrome.dart';
 import 'package:writing_human/ui/transcription_guide.dart';
 
 import 'widget_test.dart' show MemoryStore;
@@ -2908,15 +2909,19 @@ void main() {
   testWidgets(
     'A long original scrolls in the bottom reference on a compact screen',
     (tester) async {
-      final lines = List.generate(32, (i) => '${i + 1}번째 줄을 천천히 옮겨 적는다.');
+      final lines = List.generate(32, (i) => '${i + 1}번째 줄을 옮겨 적는다.');
       final source = lines.join('\n');
+      const citationLabel = '제목 · 작가 · 자료원';
+      const citation = '$citationLabel · https://example.com/source';
       final store = MemoryStore()
         ..data = Library(
           records: [
             WritingRecord(
               id: 'r',
               title: '필사',
-              originals: [RegisteredOriginal('source', source)],
+              originals: [
+                RegisteredOriginal('source', source, citation: citation),
+              ],
             ),
           ],
           pages: const [
@@ -2938,6 +2943,12 @@ void main() {
       expect(transcriptionReference, findsNothing);
       expect(remainingInline(tester), source);
       expect(field.controller!.text, isEmpty);
+      final titleMark = find.descendant(
+        of: find.byType(WritingHeader),
+        matching: find.byType(InkMark),
+      );
+      final writingTop = tester.getTopLeft(bodyField).dy;
+      expect(titleMark, findsOneWidget);
 
       tester.view.viewInsets = const FakeViewPadding(bottom: 290);
       await tester.showKeyboard(bodyField);
@@ -2948,12 +2959,29 @@ void main() {
         greaterThanOrEqualTo(tester.getBottomLeft(bodyField).dy),
       );
       expect(tester.getBottomLeft(transcriptionReference).dy, lessThan(350));
+      expect(tester.getTopLeft(bodyField).dy, lessThan(writingTop));
+      final bodyStyle = field.style!;
+      expect(
+        tester.getSize(bodyField).height,
+        greaterThanOrEqualTo(bodyStyle.fontSize! * bodyStyle.height!),
+      );
+      expect(titleMark, findsNothing);
+      expect(find.text('1 · $citationLabel'), findsOneWidget);
 
       final viewport = find.descendant(
         of: transcriptionReference,
         matching: find.byType(SingleChildScrollView),
       );
       final scroll = tester.widget<SingleChildScrollView>(viewport).controller!;
+      final paragraph = find.descendant(
+        of: viewport,
+        matching: find.byType(RichText),
+      );
+      final lineHeight = tester.getSize(paragraph).height / lines.length;
+      final viewportHeight = tester.getSize(viewport).height;
+      final fullLines = (viewportHeight / lineHeight).round();
+      expect(fullLines, greaterThanOrEqualTo(2));
+      expect(viewportHeight, closeTo(fullLines * lineHeight, 1));
       expect(scroll.position.maxScrollExtent, greaterThan(500));
       final initial = field.controller!.value;
       final editorOffset = field.scrollController!.offset;
@@ -2968,7 +2996,7 @@ void main() {
       await tester.enterText(bodyField, written);
       await tester.pumpAndSettle();
       expect(remainingReference(tester), lines.skip(8).join('\n'));
-      expect(scroll.offset, greaterThan(140));
+      expect(scroll.offset, closeTo(8 * lineHeight, 1));
       expect(scroll.offset, lessThan(scroll.position.maxScrollExtent));
 
       field.focusNode!.unfocus();
@@ -2977,6 +3005,7 @@ void main() {
       expect(transcriptionGuide, findsOneWidget);
       expect(transcriptionReference, findsNothing);
       expect(remainingInline(tester), lines.skip(8).join('\n'));
+      expect(titleMark, findsOneWidget);
       expect(field.controller!.text, written);
       expect(tester.takeException(), isNull);
     },
@@ -3086,6 +3115,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(transcriptionGuide, findsNothing);
       expect(remainingReference(tester), '따라 쓸 구절');
+      expect(find.byKey(const ValueKey('page-originals-button')), findsNothing);
+      expect(tester.getSize(bodyField).height, greaterThanOrEqualTo(36));
       expect(
         tester.getRect(transcriptionReference).bottom,
         lessThanOrEqualTo(260),

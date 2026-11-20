@@ -28,6 +28,32 @@ class TranscriptionReference extends StatefulWidget {
   final TextEditingController controller;
   final TextStyle style;
 
+  static const _verticalPadding = 4.0;
+
+  static StrutStyle _strut(TextStyle style) =>
+      StrutStyle.fromTextStyle(style, forceStrutHeight: true);
+
+  static double heightForText({
+    required TextStyle style,
+    required TextScaler scaler,
+    required double availableHeight,
+  }) {
+    final measure = TextPainter(
+      text: TextSpan(style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: scaler,
+      strutStyle: _strut(style),
+    );
+    final lineHeight = measure.preferredLineHeight;
+    measure.dispose();
+    final padding = _verticalPadding * 2;
+    final lines = ((availableHeight - padding) / lineHeight).floor().clamp(
+      0,
+      4,
+    );
+    return lines == 0 ? 0 : lineHeight * lines + padding;
+  }
+
   @override
   State<TranscriptionReference> createState() => _TranscriptionReferenceState();
 }
@@ -70,7 +96,9 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
         border: Border(top: BorderSide(color: line)),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(
+          vertical: TranscriptionReference._verticalPadding,
+        ),
         child: Semantics(
           label: '따라 쓰는 원문',
           child: TextFieldTapRegion(
@@ -128,6 +156,7 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
           child: RichText(
             key: _paragraph,
             textScaler: scaler,
+            strutStyle: TranscriptionReference._strut(widget.style),
             text: TextSpan(
               style: widget.style,
               children: [

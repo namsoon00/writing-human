@@ -16,13 +16,14 @@ class WritingHeader extends StatelessWidget {
     this.bookTitle,
     this.loosePage = false,
     this.compact = false,
+    this.showInkMark = true,
     this.useDevelopmentTypeface = true,
     this.bookmarked = false,
     this.ribbon = const BookDetailChoice(),
   });
   final VoidCallback onCollection, onAdd;
   final String? bookTitle;
-  final bool compact, useDevelopmentTypeface;
+  final bool compact, showInkMark, useDevelopmentTypeface;
   final bool bookmarked, loosePage;
   final BookDetailChoice ribbon;
 
@@ -46,7 +47,10 @@ class WritingHeader extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (!compact) ...[
-                const InkMark(size: 12),
+                if (showInkMark)
+                  const InkMark(size: 12)
+                else
+                  const SizedBox(height: 12),
                 const SizedBox(height: 8),
               ],
               Text(

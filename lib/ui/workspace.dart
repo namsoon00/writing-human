@@ -1840,6 +1840,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 bookmarked: book != null && record != null,
                 useDevelopmentTypeface: c.library.style.useDevelopmentTypeface,
                 compact: compact,
+                showInkMark: keyboardInset == 0,
                 bookTitle: book?.title,
                 loosePage: book == null && record != null,
                 onCollection: _collection,

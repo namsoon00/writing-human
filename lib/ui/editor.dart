@@ -708,7 +708,7 @@ class _PageEditorState extends State<PageEditor> {
                   child: writing,
                 ),
               ),
-              if (source != null && referenceHeight > 0)
+              if (!showInlineGuide && source != null && referenceHeight > 0)
                 Padding(
                   padding: writingMargins,
                   child: SizedBox(

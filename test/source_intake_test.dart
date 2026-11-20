@@ -40,6 +40,15 @@ final readingText = find.byKey(const ValueKey('source-reading-text'));
 final transcriptionReference = find.byKey(
   const ValueKey('transcription-reference'),
 );
+final transcriptionGuide = find.byKey(const ValueKey('transcription-guide'));
+
+String remainingInline(WidgetTester tester) {
+  final painter =
+      tester.widget<CustomPaint>(transcriptionGuide).painter!
+          as TranscriptionGuidePainter;
+  final value = tester.widget<TextField>(bodyField).controller!.value;
+  return painter.remainderFor(value);
+}
 
 TextSpan referenceText(WidgetTester tester) =>
     tester
@@ -450,7 +459,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(store.data.records.single.originals.single.text, cleaned);
     expect(store.data.activePage!.text, isEmpty);
-    expect(remainingReference(tester), cleaned);
+    expect(remainingInline(tester), cleaned);
   });
 
   testWidgets('Original editing keeps the draft through IME and save retry', (
@@ -2168,11 +2177,11 @@ void main() {
       final field = tester.widget<TextField>(bodyField);
       expect(field.controller!.text, isEmpty);
       expect(field.focusNode!.hasFocus, isTrue);
-      expect(remainingReference(tester), original);
+      expect(remainingInline(tester), original);
       expect(store.data.pages.single.text, isEmpty);
       await tester.enterText(bodyField, '한 문쟝을');
       await tester.pumpAndSettle();
-      expect(remainingReference(tester), ' 옮겨 쓴다.\n$second');
+      expect(remainingInline(tester), ' 옮겨 쓴다.\n$second');
       expect(store.data.pages.single.text, '한 문쟝을');
       const composing = TextEditingValue(
         text: '한 문쟝을 ㅇ',
@@ -2181,7 +2190,7 @@ void main() {
       );
       tester.testTextInput.updateEditingValue(composing);
       await tester.pumpAndSettle();
-      expect(remainingReference(tester), '옮겨 쓴다.\n$second');
+      expect(remainingInline(tester), '겨 쓴다.\n$second');
       expect(field.controller!.value, composing);
       await tester.enterText(bodyField, '한 문장을');
       await tester.pumpAndSettle();
@@ -2189,7 +2198,7 @@ void main() {
       expect(store.data.pages.single.text, '한 문장을');
       await tester.enterText(bodyField, '$first\n');
       await tester.pumpAndSettle();
-      expect(remainingReference(tester), second);
+      expect(remainingInline(tester), second);
       expect(store.data.pages.single.text, '$first\n');
       const mistyped = '한 문쟝을 옮겨 쓴다.\n';
       await tester.enterText(bodyField, mistyped);
@@ -2210,7 +2219,7 @@ void main() {
       final reopened = tester.widget<TextField>(bodyField);
       expect(reopened.controller!.text, mistyped);
       expect(reopened.controller!.selection.extentOffset, first.length + 1);
-      expect(remainingReference(tester), second);
+      expect(remainingInline(tester), second);
       expect(reopened.focusNode!.hasFocus, isFalse);
     },
   );
@@ -2303,9 +2312,7 @@ void main() {
     },
   );
 
-  testWidgets('Guided writing follows the line above the source reference', (
-    tester,
-  ) async {
+  testWidgets('Guided writing follows the line on roomy paper', (tester) async {
     const first = '첫 줄을 옮겨 적는다.';
     const second = '두 번째 줄을 따라 쓴다.';
     const third = '다음 줄을 읽는다.';
@@ -2325,15 +2332,16 @@ void main() {
         writing: true,
       );
     await open(tester, store, FakeIntake());
-    final reference = transcriptionReference;
-    expect(reference, findsOneWidget);
-    expect(remainingReference(tester), '$first\n$second\n$third');
+    expect(transcriptionGuide, findsOneWidget);
+    expect(transcriptionReference, findsNothing);
+    expect(remainingInline(tester), '$first\n$second\n$third');
     const keyboard = 290.0;
     tester.view.viewInsets = const FakeViewPadding(bottom: keyboard);
     addTearDown(tester.view.resetViewInsets);
     await tester.showKeyboard(bodyField);
     await tester.pumpAndSettle();
-    expect(reference, findsOneWidget);
+    expect(transcriptionGuide, findsOneWidget);
+    expect(transcriptionReference, findsNothing);
     final editable = tester
         .state<EditableTextState>(
           find.descendant(of: bodyField, matching: find.byType(EditableText)),
@@ -2350,11 +2358,10 @@ void main() {
         )
         .dy;
     expect(caretY(), closeTo(middle, 5));
-    expect(tester.getTopLeft(reference).dy, greaterThan(caretY()));
     await tester.enterText(bodyField, '$first\n');
     await tester.pumpAndSettle();
     expect(caretY(), closeTo(middle, 5));
-    expect(remainingReference(tester), '$second\n$third');
+    expect(remainingInline(tester), '$second\n$third');
     const draft = '$first\n두';
     final composing = TextEditingValue(
       text: draft,
@@ -2375,7 +2382,7 @@ void main() {
   });
 
   testWidgets(
-    'The remaining source returns to roomy paper without changing input',
+    'The original switches between paper and bottom reference without changing input',
     (tester) async {
       final passage = [
         '첫 줄을 옮겨 적는다.',
@@ -2413,14 +2420,10 @@ void main() {
           writing: true,
         );
       await open(tester, store, FakeIntake());
-      final guide = find.byKey(const ValueKey('transcription-guide'));
-      TranscriptionGuidePainter painter() =>
-          tester.widget<CustomPaint>(guide).painter!
-              as TranscriptionGuidePainter;
       final field = tester.widget<TextField>(bodyField);
-      expect(guide, findsOneWidget);
-      expect(transcriptionReference, findsOneWidget);
-      expect(painter().remainderFor(field.controller!.value), passage);
+      expect(transcriptionGuide, findsOneWidget);
+      expect(transcriptionReference, findsNothing);
+      expect(remainingInline(tester), passage);
       expect(field.controller!.text, isEmpty);
       expect(
         field.scrollController!.position.maxScrollExtent,
@@ -2431,7 +2434,7 @@ void main() {
       tester.view.viewInsets = const FakeViewPadding(bottom: 290);
       await tester.showKeyboard(bodyField);
       await tester.pumpAndSettle();
-      expect(guide, findsNothing);
+      expect(transcriptionGuide, findsNothing);
       expect(transcriptionReference, findsOneWidget);
       expect(field.controller!.text, isEmpty);
 
@@ -2445,20 +2448,18 @@ void main() {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.resetViewInsets();
       await tester.pumpAndSettle();
-      expect(guide, findsOneWidget);
-      expect(transcriptionReference, findsOneWidget);
+      expect(transcriptionGuide, findsOneWidget);
+      expect(transcriptionReference, findsNothing);
       expect(field.controller!.value, composing);
-      expect(painter().remainderFor(composing), passage.substring(6));
+      expect(remainingInline(tester), passage.substring(6));
 
       await tester.enterText(bodyField, '첫 줄윽');
       await tester.pumpAndSettle();
       field.focusNode!.unfocus();
       await tester.pumpAndSettle();
-      expect(guide, findsOneWidget);
-      expect(
-        painter().remainderFor(field.controller!.value),
-        passage.substring(4),
-      );
+      expect(transcriptionGuide, findsOneWidget);
+      expect(transcriptionReference, findsNothing);
+      expect(remainingInline(tester), passage.substring(4));
       expect(store.data.activePage!.text, '첫 줄윽');
       expect(store.data.activePage!.guidedOriginalId, 'o');
       expect(tester.takeException(), isNull);
@@ -2494,8 +2495,9 @@ void main() {
       tester.view.physicalSize = const Size(320, 640);
       await tester.pumpAndSettle();
       final field = tester.widget<TextField>(bodyField);
-      expect(transcriptionReference, findsOneWidget);
-      expect(remainingReference(tester), source);
+      expect(transcriptionGuide, findsOneWidget);
+      expect(transcriptionReference, findsNothing);
+      expect(remainingInline(tester), source);
       expect(field.controller!.text, isEmpty);
 
       tester.view.viewInsets = const FakeViewPadding(bottom: 290);
@@ -2533,8 +2535,9 @@ void main() {
       field.focusNode!.unfocus();
       tester.view.resetViewInsets();
       await tester.pumpAndSettle();
-      expect(transcriptionReference, findsOneWidget);
-      expect(referenceText(tester).toPlainText(), source);
+      expect(transcriptionGuide, findsOneWidget);
+      expect(transcriptionReference, findsNothing);
+      expect(remainingInline(tester), lines.skip(8).join('\n'));
       expect(field.controller!.text, written);
       expect(tester.takeException(), isNull);
     },
@@ -2589,6 +2592,12 @@ void main() {
       expect(store.data.activeBook!.id, 'b');
       expect(store.data.activePage!.text, '이미 쓴 글');
       expect(store.data.activePage!.referenceOnly, isTrue);
+      expect(transcriptionGuide, findsNothing);
+      expect(transcriptionReference, findsOneWidget);
+      expect(
+        remainingReference(tester),
+        store.data.activeBook!.originals.last.text,
+      );
       expect(
         store.data.activePage!.guidedOriginalId,
         store.data.activeBook!.originals.last.id,
@@ -2626,14 +2635,17 @@ void main() {
         );
       await open(tester, store, photo);
       final image = find.byKey(const ValueKey('saved-original-photo'));
-      expect(transcriptionReference, findsOneWidget);
-      expect(remainingReference(tester), '따라 쓸 구절');
+      expect(transcriptionGuide, findsOneWidget);
+      expect(transcriptionReference, findsNothing);
+      expect(remainingInline(tester), '따라 쓸 구절');
       expect(image, findsNothing);
       expect(find.text('사진 보기'), findsNothing);
       tester.view.physicalSize = const Size(320, 600);
       tester.view.viewInsets = const FakeViewPadding(bottom: 340);
       await tester.showKeyboard(bodyField);
       await tester.pumpAndSettle();
+      expect(transcriptionGuide, findsNothing);
+      expect(remainingReference(tester), '따라 쓸 구절');
       expect(
         tester.getRect(transcriptionReference).bottom,
         lessThanOrEqualTo(260),
@@ -2781,7 +2793,7 @@ void main() {
       expect(store.data.activePage!.text, isEmpty);
       expect(store.data.activePage!.guidedOriginalId, original.id);
       expect(store.data.activePage!.originalCitations, ['책 72쪽']);
-      expect(remainingReference(tester), saved.text);
+      expect(remainingInline(tester), saved.text);
       expect(find.byType(OriginalPhoto), findsNothing);
     },
   );

@@ -1125,6 +1125,96 @@ void main() {
     }, () => client);
   });
 
+  for (final existingText in [false, true]) {
+    testWidgets(
+      'Poem suggestions can save and open a guide (existing text: $existingText)',
+      (tester) async {
+        final requests = <Uri>[];
+        final client = MockClient((request) async {
+          requests.add(request.url);
+          return http.Response.bytes(
+            utf8.encode(
+              jsonEncode({
+                'parse': {
+                  'pageid': 1515,
+                  'revid': 387685,
+                  'categories': [
+                    {'category': 'PD-old-70'},
+                  ],
+                  'text': '<div class="poem"><p>첫 번째 연</p><p>옮겨 쓸 연</p></div>',
+                },
+              }),
+            ),
+            200,
+          );
+        });
+        await http.runWithClient(() async {
+          final store = MemoryStore();
+          if (existingText) {
+            store.data = const Library(
+              records: [
+                WritingRecord(
+                  id: 'r',
+                  title: '기록',
+                  originals: [RegisteredOriginal('previous', '이미 담은 원문')],
+                ),
+              ],
+              pages: [
+                WritingPage(id: 'p', recordId: 'r', number: 1, text: '이미 쓴 글'),
+              ],
+              activePageId: 'p',
+              writing: true,
+            );
+          }
+          await open(tester, store, FakeIntake());
+          if (existingText) {
+            await tester.tap(place);
+            await tester.pumpAndSettle();
+            await tester.tap(find.text('원문 담기'));
+            await tester.pumpAndSettle();
+          } else {
+            await openRegistration(tester);
+          }
+          expect(requests, isEmpty);
+          expect(find.text('바로 담을 수 있는 시'), findsOneWidget);
+          final poem = find.widgetWithText(ListTile, '서시');
+          await tester.ensureVisible(poem);
+          await tester.tap(poem);
+          await tester.pumpAndSettle();
+          expect(requests.single.queryParameters['oldid'], '387685');
+          await tester.tap(find.text('옮겨 쓸 연'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('선택한 구절 담기'));
+          await tester.pumpAndSettle();
+          expect(
+            tester.widget<TextField>(sourceField).controller!.text,
+            '옮겨 쓸 연',
+          );
+          expect(store.writes, 0);
+          expect(find.text('담기'), findsOneWidget);
+
+          await tester.tap(
+            find.text(existingText ? '담고 쓰면서 원문 보기' : '담고 옮겨 쓰기'),
+          );
+          await settleSourceSheets(tester);
+          final saved = store.data.records.single.originals.last;
+          final page = store.data.activePage!;
+          expect(saved.text, '옮겨 쓸 연');
+          expect(saved.citation, contains('oldid=387685'));
+          expect(page.guidedOriginalId, saved.id);
+          expect(page.text, existingText ? '이미 쓴 글' : isEmpty);
+          expect(page.referenceOnly, existingText);
+          expect(reading, findsNothing);
+          expect(find.byType(SourceImportSheet), findsNothing);
+          expect(
+            existingText ? remainingReference(tester) : remainingInline(tester),
+            '옮겨 쓸 연',
+          );
+        }, () => client);
+      },
+    );
+  }
+
   test('A complete unique word can suggest text before a second word', () {
     const original = RegisteredOriginal('a', '아침이다. 햇빛이 책장에 내려앉았다.');
     const repeated = RegisteredOriginal('b', '햇빛이 창문에 번졌다.');

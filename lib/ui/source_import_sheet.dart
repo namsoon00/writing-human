@@ -17,6 +17,7 @@ import '../source/source_scan.dart';
 import '../source/wikisource_preview.dart';
 import 'book_details.dart';
 import 'paper.dart';
+import 'photo_original_paper.dart';
 import 'paper_panel.dart';
 import 'original_list_item.dart';
 import 'original_photo_crop.dart';
@@ -89,6 +90,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   late String? _bookId = widget.bookId;
   final _editors = <TextEditingController>[];
   TextEditingController? _wholeEditor;
+  bool _correctingPhoto = false;
   List<List<ScanLine>> _reviewLines = const [];
   List<(_ScanMode, int, String)> _reviewKeys = const [];
   final _savedReviews = <(_ScanMode, int, String), String>{};
@@ -445,6 +447,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     final editor = _wholeEditor;
     if (editor == null) return;
     _wholeEditor = null;
+    _correctingPhoto = false;
     editor.removeListener(_changed);
     WidgetsBinding.instance.addPostFrameCallback((_) => editor.dispose());
   }
@@ -797,7 +800,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   }
 
   TextEditingValue? get _selectedOriginal {
-    final value = _wholeEditor?.value;
+    final value = _correctingPhoto ? null : _wholeEditor?.value;
     if (value == null) return null;
     final selection = value.selection;
     if (!selection.isValid ||
@@ -817,23 +820,11 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   void _deleteSelectedOriginal() {
     final value = _selectedOriginal;
     if (!_editable || value == null) return;
-    final editorContext = _focus.context;
-    final delete = editorContext == null
-        ? null
-        : Actions.handler(
-            editorContext,
-            const DeleteCharacterIntent(forward: false),
-          );
-    if (delete != null) {
-      delete();
-    } else {
-      final selection = value.selection;
-      _wholeEditor!.value = TextEditingValue(
-        text: value.text.replaceRange(selection.start, selection.end, ''),
-        selection: TextSelection.collapsed(offset: selection.start),
-      );
-    }
-    _focus.requestFocus();
+    final selection = value.selection;
+    _wholeEditor!.value = TextEditingValue(
+      text: value.text.replaceRange(selection.start, selection.end, ''),
+      selection: TextSelection.collapsed(offset: selection.start),
+    );
     if (_error != null) setState(() => _error = null);
   }
 
@@ -1648,11 +1639,90 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     ),
   );
 
-  List<Widget> _wholeReviewPanel(TextEditingController editor) => [
-    _field(editor, 0),
-    OriginalTextCleanup(controller: editor, enabled: _editable),
-    if (_range != null) _writingRangeButton(),
-  ];
+  void _togglePhotoCorrection() {
+    final editor = _wholeEditor;
+    if (editor == null || !_editable) return;
+    if (_correctingPhoto) {
+      _focus.unfocus();
+    } else if (!editor.selection.isValid) {
+      editor.selection = TextSelection.collapsed(offset: editor.text.length);
+    }
+    setState(() => _correctingPhoto = !_correctingPhoto);
+  }
+
+  List<Widget> _wholeReviewPanel(TextEditingController editor) {
+    final theme = Theme.of(context);
+    final style = theme.textTheme.bodyLarge!.copyWith(
+      inherit: false,
+      color: theme.colorScheme.onSurface,
+      height: 1.65,
+    );
+    final selected = _selectedOriginal != null;
+    return [
+      SizedBox(
+        height: 48,
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                _correctingPhoto
+                    ? '고칠 곳을 눌러 글자를 바꿔요.'
+                    : selected
+                    ? '양끝을 끌어 범위를 맞춰요.'
+                    : '글을 눌러 구절을 골라요.',
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+            if (selected)
+              TextButton(
+                onPressed: _editable
+                    ? () => editor.selection = TextSelection.collapsed(
+                        offset: editor.selection.start,
+                      )
+                    : null,
+                child: const Text('선택 풀기'),
+              ),
+          ],
+        ),
+      ),
+      SourceSlip(
+        choice: widget.style.bookDetails.sourceSlip,
+        compact: true,
+        showCaption: false,
+        panelColor: originalPanelColor,
+        child: _correctingPhoto
+            ? PhotoOriginalCorrection(
+                key: const ValueKey('photo-original-correction'),
+                controller: editor,
+                focusNode: _focus,
+                style: style,
+                ink: theme.colorScheme.primary,
+                readOnly: _busy,
+              )
+            : PhotoOriginalPaper(
+                key: const ValueKey('photo-original-paper'),
+                text: editor.text,
+                selection: editor.selection,
+                style: style,
+                ink: theme.colorScheme.primary,
+                onSelection: _editable
+                    ? (selection) => editor.selection = selection
+                    : null,
+              ),
+      ),
+      OriginalTextCleanup(controller: editor, enabled: _editable),
+      if (_range != null) _writingRangeButton(),
+    ];
+  }
+
+  Widget _photoCorrectionButton() => TextButton(
+    style: TextButton.styleFrom(
+      minimumSize: const Size(0, 48),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+    ),
+    onPressed: _editable ? _togglePhotoCorrection : null,
+    child: Text(_correctingPhoto ? '구절 선택' : '글 고치기'),
+  );
 
   List<Widget> _reviewPanel() => [
     Wrap(
@@ -1746,12 +1816,11 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         _citation.text.trim().length <= 500;
     return Row(
       children: [
-        Expanded(
-          child: TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
-            onPressed: _editable ? _deleteSelectedOriginal : null,
-            child: const Text('선택한 글 지우기', textAlign: TextAlign.center),
-          ),
+        _photoCorrectionButton(),
+        IconButton(
+          tooltip: '선택한 글 지우기',
+          onPressed: _editable ? _deleteSelectedOriginal : null,
+          icon: const Icon(CupertinoIcons.trash, size: 20),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -1779,6 +1848,29 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     final selectionReady = _mode == _ScanMode.page
         ? _selected.isNotEmpty
         : _paragraph != null;
+    final confirm = FilledButton(
+      key: const ValueKey('source-confirm'),
+      style: _confirmStyle,
+      onPressed: _selecting
+          ? selectionReady && !_busy
+                ? _reviewSelection
+                : null
+          : _offerExtraction
+          ? (_editable ? _extractPhoto : null)
+          : canSubmit
+          ? _submit
+          : null,
+      child: Text(
+        _offerExtraction
+            ? '사진에서 글자 읽기'
+            : !_selecting
+            ? (_extractionOnly ? '원문에 글 추가' : '담기')
+            : _mode == _ScanMode.page
+            ? '페이지 확인'
+            : '선택한 구절 확인',
+        textAlign: TextAlign.center,
+      ),
+    );
     return PopScope(
       canPop: !_savingPhoto,
       child: DecoratedBox(
@@ -1983,30 +2075,16 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                         children: [
                           if (_selectedOriginal case final selection?)
                             _selectionActions(selection)
+                          else if (_wholeEditor != null)
+                            Row(
+                              children: [
+                                _photoCorrectionButton(),
+                                const SizedBox(width: 8),
+                                Expanded(child: confirm),
+                              ],
+                            )
                           else
-                            FilledButton(
-                              key: const ValueKey('source-confirm'),
-                              style: _confirmStyle,
-                              onPressed: _selecting
-                                  ? selectionReady && !_busy
-                                        ? _reviewSelection
-                                        : null
-                                  : _offerExtraction
-                                  ? (_editable ? _extractPhoto : null)
-                                  : canSubmit
-                                  ? _submit
-                                  : null,
-                              child: Text(
-                                _offerExtraction
-                                    ? '사진에서 글자 읽기'
-                                    : !_selecting
-                                    ? (_extractionOnly ? '원문에 글 추가' : '담기')
-                                    : _mode == _ScanMode.page
-                                    ? '페이지 확인'
-                                    : '선택한 구절 확인',
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
+                            confirm,
                           if (_offerExtraction &&
                               !_readingPhoto &&
                               !_extractionOnly)

@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -21,6 +22,7 @@ import 'package:writing_human/ui/book_details.dart';
 import 'package:writing_human/ui/book_detail_design.dart';
 import 'package:writing_human/ui/paper.dart';
 import 'package:writing_human/ui/paper_panel.dart';
+import 'package:writing_human/ui/photo_original_paper.dart';
 import 'package:writing_human/ui/original_list_item.dart';
 import 'package:writing_human/ui/original_photo.dart';
 import 'package:writing_human/ui/original_range_sheet.dart';
@@ -33,6 +35,36 @@ import 'package:writing_human/ui/transcription_guide.dart';
 import 'widget_test.dart' show MemoryStore;
 
 final sourceField = find.byKey(const ValueKey('source-text'));
+final photoPaper = find.byType(PhotoOriginalPaper);
+final photoCorrection = find.descendant(
+  of: find.byType(PhotoOriginalCorrection),
+  matching: find.byType(EditableText),
+);
+
+PhotoOriginalPaper photoDraft(WidgetTester tester) =>
+    tester.widget<PhotoOriginalPaper>(photoPaper);
+
+Offset photoCaret(WidgetTester tester, int offset) {
+  final paragraph = tester.renderObject<RenderParagraph>(
+    find.descendant(of: photoPaper, matching: find.byType(RichText)),
+  );
+  final position = TextPosition(
+    offset: offset,
+    affinity: TextAffinity.upstream,
+  );
+  return paragraph.localToGlobal(
+    paragraph.getOffsetForCaret(position, Rect.zero) +
+        Offset(0, paragraph.getFullHeightForCaret(position) / 2),
+  );
+}
+
+Future<void> correctPhoto(WidgetTester tester, String text) async {
+  await tester.tap(find.text('글 고치기'));
+  await tester.pumpAndSettle();
+  await tester.enterText(photoCorrection, text);
+  await tester.pumpAndSettle();
+}
+
 final bodyField = find.byKey(const ValueKey('page-text'));
 final confirm = find.byKey(const ValueKey('source-confirm'));
 final place = find.byKey(const ValueKey('writing-originals'));
@@ -378,7 +410,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(intake.photos, 1);
       expect(intake.scans, 1);
-      expect(sourceField, findsOneWidget);
+      expect(photoPaper, findsOneWidget);
+      expect(sourceField, findsNothing);
       await openPhotoMenu(tester);
       await saveWithPhoto(tester, action: find.text('사진만 담기'));
       expect(store.data.records.single.originals.single.photoId, isNotNull);
@@ -389,7 +422,7 @@ void main() {
     },
   );
 
-  testWidgets('Camera capture reads all paragraphs into one editable field', (
+  testWidgets('Camera capture opens all paragraphs on selectable paper', (
     tester,
   ) async {
     final intake = FakeIntake();
@@ -409,18 +442,32 @@ void main() {
     expect(intake.scans, 1);
     expect(find.text('원문 확인'), findsOneWidget);
     expect(find.text('구절 고르기'), findsNothing);
-    final controller = tester.widget<TextField>(sourceField).controller!;
-    expect(controller.text, '첫 문단입니다.\n\n둘째 문단입나다.');
-    expect(find.byKey(const ValueKey('source-review-text-1')), findsNothing);
+    expect(photoDraft(tester).text, '첫 문단입니다.\n\n둘째 문단입나다.');
+    expect(photoCorrection, findsNothing);
+    expect(tester.testTextInput.isVisible, isFalse);
 
-    await tester.enterText(sourceField, '둘째 문단입니다.');
+    await tester.tapAt(
+      Offset.lerp(photoCaret(tester, 0), photoCaret(tester, 1), .75)!,
+    );
+    await tester.pumpAndSettle();
+    final selected = photoDraft(tester).selection;
+    expect(selected.textInside(photoDraft(tester).text), '첫');
+    await tester.tap(find.text('글 고치기'));
+    await tester.pumpAndSettle();
+    final input = tester.widget<EditableText>(photoCorrection).controller;
+    expect(input.selection, selected);
+    tester.testTextInput.updateEditingValue(
+      input.value.replaced(selected, '고친 첫'),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('구절 선택'));
+    await tester.pumpAndSettle();
     await openPhotoMenu(tester);
     await tester.tap(find.text('구절 고르기'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('계속 편집'));
     await tester.pumpAndSettle();
-    expect(tester.widget<TextField>(sourceField).controller, same(controller));
-    expect(controller.text, '둘째 문단입니다.');
+    expect(photoDraft(tester).text, '고친 첫 문단입니다.\n\n둘째 문단입나다.');
   });
 
   testWidgets(
@@ -454,49 +501,83 @@ void main() {
       tester.view.physicalSize = const Size(320, 640);
       await openRegistration(tester);
       await takePhoto(tester);
-      await tester.showKeyboard(sourceField);
-      final controller = tester.widget<TextField>(sourceField).controller!;
-      expect(controller.text, '$header\n\n$first\n$second\n\n$footer');
-      final remove = find.widgetWithText(TextButton, '선택한 글 지우기');
+      expect(photoDraft(tester).text, '$header\n\n$first\n$second\n\n$footer');
+      final remove = find.byTooltip('선택한 글 지우기');
       final save = find.widgetWithText(FilledButton, '선택한 글 담기');
+      final endHandle = find.byKey(const ValueKey('photo-selection-end'));
       expect(confirm, findsOneWidget);
 
-      final selectedHeader = controller.value.copyWith(
-        selection: TextSelection(
-          baseOffset: header.length + 2,
-          extentOffset: 0,
-        ),
+      await tester.tapAt(photoCaret(tester, 1));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('photo-selection-start')),
+        findsOneWidget,
       );
-      const composing = TextRange(start: 0, end: header.length + 2);
-      tester.testTextInput.updateEditingValue(
-        selectedHeader.copyWith(composing: composing),
+      expect(endHandle, findsOneWidget);
+      expect(tester.testTextInput.isVisible, isFalse);
+      final oldEnd = photoDraft(tester).selection.end;
+      await tester.drag(
+        endHandle,
+        photoCaret(tester, header.length) - photoCaret(tester, oldEnd),
       );
       await tester.pumpAndSettle();
-      expect(controller.value.composing, composing);
-      expect(tester.widget<TextButton>(remove).onPressed, isNull);
-      expect(tester.widget<FilledButton>(save).onPressed, isNull);
-
-      tester.testTextInput.updateEditingValue(selectedHeader);
-      await tester.pumpAndSettle();
+      expect(photoDraft(tester).selection.end, header.length);
       await tester.tap(remove);
       await tester.pumpAndSettle();
-      expect(controller.text, '$first\n$second\n\n$footer');
-      expect(controller.selection, const TextSelection.collapsed(offset: 0));
-      expect(tester.widget<TextField>(sourceField).focusNode!.hasFocus, isTrue);
+      expect(photoDraft(tester).text, '\n\n$first\n$second\n\n$footer');
+      expect(
+        photoDraft(tester).selection,
+        const TextSelection.collapsed(offset: 0),
+      );
+      expect(tester.testTextInput.isVisible, isFalse);
       expect(save, findsNothing);
       expect(store.data.records, isEmpty);
 
-      await tester.enterText(sourceField, '$first\n$second\n\n고친 마지막 줄');
+      await correctPhoto(tester, '$first\n$second\n\n고친 마지막 줄');
+      final controller = tester
+          .widget<EditableText>(photoCorrection)
+          .controller;
       final corrected = controller.text;
+      final composing = TextRange(
+        start: corrected.length - 1,
+        end: corrected.length,
+      );
       tester.testTextInput.updateEditingValue(
-        controller.value.copyWith(
-          selection: TextSelection(
-            baseOffset: corrected.indexOf(second) + second.length,
-            extentOffset: corrected.indexOf(' 남길'),
-          ),
-        ),
+        controller.value.copyWith(composing: composing),
       );
       await tester.pumpAndSettle();
+      expect(controller.value.composing, composing);
+      expect(
+        tester
+            .widget<TextButton>(find.widgetWithText(TextButton, '구절 선택'))
+            .onPressed,
+        isNull,
+      );
+      expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+
+      tester.testTextInput.updateEditingValue(
+        controller.value.copyWith(composing: TextRange.empty),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('구절 선택'));
+      await tester.pumpAndSettle();
+      expect(photoCorrection, findsNothing);
+      expect(tester.testTextInput.isVisible, isFalse);
+      expect(photoDraft(tester).text, corrected);
+      final start = corrected.indexOf('남길');
+      await tester.tapAt(photoCaret(tester, start + 1));
+      await tester.pumpAndSettle();
+      final wordEnd = photoDraft(tester).selection.end;
+      await tester.drag(
+        endHandle,
+        photoCaret(tester, corrected.indexOf(second) + second.length) -
+            photoCaret(tester, wordEnd),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        photoDraft(tester).selection.textInside(corrected),
+        '남길 글.\n$second',
+      );
       await saveWithPhoto(tester, action: save);
 
       final original = store.data.records.single.originals.single;
@@ -535,18 +616,15 @@ void main() {
       await tester.tap(find.text('보정해 다시 읽기'));
       for (var frame = 0; frame < 40; frame++) {
         await tester.pump(const Duration(milliseconds: 30));
-        if (tester.widget<TextField>(sourceField).controller!.text ==
-            intake.blocks.single) {
+        if (photoPaper.evaluate().isNotEmpty &&
+            photoDraft(tester).text == intake.blocks.single) {
           break;
         }
         await Future<void>.delayed(const Duration(milliseconds: 15));
       }
     });
     await tester.pumpAndSettle();
-    expect(
-      tester.widget<TextField>(sourceField).controller!.text,
-      '보정 후 다시 읽은 문장',
-    );
+    expect(photoDraft(tester).text, '보정 후 다시 읽은 문장');
     await openPhotoMenu(tester);
     await tester.tap(find.text('보정 전 결과 보기'));
     await tester.pumpAndSettle();
@@ -3051,7 +3129,7 @@ void main() {
       final intake = FakeIntake()
         ..shares.add(const IncomingSource('image-share', '', hasPhoto: true));
       await open(tester, store, intake);
-      expect(sourceField, findsOneWidget);
+      expect(photoPaper, findsOneWidget);
       await showSourceDetails(tester);
       await tester.enterText(
         find.byKey(const ValueKey('original-citation')),
@@ -3119,14 +3197,16 @@ void main() {
       expect(intake.scans, 3);
       expect(intake.recognizedRegion!.width, closeTo(.6, .02));
       const corrected = '사진에서 확인한 첫 문단.\n\n둘째 문단입나다.';
-      await tester.enterText(sourceField, corrected);
-      await tester.pumpAndSettle();
+      await correctPhoto(tester, corrected);
 
       expect(find.text('원문에 글 추가'), findsOneWidget);
       store.fail = true;
       await loadPhotoAfter(confirm);
       expect(find.text('원문 글을 저장하지 못했어요. 다시 저장해 주세요.'), findsOneWidget);
-      expect(tester.widget<TextField>(sourceField).controller!.text, corrected);
+      expect(
+        tester.widget<EditableText>(photoCorrection).controller.text,
+        corrected,
+      );
       expect(store.data.books.single.originals.single.text, isEmpty);
       store.fail = false;
       await saveWithPhoto(tester);
@@ -3217,11 +3297,8 @@ void main() {
     final intake = FakeIntake();
     intake.recovered = intake.photo;
     await open(tester, store, intake);
-    expect(sourceField, findsOneWidget);
-    expect(
-      tester.widget<TextField>(sourceField).controller!.text,
-      '첫 문단입니다.\n\n둘째 문단입나다.',
-    );
+    expect(photoPaper, findsOneWidget);
+    expect(photoDraft(tester).text, '첫 문단입니다.\n\n둘째 문단입나다.');
     expect(intake.scans, 1);
     expect(intake.photos, 0);
     expect(store.writes, 0);

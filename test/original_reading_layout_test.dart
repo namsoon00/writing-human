@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/data/original_photo_store.dart';
+import 'package:writing_human/ui/editor.dart';
 import 'package:writing_human/ui/original_photo.dart';
 import 'package:writing_human/ui/page_originals_panel.dart';
 import 'package:writing_human/ui/source_reading.dart';
@@ -74,56 +75,82 @@ void main() {
     });
   }
 
-  testWidgets(
-    'A photo thumbnail shares the writing reference without changing composing',
-    (tester) async {
+  for (final withText in [true, false]) {
+    testWidgets('Writing only shows original text (with text: $withText)', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetViewInsets);
       await preparePhotoStorage(tester);
       final intake = FakeIntake();
       addTearDown(intake.dispose);
       final photoId = await tester.runAsync(
         () => const OriginalPhotoStore().save(intake.photo.bytes),
       );
-      final controller = TextEditingController.fromValue(
-        const TextEditingValue(
-          text: '하ㄴ',
-          selection: TextSelection.collapsed(offset: 2),
-          composing: TextRange(start: 0, end: 2),
-        ),
+      final original = RegisteredOriginal(
+        'photo',
+        withText ? '한 문장을 읽습니다.' : '',
+        photoId: photoId,
       );
-      addTearDown(controller.dispose);
-      final before = controller.value;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: Center(
-              child: SizedBox(
-                width: 300,
-                height: 80,
-                child: TranscriptionReference(
-                  original: RegisteredOriginal(
-                    'photo',
-                    '한 문장을 읽습니다.',
-                    photoId: photoId,
-                  ),
-                  comparison: null,
-                  controller: controller,
-                  style: const TextStyle(fontSize: 20),
-                ),
+            resizeToAvoidBottomInset: false,
+            body: PageEditor(
+              page: WritingPage(
+                id: 'p',
+                recordId: 'r',
+                number: 1,
+                guidedOriginalId: original.id,
               ),
+              originals: [original],
+              onChanged: (_, _, _, _, _) {},
             ),
           ),
         ),
       );
-      await finishPhotoLoad(tester);
-      expect(find.byKey(const ValueKey('reference-photo')), findsOneWidget);
-      expect(find.text('한 문장을 읽습니다.', findRichText: true), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('reference-photo')));
+      final field = find.byKey(const ValueKey('page-text'));
+      await tester.showKeyboard(field);
       await tester.pumpAndSettle();
-      expect(controller.value, before);
-      expect(find.text('원본 사진'), findsNothing);
+      final reference = find.byType(TranscriptionReference);
+      expect(find.byType(OriginalPhoto), findsNothing);
+      expect(reference, withText ? findsOneWidget : findsNothing);
+      if (!withText) return;
+
+      const composing = TextEditingValue(
+        text: '하ㄴ',
+        selection: TextSelection.collapsed(offset: 2),
+        composing: TextRange(start: 0, end: 2),
+      );
+      tester.testTextInput.updateEditingValue(composing);
+      await tester.pumpAndSettle();
+      final line = find.text(original.text, findRichText: true);
+      expect(line, findsOneWidget);
+      expect(
+        tester.getTopLeft(line).dx,
+        closeTo(tester.getTopLeft(reference).dx, 1),
+      );
+      await tester.tap(reference);
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(field).controller!.value, composing);
+      expect(find.byType(PageOriginalsPanel), findsNothing);
+
+      tester.testTextInput.updateEditingValue(
+        composing.copyWith(composing: TextRange.empty),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(reference);
+      tester.view.resetViewInsets();
+      await finishPhotoLoad(tester);
+      expect(find.byType(PageOriginalsPanel), findsOneWidget);
+      expect(find.byType(OriginalPhoto), findsOneWidget);
       expect(tester.takeException(), isNull);
-    },
-  );
+    });
+  }
   testWidgets(
     'Archived source copies remain readable without a numbered writing UI',
     (tester) async {

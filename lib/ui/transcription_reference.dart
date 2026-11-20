@@ -6,7 +6,6 @@ import 'package:flutter/rendering.dart' show RenderParagraph;
 import '../data/model.dart';
 import '../source/transcription_comparison.dart';
 import 'paper.dart';
-import 'original_photo.dart';
 
 /// Scrolls the selected original independently of the editable paper.
 class TranscriptionReference extends StatefulWidget {
@@ -92,6 +91,7 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
     final passage = source.text
         .substring(source.writingRange?.start ?? 0, source.writingRange?.end)
         .trimLeft();
+    if (passage.isEmpty) return const SizedBox.shrink();
     final scaler = MediaQuery.textScalerOf(context);
     final reference = DecoratedBox(
       decoration: const BoxDecoration(
@@ -105,66 +105,7 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
           label: '따라 쓰는 원문',
           button: widget.onOpen != null,
           onTap: widget.onOpen,
-          child: TextFieldTapRegion(
-            child: passage.isEmpty
-                ? (source.photoId == null
-                      ? SingleChildScrollView(
-                          child: Text(source.citation, style: widget.style),
-                        )
-                      : OriginalPhoto(
-                          id: source.photoId!,
-                          region: source.photoRegion,
-                          fitWidth: true,
-                        ))
-                : source.photoId == null
-                ? _textReference(passage, scaler)
-                : LayoutBuilder(
-                    builder: (context, box) {
-                      // Keep the complete text line in the smallest keyboard layouts.
-                      if (box.maxHeight < 48) {
-                        return _textReference(passage, scaler);
-                      }
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          SizedBox(
-                            key: const ValueKey('reference-photo'),
-                            width: math.min(88, box.maxWidth * .24),
-                            child: Semantics(
-                              button: true,
-                              label: '원문 사진 크게 보기',
-                              child: InkWell(
-                                onTap: () {
-                                  final value = widget.controller.value;
-                                  if (value.isComposingRangeValid &&
-                                      !value.composing.isCollapsed) {
-                                    return;
-                                  }
-                                  FocusScope.of(context).unfocus();
-                                  showOriginalPhoto(
-                                    context,
-                                    source.photoId!,
-                                    color: originalPanelColor,
-                                    region: source.photoRegion,
-                                  );
-                                },
-                                child: ClipRect(
-                                  child: OriginalPhoto(
-                                    id: source.photoId!,
-                                    region: source.photoRegion,
-                                    compact: true,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(child: _textReference(passage, scaler)),
-                        ],
-                      );
-                    },
-                  ),
-          ),
+          child: TextFieldTapRegion(child: _textReference(passage, scaler)),
         ),
       ),
     );

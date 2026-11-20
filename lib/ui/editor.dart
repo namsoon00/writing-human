@@ -543,7 +543,7 @@ class _PageEditorState extends State<PageEditor> {
         final end = active == null
             ? text.text.length
             : passageEnd(passages, active, text.text.length);
-        final hasChosenGuide = source != null;
+        final hasChosenGuide = source?.canTranscribe == true;
         final paperHeight = math.max(0.0, constraints.maxHeight - overlap);
         final scaler = MediaQuery.textScalerOf(context);
         final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
@@ -575,17 +575,12 @@ class _PageEditorState extends State<PageEditor> {
           paperHeight * .34,
           math.max(0.0, paperHeight - minimumWritingHeight),
         );
-        final referenceHeight = showInlineGuide || source == null
+        final referenceHeight = showInlineGuide || !hasChosenGuide
             ? 0.0
-            : source.canTranscribe
-            ? TranscriptionReference.heightForText(
+            : TranscriptionReference.heightForText(
                 style: referenceStyle,
                 scaler: scaler,
                 availableHeight: referenceBudget,
-              )
-            : math.min(
-                scaler.scale(referenceStyle.fontSize!) * 4 + 12,
-                referenceBudget,
               );
         final canCenter =
             hasChosenGuide &&

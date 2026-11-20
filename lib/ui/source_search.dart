@@ -252,7 +252,6 @@ class _SourceSearchState extends State<_SourceSearch> {
   _SearchMode _mode = _SearchMode.title;
   _SourceHit? _selected;
   Future<List<String>?>? _preview;
-  final _stanzas = <int>{};
   List<(_Collection, List<_SourceHit>?)> _results = const [];
 
   Timer? _completionDelay;
@@ -389,7 +388,7 @@ class _SourceSearchState extends State<_SourceSearch> {
     } on FormatException catch (exception) {
       error = exception.message;
     } on Exception {
-      error = '붙여넣지 못했어요. 구절을 다시 복사해 주세요.';
+      error = '붙여넣지 못했어요. 글을 다시 복사해 주세요.';
     } finally {
       if (mounted) {
         setState(() {
@@ -413,7 +412,6 @@ class _SourceSearchState extends State<_SourceSearch> {
     setState(() {
       _selected = hit;
       _linkError = null;
-      _stanzas.clear();
       _preview = poem == null ? null : _loadPreview(poem);
     });
   }
@@ -444,22 +442,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                 ),
                 Text('${poem.author} · 위키문헌'),
                 const SizedBox(height: 8),
-                const Text('담을 구절을 골라 주세요.'),
-                for (var index = 0; index < stanzas.length; index++)
-                  CheckboxListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    value: _stanzas.contains(index),
-                    title: Text(stanzas[index]),
-                    onChanged: (selected) => setState(() {
-                      if (selected == true) {
-                        _stanzas.add(index);
-                      } else {
-                        _stanzas.remove(index);
-                      }
-                    }),
-                  ),
+                Text(stanzas.join('\n\n')),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton(
@@ -478,32 +461,12 @@ class _SourceSearchState extends State<_SourceSearch> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            child: Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 8,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, (
-                    citation: poem.citation,
-                    text: stanzas.join('\n\n'),
-                  )),
-                  child: const Text('전체 선택'),
-                ),
-                FilledButton(
-                  onPressed: _stanzas.isEmpty
-                      ? null
-                      : () {
-                          final selected = _stanzas.toList()..sort();
-                          Navigator.pop(context, (
-                            citation: poem.citation,
-                            text: selected
-                                .map((index) => stanzas[index])
-                                .join('\n\n'),
-                          ));
-                        },
-                  child: const Text('이 구절 선택'),
-                ),
-              ],
+            child: FilledButton(
+              onPressed: () => Navigator.pop(context, (
+                citation: poem.citation,
+                text: stanzas.join('\n\n'),
+              )),
+              child: const Text('원문 가져오기'),
             ),
           ),
         ],
@@ -525,7 +488,7 @@ class _SourceSearchState extends State<_SourceSearch> {
       ],
       if (_mode != _SearchMode.author) ...[
         const SizedBox(height: 12),
-        const Text('원문에서 구절을 복사한 뒤 ‘복사한 구절 선택’을 누르세요.'),
+        const Text('원문을 복사한 뒤 ‘복사한 글 가져오기’를 누르세요.'),
       ],
       const SizedBox(height: 12),
       OutlinedButton.icon(
@@ -543,7 +506,7 @@ class _SourceSearchState extends State<_SourceSearch> {
         const SizedBox(height: 8),
         FilledButton(
           onPressed: _pasting ? null : () => _collect(hit),
-          child: const Text('복사한 구절 선택'),
+          child: const Text('복사한 글 가져오기'),
         ),
         TextButton(
           onPressed: _pasting
@@ -702,9 +665,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                     children: [
                       const Padding(
                         padding: EdgeInsets.all(8),
-                        child: Text(
-                          '‘복사 필요’가 표시된 자료는 웹에서 원문을 열고 원하는 구절을 복사해 주세요.',
-                        ),
+                        child: Text('‘복사 필요’가 표시된 자료는 웹에서 원문을 열고 본문을 복사해 주세요.'),
                       ),
                       if (searched == null)
                         Padding(
@@ -770,7 +731,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                         ),
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Text('네이버에서 구절을 복사한 뒤 ‘복사한 구절 선택’을 누르세요.'),
+                          child: Text('네이버에서 원문을 복사한 뒤 ‘복사한 글 가져오기’를 누르세요.'),
                         ),
                       ],
                     ],

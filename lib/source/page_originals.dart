@@ -3,18 +3,23 @@ import '../data/original_removals.dart';
 import 'photo_lines.dart';
 import 'transcription_comparison.dart';
 
-/// A stable, selected copy: later catalog edits cannot change a written passage.
-RegisteredOriginal originalSnapshot(RegisteredOriginal original) =>
-    RegisteredOriginal(
-      original.id,
-      original.text.substring(
-        original.writingRange?.start ?? 0,
-        original.writingRange?.end,
-      ),
-      citation: original.citation,
-      photoId: original.photoId,
-      photoRegion: originalPhotoPreviewRegion(original),
-    );
+/// Captures the source so later catalog edits cannot change a written page.
+RegisteredOriginal originalSnapshot(
+  RegisteredOriginal original, {
+  bool useLegacyRange = false,
+}) {
+  final range = useLegacyRange ? original.writingRange : null;
+  return RegisteredOriginal(
+    original.id,
+    original.text.substring(range?.start ?? 0, range?.end),
+    citation: original.citation,
+    photoId: original.photoId,
+    photoRegion: originalPhotoPreviewRegion(
+      original,
+      useWritingRange: useLegacyRange,
+    ),
+  );
+}
 
 /// A page can resume its source only when the selected copy still matches.
 bool sameOriginalCopy(RegisteredOriginal a, RegisteredOriginal b) =>
@@ -41,7 +46,12 @@ bool pageUsesOriginal(
     originals,
   ).map(passageOriginal).nonNulls.toList();
   return sources.length == 1 &&
-      sameOriginalCopy(sources.single, originalSnapshot(original));
+      (sameOriginalCopy(sources.single, originalSnapshot(original)) ||
+          (original.writingRange != null &&
+              sameOriginalCopy(
+                sources.single,
+                originalSnapshot(original, useLegacyRange: true),
+              )));
 }
 
 RegisteredOriginal? passageOriginal(PagePassage passage) =>
@@ -65,7 +75,7 @@ List<PagePassage> pageOriginals(
         .where((item) => item.id == page.guidedOriginalId)
         .firstOrNull;
     if (guide != null && !passages.any((p) => p.start == 0)) {
-      final snapshot = originalSnapshot(guide);
+      final snapshot = originalSnapshot(guide, useLegacyRange: true);
       passages.insert(
         0,
         PagePassage(

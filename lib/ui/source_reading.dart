@@ -6,10 +6,8 @@ import 'package:flutter/rendering.dart';
 
 import '../data/model.dart';
 import '../data/library_search.dart';
-import '../data/original_photo_store.dart';
 import '../source/originals.dart';
 import '../source/photo_lines.dart';
-import '../source/source_scan.dart';
 import 'paper.dart';
 import 'paper_panel.dart';
 import 'original_edit.dart';
@@ -18,7 +16,6 @@ import 'original_photo.dart';
 import 'original_reading_layout.dart';
 import 'source_browser.dart';
 import 'paper_search_field.dart';
-import 'original_range_sheet.dart';
 import 'pencil_marks.dart';
 import 'reflection_ink.dart';
 import 'search_completions.dart';
@@ -43,7 +40,6 @@ class SourceReading extends StatefulWidget {
     this.onOpenWriting,
     this.onRetry,
     this.onSaveReflection,
-    this.onSaveRange,
     this.onDelete,
     this.onEdit,
   });
@@ -65,7 +61,6 @@ class SourceReading extends StatefulWidget {
   onSavePhotoRegion;
   final ValueChanged<Passage>? onOpenWriting;
   final VoidCallback? onRetry;
-  final Future<bool> Function(RegisteredOriginal, PencilMark?)? onSaveRange;
   final Future<bool> Function(RegisteredOriginal)? onDelete;
   final Future<RegisteredOriginal?> Function(
     RegisteredOriginal,
@@ -343,53 +338,6 @@ class _SourceReadingState extends State<SourceReading> {
     }
   }
 
-  Future<void> _changeRange(RegisteredOriginal original) async {
-    if (saving) return;
-    setState(() => saving = true);
-    try {
-      SourceScan? photo;
-      if (original.photoId case final id?) {
-        try {
-          final bytes = await const OriginalPhotoStore().load(id);
-          if (bytes != null) {
-            final image = await ScanImage.decode(bytes);
-            photo = SourceScan(
-              image.bytes,
-              const [],
-              width: image.width,
-              height: image.height,
-            );
-          }
-        } catch (_) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('원본 사진을 열지 못했어요. 글에서 옮겨 쓸 구절을 골라 주세요.'),
-              ),
-            );
-          }
-        }
-      }
-      if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
-      final choice = await chooseOriginalRange(
-        context,
-        original.text,
-        current: original.writingRange,
-        photo: photo,
-        photoLines: original.photoLines,
-      );
-      if (!mounted || choice == null) return;
-      final saved = await widget.onSaveRange!(original, choice.range);
-      if (mounted && !saved) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('옮겨 쓸 구절을 저장하지 못했어요.')));
-      }
-    } finally {
-      if (mounted) setState(() => saving = false);
-    }
-  }
-
   Future<void> _extractPhoto(RegisteredOriginal original) async {
     if (saving) return;
     setState(() => saving = true);
@@ -405,7 +353,7 @@ class _SourceReadingState extends State<SourceReading> {
     context,
     original.photoId!,
     color: originalPanelColor,
-    region: originalPhotoPreviewRegion(original),
+    region: originalPhotoPreviewRegion(original, useWritingRange: false),
     onSaveRegion: widget.onSavePhotoRegion == null
         ? null
         : (region) => widget.onSavePhotoRegion!(original, region),
@@ -606,7 +554,6 @@ class _SourceReadingState extends State<SourceReading> {
               if (original != null &&
                   !editing &&
                   (original.photoId != null ||
-                      original.isFullPage ||
                       widget.onDelete != null ||
                       widget.onEdit != null))
                 Row(
@@ -622,14 +569,6 @@ class _SourceReadingState extends State<SourceReading> {
                                   : () => _showPhoto(original),
                               icon: const Icon(CupertinoIcons.photo, size: 16),
                               label: const Text('원본 사진'),
-                            ),
-                          if (original.isFullPage && widget.onSaveRange != null)
-                            OriginalRangeButton(
-                              text: original.text,
-                              range: original.writingRange,
-                              onPressed: saving
-                                  ? null
-                                  : () => _changeRange(original),
                             ),
                         ],
                       ),
@@ -869,14 +808,9 @@ class _OriginalTextState extends State<_OriginalText> {
                 current.start >= mark.end)
         ? current
         : null;
-    final range = widget.original.writingRange;
     final boundaries = {
       from,
       to,
-      if (range != null) ...[
-        range.start.clamp(from, to),
-        range.end.clamp(from, to),
-      ],
       if (mark != null) ...[
         mark.start.clamp(from, to),
         mark.end.clamp(from, to),
@@ -906,10 +840,6 @@ class _OriginalTextState extends State<_OriginalText> {
                       boundaries[i] >= match.start &&
                       boundaries[i] < match.end
                 ? const TextStyle(backgroundColor: Color(0x30a78356))
-                : range != null &&
-                      boundaries[i] >= range.start &&
-                      boundaries[i] < range.end
-                ? const TextStyle(backgroundColor: Color(0x20a78356))
                 : null,
           ),
       ],

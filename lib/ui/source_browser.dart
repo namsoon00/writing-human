@@ -10,7 +10,7 @@ import 'source_browser_native.dart'
 Future<String> readSourceExcerpt() async {
   final data = await Clipboard.getData(Clipboard.kTextPlain);
   final text = normalizeSource(data?.text ?? '');
-  if (text.isEmpty) throw const FormatException('복사한 구절이 없어요.');
+  if (text.isEmpty) throw const FormatException('복사한 글이 없어요.');
   if (text.length > sourceLengthLimit) {
     throw const FormatException('구절이 너무 길어요. 필요한 부분만 복사해 주세요.');
   }
@@ -161,7 +161,7 @@ class _SourceBrowserState extends State<_SourceBrowser> {
             FilledButton.icon(
               onPressed: _readingClipboard ? null : _collect,
               icon: const Icon(CupertinoIcons.doc_on_clipboard, size: 17),
-              label: Text(widget.hasCitation ? '복사한 구절과 출처 선택' : '복사한 구절 선택'),
+              label: Text(widget.hasCitation ? '복사한 글과 출처 가져오기' : '복사한 글 가져오기'),
             ),
           ],
         ),

@@ -812,7 +812,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               photoId: result.photoId,
               photoRegion: result.photoRegion,
               isFullPage: result.isFullPage,
-              writingRange: result.writingRange,
               photoLines: result.photoLines,
             ),
           );
@@ -906,7 +905,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 photoId: result.photoId,
                 photoRegion: result.photoRegion,
                 isFullPage: result.isFullPage,
-                writingRange: result.writingRange,
                 photoLines: result.photoLines,
               ),
             );
@@ -979,7 +977,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             citation: result.citation,
             extraction: (
               isFullPage: result.isFullPage,
-              writingRange: result.writingRange,
               photoLines: result.photoLines,
               photoRegion: result.photoRegion,
             ),
@@ -1263,23 +1260,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                   openedWriting = true;
                 }),
             onRetry: owner.saveError == null ? null : _retrySave,
-            onSaveRange: (original, range) async {
-              if (!mounted || c != owner || _accountLocked || owner.composing) {
-                return false;
-              }
-              final latest = originals()
-                  .where((item) => item.id == original.id)
-                  .firstOrNull;
-              if (latest == null || latest.text != original.text) {
-                return false;
-              }
-              return owner.saveOriginalRange(
-                bookId: bookId,
-                recordId: selectedPage.recordId,
-                original: latest,
-                range: range,
-              );
-            },
             onEdit: (original, text, citation) async {
               if (!mounted || c != owner || _accountLocked) return null;
               return owner.saveOriginalEdit(

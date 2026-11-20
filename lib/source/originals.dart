@@ -112,7 +112,6 @@ Iterable<OriginalRemoval> removalKeysFor(
 
 typedef OriginalExtraction = ({
   bool isFullPage,
-  PencilMark? writingRange,
   List<OriginalPhotoLine> photoLines,
   List<double>? photoRegion,
 });
@@ -129,7 +128,7 @@ RegisteredOriginal editOriginal(
       ? edited
       : edited.withDetails(
           reflection: edited.reflection,
-          writingRange: extraction.writingRange,
+          writingRange: null,
           isFullPage: extraction.isFullPage,
           photoLines: extraction.photoLines,
           photoRegion: extraction.photoRegion,

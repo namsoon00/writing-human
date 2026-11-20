@@ -484,21 +484,6 @@ class LibraryController extends ChangeNotifier {
     updated: original.withReflection(reflection),
   );
 
-  Future<bool> saveOriginalRange({
-    required String? bookId,
-    required String recordId,
-    required RegisteredOriginal original,
-    required PencilMark? range,
-  }) => _saveOriginal(
-    bookId: bookId,
-    recordId: recordId,
-    original: original,
-    updated: original.withDetails(
-      reflection: original.reflection,
-      writingRange: range,
-    ),
-  );
-
   Future<bool> saveOriginalPhotoRegion({
     required String? bookId,
     required String recordId,

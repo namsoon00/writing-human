@@ -12,10 +12,13 @@ extension OriginalPhotoLineBounds on OriginalPhotoLine {
   );
 }
 
-/// The visible excerpt follows the chosen range when OCR line locations exist.
-List<double>? originalPhotoPreviewRegion(RegisteredOriginal original) {
+/// Uses OCR line locations to frame the text or a saved legacy range.
+List<double>? originalPhotoPreviewRegion(
+  RegisteredOriginal original, {
+  bool useWritingRange = true,
+}) {
   if (original.photoId == null) return null;
-  final range = original.writingRange;
+  final range = useWritingRange ? original.writingRange : null;
   return original.photoRegion ??
       photoExcerptRegion([
         for (final line in original.photoLines)

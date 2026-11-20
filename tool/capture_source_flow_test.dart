@@ -109,7 +109,7 @@ void main() {
       await tester.tap(find.widgetWithText(ListTile, '서시'));
       await tester.pumpAndSettle();
       await capture('04-read');
-      await tester.tap(find.text('전체 선택'));
+      await tester.tap(find.text('원문 가져오기'));
       await tester.pumpAndSettle();
       expect(store.writes, 0);
       await capture('05-selected');

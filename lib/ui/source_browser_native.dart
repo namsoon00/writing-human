@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const openOnEntry = true;
-const collectionInstructions = '웹페이지에서 원하는 구절을 복사한 뒤, 이 화면으로 돌아와 선택해 주세요.';
+const collectionInstructions = '웹페이지에서 원문을 복사한 뒤 이 화면에서 가져와 주세요.';
 
 Widget? embeddedSourcePage(Uri url) => null;
 

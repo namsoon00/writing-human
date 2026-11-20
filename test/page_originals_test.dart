@@ -114,6 +114,52 @@ void attachArchivedSource(
 void main() {
   sqfliteFfiInit();
   test(
+    'New pages use the whole original and old guides keep their range',
+    () async {
+      const old = RegisteredOriginal(
+        'legacy',
+        '첫 줄\n쓰던 줄\n마지막 줄',
+        isFullPage: true,
+        writingRange: PencilMark(4, 8),
+      );
+      const earlier = WritingPage(
+        id: 'earlier',
+        recordId: 'r',
+        number: 1,
+        guidedOriginalId: 'legacy',
+        text: '쓰던',
+        base: 2,
+        extent: 2,
+      );
+      final data = fixture(text: '').copy(
+        records: const [
+          WritingRecord(id: 'r', title: '필사', originals: [old]),
+        ],
+        pages: const [
+          earlier,
+          WritingPage(id: 'p', recordId: 'r', number: 2),
+        ],
+      );
+      final c = LibraryController(TestStore(data), data);
+
+      expect(pageOriginals(earlier, [old]).single.source, '쓰던 줄');
+      expect(pageUsesOriginal(earlier, [old], old), isTrue);
+      c.guidePage('p', old);
+      expect(c.library.activePage!.passages.single.source, old.text);
+      expect(pageUsesOriginal(c.library.activePage!, [old], old), isTrue);
+      c.addPage(guidedOriginalId: old.id, originalCitation: old.citation);
+      expect(c.library.activePage!.passages.single.source, old.text);
+      expect(c.library.pages.first, same(earlier));
+      expect(
+        c.library.records.single.originals.single.writingRange,
+        old.writingRange,
+      );
+      await c.settled;
+      c.dispose();
+    },
+  );
+
+  test(
     'Multiple sources retain boundaries, selected copies and unlinked writing',
     () async {
       final c = LibraryController(TestStore(fixture()), fixture());

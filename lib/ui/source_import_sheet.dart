@@ -862,7 +862,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  _showDetails ? '접기' : '책·출처',
+                  _showDetails ? '접기' : '담을 책·원문 출처',
                   style: const TextStyle(fontSize: 12, color: muted),
                 ),
                 const SizedBox(width: 4),
@@ -880,7 +880,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         if (_showDetails) ...[
           if (widget.books.isNotEmpty)
             _metadataRow(
-              '보관할 책',
+              '담을 책',
               DropdownButtonFormField<String>(
                 initialValue: _bookId ?? '',
                 decoration: _recordDecoration,
@@ -889,7 +889,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                 isExpanded: true,
                 items: [
                   if (widget.allowUnbound)
-                    const DropdownMenuItem(value: '', child: Text('책 없이 보관')),
+                    const DropdownMenuItem(value: '', child: Text('책 없이 담기')),
                   for (final book in widget.books.entries)
                     DropdownMenuItem(
                       value: book.key,
@@ -902,7 +902,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
               ),
             ),
           _metadataRow(
-            '출처 (선택)',
+            '원문 출처 · 선택',
             WritingCaret(
               controller: _citation,
               color: widget.penColor,
@@ -913,7 +913,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                 scrollController: scroll,
                 showCursor: false,
                 decoration: _recordDecoration.copyWith(
-                  hintText: '쪽수나 출처',
+                  hintText: '작품명, 쪽수 또는 링크',
                   errorText: citation.length > 500 ? '출처를 조금 줄여 주세요.' : null,
                 ),
               ),
@@ -1575,7 +1575,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                         if (_offerExtraction && !_extractionOnly)
                           TextButton(
                             onPressed: canSubmit ? _submit : null,
-                            child: const Text('사진만 보관'),
+                            child: const Text('사진만 담기'),
                           ),
                       ],
                     ),

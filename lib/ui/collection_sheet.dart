@@ -22,7 +22,7 @@ class CollectionSheet extends StatefulWidget {
     required this.onRecord,
     required this.onBook,
     this.onResumeBook,
-    required this.onNewSheet,
+    required this.onNewWriting,
     required this.onNewBook,
     this.onPassage,
     this.onContentsPage,
@@ -33,7 +33,7 @@ class CollectionSheet extends StatefulWidget {
   final ValueChanged<WritingRecord> onRecord;
   final ValueChanged<Book> onBook;
   final ValueChanged<Book>? onResumeBook;
-  final ValueChanged<String?> onNewSheet;
+  final ValueChanged<String?> onNewWriting;
   final VoidCallback onNewBook;
   final ValueChanged<Passage>? onPassage;
   final ValueChanged<WritingPage>? onContentsPage;
@@ -263,9 +263,9 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     ),
                   ),
                   TextButton.icon(
-                    onPressed: () => widget.onNewSheet(book.id),
+                    onPressed: () => widget.onNewWriting(book.id),
                     icon: const Icon(CupertinoIcons.plus, size: 16),
-                    label: const Text('새 종이'),
+                    label: const Text('새 글'),
                     style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
                   ),
                 ],
@@ -273,7 +273,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
               if (records.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 22),
-                  child: Text('아직 필사 기록이 없어요.', style: TextStyle(color: muted)),
+                  child: Text('아직 쓴 글이 없어요.', style: TextStyle(color: muted)),
                 ),
             ],
           );
@@ -295,7 +295,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                 const Divider(height: 1, color: line),
             Semantics(
               selected: resumed,
-              label: resumed ? '이어서 쓰는 기록' : null,
+              label: resumed ? '이어서 쓰는 글' : null,
               child: Material(
                 type: MaterialType.transparency,
                 borderRadius: BorderRadius.circular(4),
@@ -446,7 +446,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
       final shelf = books && topLevel;
       final searching = passages != null && query.trim().isNotEmpty;
       final canSearch = shelf || (records.isNotEmpty && passages != null);
-      final searchLabel = shelf ? '노트 검색' : '내 글 검색';
+      final searchLabel = shelf ? '책 검색' : '내 글 검색';
       final volume = book == null
           ? const <WritingPage>[]
           : c.library.volumePages(bookId: book.id);
@@ -569,9 +569,9 @@ class _CollectionSheetState extends State<CollectionSheet> {
                   TextButton.icon(
                     onPressed: shelf
                         ? widget.onNewBook
-                        : () => widget.onNewSheet(null),
+                        : () => widget.onNewWriting(null),
                     icon: const Icon(CupertinoIcons.plus, size: 15),
-                    label: Text(shelf ? '새 노트' : '새 종이'),
+                    label: Text(shelf ? '새 책' : '새 글'),
                   ),
                 ],
               ),
@@ -582,9 +582,9 @@ class _CollectionSheetState extends State<CollectionSheet> {
               child: Align(
                 alignment: AlignmentDirectional.centerEnd,
                 child: TextButton.icon(
-                  onPressed: () => widget.onNewSheet(book!.id),
+                  onPressed: () => widget.onNewWriting(book!.id),
                   icon: const Icon(CupertinoIcons.plus, size: 15),
-                  label: const Text('새 종이'),
+                  label: const Text('새 글'),
                 ),
               ),
             ),
@@ -597,7 +597,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                 controller: searchField,
                 focusNode: searchFocus,
                 autofocus: true,
-                hint: shelf ? '노트 제목 찾기' : '문장, 책, 날짜 찾기',
+                hint: shelf ? '책 이름 찾기' : '문장, 책, 날짜 찾기',
                 onSubmitted: (_) => searchFocus.unfocus(),
                 onChanged: (value) => setState(() => query = value),
               ),
@@ -627,7 +627,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     scrollController: query.trim().isEmpty ? shelfScroll : null,
                     query: query,
                     onOpen: widget.onBook,
-                    onWrite: () => widget.onNewSheet(null),
+                    onWrite: () => widget.onNewWriting(null),
                     onPractice: _openPractice,
                     onDetails: (book) => setState(() {
                       books = false;
@@ -680,7 +680,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
     if (count == 0) {
       return Center(
         child: Text(
-          results == null ? '아직 쓴 글이 없어요.' : '일치하는 기록이 없어요.',
+          results == null ? '아직 쓴 글이 없어요.' : '일치하는 글이 없어요.',
           style: const TextStyle(color: muted),
         ),
       );
@@ -705,7 +705,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
       final book = books[recordBooks[passage.page.recordId]];
       return WritingSheetPreview(
         excerpt: passage.excerpt,
-        notebook: bookId == null ? book?.title : null,
+        bookTitle: bookId == null ? book?.title : null,
         date: passage.page.writtenOn,
         style: c.styleFor(book),
         onOpen: () => widget.onPassage!(passage),
@@ -729,7 +729,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
         return WritingSheetPreview(
           key: ValueKey('writing-sheet-${record.id}'),
           excerpt: _firstWriting(recordPages),
-          notebook: bookId == null ? book?.title : null,
+          bookTitle: bookId == null ? book?.title : null,
           date: recordPages.firstOrNull?.writtenOn,
           style: c.styleFor(book),
           onOpen: () => widget.onRecord(record),
@@ -749,7 +749,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
   }
 
   Widget _results(List<Passage> results) => results.isEmpty
-      ? const Center(child: Text('일치하는 기록이 없어요.'))
+      ? const Center(child: Text('일치하는 글이 없어요.'))
       : ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           itemCount: results.length,

@@ -115,7 +115,7 @@ class _PageTrashState extends State<PageTrash> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         subtitle: Text(
-                          [book ?? '책 없는 필사', ?record?.title].join(' · '),
+                          [book ?? '책 없는 글', ?record?.title].join(' · '),
                         ),
                         trailing: PopupMenuButton<bool>(
                           enabled: !_saving,

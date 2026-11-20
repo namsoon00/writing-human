@@ -1,5 +1,26 @@
 # 구현 구조
 
+## 제품 용어와 저장 구조
+
+[화면 용어](product.md#화면-용어)에 따라 화면의 ‘책 → 글 → 쪽’은 저장 모델의
+`Book → WritingRecord → WritingPage`와 대응한다.
+
+- `Book`은 책장에 보이는 제목, 표지와 내지, 장서표 소유자와 표지의 저자를
+  가진다. `WritingRecord.bookId`는 글을 담고 있는 책을 가리키며 비어 있을 수
+  있다. 다른 책으로 옮길 때 같은 글과 쪽의 ID를 사용한다. 연습장은 고정 ID의 책이다.
+- `WritingRecord`는 내 글과 목차의 한 행이다. ‘새 글’은 별도 글의 첫 쪽을
+  준비하고, ‘한 쪽 더’는 기존 `recordId`의 다음 쪽을 추가한다.
+  `WritingPage.number`는 글 안의 번호다. 책 화면에서 보여 주는 쪽수는
+  `Library.volumePages`의 책 순서에서 계산한다. `writtenOn`은 쪽을 처음
+  저장한 날짜다.
+- `RegisteredOriginal`은 `Book.originals` 또는 책 없이 담은
+  `WritingRecord.originals`에 저장한다. 책의 원문 목록은 책과 그 안의 글에서
+  볼 수 있는 원문을 조회한다. `citation`은 작품·쪽수·링크 등을 담는 출처
+  문자열이다. 앱에서 담을 책의 ID와 별개다.
+- `WritingPage.guidedOriginalId`는 참고 중인 원문을 가리킨다.
+  `originalSlip`은 해당 쪽에 끼울 당시의 원문 사본이다. `reflection`은 원문에
+  남긴 느낀 점이다. 사용자가 직접 입력한 글은 `WritingPage.text`에 저장한다.
+
 ## 글자 크기
 
 WritingStyle.fontSize는 기본 20, 범위 16–30으로 저장하고 SQLite 설정 JSON·웹·
@@ -50,7 +71,7 @@ SQLite v10은 `books.detail_overrides`에 빈 JSON 객체를 기본값으로 추
 `CollectionSheet`는 책장을 먼저 열고 책 상세와 ‘내 글’로 연결한다. `Bookshelf`는
 기존 린넨 표지, 종이 결, 책별 표지 설정을 사용하고 화면 폭에 맞춰 선반을 그린다.
 제목 검색은 현재 책 목록을 필터링한다. 찾기와 상세 열기는 기록을 저장하지 않는다.
-‘내 글’의 `WritingSheetPreview`는 첫 본문과 날짜를 읽어 노트의 내지와 현재 잉크·서체로
+‘내 글’의 `WritingSheetPreview`는 첫 본문과 날짜를 읽어 책의 내지와 현재 잉크·서체로
 표시한다. 검색 결과는 본문에서 일치하는 위치를 사용한다.
 ‘연습장’은 고정 ID를 가진 일반 Book이다. 열 때 책 없는 기록의 bookId만 연결해
 같은 저장 큐에서 저장하고, 성공하면 ‘내 글’과 같은 종이 미리보기 목록을 연다.
@@ -262,9 +283,10 @@ Android는 [ML Kit 한글 모델](https://developers.google.com/ml-kit/vision/te
 `flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true`를 사용한다.
 GitHub Pages·Sites의 빌드 스크립트에는 준비 단계가 포함된다.
 
-## 문장 구분표와 압화
+## 구분 표시와 압화
 
-`ui/reading_details.dart`가 기록 행 사이의 구분표와 표지·장서표의 압화를 그린다.
+목차와 원문 목록은 `RecordDivider`로 항목 사이의 구분 표시를 그린다.
+`ui/reading_details.dart`는 꾸밈의 견본과 표지·장서표의 압화를 구성한다.
 이전 SQLite의 `books.index_label` 컬럼은 호환을 위해 남겨 둔다. 기존 웹 저장,
 백업, 동기화에서 읽은 `indexLabel`과 전역·책별 `indexTab`은 앱에서 무시한다.
 새 저장과 백업에는 두 필드를 쓰지 않는다.
@@ -294,7 +316,7 @@ DemoStore는 명시적으로 주입하는 개발 검증용 fixture로만 남으�
 
 린넨 표지의 WebP는 천, 책등, 테두리를 담는다. 작은 표지와 큰 앞표지는 제목과
 압화에 각각 다른 영역을 배정한다. 압화는 같은 선택값으로 그리고 어두운 천에서는
-색의 밝기를 높인다. 현재 책의 책갈피, 날짜인의 간격, 제본 폭, 원문 목록의 구분표와
+색의 밝기를 높인다. 현재 책의 책갈피, 날짜인의 간격, 제본 폭, 원문 목록의 구분 표시와
 쪽수 문양은 각 화면의 크기에 맞춘다.
 
 아홉 가지 독립 설정은 `data/book_detail_style.dart`의 BookDetailsStyle에 보관한다. 기존 ribbon/bookplate/sourceSlip/pencil/ornament/binding/dateStamp에 recordDivider/pressedFlower가 추가됐다. BookDetailChoice의 enabled·variant·tone과 압화에 사용하는 optional placement를 기존 SQLite settings JSON과 웹 라이브러리에 저장한다. 이전 데이터에 새 키가 없으면 기본값을 읽는다. 동기화는 요소별 필드를 따로 병합한다.
@@ -321,7 +343,7 @@ Flutter 3.41.2 / Dart 3.11.0. iOS·Android는 sqflite, 웹 미리보기는 packa
 Workspace는 마지막 활성 페이지를 즉시 보여 주며, 기록이 없으면 저장하지 않은 WritingPage 초안을 표시한다. 탭/포커스/스크롤만으로는 저장하지 않는다. LibraryController.saveDraft가 첫 실제 입력 또는 원문 메모를 기존 초안과 같은 page/record ID로 저장한다. PageEditor의 키와 TextEditingController를 유지해 첫 한글 조합도 다시 설정하지 않는다. 오류 안내·원문 표시가 생겨도 writing-surface 키를 가진 Expanded를 유지한다.
 
 책 안의 상단 ＋는 쪽 추가의 저장 경로를 사용한다. 빈 책의 초안은 첫 쪽으로만 저장한다.
-책 밖에서 상단 ＋로 연 새 종이는 첫 입력까지 메모리 초안이다. 앱을 닫으면 쓰지 않은 초안만 사라지고 마지막 저장 글은 유지한다. 기존 글을 이후 새 책으로 묶을 때는 addBook + bindRecord로 같은 기록을 묶으며 빈 기록을 추가 생성하지 않는다. 데이터 형식과 DB 스키마는 바꾸지 않았다.
+책 밖에서 상단 ＋로 연 새 글은 첫 입력까지 메모리 초안이다. 앱을 닫으면 쓰지 않은 초안만 사라지고 마지막 저장 글은 유지한다. 기존 글을 이후 새 책으로 묶을 때는 addBook + bindRecord로 같은 기록을 묶으며 빈 기록을 추가 생성하지 않는다. 데이터 형식과 DB 스키마는 바꾸지 않았다.
 
 collection_sheet.dart는 필요할 때 여는 글/책 보관함이다. tools_screen.dart는 종이·잉크·글꼴과 펜/줄 가이드를 한 시트에서 독립 선택한다. 원문·페이지·동기화도 보조 시트이며 기존 계정 보호·저장 실패/재시도·기존 기기 기록 가져오기를 유지한다. 작성 화면은 폭 760 이하의 한 면으로 적응하고, 마케팅 배경과 휴대폰 프레임은 사용하지 않는다. 아래 첨부 이미지 개편 기록은 이전 UI 구조다.
 

@@ -38,11 +38,6 @@ class NewBookDialogState extends State<NewBookDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '읽는 책도, 나만의 문장 모음도 좋아요.',
-              style: TextStyle(color: muted, fontSize: 12),
-            ),
-            const SizedBox(height: 26),
             TextFormField(
               controller: title,
               autofocus: true,
@@ -61,7 +56,7 @@ class NewBookDialogState extends State<NewBookDialog> {
               maxLength: 80,
               decoration: const InputDecoration(
                 labelText: '저자 · 선택',
-                hintText: '비워 두어도 괜찮아요.',
+                hintText: '표지에 함께 적을 이름',
               ),
               onFieldSubmitted: (_) => submit(),
             ),

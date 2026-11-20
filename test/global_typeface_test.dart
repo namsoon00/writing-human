@@ -324,8 +324,8 @@ void main() {
       await tester.tap(find.text('책장'));
       await tester.pumpAndSettle();
       expectTypeface('책장');
-      expectTypeface('새 노트');
-      await tester.tap(find.text('새 노트'));
+      expectTypeface('새 책');
+      await tester.tap(find.text('새 책'));
       await tester.pumpAndSettle();
       expectTypeface('책 만들고 쓰기');
       final input = tester.widget<EditableText>(

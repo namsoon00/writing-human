@@ -256,7 +256,7 @@ class _ArchiveSheetState extends State<ArchiveSheet> {
                   if (widget.record case final record?)
                     ListTile(
                       leading: const Icon(CupertinoIcons.doc_plaintext),
-                      title: const Text('이 필사 텍스트 내보내기'),
+                      title: const Text('이 글을 텍스트로 내보내기'),
                       onTap: _busy
                           ? null
                           : () =>

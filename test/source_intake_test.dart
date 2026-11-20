@@ -350,10 +350,10 @@ void main() {
       expect(intake.scans, 0);
       expect(sourceField, findsNothing);
       expect(find.text('책 없이 담기'), findsOneWidget);
-      await saveWithPhoto(tester, action: find.text('사진만 보관'));
+      await saveWithPhoto(tester, action: find.text('사진만 담기'));
       expect(store.data.records.single.originals.single.photoId, isNotNull);
       expect(store.data.records.single.originals.single.canTranscribe, isFalse);
-      expect(find.text('보관한 사진 열기'), findsOneWidget);
+      expect(find.text('담은 사진 열기'), findsOneWidget);
       expect(find.text('이 구절 필사하기'), findsNothing);
       expect(store.data.activePage!.guidedOriginalId, isNull);
     },
@@ -2678,7 +2678,7 @@ void main() {
         '책 72쪽',
       );
       await tester.pumpAndSettle();
-      await saveWithPhoto(tester, action: find.text('사진만 보관'));
+      await saveWithPhoto(tester, action: find.text('사진만 담기'));
       final original = store.data.books.single.originals.single;
       expect(original.text, isEmpty);
       expect(original.photoId, isNotNull);
@@ -2710,7 +2710,7 @@ void main() {
       expect(store.data.activePage!.guidedOriginalId, isNull);
       await loadPhotoAfter(find.text('사진에서 글자 뽑기'));
       expect(intake.scans, 0);
-      expect(find.text('사진만 보관'), findsNothing);
+      expect(find.text('사진만 담기'), findsNothing);
       await loadPhotoAfter(find.text('글자 영역 고르기'));
       final frame = tester.getRect(find.byType(Image).last);
       await tester.dragFrom(

@@ -395,7 +395,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('책장'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('새 노트'));
+      await tester.tap(find.text('새 책'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField).first, '오래 곁에 둘 문장들');
       await tester.tap(find.text('책 만들고 쓰기'));
@@ -700,10 +700,10 @@ void main() {
       await tester.enterText(editor, '먼저 남긴 글');
       await tester.pumpAndSettle();
       final firstId = store.data.activePageId;
-      await tester.tap(find.byTooltip('새 종이'));
+      await tester.tap(find.byTooltip('새 글'));
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(editor).controller!.text, '');
-      await tester.tap(find.byTooltip('새 종이'));
+      await tester.tap(find.byTooltip('새 글'));
       await tester.pumpAndSettle();
       expect(store.data.records.length, 1);
       expect(store.data.activePageId, firstId);
@@ -747,7 +747,7 @@ void main() {
     await tester.tap(menu);
     await tester.pumpAndSettle();
     expect(find.text('잉크'), findsOneWidget);
-    expect(find.text('페이지'), findsNothing);
+    expect(find.text('쪽 목록'), findsNothing);
     expect(find.text('기기 동기화'), findsNothing);
     final bind = find.text('책에 넣기');
     await tester.ensureVisible(bind);
@@ -794,7 +794,7 @@ void main() {
     );
     expect(find.text('전체 백업 내보내기'), findsOneWidget);
     expect(find.text('백업에서 가져오기'), findsOneWidget);
-    expect(find.text('이 필사 텍스트 내보내기'), findsOneWidget);
+    expect(find.text('이 글을 텍스트로 내보내기'), findsOneWidget);
   });
 
   testWidgets('Saved originals stay available without a guide', (tester) async {

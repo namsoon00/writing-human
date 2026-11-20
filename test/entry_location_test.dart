@@ -64,7 +64,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(store.data.records, isEmpty);
       expect(find.text('목차'), findsNothing);
-      await tester.tap(find.text('새 종이'));
+      await tester.tap(find.text('새 글'));
       await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const ValueKey('page-text')),

@@ -72,7 +72,7 @@ void main() {
     expect(tester.widget<TextField>(field).decoration!.hintText, isNull);
     await tester.tap(find.text('책장'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('새 노트'));
+    await tester.tap(find.text('새 책'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, '실제 파일 검수');
     await tester.tap(find.text('책 만들고 쓰기'));

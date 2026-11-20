@@ -114,7 +114,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     if (!_editorComposing && !c.composing) return true;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('입력을 마친 뒤 페이지를 넘겨 주세요.')));
+    ).showSnackBar(const SnackBar(content: Text('입력을 마친 뒤 쪽을 넘겨 주세요.')));
     return false;
   }
 
@@ -242,7 +242,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   Future<void> _openBookFromStart(Book book) async {
     final first = c.library.volumePages(bookId: book.id).firstOrNull;
     if (first == null) {
-      await _newSheet(book.id);
+      await _newWriting(book.id);
     } else {
       await _openPage(first.id, startAtTop: true);
     }
@@ -252,7 +252,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     if (!c.library.books.any((entry) => entry.id == book.id)) return;
     final target = c.resumePageForBook(book.id);
     if (target == null) {
-      await _newSheet(book.id);
+      await _newWriting(book.id);
     } else {
       await _openPage(target.id, paperTurn: paperTurn);
     }
@@ -463,7 +463,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _newSheet([String? bookId]) => _navigatePage(() async {
+  Future<void> _newWriting([String? bookId]) => _navigatePage(() async {
     setState(() {
       _bookLeaf = null;
       draft = _blank();
@@ -543,8 +543,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               pages.last.id;
           _openFromCollection(() => _openPage(id, paperTurn: false));
         },
-        onNewSheet: (bookId) {
-          _openFromCollection(() => _newSheet(bookId));
+        onNewWriting: (bookId) {
+          _openFromCollection(() => _newWriting(bookId));
         },
         onNewBook: () {
           _afterSheet(_createBook);
@@ -1892,8 +1892,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 bookTitle: book?.title,
                 loosePage: book == null && record != null,
                 onCollection: _collection,
-                onNewSheet: book == null
-                    ? () => _newSheet()
+                onAdd: book == null
+                    ? () => _newWriting()
                     : () => _appendPage(addAfterDraft: false),
               ),
               if (widget.sync != null &&
@@ -1945,7 +1945,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                             saved.original.canTranscribe
                                 ? '이 구절 필사하기'
                                 : saved.original.photoId != null
-                                ? '보관한 사진 열기'
+                                ? '담은 사진 열기'
                                 : '보관한 원문 열기',
                           ),
                         ),

@@ -389,7 +389,7 @@ void main() {
               controller: c,
               onRecord: (_) {},
               onBook: (_) {},
-              onNewSheet: (_) {},
+              onNewWriting: (_) {},
               onNewBook: () {},
             ),
           ),

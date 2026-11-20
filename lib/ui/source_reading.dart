@@ -696,7 +696,7 @@ class _SourceReadingState extends State<SourceReading> {
                               ? '일치하는 원문이 없어요.'
                               : markedOnly
                               ? '밑칠한 구절이 없어요.'
-                              : '등록한 원문이 없습니다.',
+                              : '담은 원문이 없어요.',
                         ),
                       )
                     : SingleChildScrollView(

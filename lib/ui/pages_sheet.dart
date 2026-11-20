@@ -59,7 +59,7 @@ class PagesSheet extends StatelessWidget {
             children: [
               const Expanded(
                 child: Text(
-                  '페이지',
+                  '쪽 목록',
                   style: TextStyle(
                     fontFamily: appFontFamily,
                     fontFamilyFallback: appFontFallback,
@@ -160,7 +160,7 @@ class PagesSheet extends StatelessWidget {
                 children: [
                   Semantics(
                     selected: selected,
-                    label: '$number쪽${selected ? ', 현재 페이지' : ''}',
+                    label: '$number쪽${selected ? ', 현재 쪽' : ''}',
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
                       onTap: () => onChoose((

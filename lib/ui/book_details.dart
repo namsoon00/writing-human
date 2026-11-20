@@ -305,7 +305,7 @@ class DateStamp extends StatelessWidget {
     final color = BookDetailDesign.color(BookDetailKind.dateStamp, choice);
     final framed = choice.enabled && choice.variant != 2;
     return Semantics(
-      label: '기록 시작일 ${date.replaceAll('-', '.')}',
+      label: '쪽을 만든 날짜 ${date.replaceAll('-', '.')}',
       excludeSemantics: true,
       child: CustomPaint(
         foregroundPainter: framed ? _StampFrame(choice.variant, color) : null,

@@ -103,7 +103,7 @@ void main() {
         records: [fixture.records.single.copy(bookId: 'book')],
       );
     await open(tester, store);
-    await tester.tap(find.byTooltip('이 책에 한 쪽 추가'));
+    await tester.tap(find.byTooltip('한 쪽 더'));
     await tester.pumpAndSettle();
 
     final saved = store.data;
@@ -148,7 +148,7 @@ void main() {
     await tester.tap(find.text('첫 쪽 쓰기'));
     await tester.pumpAndSettle();
     expect(store.data.pages, isEmpty);
-    await tester.tap(find.byTooltip('이 책에 한 쪽 추가'));
+    await tester.tap(find.byTooltip('한 쪽 더'));
     await tester.pumpAndSettle();
     expect(store.data.activeRecord!.bookId, 'book');
     expect(store.data.pages.single.number, 1);

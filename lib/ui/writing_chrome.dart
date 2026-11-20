@@ -12,7 +12,7 @@ class WritingHeader extends StatelessWidget {
   const WritingHeader({
     super.key,
     required this.onCollection,
-    required this.onNewSheet,
+    required this.onAdd,
     this.bookTitle,
     this.loosePage = false,
     this.compact = false,
@@ -20,7 +20,7 @@ class WritingHeader extends StatelessWidget {
     this.bookmarked = false,
     this.ribbon = const BookDetailChoice(),
   });
-  final VoidCallback onCollection, onNewSheet;
+  final VoidCallback onCollection, onAdd;
   final String? bookTitle;
   final bool compact, useDevelopmentTypeface;
   final bool bookmarked, loosePage;
@@ -79,8 +79,8 @@ class WritingHeader extends StatelessWidget {
         Align(
           alignment: Alignment.centerRight,
           child: IconButton(
-            onPressed: onNewSheet,
-            tooltip: bookTitle == null ? '새 종이' : '이 책에 한 쪽 추가',
+            onPressed: onAdd,
+            tooltip: bookTitle == null ? '새 글' : '한 쪽 더',
             constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             icon: const Icon(CupertinoIcons.plus, size: 25),
           ),
@@ -171,7 +171,7 @@ class WritingFooter extends StatelessWidget {
               onIncrease: onNext,
               onDecrease: onPrevious,
               child: Tooltip(
-                message: _marking ? '쓰기 도구' : '페이지 목록',
+                message: _marking ? '쓰기 도구' : '쪽 목록',
                 child: TextButton(
                   key: ValueKey(_marking ? 'active-paper-tool' : 'page-number'),
                   onPressed: _marking ? onMenu : onPages,

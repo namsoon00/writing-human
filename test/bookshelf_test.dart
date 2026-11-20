@@ -171,6 +171,22 @@ void main() {
         findsOneWidget,
       );
       expect(tester.getCenter(pageNumber).dx, closeTo(195, .5));
+
+      await shelf(tester);
+      await tester.tap(find.byKey(const ValueKey('shelf-details-book')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('새 글'));
+      await tester.pumpAndSettle();
+      expect(store.data.records, hasLength(3));
+      await tester.enterText(editor, '목차에서 시작한 새 글');
+      await tester.pumpAndSettle();
+      expect(store.data.records, hasLength(4));
+      expect(store.data.activeRecord!.bookId, 'book');
+      expect(store.data.activePage!.number, 1);
+      expect(
+        store.data.pages.firstWhere((page) => page.id == 'b1').text,
+        '둘째 기록 첫 쪽',
+      );
     },
   );
 
@@ -248,7 +264,7 @@ void main() {
       await tester.tap(practiceCover);
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('writing-sheet-a')), findsNothing);
-      await tester.tap(find.widgetWithText(TextButton, '새 종이'));
+      await tester.tap(find.widgetWithText(TextButton, '새 글'));
       await tester.pumpAndSettle();
       await tester.enterText(editor, '새로 쓴 낱장');
       await tester.pumpAndSettle();
@@ -257,7 +273,7 @@ void main() {
     },
   );
 
-  testWidgets('A full shelf scrolls in rows and searches notebook titles', (
+  testWidgets('A full shelf scrolls in rows and searches book titles', (
     tester,
   ) async {
     tester.view.devicePixelRatio = 1;
@@ -282,7 +298,7 @@ void main() {
     expect(find.byKey(const ValueKey('shelf-recent')), findsNothing);
     expect(store.data.activePageId, 'p');
     await shelf(tester);
-    expect(find.text('모든 노트'), findsOneWidget);
+    expect(find.text('모든 책'), findsOneWidget);
     expect(
       tester.getTopLeft(cover('b1')).dy,
       tester.getTopLeft(cover('b2')).dy,
@@ -293,7 +309,7 @@ void main() {
     );
     await tester.scrollUntilVisible(cover('b16'), 235, scrollable: scroll);
     expect(cover('b16'), findsOneWidget);
-    await tester.tap(find.byTooltip('노트 검색'));
+    await tester.tap(find.byTooltip('책 검색'));
     await tester.pumpAndSettle();
     final search = find.byKey(const ValueKey('shelf-title-search'));
     expect(find.bySemanticsIdentifier('writing-page-body'), findsNothing);
@@ -324,12 +340,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(cover('b1'), findsNothing);
     expect(cover('b16'), findsOneWidget);
-    await tester.tap(find.byTooltip('노트 검색 닫기'));
+    await tester.tap(find.byTooltip('책 검색 닫기'));
     await tester.pumpAndSettle();
     expect(cover('b16'), findsOneWidget);
     expect(find.text('검색 결과'), findsNothing);
     expect(store.writes, 0);
-    await tester.tap(find.byTooltip('노트 검색'));
+    await tester.tap(find.byTooltip('책 검색'));
     await tester.pumpAndSettle();
     await tester.enterText(search, '노트 1');
     await tester.pumpAndSettle();

@@ -64,14 +64,14 @@ class BookDetailDesign {
     ),
     BookDetailKind.dateStamp => const BookDetailDesign(
       '날짜인',
-      '기록을 시작한 날을 남기는 작은 인장',
+      '쪽을 만든 날짜를 남기는 작은 인장',
       ['사각 인장', '타원 인장', '날짜 활자'],
       ['브라운', '포도', '올리브', '회청'],
       [brandInk, burgundy, green, Color(0xff4c607a)],
     ),
     BookDetailKind.recordDivider => const BookDetailDesign(
-      '문장 구분표',
-      '필사 기록과 기록 사이에 두는 작은 쉼',
+      '구분 표시',
+      '목차와 원문 목록에서 항목을 나누는 표시',
       ['세 점', '짧은 선', '작은 꽃'],
       ['브라운', '포도', '올리브', '회청'],
       [brandInk, burgundy, green, Color(0xff4c607a)],

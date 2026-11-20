@@ -124,7 +124,7 @@ class _OriginalEditState extends State<OriginalEdit> {
                       minLines: 1,
                       maxLines: 3,
                       decoration: InputDecoration(
-                        labelText: '출처',
+                        labelText: '원문 출처 · 선택',
                         errorText: citationTooLong
                             ? '출처는 500자까지 저장할 수 있어요.'
                             : null,

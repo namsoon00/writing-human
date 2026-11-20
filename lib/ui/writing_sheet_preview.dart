@@ -12,13 +12,13 @@ class WritingSheetPreview extends StatelessWidget {
     required this.excerpt,
     required this.style,
     required this.onOpen,
-    this.notebook,
+    this.bookTitle,
     this.date,
   });
 
   final String excerpt;
   final WritingStyle style;
-  final String? notebook, date;
+  final String? bookTitle, date;
   final VoidCallback onOpen;
 
   @override
@@ -26,7 +26,7 @@ class WritingSheetPreview extends StatelessWidget {
     final color = paperColors[style.paperIndex];
     final writtenOn = DateTime.tryParse(date ?? '');
     final metadata = [
-      ?notebook,
+      ?bookTitle,
       if (writtenOn != null) '${writtenOn.month}월 ${writtenOn.day}일',
     ].join(' · ');
     return CustomPaint(
@@ -83,8 +83,8 @@ class WritingSheetPreview extends StatelessWidget {
                             spacing: 10,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              if (notebook != null)
-                                Text(notebook!, style: _metadataStyle),
+                              if (bookTitle != null)
+                                Text(bookTitle!, style: _metadataStyle),
                               DateStamp(
                                 compact: true,
                                 date: date!,

@@ -30,16 +30,16 @@ class Bookshelf extends StatelessWidget {
     final library = controller.library;
     final term = query.trim().toLowerCase();
     final practice = controller.practiceBook;
-    final notebooks = library.books
+    final ordinaryBooks = library.books
         .where((book) => book.id != practice.id)
         .toList();
     final recent = term.isEmpty
-        ? notebooks
+        ? ordinaryBooks
                   .where((book) => book.id == library.activeBook?.id)
                   .firstOrNull ??
-              notebooks.lastOrNull
+              ordinaryBooks.lastOrNull
         : null;
-    final books = notebooks
+    final books = ordinaryBooks
         .where((book) => book.title.toLowerCase().contains(term))
         .toList();
     final compact = books.length > 3;
@@ -75,7 +75,7 @@ class Bookshelf extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(term.isEmpty ? '아직 노트가 없어요.' : '일치하는 노트가 없어요.'),
+              Text(term.isEmpty ? '아직 책이 없어요.' : '일치하는 책이 없어요.'),
               if (term.isEmpty) ...[
                 const SizedBox(height: 16),
                 FilledButton(
@@ -83,7 +83,7 @@ class Bookshelf extends StatelessWidget {
                     minimumSize: const Size(48, 48),
                   ),
                   onPressed: onWrite,
-                  child: const Text('새 종이'),
+                  child: const Text('새 글'),
                 ),
               ],
             ],
@@ -200,7 +200,7 @@ class Bookshelf extends StatelessWidget {
                     else ...[
                       const Padding(
                         padding: EdgeInsets.symmetric(horizontal: padding),
-                        child: _ShelfLabel('최근 노트'),
+                        child: _ShelfLabel('최근 책'),
                       ),
                       const SizedBox(height: 8),
                       Center(child: openCover(recent, featuredWidth)),
@@ -219,8 +219,8 @@ class Bookshelf extends StatelessWidget {
                         term.isNotEmpty
                             ? '검색 결과'
                             : recent != null && !compact
-                            ? '다른 노트'
-                            : '모든 노트',
+                            ? '다른 책'
+                            : '모든 책',
                       ),
                     ),
                 ],

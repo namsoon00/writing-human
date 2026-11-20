@@ -1,8 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
-/// Enlarge the app's small original type without discarding OS text scaling.
-/// The system scaler receives the larger base size, retaining nonlinear rules.
+/// Keep small labels legible while retaining OS accessibility text scaling.
 class ReadingTextScaler extends TextScaler {
   const ReadingTextScaler(this.system);
   final TextScaler system;
@@ -10,7 +9,7 @@ class ReadingTextScaler extends TextScaler {
   @override
   double scale(double fontSize) {
     assert(fontSize >= 0);
-    return fontSize == 0 ? 0 : system.scale(math.max(14.0, fontSize * 1.2));
+    return fontSize == 0 ? 0 : system.scale(math.max(14.0, fontSize));
   }
 
   @override

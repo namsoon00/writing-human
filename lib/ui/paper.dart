@@ -18,7 +18,7 @@ EdgeInsets writingPagePadding(Size size) => EdgeInsets.fromLTRB(
 
 TextStyle writingTextStyle(
   int font, {
-  double size = 23,
+  double size = 20,
   Color color = ink,
   bool useDevelopmentTypeface = true,
 }) => TextStyle(

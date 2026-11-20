@@ -79,9 +79,12 @@ void main() {
       await tester.tapAt(caret(2));
       await tester.pumpAndSettle();
       expect(tester.testTextInput.isVisible, isTrue);
-      const composing = TextEditingValue(
+      final composing = TextEditingValue(
         text: sentence,
-        selection: TextSelection.collapsed(offset: 2),
+        selection: TextSelection.collapsed(
+          offset: 2,
+          affinity: controller.selection.affinity,
+        ),
         composing: TextRange(start: 0, end: 2),
       );
       tester.testTextInput.updateEditingValue(composing);
@@ -766,9 +769,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('11,172'), findsNothing);
     final archive = find.text('기록 보관');
-    await tester.ensureVisible(archive);
     addTearDown(tester.view.resetPadding);
     tester.view.padding = const FakeViewPadding(top: 47, bottom: 34);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(archive);
     await tester.pumpAndSettle();
     await tester.tap(archive);
     await tester.pumpAndSettle();

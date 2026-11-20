@@ -1,0 +1,93 @@
+import 'package:flutter/material.dart';
+
+import '../data/model.dart';
+import 'paper.dart';
+
+class FontSizeControl extends StatefulWidget {
+  const FontSizeControl({
+    super.key,
+    required this.style,
+    required this.onChanged,
+  });
+  final WritingStyle style;
+  final ValueChanged<double> onChanged;
+
+  @override
+  State<FontSizeControl> createState() => _FontSizeControlState();
+}
+
+class _FontSizeControlState extends State<FontSizeControl> {
+  double? _draft;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = _draft ?? widget.style.fontSize;
+    void step(double delta) => widget.onChanged(
+      (size + delta).clamp(WritingStyle.minFontSize, WritingStyle.maxFontSize),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                '글자 크기',
+                style: TextStyle(fontSize: 13, color: muted),
+              ),
+            ),
+            IconButton(
+              tooltip: '글자 작게',
+              onPressed: size > WritingStyle.minFontSize
+                  ? () => step(-1)
+                  : null,
+              icon: const Icon(Icons.text_decrease, size: 19),
+            ),
+            Text(
+              size.toStringAsFixed(0),
+              key: const ValueKey('font-size-value'),
+            ),
+            IconButton(
+              tooltip: '글자 크게',
+              onPressed: size < WritingStyle.maxFontSize ? () => step(1) : null,
+              icon: const Icon(Icons.text_increase, size: 19),
+            ),
+          ],
+        ),
+        Slider(
+          key: const ValueKey('font-size-slider'),
+          min: WritingStyle.minFontSize,
+          max: WritingStyle.maxFontSize,
+          divisions: (WritingStyle.maxFontSize - WritingStyle.minFontSize)
+              .round(),
+          value: size,
+          label: size.toStringAsFixed(0),
+          onChanged: (value) => setState(() => _draft = value),
+          onChangeEnd: (value) {
+            setState(() => _draft = null);
+            widget.onChanged(value);
+          },
+        ),
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 68),
+          child: AnimatedSwitcher(
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 150),
+            child: Text(
+              '마음에 남은 문장',
+              key: ValueKey(size),
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              style: writingTextStyle(
+                widget.style.fontIndex,
+                size: size,
+                useDevelopmentTypeface: widget.style.useDevelopmentTypeface,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

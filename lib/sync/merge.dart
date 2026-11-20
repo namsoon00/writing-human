@@ -506,6 +506,11 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
       remote.style.penIndex,
     ),
     fontIndex: fontStyle.fontIndex,
+    fontSize: _field(
+      base.style.fontSize,
+      local.style.fontSize,
+      remote.style.fontSize,
+    ),
     useDevelopmentTypeface: fontStyle.useDevelopmentTypeface,
     guides: _field(base.style.guides, local.style.guides, remote.style.guides),
     penMotion: _field(

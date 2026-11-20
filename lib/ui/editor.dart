@@ -11,6 +11,7 @@ import 'paper.dart';
 import 'ink_reveal.dart';
 import 'paper_highlighter.dart';
 import 'paper_tool.dart';
+import 'paper_text_zoom.dart';
 import 'paper_selection_menu.dart';
 import 'writing_pen.dart';
 import 'writing_sound.dart';
@@ -28,6 +29,7 @@ class PageEditor extends StatefulWidget {
     this.style = const WritingStyle(),
     this.focusNode,
     this.onEditingState,
+    this.onFontSizeChanged,
     this.onEraseHighlight,
     this.onHighlight,
     this.paperTool = PaperTool.writing,
@@ -38,6 +40,7 @@ class PageEditor extends StatefulWidget {
     this.startAtTopRequest,
   });
   final FocusNode? focusNode;
+  final ValueChanged<double>? onFontSizeChanged;
   final void Function(bool focused, bool composing)? onEditingState;
   final WritingPage page;
   final WritingStyle style;
@@ -73,6 +76,32 @@ class _PageEditorState extends State<PageEditor> {
   late final focus = widget.focusNode ?? FocusNode();
   bool restoring = true;
   final fieldRenderKey = GlobalKey();
+
+  double? _zoomSize;
+  double _zoomStartSize = 20;
+  bool _zoomBlocked = false;
+
+  void _startTextZoom() {
+    _zoomBlocked = _composing || widget.paperTool != PaperTool.writing;
+    _zoomStartSize = widget.style.fontSize;
+    _editable?.hideToolbar();
+  }
+
+  void _updateTextZoom(double scale) {
+    if (_zoomBlocked || _composing) return;
+    final size = (_zoomStartSize * scale)
+        .clamp(WritingStyle.minFontSize, WritingStyle.maxFontSize)
+        .roundToDouble();
+    if (_zoomSize != size) setState(() => _zoomSize = size);
+  }
+
+  void _endTextZoom() {
+    final size = _zoomSize;
+    if (size != null && !_zoomBlocked && !_composing) {
+      widget.onFontSizeChanged?.call(size);
+    }
+    if (mounted) setState(() => _zoomSize = null);
+  }
 
   @override
   void initState() {
@@ -425,7 +454,9 @@ class _PageEditorState extends State<PageEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final style = widget.style;
+    final style = _zoomSize == null
+        ? widget.style
+        : widget.style.copy(fontSize: _zoomSize);
     final tool = widget.paperTool;
     final marking = tool != PaperTool.writing;
     final stroke = tool == PaperTool.eraser
@@ -448,9 +479,12 @@ class _PageEditorState extends State<PageEditor> {
         final paperHeight = math.max(0.0, constraints.maxHeight - overlap);
         final scaler = MediaQuery.textScalerOf(context);
         final referenceHeight = source?.photoId == null
-            ? math.min(scaler.scale(16) * 4 + 12, paperHeight * .34)
+            ? math.min(
+                scaler.scale((style.fontSize * .8).clamp(14, 22)) * 4 + 12,
+                paperHeight * .34,
+              )
             : math.min(232.0, paperHeight * .40);
-        final lineHeight = scaler.scale(23) * 1.8;
+        final lineHeight = scaler.scale(style.fontSize) * 1.8;
         final canCenter =
             hasChosenGuide &&
             focus.hasFocus &&
@@ -476,7 +510,7 @@ class _PageEditorState extends State<PageEditor> {
                 fieldKey: fieldRenderKey,
                 style: writingTextStyle(
                   style.fontIndex,
-                  size: 23,
+                  size: style.fontSize,
                   color: const Color(0xff8b8273).withValues(alpha: .58),
                   useDevelopmentTypeface: style.useDevelopmentTypeface,
                 ),
@@ -499,7 +533,10 @@ class _PageEditorState extends State<PageEditor> {
                         left: padding.left,
                         right: padding.right,
                         lineHeight:
-                            MediaQuery.textScalerOf(context).scale(23) * 1.8,
+                            MediaQuery.textScalerOf(
+                              context,
+                            ).scale(style.fontSize) *
+                            1.8,
                         scroll: 0,
                         controller: scroll,
                       ),
@@ -547,7 +584,7 @@ class _PageEditorState extends State<PageEditor> {
                         contextMenuBuilder: _selectionMenu,
                         style: writingTextStyle(
                           style.fontIndex,
-                          size: 23,
+                          size: style.fontSize,
                           color: penColors[style.penIndex],
                           useDevelopmentTypeface: style.useDevelopmentTypeface,
                         ),
@@ -661,7 +698,15 @@ class _PageEditorState extends State<PageEditor> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(child: writing),
+              Expanded(
+                child: PaperTextZoom(
+                  enabled: widget.onFontSizeChanged != null && !marking,
+                  onStart: _startTextZoom,
+                  onUpdate: _updateTextZoom,
+                  onEnd: _endTextZoom,
+                  child: writing,
+                ),
+              ),
               if (source != null && referenceHeight > 0)
                 Padding(
                   padding: writingMargins,
@@ -677,7 +722,7 @@ class _PageEditorState extends State<PageEditor> {
                       controller: text,
                       style: writingTextStyle(
                         style.fontIndex,
-                        size: 16,
+                        size: (style.fontSize * .8).clamp(14, 22),
                         color: ink,
                         useDevelopmentTypeface: style.useDevelopmentTypeface,
                       ).copyWith(height: 1.35),

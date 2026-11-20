@@ -868,7 +868,7 @@ class _OriginalTextState extends State<_OriginalText> {
     return TextSpan(
       style: writingTextStyle(
         style.fontIndex,
-        size: 20,
+        size: style.fontSize,
         color: penColors[style.penIndex],
         useDevelopmentTypeface: style.useDevelopmentTypeface,
       ).copyWith(height: 1.65, letterSpacing: 0),

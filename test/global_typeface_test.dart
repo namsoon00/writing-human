@@ -144,6 +144,118 @@ void main() {
   );
 
   testWidgets(
+    'Font size controls and two-finger zoom preserve the live editor',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final store = SnapshotStore(jsonEncode(legacyLibrary()));
+      await tester.pumpWidget(WritingHumanApp(store: store));
+      await tester.pumpAndSettle();
+      final field = find.byKey(const ValueKey('page-text'));
+      final controller = tester.widget<TextField>(field).controller!;
+      final before = controller.value;
+      expect(tester.widget<TextField>(field).style!.fontSize, 20);
+      await tester.tap(find.byTooltip('쓰기 도구'));
+      await tester.pumpAndSettle();
+      final control = find.byTooltip('글자 크게');
+      await tester.ensureVisible(control);
+      await tester.tap(control);
+      await tester.pumpAndSettle();
+      expect(Library.decode(store.snapshot).style.fontSize, 21);
+      await tester.tap(find.byTooltip('닫기'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(field).controller, same(controller));
+      expect(controller.value, before);
+      expect(tester.widget<TextField>(field).style!.fontSize, 21);
+      final bounds = tester.getRect(field);
+      final middle = Offset(bounds.center.dx, bounds.top + 100);
+
+      Future<void> pinch(double factor) async {
+        final first = await tester.startGesture(
+          middle - const Offset(40, 0),
+          pointer: 1,
+        );
+        final second = await tester.startGesture(
+          middle + const Offset(40, 0),
+          pointer: 2,
+        );
+        await tester.pump();
+        await first.moveTo(middle - Offset(40 * factor, 0));
+        await second.moveTo(middle + Offset(40 * factor, 0));
+        await tester.pump();
+        await first.up();
+        await second.up();
+        await tester.pumpAndSettle();
+      }
+
+      await pinch(1.35);
+      final enlarged = Library.decode(store.snapshot).style.fontSize;
+      expect(enlarged, greaterThan(21));
+      expect(enlarged, lessThanOrEqualTo(WritingStyle.maxFontSize));
+      expect(tester.widget<TextField>(field).controller, same(controller));
+      expect(controller.text, before.text);
+      expect(controller.selection, before.selection);
+      expect(Library.decode(store.snapshot).pages.length, 2);
+      expect(Library.decode(store.snapshot).activePageId, 'p');
+      await pinch(.5);
+      final reduced = Library.decode(store.snapshot).style.fontSize;
+      expect(reduced, WritingStyle.minFontSize);
+      expect(controller.text, before.text);
+      expect(controller.selection, before.selection);
+
+      await tester.showKeyboard(field);
+      final composing = TextEditingValue(
+        text: controller.text,
+        selection: const TextSelection.collapsed(offset: 2),
+        composing: const TextRange(start: 1, end: 2),
+      );
+      tester.testTextInput.updateEditingValue(composing);
+      await tester.pumpAndSettle();
+      await pinch(1.35);
+      expect(controller.value, composing);
+      expect(Library.decode(store.snapshot).style.fontSize, reduced);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(WritingHumanApp(store: store));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(field).style!.fontSize, reduced);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Maximum font preview and tools fit a narrow screen with large system text',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final library = Library.decode(jsonEncode(legacyLibrary()));
+      final store = SnapshotStore(
+        library.copy(style: library.style.copy(fontSize: 30)).encode(),
+      );
+      await tester.pumpWidget(WritingHumanApp(store: store));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('쓰기 도구'));
+      await tester.pumpAndSettle();
+      final smaller = find.byTooltip('글자 작게');
+      await tester.ensureVisible(smaller);
+      await tester.pumpAndSettle();
+      await tester.tap(smaller);
+      await tester.pumpAndSettle();
+      expect(Library.decode(store.snapshot).style.fontSize, 29);
+      await tester.ensureVisible(find.text('기록 보관'));
+      await tester.pumpAndSettle();
+      expect(find.text('기록 보관').hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'Ordinary app uses the font in editor, library, dialogs and tools',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);
@@ -161,7 +273,7 @@ void main() {
         MediaQuery.textScalerOf(
           tester.element(field),
         ).scale(editorStyle.fontSize!),
-        closeTo(27.6, .001),
+        closeTo(20, .001),
       );
       expect(controller.text, '남겨 둔 문장');
       expect(

@@ -140,7 +140,7 @@ class WritingFooter extends StatelessWidget {
     onPrevious: onPrevious,
     onNext: onNext,
     child: SizedBox(
-      height: 64 + (MediaQuery.textScalerOf(context).scale(13) - 13) * 2,
+      height: 68 + (MediaQuery.textScalerOf(context).scale(13) - 13) * 2,
       child: Stack(
         alignment: Alignment.center,
         children: [

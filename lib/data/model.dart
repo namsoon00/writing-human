@@ -717,6 +717,7 @@ class WritingStyle {
     this.paperIndex = 0,
     this.penIndex = 0,
     this.fontIndex = 0,
+    this.fontSize = 20,
     this.useDevelopmentTypeface = true,
     this.guides = false,
     this.penMotion = true,
@@ -727,6 +728,9 @@ class WritingStyle {
     this.bookDetails = const BookDetailsStyle(),
   });
   final int paperIndex, penIndex, fontIndex;
+  final double fontSize;
+  static const minFontSize = 16.0;
+  static const maxFontSize = 30.0;
   final bool guides, penMotion, useDevelopmentTypeface;
   final bool pageMotion, pageSound, writingSound;
   final List<String> favoriteBookIds;
@@ -735,6 +739,7 @@ class WritingStyle {
     int? paperIndex,
     int? penIndex,
     int? fontIndex,
+    double? fontSize,
     bool? useDevelopmentTypeface,
     bool? guides,
     bool? penMotion,
@@ -747,6 +752,7 @@ class WritingStyle {
     paperIndex: paperIndex ?? this.paperIndex,
     penIndex: penIndex ?? this.penIndex,
     fontIndex: fontIndex ?? this.fontIndex,
+    fontSize: fontSize ?? this.fontSize,
     useDevelopmentTypeface:
         useDevelopmentTypeface ?? this.useDevelopmentTypeface,
     guides: guides ?? this.guides,
@@ -761,6 +767,7 @@ class WritingStyle {
     'paperIndex': paperIndex,
     'penIndex': penIndex,
     'fontIndex': fontIndex,
+    'fontSize': fontSize,
     'useDevelopmentTypeface': useDevelopmentTypeface,
     'typefaceDefaultsVersion': 1,
     'guides': guides,
@@ -787,6 +794,7 @@ class WritingStyle {
       paperIndex: j['paperIndex'] as int? ?? 0,
       penIndex: j['penIndex'] as int? ?? 0,
       fontIndex: j['fontIndex'] as int? ?? 1,
+      fontSize: (j['fontSize'] as num?)?.toDouble() ?? 20,
       // Apply the requested app-wide font once to existing settings. Later
       // explicit alternatives carry version 1 and survive save/reopen/sync.
       useDevelopmentTypeface: defaultsVersion == 1
@@ -805,7 +813,10 @@ class WritingStyle {
         style.penIndex < 0 ||
         style.penIndex > 2 ||
         style.fontIndex < 0 ||
-        style.fontIndex > 2) {
+        style.fontIndex > 2 ||
+        !style.fontSize.isFinite ||
+        style.fontSize < minFontSize ||
+        style.fontSize > maxFontSize) {
       throw const FormatException('알 수 없는 쓰기 도구 설정입니다.');
     }
     return style;
@@ -1020,6 +1031,11 @@ class Library {
 
   void validate() {
     style.bookDetails.validate();
+    if (!style.fontSize.isFinite ||
+        style.fontSize < WritingStyle.minFontSize ||
+        style.fontSize > WritingStyle.maxFontSize) {
+      throw const FormatException('알 수 없는 글자 크기입니다.');
+    }
     for (final book in books) {
       for (final choice in book.detailOverrides.values) {
         choice.validate();

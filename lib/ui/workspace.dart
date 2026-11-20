@@ -1862,6 +1862,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                               )
                             : null,
                         onChanged: _edit,
+                        onFontSizeChanged: (value) {
+                          if (!_editorComposing && !c.composing) {
+                            c.setStyle(c.library.style.copy(fontSize: value));
+                          }
+                        },
                         onEraseHighlight: c.erasePencilMark,
                         onHighlight: c.addPencilMark,
                         paperTool: tool,

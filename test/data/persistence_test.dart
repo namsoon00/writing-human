@@ -20,6 +20,37 @@ void main() {
   });
 
   test(
+    'Font size survives SQLite and merges independently of the font',
+    () async {
+      final file = '${dir.path}/font-size.db';
+      final store = await SqliteLibraryStore.open(
+        file,
+        factory: databaseFactoryFfi,
+      );
+      const before = Library();
+      final sized = before.copy(style: before.style.copy(fontSize: 26));
+      await store.save(sized);
+      await store.close();
+      final reopened = await SqliteLibraryStore.open(
+        file,
+        factory: databaseFactoryFfi,
+      );
+      expect((await reopened.load()).style.fontSize, 26);
+      await reopened.close();
+      final other = before.copy(
+        style: before.style.copy(fontIndex: 2, useDevelopmentTypeface: false),
+      );
+      final merged = mergeLibraries(before, other, sized).library;
+      expect(merged.style.fontSize, 26);
+      expect(merged.style.fontIndex, 2);
+      expect(merged.style.useDevelopmentTypeface, isFalse);
+      final old = before.toJson();
+      (old['style'] as Map).remove('fontSize');
+      expect(Library.decode(jsonEncode(old)).style.fontSize, 20);
+    },
+  );
+
+  test(
     'Original editing keeps guides, valid photo lines and sync changes',
     () async {
       final original = RegisteredOriginal(

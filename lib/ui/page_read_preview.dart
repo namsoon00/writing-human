@@ -44,7 +44,8 @@ class _PageReadPreviewState extends State<PageReadPreview> {
                     left: padding.left,
                     right: padding.right,
                     lineHeight:
-                        MediaQuery.textScalerOf(context).scale(23) * 1.8,
+                        MediaQuery.textScalerOf(context).scale(style.fontSize) *
+                        1.8,
                     scroll: _offset,
                   ),
                 ),
@@ -64,6 +65,7 @@ class _PageReadPreviewState extends State<PageReadPreview> {
                   key: ValueKey('page-preview-text:${widget.page.id}'),
                   style: writingTextStyle(
                     style.fontIndex,
+                    size: style.fontSize,
                     color: penColors[style.penIndex],
                     useDevelopmentTypeface: style.useDevelopmentTypeface,
                   ),

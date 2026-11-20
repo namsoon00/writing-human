@@ -2222,3 +2222,17 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - [GitHub Pages 배포 44830049559](https://github.com/namsoon00/writing-human/actions/runs/44830049559)
   후 공개 웹의 같은 Chrome 화면 크기에서 두 동선을 다시 확인했다.
 - iOS·Android 실기기의 촬영·키보드 및 Safari는 이번 변경에서 검증하지 않았다.
+
+## 2026-11-21 · 필사하는 쪽의 원문은 글만 표시
+
+- Dart 포맷 검사, Flutter 정적 분석과 전체 Flutter 테스트 210개를 통과했다.
+- 위젯 테스트에서 키보드를 연 필사 쪽의 원문 글이 왼쪽부터 온전히 표시되고
+  사진은 표시되지 않는 것을 확인했다. 한글 조합 상태를 유지했고, 조합을 마친 뒤
+  하단 글을 누르면 원문 상세의 사진이 열렸다. 글이 없는 원문은 필사 영역을
+  차지하지 않았다.
+- 로컬 GitHub Pages 빌드를 Chrome 390×844와 320×640에서 확인했다. 글과 사진을
+  같이 담은 원문은 필사하는 쪽에서 글만, 사진만 담은 원문은 상세에서 사진을
+  확인했다. 테스트 사진은 합성 파일을 Chrome의 IndexedDB에 보관해서 사용했다.
+- [GitHub Pages 배포 44831490940](https://github.com/namsoon00/writing-human/actions/runs/44831490940)
+  후 공개 웹에서도 두 원문의 필사 표시와 저장한 사진 열기를 확인했다.
+  iOS·Android 실기기는 이번 변경에서 확인하지 않았다.

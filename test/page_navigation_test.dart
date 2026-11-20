@@ -141,11 +141,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(store.data.pages, isEmpty);
     expect(find.text('이어서 쓰기'), findsNothing);
-    await tester.tap(find.text('책 펼치기'));
-    await tester.pumpAndSettle();
-    expect(bookplate, findsOneWidget);
-    expect(store.data.pages, isEmpty);
-    await tester.tap(find.text('첫 쪽 쓰기'));
+    expect(find.text('아직 쓴 글이 없어요.'), findsOneWidget);
+    await tester.tap(find.text('새 글'));
     await tester.pumpAndSettle();
     expect(store.data.pages, isEmpty);
     await tester.tap(find.byTooltip('한 쪽 더'));

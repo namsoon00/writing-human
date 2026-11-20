@@ -1663,8 +1663,6 @@ void main() {
     expect(find.text('목차'), findsNothing);
     await tester.tap(find.byKey(const ValueKey('shelf-book-b')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('목차'));
-    await tester.pumpAndSettle();
     final collection = find.byType(CollectionSheet);
     final bookOriginals = find.descendant(
       of: collection,

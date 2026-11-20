@@ -520,13 +520,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       CollectionSheet(
         initialBookId: initialBookId,
         controller: c,
-        onBook: (book) => _openFromCollection(
-          () => _navigatePage(() async {
-            if (c.library.books.any((entry) => entry.id == book.id)) {
-              _showBookLeaf(book, _BookLeaf.frontCover);
-            }
-          }, paperTurn: false),
-        ),
         onResumeBook: (book) =>
             _openFromCollection(() => _resumeBook(book, paperTurn: false)),
         onRecord: (r) {

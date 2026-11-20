@@ -20,8 +20,7 @@ class CollectionSheet extends StatefulWidget {
     super.key,
     required this.controller,
     required this.onRecord,
-    required this.onBook,
-    this.onResumeBook,
+    required this.onResumeBook,
     this.initialBookId,
     required this.onNewWriting,
     required this.onNewBook,
@@ -34,8 +33,7 @@ class CollectionSheet extends StatefulWidget {
   final LibraryController controller;
   final String? initialBookId;
   final ValueChanged<WritingRecord> onRecord;
-  final ValueChanged<Book> onBook;
-  final ValueChanged<Book>? onResumeBook;
+  final ValueChanged<Book> onResumeBook;
   final ValueChanged<String?> onNewWriting;
   final VoidCallback onNewBook;
   final VoidCallback? onSettings;
@@ -49,6 +47,7 @@ class CollectionSheet extends StatefulWidget {
 class _CollectionSheetState extends State<CollectionSheet> {
   late bool books = widget.initialBookId == null;
   bool showSearch = false;
+  bool returnToShelfOnBack = false;
   late String? bookId = widget.initialBookId;
   String query = '';
   final searchField = TextEditingController();
@@ -213,16 +212,13 @@ class _CollectionSheetState extends State<CollectionSheet> {
           if (resumeNumber != null) ...[
             const SizedBox(height: 12),
             FilledButton.icon(
-              onPressed: () => (widget.onResumeBook ?? widget.onBook)(book),
+              onPressed: () => widget.onResumeBook(book),
               icon: const Icon(CupertinoIcons.book, size: 16),
-              label: const Text('이어서 쓰기'),
+              label: Text(
+                '이어서 쓰기 · $resumeNumber쪽',
+                textAlign: TextAlign.center,
+              ),
               style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '이어서 쓸 위치 · $resumeNumber쪽',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12, color: muted),
             ),
           ],
           const SizedBox(height: 8),
@@ -432,9 +428,23 @@ class _CollectionSheetState extends State<CollectionSheet> {
     if (!await controller.openPracticeBook() || !mounted || controller != c) {
       return;
     }
+    _openBook(controller.practiceBook);
+  }
+
+  void _showShelf() {
+    setState(() {
+      bookId = null;
+      books = true;
+      returnToShelfOnBack = false;
+      _clearSearch();
+    });
+  }
+
+  void _openBook(Book book) {
     setState(() {
       books = false;
-      bookId = controller.practiceBook.id;
+      bookId = book.id;
+      returnToShelfOnBack = true;
       _clearSearch();
     });
   }
@@ -477,11 +487,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                 if (!topLevel)
                   IconButton(
                     tooltip: '모든 책',
-                    onPressed: () => setState(() {
-                      bookId = null;
-                      books = true;
-                      _clearSearch();
-                    }),
+                    onPressed: _showShelf,
                     icon: const Icon(CupertinoIcons.chevron_left, size: 18),
                   ),
                 if (topLevel) ...[
@@ -630,7 +636,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     controller: c,
                     scrollController: query.trim().isEmpty ? shelfScroll : null,
                     query: query,
-                    onOpen: widget.onBook,
+                    onOpen: _openBook,
                     onWrite: () => widget.onNewWriting(null),
                     onPractice: _openPractice,
                   )
@@ -657,18 +663,24 @@ class _CollectionSheetState extends State<CollectionSheet> {
             ),
         ],
       );
-      return PageStorage(
-        bucket: scrollStorage,
-        child: PaperPanel(
-          color: book == null
-              ? shelf
-                    ? const Color(0xffeee0cd)
-                    : const Color(0xffe8dbca)
-              : bookPaper,
-          grainOpacity: book == null
-              ? panelGrainOpacity
-              : paperGrainOpacity[paperIndex],
-          child: sheet,
+      return PopScope<void>(
+        canPop: !returnToShelfOnBack,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop && returnToShelfOnBack) _showShelf();
+        },
+        child: PageStorage(
+          bucket: scrollStorage,
+          child: PaperPanel(
+            color: book == null
+                ? shelf
+                      ? const Color(0xffeee0cd)
+                      : const Color(0xffe8dbca)
+                : bookPaper,
+            grainOpacity: book == null
+                ? panelGrainOpacity
+                : paperGrainOpacity[paperIndex],
+            child: sheet,
+          ),
         ),
       );
     },

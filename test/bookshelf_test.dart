@@ -51,22 +51,19 @@ void main() {
       final writes = store.writes;
       await tester.tap(cover('a'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('책 펼치기'));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('inside-bookplate')), findsOneWidget);
+      expect(find.byKey(const ValueKey('book-contents-a')), findsOneWidget);
       expect(store.data.activePageId, 'two');
       expect(store.writes, writes);
 
-      await shelf(tester);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
       await tester.scrollUntilVisible(cover('b'), 200, scrollable: scroll);
       await Scrollable.ensureVisible(tester.element(cover('b')), alignment: .5);
       await tester.pumpAndSettle();
       await tester.tap(cover('b'));
       await tester.pumpAndSettle();
       expect(store.data.activePageId, 'two');
-      await tester.tap(find.text('책 펼치기'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('첫 쪽 펼치기'));
+      await tester.tap(find.text('이어서 쓰기 · 1쪽'));
       await tester.pumpAndSettle();
       expect(store.data.activePageId, 'other');
 
@@ -83,7 +80,7 @@ void main() {
       await tester.tap(cover('a'));
       await tester.pumpAndSettle();
       expect(store.data.activePageId, 'other');
-      await tester.tap(find.text('이어서 쓰기'));
+      await tester.tap(find.text('이어서 쓰기 · 2쪽'));
       await tester.pumpAndSettle();
       expect(store.data.activePageId, 'two');
       expect(tester.widget<TextField>(editor).controller!.text, '둘째 쪽');
@@ -123,11 +120,9 @@ void main() {
       expect(find.text('목차'), findsNothing);
       await tester.tap(find.byKey(const ValueKey('shelf-book-book')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('목차'));
-      await tester.pumpAndSettle();
       expect(find.text('2편 · 4쪽'), findsOneWidget);
-      expect(find.text('이어서 쓸 위치 · 4쪽'), findsOneWidget);
-      await tester.tap(find.text('이어서 쓰기'));
+      expect(find.text('이어서 쓰기 · 4쪽'), findsOneWidget);
+      await tester.tap(find.text('이어서 쓰기 · 4쪽'));
       await tester.pumpAndSettle();
       expect(store.data.activePageId, 'b2');
       expect(store.data.pages, hasLength(5));
@@ -135,8 +130,6 @@ void main() {
       await shelf(tester);
       expect(find.text('목차'), findsNothing);
       await tester.tap(find.byKey(const ValueKey('shelf-book-book')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('목차'));
       await tester.pumpAndSettle();
       final firstNumber = find.byKey(const ValueKey('contents-page-a'));
       final secondNumber = find.byKey(const ValueKey('contents-page-b'));
@@ -181,8 +174,6 @@ void main() {
       await shelf(tester);
       expect(find.text('목차'), findsNothing);
       await tester.tap(find.byKey(const ValueKey('shelf-book-book')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('목차'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('새 글'));
       await tester.pumpAndSettle();
@@ -305,7 +296,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('shelf-recent')), findsNothing);
     expect(store.data.activePageId, 'p');
-    await shelf(tester);
+    expect(find.byKey(const ValueKey('book-contents-b1')), findsOneWidget);
+    await tester.tap(find.byTooltip('모든 책'));
+    await tester.pumpAndSettle();
     expect(find.text('모든 책'), findsOneWidget);
     expect(
       tester.getTopLeft(cover('b1')).dy,
@@ -369,6 +362,7 @@ void main() {
     await tester.tap(cover('b16'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('bookshelf-scroll')), findsNothing);
+    expect(find.byKey(const ValueKey('book-contents-b16')), findsOneWidget);
     expect(store.data.books.length, 16);
     expect(store.data.pages.length, 1);
   });

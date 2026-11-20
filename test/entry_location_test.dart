@@ -120,8 +120,6 @@ void main() {
         find.byKey(ValueKey('shelf-book-${specimen().books.single.id}')),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('목차'));
-      await tester.pumpAndSettle();
       expect(find.text('책 낭독').hitTestable(), findsOneWidget);
       await tester.tap(find.text('책 꾸미기'));
       await tester.pumpAndSettle();

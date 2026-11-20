@@ -87,8 +87,6 @@ void main() {
     expect(find.text('목차'), findsNothing);
     await tester.tap(find.byKey(ValueKey('shelf-book-$initialBookId')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('목차'));
-    await tester.pumpAndSettle();
     final collection = find.byType(CollectionSheet);
     await tester.tap(
       find.descendant(of: collection, matching: find.text('원문')),
@@ -117,8 +115,6 @@ void main() {
     await tester.tap(
       find.descendant(of: collection, matching: find.byTooltip('닫기')),
     );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('이어서 쓰기'));
     await tester.pumpAndSettle();
     final text = tester.widget<TextField>(field).controller!;
     expect(
@@ -162,8 +158,6 @@ void main() {
     expect(find.text('목차'), findsNothing);
     await tester.tap(find.byKey(ValueKey('shelf-book-$bookId')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('목차'));
-    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('책 더 보기'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('책 이름 변경'));
@@ -181,8 +175,6 @@ void main() {
     await tester.tap(find.text('저장'));
     await saved();
     await tester.tap(find.byTooltip('닫기'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('이어서 쓰기'));
     await tester.pumpAndSettle();
     expect(tester.widget<Text>(heading).data, '새 이름으로 남긴 책');
     expect(tester.widget<TextField>(field).controller!.value, committed);

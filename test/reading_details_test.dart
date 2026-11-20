@@ -396,7 +396,7 @@ void main() {
               initialBookId: 'b',
               controller: c,
               onRecord: (_) {},
-              onBook: (_) {},
+              onResumeBook: (_) {},
               onNewWriting: (_) {},
               onNewBook: () {},
             ),

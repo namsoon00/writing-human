@@ -36,6 +36,7 @@ class PageEditor extends StatefulWidget {
     this.keyboardOverlap = 0,
     this.originals = const [],
     this.guidedOriginal,
+    this.onSaveOriginalPhotoRegion,
     this.reveal,
     this.startAtTopRequest,
   });
@@ -49,6 +50,8 @@ class PageEditor extends StatefulWidget {
   final PaperTool paperTool;
   final List<RegisteredOriginal> originals;
   final RegisteredOriginal? guidedOriginal;
+  final Future<bool> Function(RegisteredOriginal, List<double>?)?
+  onSaveOriginalPhotoRegion;
   final double keyboardOverlap;
   final ({int offset, int request})? reveal;
   final int? startAtTopRequest;
@@ -715,6 +718,13 @@ class _PageEditorState extends State<PageEditor> {
                     child: TranscriptionReference(
                       key: const ValueKey('transcription-reference'),
                       original: source,
+                      onSavePhotoRegion:
+                          widget.onSaveOriginalPhotoRegion == null
+                          ? null
+                          : (region) => widget.onSaveOriginalPhotoRegion!(
+                              source,
+                              region,
+                            ),
                       comparison: _comparison,
                       photoPanelColor: panelPaperColor(
                         paperColors[style.paperIndex],

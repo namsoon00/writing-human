@@ -21,6 +21,7 @@ import 'package:writing_human/ui/book_details.dart';
 import 'package:writing_human/ui/book_detail_design.dart';
 import 'package:writing_human/ui/paper.dart';
 import 'package:writing_human/ui/paper_panel.dart';
+import 'package:writing_human/ui/original_photo.dart';
 import 'package:writing_human/ui/reading_details.dart';
 import 'package:writing_human/ui/source_import_sheet.dart';
 import 'package:writing_human/ui/source_reading.dart';
@@ -1824,6 +1825,11 @@ void main() {
       );
       await saveWithPhoto(tester);
       expect(store.data.records.single.originals.single.text, '다시 읽은 구절');
+      final region = store.data.records.single.originals.single.photoRegion!;
+      expect(region[0], closeTo(.498, .001));
+      expect(region[1], closeTo(.388, .001));
+      expect(region[2], closeTo(.812, .001));
+      expect(region[3], closeTo(.562, .001));
     },
   );
 
@@ -2587,6 +2593,31 @@ void main() {
       expect(store.data.activePage!.guidedOriginalId, original.id);
       expect(store.data.activePage!.originalCitations, ['책 72쪽']);
       expect(find.text('사진 크게 보기'), findsOneWidget);
+      final preview = find.descendant(
+        of: transcriptionReference,
+        matching: find.byType(OriginalPhoto),
+      );
+      expect(tester.widget<OriginalPhoto>(preview).fitWidth, isTrue);
+      await loadPhotoAfter(find.text('사진 크게 보기'));
+      await loadPhotoAfter(find.text('볼 부분 고르기'));
+      final frame = tester.getRect(find.byType(Image).last);
+      await tester.dragFrom(
+        frame.topLeft + const Offset(10, 20),
+        Offset(frame.width * .6, frame.height * .4),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, '이 부분 사용'))
+            .onPressed,
+        isNotNull,
+      );
+      await loadPhotoAfter(find.text('이 부분 사용'));
+      final saved = store.data.books.single.originals.single;
+      expect(saved.photoRegion, isNotNull);
+      expect(saved.photoId, original.photoId);
+      expect(store.data.activePage!.text, isEmpty);
+      expect(find.text('사진 전체 보기'), findsOneWidget);
     },
   );
 

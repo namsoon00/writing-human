@@ -12,6 +12,30 @@ extension OriginalPhotoLineBounds on OriginalPhotoLine {
   );
 }
 
+/// The visible excerpt follows the chosen range when OCR line locations exist.
+List<double>? originalPhotoPreviewRegion(RegisteredOriginal original) {
+  if (original.photoId == null) return null;
+  final range = original.writingRange;
+  return original.photoRegion ??
+      photoExcerptRegion([
+        for (final line in original.photoLines)
+          if (range == null ||
+              (range.start < line.range.end && line.range.start < range.end))
+            line.bounds,
+      ]);
+}
+
+List<double>? photoExcerptRegion(Iterable<Rect> lines) {
+  if (lines.isEmpty) return null;
+  final bounds = lines
+      .reduce((first, next) => first.expandToInclude(next))
+      .inflate(.012)
+      .intersect(const Rect.fromLTWH(0, 0, 1, 1));
+  return bounds.isEmpty
+      ? null
+      : [bounds.left, bounds.top, bounds.right, bounds.bottom];
+}
+
 List<OriginalPhotoLine> mapPhotoLines(
   Iterable<(String, List<ScanLine>)> paragraphs, {
   Rect Function(Rect)? transformBounds,

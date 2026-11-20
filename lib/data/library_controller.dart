@@ -5,6 +5,7 @@ import 'store.dart';
 import 'library_backup.dart';
 import 'original_removals.dart';
 import '../source/originals.dart';
+import '../source/photo_lines.dart';
 
 class LibraryController extends ChangeNotifier {
   static const defaultPracticeBook = Book(
@@ -410,6 +411,23 @@ class LibraryController extends ChangeNotifier {
     ),
   );
 
+  Future<bool> saveOriginalPhotoRegion({
+    required String? bookId,
+    required String recordId,
+    required RegisteredOriginal original,
+    required List<double>? region,
+  }) => _saveOriginal(
+    bookId: bookId,
+    recordId: recordId,
+    original: original,
+    updated: original.withDetails(
+      reflection: original.reflection,
+      writingRange: original.writingRange,
+      photoRegion: region,
+      clearPhotoRegion: region == null,
+    ),
+  );
+
   Future<bool> _saveOriginal({
     required String? bookId,
     required String recordId,
@@ -757,7 +775,7 @@ class LibraryController extends ChangeNotifier {
             ),
             citation: original.citation,
             photoId: original.photoId,
-            photoRegion: original.photoRegion,
+            photoRegion: originalPhotoPreviewRegion(original),
           );
     if (slip != null && !RegisteredOriginal.validList([slip])) return false;
     _publish(

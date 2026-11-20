@@ -67,11 +67,19 @@ List<RegisteredOriginal> _mergeOriginals(
         incoming.writingRange,
       _ => entry.writingRange,
     };
+    final photoId = incoming.photoId ?? entry.photoId;
+    final photoRegion = entry.photoId == incoming.photoId
+        ? _field(previous?.photoRegion, entry.photoRegion, incoming.photoRegion)
+        : photoId == incoming.photoId
+        ? incoming.photoRegion
+        : entry.photoRegion;
     merged[entry.id] = entry.withDetails(
       registeredAt:
           previous?.registeredAt ?? entry.registeredAt ?? incoming.registeredAt,
       reflection: reflection,
-      photoId: incoming.photoId ?? entry.photoId,
+      photoId: photoId,
+      photoRegion: photoRegion,
+      clearPhotoRegion: photoRegion == null,
       isFullPage: entry.isFullPage || incoming.isFullPage,
       writingRange: range,
       photoLines: incoming.photoLines.isEmpty

@@ -1908,6 +1908,33 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                               (item) => item.id == currentPage.guidedOriginalId,
                             )
                             .firstOrNull,
+                        onSaveOriginalPhotoRegion: (source, region) {
+                          if (_accountLocked ||
+                              c.saveError != null ||
+                              c.composing ||
+                              page.id != currentPage.id) {
+                            return Future.value(false);
+                          }
+                          final latest =
+                              originalsFor(
+                                    c.library,
+                                    bookId: bookId,
+                                    recordId: currentPage.recordId,
+                                  )
+                                  .where(
+                                    (item) =>
+                                        item.id == source.id &&
+                                        item.photoId == source.photoId,
+                                  )
+                                  .firstOrNull;
+                          if (latest == null) return Future.value(false);
+                          return c.saveOriginalPhotoRegion(
+                            bookId: bookId,
+                            recordId: currentPage.recordId,
+                            original: latest,
+                            region: region,
+                          );
+                        },
                         keyboardOverlap: keyboardOverlap,
                         startAtTopRequest:
                             _firstPageView?.pageId == currentPage.id

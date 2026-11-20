@@ -59,6 +59,41 @@ class DeviceRemote implements CloudRemote {
 }
 
 void main() {
+  test('A saved photo crop merges independently of the original text', () {
+    const original = RegisteredOriginal(
+      'o',
+      '기존 글',
+      photoId:
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    );
+    const base = Library(
+      books: [
+        Book(id: 'b', title: '책', originals: [original]),
+      ],
+    );
+    final cropped = original.withDetails(
+      reflection: null,
+      writingRange: null,
+      photoRegion: const [.1, .2, .8, .9],
+    );
+    Library withOriginal(RegisteredOriginal source) => base.copy(
+      books: [
+        base.books.single.copy(originals: [source]),
+      ],
+    );
+    final remote = withOriginal(cropped);
+    final local = withOriginal(original.edited('수정한 글', ''));
+    final merged = mergeLibraries(
+      base,
+      local,
+      remote,
+    ).library.books.single.originals.single;
+    expect(merged.text, '수정한 글');
+    expect(merged.photoRegion, cropped.photoRegion);
+    final reset = mergeLibraries(remote, remote, withOriginal(original));
+    expect(reset.library.books.single.originals.single.photoRegion, isNull);
+  });
+
   test('Trash, restore and permanent deletion sync across devices', () {
     const kept = WritingPage(id: 'kept', recordId: 'r', number: 1);
     const page = WritingPage(

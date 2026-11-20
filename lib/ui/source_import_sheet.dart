@@ -675,7 +675,18 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     }
     final photo = _originalPhoto;
     final citation = _citation.text.trim(), bookId = _bookId;
-    final photoRegion = _photoRegion;
+    final passage = _reviewing && _mode == _ScanMode.paragraph
+        ? _passage
+        : null;
+    final photoRegion =
+        _photoRegion ??
+        (passage == null
+            ? null
+            : photoExcerptRegion(
+                passage
+                    .lineBoxes(_first, _last)
+                    .map((box) => _cameraPage?.originalBounds(box) ?? box),
+              ));
     final range = isFullPage ? _range?.range : null;
     final photoLines = isFullPage
         ? _photoLines(original: true)

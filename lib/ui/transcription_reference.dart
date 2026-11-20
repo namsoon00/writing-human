@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart' show RenderParagraph;
 
 import '../data/model.dart';
 import '../source/transcription_comparison.dart';
+import '../source/photo_lines.dart';
 import 'paper.dart';
 import 'original_photo.dart';
 
@@ -17,6 +18,7 @@ class TranscriptionReference extends StatefulWidget {
     required this.photoPanelColor,
     required this.controller,
     required this.style,
+    this.onSavePhotoRegion,
   });
 
   final RegisteredOriginal original;
@@ -24,6 +26,7 @@ class TranscriptionReference extends StatefulWidget {
   final Color photoPanelColor;
   final TextEditingController controller;
   final TextStyle style;
+  final Future<bool> Function(List<double>?)? onSavePhotoRegion;
 
   @override
   State<TranscriptionReference> createState() => _TranscriptionReferenceState();
@@ -62,12 +65,18 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
     });
   }
 
-  void _openPhoto(String id) =>
-      showOriginalPhoto(context, id, color: widget.photoPanelColor);
+  void _openPhoto(String id, List<double>? region) => showOriginalPhoto(
+    context,
+    id,
+    color: widget.photoPanelColor,
+    region: region,
+    onSaveRegion: widget.onSavePhotoRegion,
+  );
 
   @override
   Widget build(BuildContext context) {
     final source = widget.original;
+    final region = originalPhotoPreviewRegion(source);
     final passage = source.text
         .substring(source.writingRange?.start ?? 0, source.writingRange?.end)
         .trimLeft();
@@ -101,7 +110,8 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
                                     child: Text(_showPhoto ? '글 보기' : '사진 보기'),
                                   ),
                                 TextButton(
-                                  onPressed: () => _openPhoto(source.photoId!),
+                                  onPressed: () =>
+                                      _openPhoto(source.photoId!, region),
                                   child: const Text('사진 크게 보기'),
                                 ),
                               ],
@@ -109,10 +119,12 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
                           Expanded(
                             child: _showPhoto || passage.isEmpty
                                 ? InkWell(
-                                    onTap: () => _openPhoto(source.photoId!),
+                                    onTap: () =>
+                                        _openPhoto(source.photoId!, region),
                                     child: OriginalPhoto(
                                       id: source.photoId!,
-                                      region: source.photoRegion,
+                                      region: region,
+                                      fitWidth: true,
                                     ),
                                   )
                                 : _textReference(passage, scaler),

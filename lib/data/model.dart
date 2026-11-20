@@ -70,6 +70,8 @@ class RegisteredOriginal {
     required PencilMark? writingRange,
     String? photoId,
     bool? isFullPage,
+    List<double>? photoRegion,
+    bool clearPhotoRegion = false,
     List<OriginalPhotoLine>? photoLines,
     int? registeredAt,
   }) => RegisteredOriginal(
@@ -79,7 +81,7 @@ class RegisteredOriginal {
     registeredAt: registeredAt ?? this.registeredAt,
     reflection: reflection,
     photoId: photoId ?? this.photoId,
-    photoRegion: photoRegion,
+    photoRegion: clearPhotoRegion ? null : photoRegion ?? this.photoRegion,
     isFullPage: isFullPage ?? this.isFullPage,
     writingRange: writingRange,
     photoLines: photoLines ?? this.photoLines,

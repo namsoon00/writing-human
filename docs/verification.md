@@ -2249,3 +2249,18 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - [GitHub Pages 배포 44832395629](https://github.com/namsoon00/writing-human/actions/runs/44832395629)
   후 공개 웹에서도 같은 두 Chrome 크기로 캡처 선택과 OCR, 사진·출처 저장을 확인했다.
 - iOS·Android 실제 사진 앱의 선택 동작과 Safari는 이번 변경에서 검증하지 않았다.
+
+## 2026-11-21 · 종이 커서를 입력과 같은 프레임에 표시
+
+- Dart 포맷 검사, Flutter 정적 분석과 전체 Flutter 테스트 212개를 통과했다.
+- 위젯 테스트에서 한글 입력과 종이 탭 후 첫 프레임을 캡처했다. 새 위치의
+  세로획 픽셀과 이전 위치가 지워진 것을 각각 검사했다. 줄바꿈과 스크롤,
+  화면 크기·글꼴 변경, 한글 조합과 이모지, 범위 선택과 포커스를 잃었을 때의
+  커서 숨김을 확인했다. 원문 담기의 작은 키보드 화면에서도 조합 글자에 따라
+  세로획이 움직이고 입력값이 보존되었다.
+- GitHub Pages용 로컬 빌드의 Chrome 390×844와 320×640에서 종이 탭으로
+  입력을 열고, 한글 입력과 방향키 이동 후 본문과 커서 위치를 브라우저 저장
+  데이터에서 확인했다.
+- [GitHub Pages 배포 44833840562](https://github.com/namsoon00/writing-human/actions/runs/44833840562)
+  후 공개 웹에서도 같은 두 화면 크기에서 한글 입력과 커서 이동을 확인했다.
+  iOS·Android 실기기의 입력 지연과 모바일 Safari는 검증하지 않았다.

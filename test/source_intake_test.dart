@@ -462,6 +462,7 @@ void main() {
     expect(selected.textInside(photoDraft(tester).text), '첫');
     await tester.tap(find.text('글 고치기'));
     await tester.pumpAndSettle();
+    expect(tester.testTextInput.isVisible, isTrue);
     final input = tester.widget<EditableText>(photoCorrection).controller;
     expect(input.selection, selected);
     tester.testTextInput.updateEditingValue(

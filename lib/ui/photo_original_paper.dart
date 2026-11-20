@@ -419,6 +419,7 @@ class _PhotoOriginalCorrectionState extends State<PhotoOriginalCorrection> {
     padding: const EdgeInsets.symmetric(vertical: 22),
     child: GestureDetector(
       behavior: HitTestBehavior.translucent,
+      excludeFromSemantics: true,
       onTapUp: _placeCursor,
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 120),
@@ -430,7 +431,6 @@ class _PhotoOriginalCorrectionState extends State<PhotoOriginalCorrection> {
           cursorColor: widget.ink,
           backgroundCursorColor: Colors.transparent,
           selectionColor: widget.ink.withValues(alpha: .18),
-          autofocus: true,
           readOnly: widget.readOnly,
           maxLines: null,
           keyboardType: TextInputType.multiline,

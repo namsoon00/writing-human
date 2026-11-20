@@ -1703,6 +1703,14 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       editor.selection = TextSelection.collapsed(offset: editor.text.length);
     }
     setState(() => _correctingPhoto = !_correctingPhoto);
+    if (_correctingPhoto) {
+      // The footer action may already own focus when the editor is mounted.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _correctingPhoto && _wholeEditor == editor) {
+          _focus.requestFocus();
+        }
+      });
+    }
   }
 
   List<Widget> _wholeReviewPanel(TextEditingController editor) {

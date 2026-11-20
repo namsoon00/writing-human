@@ -434,7 +434,7 @@ void main() {
   );
 
   testWidgets(
-    'Photo correction saves all reviewed text and preserves Korean composition',
+    'Photo correction selects a word, preserves composing and saves the whole text',
     (tester) async {
       await preparePhotoStorage(tester);
       final store = MemoryStore();
@@ -473,7 +473,31 @@ void main() {
       final controller = tester
           .widget<EditableText>(photoCorrection)
           .controller;
+      final render = tester
+          .state<EditableTextState>(photoCorrection)
+          .renderEditable;
+      final word = render.localToGlobal(
+        render.getLocalRectForCaret(const TextPosition(offset: 1)).center,
+      );
+      await tester.tapAt(word);
+      await tester.pump(const Duration(milliseconds: 65));
+      await tester.tapAt(word);
+      await tester.pumpAndSettle();
+      expect(controller.selection.textInside(controller.text), '사진의');
+      expect(
+        find.byKey(const ValueKey('paper-selection-menu')),
+        findsOneWidget,
+      );
+
+      final revised = controller.value.replaced(controller.selection, '고친 사진의');
+      tester.testTextInput.updateEditingValue(
+        revised.copyWith(
+          selection: TextSelection.collapsed(offset: revised.text.length),
+        ),
+      );
+      await tester.pumpAndSettle();
       final corrected = controller.text;
+      expect(corrected, '고친 $header\n\n$first\n$second\n\n고친 마지막 줄');
       final composing = TextRange(
         start: corrected.length - 1,
         end: corrected.length,
@@ -533,13 +557,14 @@ void main() {
         original.photoLines.map(
           (line) => original.text.substring(line.range.start, line.range.end),
         ),
-        [header, first, second],
+        [first, second],
       );
-      expect(original.photoLines.first.top, 1000);
+      expect(original.photoLines.first.top, 3000);
       expect(original.photoLines.last.top, 3500);
       expect(store.data.activePage!.text, isEmpty);
       expect(tester.takeException(), isNull);
     },
+    variant: const TargetPlatformVariant({TargetPlatform.iOS}),
   );
 
   testWidgets('A compensated reread can return to the first result', (
@@ -3175,8 +3200,9 @@ void main() {
       expect(find.text('사진만 담기'), findsNothing);
       tester.view.physicalSize = const Size(390, 844);
       await tester.pumpAndSettle();
-      await openPhotoMenu(tester);
-      await loadPhotoAfter(find.text('글자 영역 고르기'));
+      final chooseArea = find.text('글자 영역 고르기');
+      expect(chooseArea.hitTestable(), findsOneWidget);
+      await loadPhotoAfter(chooseArea);
       final frame = tester.getRect(find.byType(Image).last);
       await tester.dragFrom(
         frame.topLeft + Offset(frame.width * .1, frame.height * .15),
@@ -3186,6 +3212,7 @@ void main() {
       await loadPhotoAfter(find.text('이 부분 사용'));
       expect(intake.scans, 3);
       expect(intake.recognizedRegion!.width, closeTo(.6, .02));
+      expect(find.text('글자 영역 바꾸기'), findsOneWidget);
       const corrected = '사진에서 확인한 첫 문단.\n\n둘째 문단입나다.';
       await correctPhoto(tester, corrected);
 

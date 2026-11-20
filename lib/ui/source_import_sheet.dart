@@ -32,7 +32,7 @@ typedef SourceImportResult = ({
 
 enum _ImportAction { search, share }
 
-enum _PhotoAction { crop, adjust, join, photoOnly, replace }
+enum _PhotoAction { adjust, join, photoOnly, replace }
 
 class SourceImportSheet extends StatefulWidget {
   const SourceImportSheet({
@@ -965,34 +965,43 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     ),
   );
 
+  Future<void> _chooseReviewedPhotoRegion() async {
+    final editor = _wholeEditor;
+    final photo = _originalPhoto;
+    if (editor == null || photo == null || !_editable) return;
+    _focus.unfocus();
+    final chosen = await chooseOriginalPhotoRegion(
+      context,
+      photo.bytes,
+      color: originalPanelColor,
+      current: _photoRegion,
+    );
+    if (!mounted || chosen == null || _wholeEditor != editor || !_editable) {
+      return;
+    }
+    if (!await _confirmWholeReplacement('사진에서 글자를 다시 읽을까요?') ||
+        !mounted ||
+        _wholeEditor != editor ||
+        !_editable) {
+      return;
+    }
+    final region = chosen.isEmpty ? null : chosen;
+    final box = region == null
+        ? null
+        : Rect.fromLTRB(region[0], region[1], region[2], region[3]);
+    final scan = await _recognize(photo, region: box);
+    if (scan == null || !mounted || _wholeEditor != editor) return;
+    _photoRegion = region;
+    _scanRegion = box;
+    _beforeAdjustment = null;
+    _photoBeforeAdjustment = null;
+    _reviewScan(scan);
+  }
+
   Future<void> _photoAction(_PhotoAction action) async {
     final editor = _wholeEditor;
     if (editor == null || !_editable) return;
     switch (action) {
-      case _PhotoAction.crop:
-        if (!await _confirmWholeReplacement('사진에서 읽을 부분을 다시 고를까요?') ||
-            !mounted) {
-          return;
-        }
-        final photo = _originalPhoto!;
-        final chosen = await chooseOriginalPhotoRegion(
-          context,
-          photo.bytes,
-          color: originalPanelColor,
-          current: _photoRegion,
-        );
-        if (!mounted || chosen == null || _wholeEditor != editor) return;
-        final region = chosen.isEmpty ? null : chosen;
-        final box = region == null
-            ? null
-            : Rect.fromLTRB(region[0], region[1], region[2], region[3]);
-        final scan = await _recognize(photo, region: box);
-        if (scan == null || !mounted) return;
-        _photoRegion = region;
-        _scanRegion = box;
-        _beforeAdjustment = null;
-        _photoBeforeAdjustment = null;
-        _reviewScan(scan);
       case _PhotoAction.adjust:
         if (!await _confirmWholeReplacement('사진을 다시 읽을까요?')) return;
         if (_beforeAdjustment == null) {
@@ -1019,7 +1028,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     color: originalPanelColor,
     surfaceTintColor: Colors.transparent,
     itemBuilder: (_) => [
-      const PopupMenuItem(value: _PhotoAction.crop, child: Text('글자 영역 고르기')),
       PopupMenuItem(
         value: _PhotoAction.adjust,
         child: Text(_beforeAdjustment == null ? '보정해 다시 읽기' : '보정 전 결과 보기'),
@@ -1062,6 +1070,15 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       height: 1.65,
     );
     return [
+      Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: TextButton.icon(
+          style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
+          onPressed: _editable ? _chooseReviewedPhotoRegion : null,
+          icon: const Icon(CupertinoIcons.crop, size: 17),
+          label: Text(_photoRegion == null ? '글자 영역 고르기' : '글자 영역 바꾸기'),
+        ),
+      ),
       SourceSlip(
         choice: widget.style.bookDetails.sourceSlip,
         compact: true,

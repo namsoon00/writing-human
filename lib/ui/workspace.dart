@@ -15,6 +15,7 @@ import '../source/originals.dart';
 import '../source/source_platform.dart';
 import 'source_import_sheet.dart';
 import 'source_reading.dart';
+import 'original_slip.dart';
 import 'collection_sheet.dart';
 import 'editor.dart';
 import 'new_book_dialog.dart';
@@ -1013,6 +1014,74 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     });
   }
 
+  Future<void> _openOriginalSlip(
+    WritingPage selected,
+    WritingStyle style,
+  ) async {
+    final slip = selected.originalSlip;
+    if (slip == null || !_canLeaveInput() || _accountLocked) return;
+    final owner = c;
+    _blur();
+    final remove = await showOriginalSlip(context, slip, style);
+    if (!mounted || c != owner || _accountLocked || selected.id != page.id) {
+      return;
+    }
+    if (remove == true && page.originalSlip == slip) {
+      c.setOriginalSlip(selected.id, null);
+    }
+  }
+
+  Future<void> _attachOriginalSlip(
+    BuildContext panelContext,
+    LibraryController owner,
+    WritingPage selected,
+    RegisteredOriginal original,
+  ) async {
+    if (!mounted || c != owner || _accountLocked || page.id != selected.id) {
+      return;
+    }
+    final previous = page.originalSlip;
+    if (previous != null) {
+      final replace = await showDialog<bool>(
+        context: panelContext,
+        builder: (dialog) => AlertDialog(
+          title: const Text('끼워 둔 쪽지를 바꿀까요?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('바꾸기'),
+            ),
+          ],
+        ),
+      );
+      if (replace != true) return;
+    }
+    if (!mounted ||
+        !panelContext.mounted ||
+        c != owner ||
+        _accountLocked ||
+        page.id != selected.id ||
+        page.originalSlip != previous) {
+      return;
+    }
+    if (!owner.setOriginalSlip(selected.id, original)) {
+      ScaffoldMessenger.of(
+        panelContext,
+      ).showSnackBar(const SnackBar(content: Text('쪽지를 끼우지 못했어요.')));
+      return;
+    }
+    await owner.settled;
+    if (panelContext.mounted &&
+        owner.saveError == null &&
+        ModalRoute.of(panelContext)?.isCurrent == true) {
+      Navigator.pop(panelContext);
+    }
+  }
+
   Future<void> _showOriginals({Book? bookDetails}) async {
     if (_readingSource || _sourceBusy || _accountLocked || !_canLeaveInput()) {
       return;
@@ -1113,6 +1182,19 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               ),
               onTranscribe: owner.saveError == null
                   ? (original) => Navigator.of(context).pop(original)
+                  : null,
+              hasOriginalSlip: owner.library.activePage?.originalSlip != null,
+              onAttachSlip:
+                  bookDetails == null &&
+                      !fresh &&
+                      owner.saveError == null &&
+                      !owner.saving
+                  ? (original) => _attachOriginalSlip(
+                      context,
+                      owner,
+                      selectedPage,
+                      original,
+                    )
                   : null,
               onOpenWriting: (passage) =>
                   _openPageFromPanel(route, owner, () async {
@@ -1804,14 +1886,18 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 ),
               Expanded(
                 key: const ValueKey('writing-surface'),
-                child: preview
-                    ? PageReadPreview(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (preview)
+                      PageReadPreview(
                         key: ValueKey((currentPage.id, previewFromTop)),
                         page: currentPage,
                         fromTop: previewFromTop,
                         style: style,
                       )
-                    : PageEditor(
+                    else
+                      PageEditor(
                         key: ValueKey('${currentPage.id}:${c.editorEpoch}'),
                         page: currentPage,
                         style: style,
@@ -1851,6 +1937,20 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                           );
                         },
                       ),
+                    if (currentPage.originalSlip != null)
+                      Positioned(
+                        right: -4,
+                        top: 0,
+                        child: OriginalSlipTab(
+                          key: const ValueKey('original-slip-tab'),
+                          paperColor: paperColors[style.paperIndex],
+                          onPressed: navigationEnabled
+                              ? () => _openOriginalSlip(currentPage, style)
+                              : null,
+                        ),
+                      ),
+                  ],
+                ),
               ),
               Transform.translate(
                 offset: Offset(0, preview ? 0 : -keyboardOverlap),

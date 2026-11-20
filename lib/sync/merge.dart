@@ -262,6 +262,8 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
               if (p.guidedOriginalId != null)
                 'guidedOriginalId': p.guidedOriginalId,
               if (p.referenceOnly) 'referenceOnly': true,
+              if (p.originalSlip != null)
+                'originalSlip': p.originalSlip!.toJson(),
               if (p.originalCitations.isNotEmpty)
                 'originalCitations': p.originalCitations,
               if (p.passages.isNotEmpty)
@@ -299,6 +301,7 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         guidedOriginalId: p.guidedOriginalId,
         referenceOnly: p.referenceOnly,
         originalCitations: p.originalCitations,
+        originalSlip: p.originalSlip,
       );
     }
     copies++;
@@ -372,6 +375,7 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
       l.guidedOriginalId,
       r.guidedOriginalId,
     );
+    final slip = _field(b?.originalSlip, l.originalSlip, r.originalSlip);
     final referenceOnly = l.guidedOriginalId == guide
         ? l.referenceOnly
         : r.referenceOnly;
@@ -390,6 +394,8 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         guidedOriginalId: guide,
         referenceOnly: referenceOnly,
         originalCitations: citations,
+        originalSlip: slip,
+        clearOriginalSlip: slip == null,
         clearGuide: guide == null,
       );
     } else if (b != null && l.text == b.text) {
@@ -400,6 +406,8 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         guidedOriginalId: guide,
         referenceOnly: referenceOnly,
         originalCitations: citations,
+        originalSlip: slip,
+        clearOriginalSlip: slip == null,
         clearGuide: guide == null,
       );
     } else {
@@ -417,9 +425,15 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
               guidedOriginalId: guide,
               referenceOnly: referenceOnly,
               originalCitations: citations,
+              originalSlip: slip,
+              clearOriginalSlip: slip == null,
               clearGuide: guide == null,
             )
-          : l.withDetails(originalCitations: citations);
+          : l.withDetails(
+              originalCitations: citations,
+              originalSlip: slip,
+              clearOriginalSlip: slip == null,
+            );
     }
   }
 
@@ -471,6 +485,7 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
         guidedOriginalId: p.guidedOriginalId,
         referenceOnly: p.referenceOnly,
         originalCitations: p.originalCitations,
+        originalSlip: p.originalSlip,
       ),
   ];
   final allFavorites = {

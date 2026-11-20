@@ -603,6 +603,7 @@ class WritingPage {
     this.guidedOriginalId,
     this.referenceOnly = false,
     this.originalCitations = const [],
+    this.originalSlip,
   });
   final String id, recordId, text;
   final int number, base, extent;
@@ -613,6 +614,7 @@ class WritingPage {
   final String? guidedOriginalId;
   final bool referenceOnly;
   final List<String> originalCitations;
+  final RegisteredOriginal? originalSlip;
 
   WritingPage rememberOriginalCitation(String citation) =>
       citation.trim().isEmpty || originalCitations.contains(citation)
@@ -638,6 +640,8 @@ class WritingPage {
     bool clearGuide = false,
     bool? referenceOnly,
     List<String>? originalCitations,
+    RegisteredOriginal? originalSlip,
+    bool clearOriginalSlip = false,
   }) => WritingPage(
     id: id,
     recordId: recordId,
@@ -654,6 +658,7 @@ class WritingPage {
         : guidedOriginalId ?? this.guidedOriginalId,
     referenceOnly: !clearGuide && (referenceOnly ?? this.referenceOnly),
     originalCitations: originalCitations ?? this.originalCitations,
+    originalSlip: clearOriginalSlip ? null : originalSlip ?? this.originalSlip,
   );
   WritingPage edited({
     required String text,
@@ -674,6 +679,7 @@ class WritingPage {
     guidedOriginalId: guidedOriginalId,
     referenceOnly: referenceOnly,
     originalCitations: originalCitations,
+    originalSlip: originalSlip,
   );
   Json toJson() => {
     'id': id,
@@ -688,6 +694,7 @@ class WritingPage {
     if (guidedOriginalId != null) 'guidedOriginalId': guidedOriginalId,
     if (referenceOnly) 'referenceOnly': true,
     if (originalCitations.isNotEmpty) 'originalCitations': originalCitations,
+    if (originalSlip != null) 'originalSlip': originalSlip!.toJson(),
     if (passages.isNotEmpty)
       'passages': passages.map((entry) => entry.toJson()).toList(),
   };
@@ -703,6 +710,9 @@ class WritingPage {
     guidedOriginalId: j['guidedOriginalId'] as String?,
     referenceOnly: j['referenceOnly'] as bool? ?? false,
     originalCitations: List<String>.from(j['originalCitations'] as List? ?? []),
+    originalSlip: j['originalSlip'] == null
+        ? null
+        : RegisteredOriginal.fromJson(j['originalSlip'] as Json),
     passages: (j['passages'] as List? ?? [])
         .map((entry) => PagePassage.fromJson(entry as Json))
         .toList(),
@@ -1074,6 +1084,8 @@ class Library {
           (p) =>
               !recordIds.contains(p.recordId) ||
               p.number < 1 ||
+              (p.originalSlip != null &&
+                  !RegisteredOriginal.validList([p.originalSlip!])) ||
               p.originalCitations.any(
                 (item) => item.trim().isEmpty || item.length > 500,
               ) ||

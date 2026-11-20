@@ -177,11 +177,12 @@ void main() {
       LibraryController? c;
       try {
         final migrated = await store.load();
-        expect(await store.db.getVersion(), 12);
+        expect(await store.db.getVersion(), 13);
         expect(migrated.encode(), original.encode());
         expect(migrated.pages.single.passages, isEmpty);
         expect(migrated.pages.single.originalCitations, isEmpty);
         expect(migrated.pages.single.referenceOnly, isFalse);
+        expect(migrated.pages.single.originalSlip, isNull);
         final settings = original.style.toJson();
         (settings['bookDetails'] as Json)['indexTab'] = {'enabled': true};
         await store.db.update('app_state', {'settings': jsonEncode(settings)});

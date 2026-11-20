@@ -743,6 +743,40 @@ class LibraryController extends ChangeNotifier {
     }
   }
 
+  bool setOriginalSlip(String pageId, RegisteredOriginal? original) {
+    if (_disposed || composing || saveError != null) return false;
+    final page = library.pages.where((item) => item.id == pageId).firstOrNull;
+    if (page == null) return false;
+    final slip = original == null
+        ? null
+        : RegisteredOriginal(
+            original.id,
+            original.text.substring(
+              original.writingRange?.start ?? 0,
+              original.writingRange?.end,
+            ),
+            citation: original.citation,
+            photoId: original.photoId,
+            photoRegion: original.photoRegion,
+          );
+    if (slip != null && !RegisteredOriginal.validList([slip])) return false;
+    _publish(
+      library.copy(
+        pages: [
+          for (final item in library.pages)
+            if (item.id == pageId)
+              item.withDetails(
+                originalSlip: slip,
+                clearOriginalSlip: slip == null,
+              )
+            else
+              item,
+        ],
+      ),
+    );
+    return true;
+  }
+
   void guidePage(String pageId, RegisteredOriginal original) {
     final page = library.pages.where((item) => item.id == pageId).firstOrNull;
     if (page == null) return;

@@ -20,6 +20,87 @@ void main() {
   });
 
   test(
+    'A clipped excerpt survives SQLite and merges independently of writing',
+    () async {
+      const original = RegisteredOriginal(
+        'source',
+        '제목\n옮겨 둔 구절',
+        citation: '출처',
+        photoId:
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        isFullPage: true,
+        writingRange: PencilMark(3, 10),
+      );
+      const page = WritingPage(
+        id: 'p',
+        recordId: 'r',
+        number: 1,
+        text: '먼저 쓴 글',
+      );
+      const before = Library(
+        records: [
+          WritingRecord(id: 'r', title: '필사', originals: [original]),
+        ],
+        pages: [page],
+        activePageId: 'p',
+        writing: true,
+      );
+      final file = '${dir.path}/original-slip.db';
+      final store = await SqliteLibraryStore.open(
+        file,
+        factory: databaseFactoryFfi,
+      );
+      await store.save(before);
+      final controller = LibraryController(store, before);
+      expect(controller.setOriginalSlip(page.id, original), isTrue);
+      await controller.settled;
+      controller.dispose();
+      await store.close();
+
+      final reopened = await SqliteLibraryStore.open(
+        file,
+        factory: databaseFactoryFfi,
+      );
+      final attached = await reopened.load();
+      await reopened.close();
+      final slip = attached.pages.single.originalSlip!;
+      expect(slip.text, '옮겨 둔 구절');
+      expect(slip.citation, '출처');
+      expect(slip.photoId, original.photoId);
+      expect(slip.writingRange, isNull);
+      expect(
+        LibraryBackup.photoIds(
+          attached.copy(records: [before.records.single.copy(originals: [])]),
+        ),
+        contains(original.photoId),
+      );
+
+      final written = before.copy(
+        pages: [page.edited(text: '더 쓴 글', base: 5, extent: 5, scroll: 0)],
+      );
+      final merged = mergeLibraries(before, written, attached).library;
+      expect(merged.pages.single.text, '더 쓴 글');
+      expect(merged.pages.single.originalSlip?.toJson(), slip.toJson());
+      final removed = attached.copy(
+        pages: [attached.pages.single.withDetails(clearOriginalSlip: true)],
+      );
+      final edited = merged.copy(
+        pages: [
+          merged.pages.single.edited(
+            text: '조금 더 쓴 글',
+            base: 7,
+            extent: 7,
+            scroll: 1,
+          ),
+        ],
+      );
+      final synced = mergeLibraries(attached, edited, removed).library;
+      expect(synced.pages.single.originalSlip, isNull);
+      expect(synced.pages.single.text, '조금 더 쓴 글');
+    },
+  );
+
+  test(
     'Font size survives SQLite and merges independently of the font',
     () async {
       final file = '${dir.path}/font-size.db';

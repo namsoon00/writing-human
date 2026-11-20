@@ -71,6 +71,11 @@ test('Photo and URL captures can sync independently of transcription', () => {
   delete photo.photoRegion;
   link.citation = '출처만 입력';
   assert.equal(validLibrary(library), false);
+  record.originals = [];
+  library.pages[0].originalSlip = photo;
+  assert.equal(validLibrary(library), true);
+  library.pages[0].originalSlip = {...photo, photoId: 'invalid'};
+  assert.equal(validLibrary(library), false);
 });
 
 test('Registered originals round-trip in book and record snapshots', () => {

@@ -35,6 +35,8 @@ class SourceReading extends StatefulWidget {
     this.onRegister,
     this.writingLocations = const {},
     this.onTranscribe,
+    this.onAttachSlip,
+    this.hasOriginalSlip = false,
     this.onOpenWriting,
     this.onRetry,
     this.onSaveReflection,
@@ -52,6 +54,8 @@ class SourceReading extends StatefulWidget {
   final Future<RegisteredOriginal?> Function()? onRegister;
   final Map<String, ({Passage passage, bool marked})> writingLocations;
   final ValueChanged<RegisteredOriginal>? onTranscribe;
+  final ValueChanged<RegisteredOriginal>? onAttachSlip;
+  final bool hasOriginalSlip;
   final ValueChanged<Passage>? onOpenWriting;
   final VoidCallback? onRetry;
   final Future<bool> Function(RegisteredOriginal, PencilMark?)? onSaveRange;
@@ -748,6 +752,16 @@ class _SourceReadingState extends State<SourceReading> {
                               ? null
                               : () => widget.onTranscribe!(original),
                           child: const Text('이 구절 필사하기'),
+                        ),
+                      if (widget.onAttachSlip != null)
+                        TextButton.icon(
+                          onPressed: saving
+                              ? null
+                              : () => widget.onAttachSlip!(original),
+                          icon: const Icon(CupertinoIcons.paperclip, size: 15),
+                          label: Text(
+                            widget.hasOriginalSlip ? '쪽지 바꾸기' : '이 쪽에 끼우기',
+                          ),
                         ),
                       if (writing != null && widget.onOpenWriting != null)
                         TextButton(

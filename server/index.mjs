@@ -103,6 +103,7 @@ export function validLibrary(l) {
       if (!object(p) || !id(p.id) || ids.has(p.id) || !records.has(p.recordId) || !integer(p.number) || p.number < 1 || numbers.has(n) || !text(p.text) || !integer(p.base) || !integer(p.extent) || p.base < -1 || p.extent < -1 || p.base > p.text.length || p.extent > p.text.length || typeof p.scroll !== 'number' || !Number.isFinite(p.scroll) || p.scroll < 0) return false;
       if ('writtenOn' in p && (typeof p.writtenOn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(p.writtenOn) || !Number.isFinite(Date.parse(p.writtenOn)) || new Date(p.writtenOn).toISOString().slice(0, 10) !== p.writtenOn)) return false;
       if ('pencilMarks' in p && (!Array.isArray(p.pencilMarks) || p.pencilMarks.length > p.text.length || p.pencilMarks.some(m => !object(m) || !integer(m.start) || !integer(m.end) || m.start < 0 || m.end <= m.start || m.end > p.text.length))) return false;
+      if ('originalSlip' in p && !originals([p.originalSlip])) return false;
       if ('guidedOriginalId' in p && !id(p.guidedOriginalId)) return false;
       if ('referenceOnly' in p && typeof p.referenceOnly !== 'boolean') return false;
       if ('originalCitations' in p && (!Array.isArray(p.originalCitations) ||

@@ -248,6 +248,70 @@ Future<void> takePhoto(WidgetTester tester, {bool settle = true}) async {
 
 void main() {
   testWidgets(
+    'A page keeps one attached original slip and opens it from the edge',
+    (tester) async {
+      final store = MemoryStore()
+        ..data = existing().copy(
+          records: const [
+            WritingRecord(
+              id: 'r',
+              title: '기존 필사',
+              originals: [
+                RegisteredOriginal('first-slip', '먼저 끼울 구절', citation: '첫 출처'),
+                RegisteredOriginal(
+                  'second-slip',
+                  '나중에 끼울 구절',
+                  citation: '둘째 출처',
+                ),
+              ],
+            ),
+          ],
+        );
+      final before = store.data.activePage!;
+      await open(tester, store, FakeIntake());
+      final tab = find.byTooltip('끼운 원문 쪽지 펼쳐 보기');
+      expect(tab, findsNothing);
+      await tester.tap(place);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('first-slip')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('이 쪽에 끼우기'));
+      await settleSourceSheets(tester);
+      expect(tab, findsOneWidget);
+      expect(store.data.activePage!.originalSlip?.text, '먼저 끼울 구절');
+      expect(store.data.activePage!.text, before.text);
+      expect(store.data.activePage!.extent, before.extent);
+      expect(store.data.activePage!.guidedOriginalId, before.guidedOriginalId);
+
+      await tester.tap(place);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('원문 목록'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('second-slip')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('쪽지 바꾸기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('바꾸기'));
+      await settleSourceSheets(tester);
+      expect(tab, findsOneWidget);
+      expect(store.data.activePage!.originalSlip?.id, 'second-slip');
+
+      await tester.tap(tab);
+      await tester.pumpAndSettle();
+      expect(find.text('끼운 원문 쪽지'), findsOneWidget);
+      expect(find.text('나중에 끼울 구절'), findsOneWidget);
+      expect(find.text('둘째 출처'), findsOneWidget);
+      await tester.tap(find.text('쪽지 빼기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('빼기'));
+      await tester.pumpAndSettle();
+      expect(tab, findsNothing);
+      expect(store.data.activePage!.toJson(), before.toJson());
+      expect(store.data.records.single.originals, hasLength(2));
+    },
+  );
+
+  testWidgets(
     'The capture sheet opens with two import actions and a single save',
     (tester) async {
       await preparePhotoStorage(tester);

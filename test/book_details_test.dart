@@ -410,7 +410,12 @@ void main() {
       );
       await tester.tap(find.widgetWithText(TextButton, '책장').last);
       await tester.pumpAndSettle();
-      await tester.tap(find.bySemanticsLabel('오래 곁에 둘 문장들 목차'));
+      expect(find.text('목차'), findsNothing);
+      await tester.tap(
+        find.byKey(ValueKey('shelf-book-${store.data.books.single.id}')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('목차'));
       await tester.pumpAndSettle();
       expect(find.byType(Bookplate), findsNothing);
       await tester.tap(find.byTooltip('책 더 보기'));
@@ -433,6 +438,8 @@ void main() {
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('닫기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('이어서 쓰기'));
       await tester.pumpAndSettle();
       tester.view.physicalSize = const Size(844, 390);
       await tester.pumpAndSettle();

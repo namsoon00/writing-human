@@ -513,11 +513,12 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   Future<void> _openFromCollection(Future<void> Function() open) =>
       _openPageFromPanel(_activePanel, _sheetOwner, open);
 
-  void _collection() {
+  void _collection({String? initialBookId}) {
     if (!_canLeaveInput()) return;
     _blur();
     _openPanel(
       CollectionSheet(
+        initialBookId: initialBookId,
         controller: c,
         onBook: (book) => _openFromCollection(
           () => _navigatePage(() async {
@@ -1606,6 +1607,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           ? () => _resumeBook(displayBook)
           : null,
       onAppend: back ? _appendPage : null,
+      onContents: back
+          ? null
+          : () => _collection(initialBookId: displayBook.id),
       onCollection: _collection,
     );
     Widget bookplate() => _insideBookplate(displayBook!, displayPages);

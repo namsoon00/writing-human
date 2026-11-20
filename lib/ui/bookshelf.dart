@@ -12,7 +12,6 @@ class Bookshelf extends StatelessWidget {
     super.key,
     required this.controller,
     required this.onOpen,
-    required this.onDetails,
     required this.onPractice,
     required this.onWrite,
     required this.query,
@@ -20,7 +19,7 @@ class Bookshelf extends StatelessWidget {
   });
 
   final LibraryController controller;
-  final ValueChanged<Book> onOpen, onDetails;
+  final ValueChanged<Book> onOpen;
   final VoidCallback onWrite, onPractice;
   final String query;
   final ScrollController? scrollController;
@@ -130,12 +129,6 @@ class Bookshelf extends StatelessWidget {
       onTap: onPractice,
     );
 
-    Widget contents(Book book) => TextButton(
-      key: ValueKey('shelf-details-${book.id}'),
-      onPressed: () => onDetails(book),
-      child: Text('목차', semanticsLabel: '${book.title} 목차'),
-    );
-
     return LayoutBuilder(
       builder: (context, constraints) {
         const padding = 18.0;
@@ -202,7 +195,6 @@ class Bookshelf extends StatelessWidget {
                         child: _ShelfLabel('최근 책'),
                       ),
                       const SizedBox(height: 8),
-                      Center(child: contents(recent)),
                       Center(child: openCover(recent, featuredWidth)),
                       const _WoodShelf(),
                     ],
@@ -250,15 +242,11 @@ class Bookshelf extends StatelessWidget {
                         for (final book in slots)
                           SizedBox(
                             width: slotWidth,
-                            child: book == null
-                                ? Center(child: practiceCover(coverWidth))
-                                : Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      contents(book),
-                                      openCover(book, coverWidth),
-                                    ],
-                                  ),
+                            child: Center(
+                              child: book == null
+                                  ? practiceCover(coverWidth)
+                                  : openCover(book, coverWidth),
+                            ),
                           ),
                       ],
                     ),

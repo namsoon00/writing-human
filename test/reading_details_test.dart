@@ -393,6 +393,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: CollectionSheet(
+              initialBookId: 'b',
               controller: c,
               onRecord: (_) {},
               onBook: (_) {},
@@ -402,8 +403,6 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('shelf-details-b')));
       await tester.pumpAndSettle();
       Future<void> openAppearance() async {
         await tester.ensureVisible(find.text('책 꾸미기'));

@@ -22,6 +22,7 @@ class CollectionSheet extends StatefulWidget {
     required this.onRecord,
     required this.onBook,
     this.onResumeBook,
+    this.initialBookId,
     required this.onNewWriting,
     required this.onNewBook,
     this.onPassage,
@@ -31,6 +32,7 @@ class CollectionSheet extends StatefulWidget {
     this.onSettings,
   });
   final LibraryController controller;
+  final String? initialBookId;
   final ValueChanged<WritingRecord> onRecord;
   final ValueChanged<Book> onBook;
   final ValueChanged<Book>? onResumeBook;
@@ -45,9 +47,9 @@ class CollectionSheet extends StatefulWidget {
 }
 
 class _CollectionSheetState extends State<CollectionSheet> {
-  bool books = true;
+  late bool books = widget.initialBookId == null;
   bool showSearch = false;
-  String? bookId;
+  late String? bookId = widget.initialBookId;
   String query = '';
   final searchField = TextEditingController();
   final searchFocus = FocusNode(debugLabel: 'collection search');
@@ -631,11 +633,6 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     onOpen: widget.onBook,
                     onWrite: () => widget.onNewWriting(null),
                     onPractice: _openPractice,
-                    onDetails: (book) => setState(() {
-                      books = false;
-                      bookId = book.id;
-                      _clearSearch();
-                    }),
                   )
                 : topLevel || showingPractice
                 ? _writingSheets(

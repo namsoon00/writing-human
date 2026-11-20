@@ -120,7 +120,10 @@ void main() {
       await tester.pumpWidget(WritingHumanApp(store: store));
       await tester.pumpAndSettle();
       await shelf(tester);
-      await tester.tap(find.byKey(const ValueKey('shelf-details-book')));
+      expect(find.text('목차'), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('shelf-book-book')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('목차'));
       await tester.pumpAndSettle();
       expect(find.text('2편 · 4쪽'), findsOneWidget);
       expect(find.text('이어서 쓸 위치 · 4쪽'), findsOneWidget);
@@ -130,7 +133,10 @@ void main() {
       expect(store.data.pages, hasLength(5));
 
       await shelf(tester);
-      await tester.tap(find.byKey(const ValueKey('shelf-details-book')));
+      expect(find.text('목차'), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('shelf-book-book')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('목차'));
       await tester.pumpAndSettle();
       final firstNumber = find.byKey(const ValueKey('contents-page-a'));
       final secondNumber = find.byKey(const ValueKey('contents-page-b'));
@@ -173,7 +179,10 @@ void main() {
       expect(tester.getCenter(pageNumber).dx, closeTo(195, .5));
 
       await shelf(tester);
-      await tester.tap(find.byKey(const ValueKey('shelf-details-book')));
+      expect(find.text('목차'), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('shelf-book-book')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('목차'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('새 글'));
       await tester.pumpAndSettle();

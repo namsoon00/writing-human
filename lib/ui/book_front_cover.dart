@@ -18,6 +18,7 @@ class BookFrontCover extends StatelessWidget {
     this.variant = 0,
     this.back = false,
     this.onAppend,
+    this.onContents,
     this.onResume,
   });
   final String title, author;
@@ -25,7 +26,7 @@ class BookFrontCover extends StatelessWidget {
   final int pageCount, variant;
   final VoidCallback onOpen, onCollection;
   final bool back;
-  final VoidCallback? onAppend, onResume;
+  final VoidCallback? onAppend, onResume, onContents;
 
   @override
   Widget build(BuildContext context) {
@@ -176,14 +177,22 @@ class BookFrontCover extends StatelessWidget {
       );
       final controls = Column(
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
-              key: const ValueKey('open-bookshelf'),
-              style: button,
-              onPressed: onCollection,
-              child: const Text('책장'),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton(
+                key: const ValueKey('open-bookshelf'),
+                style: button,
+                onPressed: onCollection,
+                child: const Text('책장'),
+              ),
+              if (onContents != null)
+                TextButton(
+                  style: button,
+                  onPressed: onContents,
+                  child: const Text('목차'),
+                ),
+            ],
           ),
           const Spacer(),
           Text('$pageCount쪽', style: TextStyle(color: color, fontSize: 13)),

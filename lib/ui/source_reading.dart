@@ -382,6 +382,86 @@ class _SourceReadingState extends State<SourceReading> {
     ],
   );
 
+  Widget _originalMenu(RegisteredOriginal original) =>
+      PopupMenuButton<_OriginalAction>(
+        tooltip: '원문 더 보기',
+        icon: const Icon(CupertinoIcons.ellipsis, size: 19),
+        enabled: !saving,
+        itemBuilder: (_) => [
+          if (widget.onRegister != null)
+            const PopupMenuItem(
+              value: _OriginalAction.register,
+              child: Text('원문 담기'),
+            ),
+          if (widget.onEdit != null)
+            const PopupMenuItem(
+              value: _OriginalAction.edit,
+              child: Text('원문 수정'),
+            ),
+          if (widget.onDelete != null)
+            const PopupMenuItem(
+              value: _OriginalAction.delete,
+              child: Text('원문 삭제', style: TextStyle(color: burgundy)),
+            ),
+        ],
+        onSelected: (action) => switch (action) {
+          _OriginalAction.register => _register(),
+          _OriginalAction.edit => _editOriginal(original, originalPanelColor),
+          _OriginalAction.delete => _delete(original),
+        },
+      );
+
+  Widget _readingActions(RegisteredOriginal original, Passage? writing) {
+    final transcribe = widget.onTranscribe;
+    final openWriting = widget.onOpenWriting;
+    final link = original.canTranscribe
+        ? null
+        : RegisteredOriginal.webLink(original.citation);
+    void startTranscription() => transcribe!(original);
+
+    final actions = <Widget>[
+      if (link != null)
+        TextButton(
+          onPressed: () => openSourceBrowser(
+            context,
+            url: link,
+            title: '원문 링크',
+            launchLabel: '링크 열기',
+            hasCitation: true,
+          ),
+          child: const Text('링크 열기'),
+        ),
+      if (transcribe != null)
+        original.canTranscribe
+            ? FilledButton(
+                onPressed: saving ? null : startTranscription,
+                child: Text(widget.transcribeLabel),
+              )
+            : TextButton(
+                onPressed: saving ? null : startTranscription,
+                child: Text(widget.transcribeLabel),
+              ),
+      if (writing != null && openWriting != null)
+        TextButton(
+          onPressed: saving ? null : () => openWriting(writing),
+          child: const Text('필사한 쪽 열기'),
+        ),
+    ];
+    if (actions.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: actions,
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final original = widget.originals
@@ -429,6 +509,17 @@ class _SourceReadingState extends State<SourceReading> {
                 : () => _editReflection(original, match),
           );
     final style = widget.style;
+    final originalText = original == null
+        ? null
+        : _OriginalText(
+            key: ValueKey(original.id),
+            original: original,
+            style: style,
+            match: match,
+            mark: mark,
+            note: note,
+            editing: editing,
+          );
     const panel = originalPanelColor;
     return PopScope(
       canPop: _canLeave && !editing,
@@ -460,7 +551,7 @@ class _SourceReadingState extends State<SourceReading> {
                       fontSize: 22,
                     ),
                   ),
-                  if (widget.onRegister != null && !editing)
+                  if (original == null && widget.onRegister != null)
                     ConstrainedBox(
                       constraints: BoxConstraints(
                         maxWidth: MediaQuery.sizeOf(context).width * .42,
@@ -474,6 +565,12 @@ class _SourceReadingState extends State<SourceReading> {
                         ),
                       ),
                     ),
+                  if (original != null &&
+                      !editing &&
+                      (widget.onRegister != null ||
+                          widget.onEdit != null ||
+                          widget.onDelete != null))
+                    _originalMenu(original),
                   IconButton(
                     tooltip: '닫기',
                     onPressed: () => _navigate(() => Navigator.pop(context)),
@@ -552,56 +649,19 @@ class _SourceReadingState extends State<SourceReading> {
               if (original == null && widget.originals.isNotEmpty)
                 const SizedBox(height: 4),
               if (original != null &&
-                  !editing &&
-                  (original.photoId != null ||
-                      widget.onDelete != null ||
-                      widget.onEdit != null))
-                Row(
-                  children: [
-                    Expanded(
-                      child: Wrap(
-                        spacing: 8,
-                        children: [
-                          if (original.photoId != null)
-                            TextButton.icon(
-                              onPressed: saving
-                                  ? null
-                                  : () => _showPhoto(original),
-                              icon: const Icon(CupertinoIcons.photo, size: 16),
-                              label: const Text('원본 사진'),
-                            ),
-                        ],
-                      ),
+                  original.canTranscribe &&
+                  original.photoId != null &&
+                  !editing)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: saving ? null : () => _showPhoto(original),
+                    icon: const Icon(CupertinoIcons.photo, size: 16),
+                    label: const Text('원본 사진 보기'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
                     ),
-                    if (widget.onEdit != null || widget.onDelete != null)
-                      PopupMenuButton<_OriginalAction>(
-                        tooltip: '원문 더 보기',
-                        icon: const Icon(CupertinoIcons.ellipsis, size: 19),
-                        enabled: !saving,
-                        itemBuilder: (_) => [
-                          if (widget.onEdit != null)
-                            const PopupMenuItem(
-                              value: _OriginalAction.edit,
-                              child: Text('원문 수정'),
-                            ),
-                          if (widget.onDelete != null)
-                            const PopupMenuItem(
-                              value: _OriginalAction.delete,
-                              child: Text(
-                                '원문 삭제',
-                                style: TextStyle(color: burgundy),
-                              ),
-                            ),
-                        ],
-                        onSelected: (action) => switch (action) {
-                          _OriginalAction.edit => _editOriginal(
-                            original,
-                            panel,
-                          ),
-                          _OriginalAction.delete => _delete(original),
-                        },
-                      ),
-                  ],
+                  ),
                 ),
               if (widget.onRetry != null && !editing)
                 _saveNotice('원문을 저장하지 못했어요.', widget.onRetry),
@@ -615,21 +675,17 @@ class _SourceReadingState extends State<SourceReading> {
                 ),
               Expanded(
                 child: original != null
-                    ? OriginalReadingLayout(
-                        original: original,
-                        onOpenPhoto:
-                            original.photoId == null || saving || editing
-                            ? null
-                            : () => _showPhoto(original),
-                        child: _OriginalText(
-                          key: ValueKey(original.id),
-                          original: original,
-                          style: style,
-                          match: match,
-                          mark: mark,
-                          note: note,
-                          editing: editing,
-                        ),
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: original.canTranscribe
+                            ? originalText!
+                            : OriginalReadingLayout(
+                                original: original,
+                                onOpenPhoto: original.photoId == null || saving
+                                    ? null
+                                    : () => _showPhoto(original),
+                                child: originalText!,
+                              ),
                       )
                     : visibleOriginals.isEmpty
                     ? Center(
@@ -688,40 +744,7 @@ class _SourceReadingState extends State<SourceReading> {
                   ),
                 ),
               if (original != null && !editing)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Wrap(
-                    spacing: 8,
-                    children: [
-                      if (RegisteredOriginal.webLink(original.citation)
-                          case final Uri link when original.text.trim().isEmpty)
-                        TextButton(
-                          onPressed: () => openSourceBrowser(
-                            context,
-                            url: link,
-                            title: '원문 링크',
-                            launchLabel: '링크 열기',
-                            hasCitation: true,
-                          ),
-                          child: const Text('링크 열기'),
-                        ),
-                      if (widget.onTranscribe != null)
-                        TextButton(
-                          onPressed: saving
-                              ? null
-                              : () => widget.onTranscribe!(original),
-                          child: Text(widget.transcribeLabel),
-                        ),
-                      if (writing != null && widget.onOpenWriting != null)
-                        TextButton(
-                          onPressed: saving
-                              ? null
-                              : () => widget.onOpenWriting!(writing),
-                          child: const Text('필사한 쪽 열기'),
-                        ),
-                    ],
-                  ),
-                ),
+                _readingActions(original, writing),
               if (failed && editing)
                 _saveNotice('느낀 점을 저장하지 못했어요.', _composing ? null : _flush),
             ],
@@ -732,7 +755,7 @@ class _SourceReadingState extends State<SourceReading> {
   }
 }
 
-enum _OriginalAction { edit, delete }
+enum _OriginalAction { register, edit, delete }
 
 class _OriginalText extends StatefulWidget {
   const _OriginalText({

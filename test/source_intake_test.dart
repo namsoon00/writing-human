@@ -93,12 +93,21 @@ Future<void> settleSourceSheets(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> openOriginalRegistration(WidgetTester tester) async {
+  final add = find.text('원문 담기').hitTestable();
+  if (add.evaluate().isEmpty) {
+    await tester.tap(find.byTooltip('원문 더 보기'));
+    await tester.pumpAndSettle();
+  }
+  await tester.tap(add);
+  await tester.pumpAndSettle();
+}
+
 Future<void> openRegistration(WidgetTester tester) async {
   await tester.tap(place);
   await tester.pumpAndSettle();
   expect(reading, findsOneWidget);
-  await tester.tap(find.text('원문 담기'));
-  await tester.pumpAndSettle();
+  await openOriginalRegistration(tester);
   expect(find.byType(SourceImportSheet), findsOneWidget);
   expect(reading, findsNothing);
 }
@@ -1304,8 +1313,7 @@ void main() {
           if (existingText) {
             await tester.tap(place);
             await tester.pumpAndSettle();
-            await tester.tap(find.text('원문 담기'));
-            await tester.pumpAndSettle();
+            await openOriginalRegistration(tester);
           } else {
             await openRegistration(tester);
           }
@@ -1506,8 +1514,7 @@ void main() {
     await tester.ensureVisible(bookOriginals);
     await tester.tap(bookOriginals);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('원문 담기'));
-    await tester.pumpAndSettle();
+    await openOriginalRegistration(tester);
     await saveOriginal(second, '45쪽');
     expect(store.data.books.first.originals.map((entry) => entry.text), [
       first,
@@ -1541,8 +1548,7 @@ void main() {
       tester.getRect(reading),
       Offset.zero & (tester.view.physicalSize / tester.view.devicePixelRatio),
     );
-    await tester.tap(find.text('원문 담기'));
-    await tester.pumpAndSettle();
+    await openOriginalRegistration(tester);
     await saveOriginal('정오의 종소리가 들렸다.', '60쪽');
     expect(store.data.books.first.originals, hasLength(3));
     expect(
@@ -1758,8 +1764,7 @@ void main() {
       );
       expect(find.text('내일도 읽고 싶다.'), findsOneWidget);
 
-      await tester.tap(find.text('원문 담기'));
-      await tester.pumpAndSettle();
+      await openOriginalRegistration(tester);
       final capture = find.byType(SourceImportSheet);
       expect(
         tester
@@ -2822,8 +2827,7 @@ void main() {
       await tester.tap(place);
       await tester.pumpAndSettle();
       expect(reading, findsOneWidget);
-      await tester.tap(find.text('원문 담기'));
-      await tester.pumpAndSettle();
+      await openOriginalRegistration(tester);
       final registration = find.byType(SourceImportSheet);
       expect(
         find.ancestor(of: registration, matching: find.byType(PaperBackdrop)),

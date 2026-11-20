@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:writing_human/data/library_search.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/data/original_photo_store.dart';
 import 'package:writing_human/ui/editor.dart';
@@ -26,7 +27,7 @@ void main() {
     const Size(900, 700),
     const Size(320, 640),
   ]) {
-    testWidgets('Photo and text remain visible together at $size', (
+    testWidgets('A readable original opens its photo on demand at $size', (
       tester,
     ) async {
       tester.view.physicalSize = size;
@@ -44,6 +45,14 @@ void main() {
         '사진과 함께 읽는 원문입니다.\n구절을 천천히 옮겨 씁니다.',
         photoId: photoId,
       );
+      RegisteredOriginal? transcribed;
+      Passage? opened;
+      var openedRegistration = false;
+      const savedWriting = Passage(
+        WritingPage(id: 'page', recordId: 'record', number: 1),
+        '필사',
+        '옮겨 쓴 구절',
+      );
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -51,26 +60,51 @@ void main() {
               originals: [original],
               initialOriginalId: original.id,
               transcribeLabel: '필사하기',
+              onRegister: () async {
+                openedRegistration = true;
+                return null;
+              },
+              onTranscribe: (source) => transcribed = source,
+              onOpenWriting: (passage) => opened = passage,
+              writingLocations: const {
+                'photo': (passage: savedWriting, marked: false),
+              },
             ),
           ),
         ),
       );
+      await tester.pumpAndSettle();
+      final body = find.byKey(const ValueKey('source-reading-text'));
+      final showPhoto = find.text('원본 사진 보기');
+      final transcribe = find.widgetWithText(FilledButton, '필사하기');
+      final openWriting = find.widgetWithText(TextButton, '필사한 쪽 열기');
+      expect(find.byType(OriginalPhoto), findsNothing);
+      expect(body, findsOneWidget);
+      expect(tester.getTopLeft(body).dy, lessThan(150));
+      expect(showPhoto, findsOneWidget);
+      expect(transcribe.hitTestable(), findsOneWidget);
+      expect(openWriting.hitTestable(), findsOneWidget);
+      expect(find.text('원문 담기'), findsNothing);
+
+      await tester.tap(showPhoto);
       await finishPhotoLoad(tester);
-      final photo = tester.getRect(
-        find.byKey(const ValueKey('original-reading-photo')),
-      );
-      final text = tester.getRect(
-        find.byKey(const ValueKey('source-reading-text')),
-      );
       expect(find.byType(OriginalPhoto), findsOneWidget);
-      expect(photo.width, greaterThan(100));
-      expect(photo.height, greaterThan(50));
-      if (size.width >= 600) {
-        expect(photo.right, lessThan(text.left));
-      } else {
-        expect(photo.bottom, lessThan(text.top));
-        expect(photo.height, lessThan(size.height * .35));
-      }
+      expect(find.text('원본 사진'), findsOneWidget);
+      await tester.tap(find.byTooltip('닫기'));
+      await tester.pumpAndSettle();
+      expect(body, findsOneWidget);
+      expect(find.byType(OriginalPhoto), findsNothing);
+
+      await tester.tap(find.byTooltip('원문 더 보기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('원문 담기'));
+      await tester.pumpAndSettle();
+      expect(openedRegistration, isTrue);
+
+      await tester.tap(transcribe);
+      expect(transcribed, same(original));
+      await tester.tap(openWriting);
+      expect(opened, same(savedWriting));
       expect(tester.takeException(), isNull);
     });
   }

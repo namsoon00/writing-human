@@ -249,9 +249,8 @@ void main() {
 
       final heading = find.byKey(const ValueKey('writing-title'));
       expect(tester.widget<Text>(heading).data, '연습장');
-      await tester.tap(find.byTooltip('쓰기 도구'));
+      await tester.tap(find.byKey(const ValueKey('page-number')));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('책 꾸미기'));
       final move = find.text('다른 책으로 옮기기');
       await tester.ensureVisible(move);
       await tester.tap(move);

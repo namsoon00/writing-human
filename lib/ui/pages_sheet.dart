@@ -22,6 +22,8 @@ class PagesSheet extends StatelessWidget {
     required this.coverTitle,
     required this.coverVariant,
     required this.onChoose,
+    required this.onReadAloud,
+    required this.onBind,
     required this.canTrash,
     required this.onTrash,
   });
@@ -31,6 +33,7 @@ class PagesSheet extends StatelessWidget {
   final String? coverTitle;
   final int coverVariant;
   final ValueChanged<PageChoice> onChoose;
+  final VoidCallback onReadAloud, onBind;
   final bool Function(WritingPage) canTrash;
   final Future<bool> Function(WritingPage) onTrash;
 
@@ -57,6 +60,27 @@ class PagesSheet extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 12, 12),
           child: const PaperPanelHeader('쪽 목록'),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Wrap(
+              spacing: 8,
+              children: [
+                TextButton.icon(
+                  onPressed: onReadAloud,
+                  icon: const Icon(CupertinoIcons.speaker_2, size: 17),
+                  label: const Text('이 쪽 낭독'),
+                ),
+                TextButton.icon(
+                  onPressed: onBind,
+                  icon: const Icon(CupertinoIcons.book, size: 17),
+                  label: Text(title == null ? '책에 넣기' : '다른 책으로 옮기기'),
+                ),
+              ],
+            ),
+          ),
         ),
         Expanded(
           child: GridView.builder(

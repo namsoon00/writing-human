@@ -124,7 +124,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('쓰기 도구'));
+      await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('설정'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('기기 동기화'));
       await tester.tap(find.text('기기 동기화'));

@@ -110,8 +110,16 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('이 책의 내지'), findsNothing);
       expect(find.byTooltip('크림지'), findsNothing);
-      await tester.ensureVisible(find.text('책 꾸미기'));
+      expect(find.text('책 꾸미기'), findsNothing);
+      await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(ValueKey('shelf-details-${specimen().books.single.id}')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('책 낭독').hitTestable(), findsOneWidget);
       await tester.tap(find.text('책 꾸미기'));
       await tester.pumpAndSettle();
       expect(find.byType(BookAppearance), findsOneWidget);

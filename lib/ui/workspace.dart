@@ -552,6 +552,20 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             _openFromCollection(() => _openPassage(passage, paperTurn: false)),
         onArchiveBook: (book) =>
             _afterSheet(() => _archive(selectedBook: book)),
+        onSettings: _settings,
+      ),
+    );
+  }
+
+  void _settings() {
+    if (_activePanel?.isCurrent != true || _accountLocked) return;
+    Navigator.of(context).push(
+      paperPanelRoute<void>(
+        (_) => LibrarySettings(
+          controller: c,
+          onArchive: _archive,
+          onSync: widget.sync?.available == true ? _syncInfo : null,
+        ),
       ),
     );
   }
@@ -583,21 +597,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           setState(() => _paperTool = tool);
           Navigator.of(context).pop();
         },
-        onReadAloud: (context) {
-          if (!_canLeaveInput()) return;
-          showReadAloud(
-            context,
-            library: c.library,
-            book: book,
-            page: page,
-            color: panelPaperColor(paperColors[_paperStyle(book).paperIndex]),
-          );
-        },
-        onBind: () => _afterSheet(_bind),
-        onArchive: () => _afterSheet(_archive),
-        onSync: widget.sync?.available == true
-            ? () => _afterSheet(() async => _syncInfo())
-            : null,
       ),
     );
   }
@@ -1476,6 +1475,29 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                   await _openPage(id, paperTurn: false);
                 }
               }),
+              onReadAloud: () {
+                if (route.isCurrent != true ||
+                    c != owner ||
+                    _accountLocked ||
+                    !_canLeaveInput()) {
+                  return;
+                }
+                showReadAloud(
+                  context,
+                  library: owner.library,
+                  book: book,
+                  page: page,
+                  color: panelPaperColor(paperColors[style.paperIndex]),
+                );
+              },
+              onBind: () async {
+                if (route.isCurrent != true || c != owner || _accountLocked) {
+                  return;
+                }
+                route.navigator!.pop();
+                await route.completed;
+                if (mounted && c == owner && !_accountLocked) await _bind();
+              },
               canTrash: (page) => (pageCounts[page.recordId] ?? 0) > 1,
               onTrash: (target) async {
                 if (!mounted ||
@@ -2175,17 +2197,19 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     final panel = panelPaperColor(
       paperColors[_paperStyle(targetBook).paperIndex],
     );
-    await _openPanel(
-      PaperPanel(
-        color: panel,
-        child: ArchiveSheet(
-          controller: owner,
-          canAccess: () => mounted && c == owner && !_accountLocked,
-          record: selectedBook == null ? record : null,
-          book: targetBook,
+    await Navigator.of(context).push(
+      paperPanelRoute<void>(
+        (_) => PaperPanel(
+          color: panel,
+          child: ArchiveSheet(
+            controller: owner,
+            canAccess: () => mounted && c == owner && !_accountLocked,
+            record: selectedBook == null ? record : null,
+            book: targetBook,
+          ),
         ),
+        color: panel,
       ),
-      color: panel,
     );
   }
 }

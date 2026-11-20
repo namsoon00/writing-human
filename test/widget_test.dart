@@ -625,37 +625,30 @@ void main() {
       expect(writingTools, findsOneWidget);
       await tester.tap(writingTools);
       await tester.pumpAndSettle();
+      expect(find.text('잉크'), findsNothing);
+      expect(find.text('책과 기록'), findsNothing);
+      expect(find.text('기록 관리'), findsNothing);
+      await tester.tap(find.text('글씨 설정'));
+      await tester.pumpAndSettle();
       expect(find.text('쓰는 인간체'), findsOneWidget);
       await tester.tap(find.text('나눔고딕'));
       await tester.pumpAndSettle();
-      final chip = find.widgetWithText(ChoiceChip, '나눔고딕');
-      final toolPaper = find.descendant(
-        of: find.byType(ToolsScreen),
-        matching: find.byType(PaperBackdrop),
-      );
+      await tester.tap(find.byTooltip('닫기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('설정'));
+      await tester.pumpAndSettle();
       for (final index in [3, 2]) {
         await tester.tap(find.byTooltip(paperNames[index]));
         await tester.pumpAndSettle();
-        final panel = panelPaperColor(paperColors[index]);
-        expect(tester.widget<PaperBackdrop>(toolPaper).color, panel);
-        expect(
-          tester.widget<ChoiceChip>(chip).selectedColor,
-          panelSelectedColor(panel),
-        );
-        expect(tester.widget<ChoiceChip>(chip).selected, isTrue);
+        expect(store.data.style.paperIndex, index);
       }
-      expect(store.data.style.paperIndex, 2);
       expect(store.data.style.fontIndex, 2);
       expect(store.data.style.penIndex, 0);
       expect(find.text('글씨 쓰는 소리'), findsNothing);
-      expect(find.text('책과 기록'), findsOneWidget);
-      final guides = find.widgetWithText(SwitchListTile, '줄 가이드');
       final effects = find.text('소리와 효과');
-      expect(
-        tester.getTopLeft(guides).dy,
-        lessThan(tester.getTopLeft(effects).dy),
-      );
-      await tester.ensureVisible(effects);
+      expect(effects.hitTestable(), findsOneWidget);
       await tester.tap(effects);
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('잉크 반응'));
@@ -677,7 +670,25 @@ void main() {
       await tester.tap(effects);
       await tester.pumpAndSettle();
       expect(tester.widget<SwitchListTile>(writingSound).value, isTrue);
-      await tester.ensureVisible(find.byTooltip('닫기'));
+      for (var screen = 0; screen < 2; screen++) {
+        await tester.tap(find.byTooltip('닫기'));
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(writingTools);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('글씨 설정'));
+      await tester.pumpAndSettle();
+      final chip = tester.widget<ChoiceChip>(
+        find.widgetWithText(ChoiceChip, '나눔고딕'),
+      );
+      final toolPaper = find.descendant(
+        of: find.byType(ToolsScreen),
+        matching: find.byType(PaperBackdrop),
+      );
+      final panel = panelPaperColor(paperColors[2]);
+      expect(tester.widget<PaperBackdrop>(toolPaper).color, panel);
+      expect(chip.selectedColor, panelSelectedColor(panel));
+      expect(chip.selected, isTrue);
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(editor).controller, same(controller));
@@ -784,9 +795,16 @@ void main() {
 
     await tester.tap(menu);
     await tester.pumpAndSettle();
-    expect(find.text('잉크'), findsOneWidget);
+    expect(find.text('글씨 설정').hitTestable(), findsOneWidget);
     expect(find.text('쪽 목록'), findsNothing);
     expect(find.text('기기 동기화'), findsNothing);
+    expect(find.text('책에 넣기'), findsNothing);
+    await tester.tap(find.byTooltip('닫기'));
+    await tester.pumpAndSettle();
+    await tester.tap(pageNumber);
+    await tester.pumpAndSettle();
+    final narration = find.text('이 쪽 낭독');
+    expect(narration.hitTestable(), findsOneWidget);
     final bind = find.text('책에 넣기');
     await tester.ensureVisible(bind);
     await tester.tap(bind);
@@ -803,10 +821,13 @@ void main() {
     expect(tester.widget<TextField>(editor).controller, same(controller));
     expect(controller.text, '쓰고 나서 책으로 묶는 문장');
 
-    await tester.tap(find.byTooltip('쓰기 도구'));
+    await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('설정'));
     await tester.pumpAndSettle();
     expect(find.textContaining('11,172'), findsNothing);
     final archive = find.text('기록 관리');
+    expect(archive.hitTestable(), findsOneWidget);
     addTearDown(tester.view.resetPadding);
     tester.view.padding = const FakeViewPadding(top: 47, bottom: 34);
     await tester.pumpAndSettle();

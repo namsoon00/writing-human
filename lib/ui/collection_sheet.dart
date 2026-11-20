@@ -28,6 +28,7 @@ class CollectionSheet extends StatefulWidget {
     this.onContentsPage,
     this.onArchiveBook,
     this.onBookOriginals,
+    this.onSettings,
   });
   final LibraryController controller;
   final ValueChanged<WritingRecord> onRecord;
@@ -35,6 +36,7 @@ class CollectionSheet extends StatefulWidget {
   final ValueChanged<Book>? onResumeBook;
   final ValueChanged<String?> onNewWriting;
   final VoidCallback onNewBook;
+  final VoidCallback? onSettings;
   final ValueChanged<Passage>? onPassage;
   final ValueChanged<WritingPage>? onContentsPage;
   final ValueChanged<Book>? onArchiveBook, onBookOriginals;
@@ -145,23 +147,10 @@ class _CollectionSheetState extends State<CollectionSheet> {
       itemBuilder: (_) => [
         if (canSearch)
           PopupMenuItem(value: _toggleSearch, child: const Text('이 책에서 찾기')),
-        PopupMenuItem(
-          value: () => showReadAloud(
-            context,
-            library: c.library,
-            book: book,
-            color: panelPaperColor(paperColors[c.styleFor(book).paperIndex]),
-          ),
-          child: const Text('책 낭독'),
-        ),
         PopupMenuItem(value: () => _rename(book), child: const Text('책 이름 변경')),
         PopupMenuItem(
           value: () => _showBookplate(book, summary),
           child: const Text('장서표'),
-        ),
-        PopupMenuItem(
-          value: () => showBookAppearance(context, c, book.id),
-          child: const Text('책 꾸미기'),
         ),
         PopupMenuItem(
           value: () => c.toggleFavorite(book.id),
@@ -175,6 +164,28 @@ class _CollectionSheetState extends State<CollectionSheet> {
       ],
     );
   }
+
+  Widget _bookActions(Book book) => Wrap(
+    alignment: WrapAlignment.center,
+    spacing: 8,
+    children: [
+      TextButton.icon(
+        onPressed: () => showReadAloud(
+          context,
+          library: c.library,
+          book: book,
+          color: panelPaperColor(paperColors[c.styleFor(book).paperIndex]),
+        ),
+        icon: const Icon(CupertinoIcons.speaker_2, size: 17),
+        label: const Text('책 낭독'),
+      ),
+      TextButton.icon(
+        onPressed: () => showBookAppearance(context, c, book.id),
+        icon: const Icon(CupertinoIcons.paintbrush, size: 17),
+        label: const Text('책 꾸미기'),
+      ),
+    ],
+  );
 
   Widget _contentsHeader(Book book, String summary, int? resumeNumber) {
     return Padding(
@@ -212,6 +223,8 @@ class _CollectionSheetState extends State<CollectionSheet> {
               style: const TextStyle(fontSize: 12, color: muted),
             ),
           ],
+          const SizedBox(height: 8),
+          _bookActions(book),
         ],
       ),
     );
@@ -469,9 +482,14 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     }),
                     icon: const Icon(CupertinoIcons.chevron_left, size: 18),
                   ),
-                if (topLevel)
-                  Expanded(child: PaperPanelTitle(shelf ? '책장' : '내 글'))
-                else if (book != null) ...[
+                if (topLevel) ...[
+                  Expanded(child: PaperPanelTitle(shelf ? '책장' : '내 글')),
+                  if (shelf && !showSearch && widget.onSettings != null)
+                    TextButton(
+                      onPressed: widget.onSettings,
+                      child: const Text('설정'),
+                    ),
+                ] else if (book != null) ...[
                   if (showingPractice)
                     Expanded(
                       child: Semantics(
@@ -558,18 +576,20 @@ class _CollectionSheetState extends State<CollectionSheet> {
                 ],
               ),
             ),
-          if (showingPractice && !showSearch)
+          if (showingPractice && !showSearch) ...[
+            _bookActions(book!),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Align(
                 alignment: AlignmentDirectional.centerEnd,
                 child: TextButton.icon(
-                  onPressed: () => widget.onNewWriting(book!.id),
+                  onPressed: () => widget.onNewWriting(book.id),
                   icon: const Icon(CupertinoIcons.plus, size: 15),
                   label: const Text('새 글'),
                 ),
               ),
             ),
+          ],
           if (canSearch && showSearch)
             Padding(
               key: shelf ? null : const ValueKey('collection-search'),

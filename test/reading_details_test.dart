@@ -400,11 +400,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('shelf-details-b')));
       await tester.pumpAndSettle();
-      Future<void> choose(String label) async {
-        await tester.tap(find.byTooltip('책 더 보기'));
-        await tester.pumpAndSettle();
-        await tester.ensureVisible(find.text(label).last);
-        await tester.tap(find.text(label).last);
+      Future<void> openAppearance() async {
+        await tester.ensureVisible(find.text('책 꾸미기'));
+        await tester.tap(find.text('책 꾸미기'));
         await tester.pumpAndSettle();
       }
 
@@ -418,8 +416,8 @@ void main() {
       expect(find.byType(PressedFlower), findsOneWidget);
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
-      expect(find.text('책 꾸미기'), findsNothing);
-      await choose('책 꾸미기');
+      expect(find.text('책 꾸미기').hitTestable(), findsOneWidget);
+      await openAppearance();
       await tester.tap(find.text('표지·내지'));
       await tester.pumpAndSettle();
       final cover = find.widgetWithText(ChoiceChip, '푸른 리넨');
@@ -447,7 +445,7 @@ void main() {
       expect(c.library.books.first.paperIndex, 3);
       expect(c.library.books.last.coverIndex, isNull);
       expect(c.library.style.paperIndex, initial.style.paperIndex);
-      await choose('책 꾸미기');
+      await openAppearance();
       await tester.tap(find.text('표지·내지'));
       await tester.pumpAndSettle();
       final defaultPaper = find.text('기본 종이 사용');

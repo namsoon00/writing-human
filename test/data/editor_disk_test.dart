@@ -122,6 +122,8 @@ void main() {
     );
     await tester.tap(find.byTooltip('쓰기 도구'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('글씨 설정'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('쓰는 인간체'));
     await saved();
     await tester.tap(find.byTooltip('닫기'));

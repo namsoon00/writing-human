@@ -2646,18 +2646,40 @@ void main() {
       expect(comparison.differencesFor('가낙다라'), [
         (start: 1, end: 2, expected: '나'),
       ]);
-      expect(comparison.differencesFor('가😀나다라'), [
-        (start: 1, end: 3, expected: ''),
+      expect(comparison.differencesFor('가X나다라'), [
+        (start: 1, end: 2, expected: ''),
       ]);
-      expect(comparison.remainderFor('가😀나다라'), '마바사.');
+      expect(comparison.remainderFor('가X나다라'), '마바사.');
       expect(comparison.differencesFor('가다라'), [
         (start: 1, end: 1, expected: '나'),
       ]);
       expect(comparison.remainderFor('가다라'), '마바사.');
       expect(comparison.differencesFor('가나다라'), isEmpty);
       expect(comparison.differencesFor('가나다라마바사.'), isEmpty);
-      expect(comparison.differencesFor('가나다라마바사.!'), [
+      expect(comparison.differencesFor('가나다라마바사.X'), [
         (start: 8, end: 9, expected: ''),
+      ]);
+    },
+  );
+
+  test(
+    'Punctuation and newlines are optional while Hanja stays comparable',
+    () {
+      const original = '가😀·「漢」\r\n나, 다!';
+      final comparison = TranscriptionComparison(
+        const RegisteredOriginal('o', original),
+      );
+
+      expect(comparison.differencesFor('가!?1️⃣漢나 다'), isEmpty);
+      expect(comparison.sourceOffsetFor('가漢나 다'), original.length);
+      expect(comparison.remainderFor('가--漢\n'), '나, 다!');
+      expect(comparison.remainderFor('가--漢'), '」\r\n나, 다!');
+      expect(comparison.remainderFor('가--漢', composingLength: 1), ', 다!');
+      expect(comparison.differencesFor('가😀、字\n나'), [
+        (start: 4, end: 5, expected: '漢'),
+      ]);
+      expect(comparison.differencesFor('가!?漢나다'), [
+        (start: 5, end: 5, expected: ' '),
       ]);
     },
   );
@@ -2671,7 +2693,7 @@ void main() {
             WritingRecord(
               id: 'r',
               title: '필사',
-              originals: [RegisteredOriginal('o', '한 문장을 계속 이어 쓴다.')],
+              originals: [RegisteredOriginal('o', '한 문장을·\n 계속 이어 쓴다.')],
             ),
           ],
           pages: [
@@ -2721,6 +2743,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(marks(), isEmpty);
       expect(store.data.activePage!.text, '한 문장을 계속');
+
+      tester.view.viewInsets = const FakeViewPadding(bottom: 290);
+      await tester.pumpAndSettle();
+      expect(remainingReference(tester), ' 이어 쓴다.');
+      expect(referenceText(tester).toPlainText(), '한 문장을·\n 계속 이어 쓴다.');
+      expect(marks(), isEmpty);
     },
   );
 

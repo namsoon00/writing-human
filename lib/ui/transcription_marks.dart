@@ -31,7 +31,6 @@ class TranscriptionMarks extends StatelessWidget {
       void show(TranscriptionDifference difference) {
         final expected = switch (difference.expected) {
           ' ' => '공백',
-          '\n' => '줄바꿈',
           final text => text,
         };
         showDialog<void>(

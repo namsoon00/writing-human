@@ -4,14 +4,13 @@ import '../data/model.dart';
 
 typedef TranscriptionDifference = ({int start, int end, String expected});
 
-/// Compares entered graphemes with the selected passage. One short lookahead
-/// distinguishes a wrong glyph from an extra or missing glyph.
+typedef _ComparedCharacter = ({String value, int start, int end});
+
+/// Compares the text of a passage while allowing punctuation and line breaks
+/// to be copied freely. Offsets always refer to the original UTF-16 strings.
 class TranscriptionComparison {
   TranscriptionComparison(RegisteredOriginal original, {int sourceOffset = 0})
-    : _source = _remaining(
-        original,
-        sourceOffset,
-      ).characters.toList(growable: false);
+    : _original = _remaining(original, sourceOffset);
 
   static String _remaining(RegisteredOriginal original, int offset) {
     final text = original.text
@@ -23,9 +22,11 @@ class TranscriptionComparison {
     return text.substring(offset.clamp(0, text.length));
   }
 
-  final List<String> _source;
+  final String _original;
+  late final _source = _comparedCharacters(_original);
   String? _lastWritten;
   var _progress = 0;
+  var _offset = 0;
   List<TranscriptionDifference> _differences = const [];
 
   List<TranscriptionDifference> differencesFor(String written) {
@@ -35,34 +36,76 @@ class TranscriptionComparison {
 
   int sourceOffsetFor(String written) {
     _compare(written);
-    return _source
-        .take(_progress)
-        .fold(0, (offset, character) => offset + character.length);
+    return _offset;
   }
 
   String remainderFor(String written, {int composingLength = 0}) {
     _compare(written);
-    return _source.skip(_progress + composingLength).join();
+    if (composingLength <= 0 || _progress >= _source.length) {
+      return _original.substring(_offset);
+    }
+    final end = (_progress + composingLength).clamp(0, _source.length);
+    return end == _source.length
+        ? ''
+        : _original.substring(_source[end - 1].end);
   }
 
-  static bool _isLineBreak(String value) =>
-      value == '\n' || value == '\r' || value == '\r\n';
+  static final _optionalCharacter = RegExp(
+    r'^[\p{P}\p{S}\r\n\u2028\u2029]',
+    unicode: true,
+  );
+
+  static List<_ComparedCharacter> _comparedCharacters(String text) {
+    final result = <_ComparedCharacter>[];
+    var start = 0;
+    for (final value in text.characters) {
+      final end = start + value.length;
+      if (!_optionalCharacter.hasMatch(value) && !value.endsWith('\u20e3')) {
+        result.add((value: value, start: start, end: end));
+      }
+      start = end;
+    }
+    return result;
+  }
+
+  static String _formattingKey(String value) => switch (value) {
+    '\r' || '\r\n' || '\u2028' || '\u2029' => '\n',
+    _ => value,
+  };
+
+  int _sourcePosition(int progress, String trailingInput) {
+    if (_source.isEmpty) return 0;
+    if (progress == _source.length) return _original.length;
+    final start = progress == 0 ? 0 : _source[progress - 1].end;
+    final end = _source[progress].start;
+    if (start == end || trailingInput.isEmpty) return start;
+    final typedFormatting = trailingInput.characters
+        .map(_formattingKey)
+        .toSet();
+    var offset = start;
+    var matched = start;
+    for (final value in _original.substring(start, end).characters) {
+      offset += value.length;
+      if (typedFormatting.contains(_formattingKey(value))) matched = offset;
+    }
+    return matched;
+  }
 
   void _compare(String written) {
     if (_lastWritten == written) return;
     _lastWritten = written;
-    final typed = written.characters.toList(growable: false);
+    if (_source.isEmpty) return;
+    final typed = _comparedCharacters(written);
     final differences = <TranscriptionDifference>[];
     var input = 0;
     var source = 0;
-    var offset = 0;
 
     int matchingRun(int nextInput, int nextSource) {
       var count = 0;
       while (count < 6 &&
           nextInput + count < typed.length &&
           nextSource + count < _source.length &&
-          typed[nextInput + count] == _source[nextSource + count]) {
+          typed[nextInput + count].value == _source[nextSource + count].value) {
         count++;
       }
       return count;
@@ -76,13 +119,7 @@ class TranscriptionComparison {
 
     while (input < typed.length && source < _source.length) {
       final character = typed[input];
-      final end = offset + character.length;
-      if (_isLineBreak(character) && !_isLineBreak(_source[source])) {
-        input++;
-        offset = end;
-        continue;
-      }
-      if (character != _source[source] && !_isLineBreak(character)) {
+      if (character.value != _source[source].value) {
         final substitution = matchingRun(input + 1, source + 1);
         final insertion = matchingRun(input + 1, source);
         final omission = matchingRun(input, source + 1);
@@ -90,36 +127,45 @@ class TranscriptionComparison {
             omission > substitution &&
             omission > insertion) {
           differences.add((
-            start: offset,
-            end: offset,
-            expected: _source[source],
+            start: character.start,
+            end: character.start,
+            expected: _source[source].value,
           ));
           source++;
           continue;
         }
         if (hasAnchor(insertion, input + 1, source) &&
             insertion > substitution) {
-          differences.add((start: offset, end: end, expected: ''));
+          differences.add((
+            start: character.start,
+            end: character.end,
+            expected: '',
+          ));
           input++;
-          offset = end;
           continue;
         }
-        differences.add((start: offset, end: end, expected: _source[source]));
+        differences.add((
+          start: character.start,
+          end: character.end,
+          expected: _source[source].value,
+        ));
       }
       source++;
       input++;
-      offset = end;
     }
-    while (input < typed.length) {
+    for (; input < typed.length; input++) {
       final character = typed[input];
-      final end = offset + character.length;
-      if (!_isLineBreak(character)) {
-        differences.add((start: offset, end: end, expected: ''));
-      }
-      input++;
-      offset = end;
+      differences.add((
+        start: character.start,
+        end: character.end,
+        expected: '',
+      ));
     }
     _progress = source;
+    _offset = _sourcePosition(
+      source,
+      written.substring(typed.lastOrNull?.end ?? 0),
+    );
     _differences = differences;
   }
 }

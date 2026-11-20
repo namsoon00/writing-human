@@ -417,25 +417,31 @@ class _PhotoOriginalCorrectionState extends State<PhotoOriginalCorrection> {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 22),
-    child: GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      excludeFromSemantics: true,
-      onTapUp: _placeCursor,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 120),
-        child: EditableText(
-          key: _editable,
-          controller: widget.controller,
-          focusNode: widget.focusNode,
-          style: widget.style,
-          cursorColor: widget.ink,
-          backgroundCursorColor: Colors.transparent,
-          selectionColor: widget.ink.withValues(alpha: .18),
-          readOnly: widget.readOnly,
-          maxLines: null,
-          keyboardType: TextInputType.multiline,
-          textInputAction: TextInputAction.newline,
-          contextMenuBuilder: (_, _) => const SizedBox.shrink(),
+    child: Semantics(
+      enabled: !widget.readOnly,
+      onFocus: widget.readOnly
+          ? null
+          : () => _editable.currentState?.requestKeyboard(),
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        excludeFromSemantics: true,
+        onTapUp: _placeCursor,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 120),
+          child: EditableText(
+            key: _editable,
+            controller: widget.controller,
+            focusNode: widget.focusNode,
+            style: widget.style,
+            cursorColor: widget.ink,
+            backgroundCursorColor: Colors.transparent,
+            selectionColor: widget.ink.withValues(alpha: .18),
+            readOnly: widget.readOnly,
+            maxLines: null,
+            keyboardType: TextInputType.multiline,
+            textInputAction: TextInputAction.newline,
+            contextMenuBuilder: (_, _) => const SizedBox.shrink(),
+          ),
         ),
       ),
     ),

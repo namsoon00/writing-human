@@ -964,6 +964,48 @@ void main() {
     }, () => client);
   });
 
+  testWidgets(
+    'iOS search taps place the caret between characters and preserve composing',
+    (tester) async {
+      await open(tester, MemoryStore(), FakeIntake());
+      await openRegistration(tester);
+      await openSourceSearch(tester);
+      await tester.tap(find.widgetWithText(ChoiceChip, '웹 검색'));
+      await tester.pumpAndSettle();
+
+      final input = find.widgetWithText(TextField, '검색어');
+      await tester.tap(input);
+      await tester.pump();
+      expect(tester.testTextInput.isVisible, isTrue);
+      await tester.enterText(input, '하늘을우러러');
+      await tester.pump();
+      final field = tester.widget<TextField>(input);
+      final editor = field.focusNode!.context!
+          .findAncestorStateOfType<EditableTextState>()!;
+      final render = editor.renderEditable;
+      Offset pointAt(int offset) => render.localToGlobal(
+        render.getLocalRectForCaret(TextPosition(offset: offset)).center,
+      );
+
+      await tester.tapAt(pointAt(2));
+      await tester.pump();
+      expect(field.controller!.selection.extentOffset, 2);
+
+      const composing = TextEditingValue(
+        text: '하느을우러러',
+        selection: TextSelection.collapsed(offset: 2),
+        composing: TextRange(start: 1, end: 2),
+      );
+      tester.testTextInput.updateEditingValue(composing);
+      await tester.pump();
+      await tester.tapAt(pointAt(4));
+      await tester.pump();
+      expect(field.controller!.value, composing);
+      expect(tester.testTextInput.isVisible, isTrue);
+    },
+    variant: const TargetPlatformVariant({TargetPlatform.iOS}),
+  );
+
   testWidgets('Search imports a source citation and keeps the original draft', (
     tester,
   ) async {

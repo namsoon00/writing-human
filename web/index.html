@@ -53,14 +53,12 @@
       pointer-events: none !important;
     }
 
-    /* Flutter positions the caret from the painted glyphs on touch screens.
-       Its semantic inputs stay focusable for the keyboard and assistive tools. */
+    /* Let Flutter position the paper's writing caret. The single-line search
+       inputs keep their own browser touch and keyboard behavior. */
     .paper-touch-input flutter-view [flt-semantics-identifier="writing-keyboard-dismiss"],
     .paper-touch-input flutter-view [flt-semantics-identifier="writing-keyboard-dismiss"] *,
     .paper-touch-input flutter-view [flt-semantics-identifier="writing-page-body"],
-    .paper-touch-input flutter-view [flt-semantics-identifier="writing-page-body"] textarea,
-    .paper-touch-input flutter-view [flt-semantics-identifier="paper-search-input"],
-    .paper-touch-input flutter-view [flt-semantics-identifier="paper-search-input"] input {
+    .paper-touch-input flutter-view [flt-semantics-identifier="writing-page-body"] textarea {
       pointer-events: none !important;
     }
   </style>
@@ -80,7 +78,6 @@
         CSS.supports('-webkit-touch-callout', 'none')) {
       document.documentElement.classList.add('paper-touch-input');
       const bodySelector = '[flt-semantics-identifier="writing-page-body"]';
-      const fieldSelector = bodySelector + ', [flt-semantics-identifier="paper-search-input"]';
       document.addEventListener('selectionchange', (event) => {
         const editor = document.activeElement;
         // A selection notification from an empty semantic textarea during
@@ -108,14 +105,14 @@
         if (!view || !touch) return null;
         // A separate semantic control retains its own tap behavior.
         const control = path.find(node => node.localName === 'flt-semantics');
-        const controlField = control?.closest(fieldSelector);
+        const controlField = control?.closest(bodySelector);
         if (control && !controlField) return null;
         const editable = path.find(node =>
           node.localName === 'input' || node.localName === 'textarea' ||
           node.isContentEditable);
-        for (const field of view.querySelectorAll(fieldSelector)) {
+        for (const field of view.querySelectorAll(bodySelector)) {
           if (controlField && field !== controlField) continue;
-          const editor = field.querySelector('input, textarea');
+          const editor = field.querySelector('textarea');
           if (!editor || editor.disabled || (editable && editable !== editor)) continue;
           const {left, right, top, bottom} = editor.getBoundingClientRect();
           if (touch.clientX >= left && touch.clientX < right &&

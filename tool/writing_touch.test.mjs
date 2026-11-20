@@ -34,7 +34,7 @@ function simulate({x = 100, move = 0, duration = 80, control, composing = false,
   const result = {focused: false, prevented: false};
   let editorFocused = alreadyFocused;
   const editor = {
-    localName: search ? 'input' : 'textarea',
+    localName: 'textarea',
     disabled,
     matches(selector) {
       assert.equal(selector, ':focus');
@@ -48,21 +48,16 @@ function simulate({x = 100, move = 0, duration = 80, control, composing = false,
   };
   let currentEditor = editor;
   const field = {querySelector: () => currentEditor};
-  const behind = {
-    querySelector: () => ({
-      ...editor,
-      getBoundingClientRect: () => ({left: 0, right: 0, top: 0, bottom: 0}),
-    }),
-  };
   const view = {
     localName: 'flutter-view',
     querySelectorAll(selector) {
-      assert.match(selector, /writing-page-body/);
-      assert.match(selector, /paper-search-input/);
-      return search ? [behind, field] : [field];
+      assert.equal(selector, '[flt-semantics-identifier="writing-page-body"]');
+      return [field];
     },
   };
-  const path = [control ?? {localName: 'flt-glass-pane'}, view];
+  const path = search
+    ? [{localName: 'input'}, view]
+    : [control ?? {localName: 'flt-glass-pane'}, view];
   const touch = (delta) => ({clientX: x + delta, clientY: 180, identifier: 1});
   handlers.get('touchstart')({composedPath: () => path, touches: [touch(0)], timeStamp: 0});
   if (composing) {
@@ -113,20 +108,35 @@ test('canceled or untrusted touches and replaced inputs are ignored', () => {
 });
 
 test('short taps request the keyboard even when the input kept its focus', () => {
-  for (const search of [false, true]) {
-    assert.deepEqual(simulate({search}), {focused: true, prevented: true});
-    assert.deepEqual(
-      simulate({search, alreadyFocused: true}),
-      {focused: true, prevented: true},
-    );
-    assert.deepEqual(
-      simulate({search, alreadyFocused: true, cancelable: false}),
-      {focused: true, prevented: false},
-    );
-    assert.deepEqual(
-      simulate({search, alreadyFocused: true, composing: true}),
-      {focused: false, prevented: true},
-    );
+  assert.deepEqual(simulate(), {focused: true, prevented: true});
+  assert.deepEqual(
+    simulate({alreadyFocused: true}),
+    {focused: true, prevented: true},
+  );
+  assert.deepEqual(
+    simulate({alreadyFocused: true, cancelable: false}),
+    {focused: true, prevented: false},
+  );
+  assert.deepEqual(
+    simulate({alreadyFocused: true, composing: true}),
+    {focused: false, prevented: true},
+  );
+});
+
+test('search input keeps the browser tap, including with a body field behind it', () => {
+  for (const options of [
+    {},
+    {alreadyFocused: true, keyboardVisible: true},
+    {alreadyFocused: true, composing: true},
+  ]) {
+    assert.deepEqual(simulate({search: true, ...options}), {
+      focused: false, prevented: false,
+    });
+  }
+  const pointerRules = [...html.matchAll(/([^{}]+)\{[^{}]*pointer-events:\s*none[^{}]*\}/g)];
+  assert.ok(pointerRules.length > 0);
+  for (const [, selector] of pointerRules) {
+    assert.doesNotMatch(selector, /paper-search-input/);
   }
 });
 
@@ -158,7 +168,7 @@ test('empty body selection notifications cannot masquerade as deletions', () => 
 
 test('an open keyboard, an intentional blur and disabled fields keep their behavior', () => {
   assert.deepEqual(
-    simulate({search: true, alreadyFocused: true, keyboardVisible: true}),
+    simulate({alreadyFocused: true, keyboardVisible: true}),
     {focused: false, prevented: true},
   );
   assert.deepEqual(
@@ -166,7 +176,7 @@ test('an open keyboard, an intentional blur and disabled fields keep their behav
     {focused: false, prevented: true},
   );
   assert.deepEqual(
-    simulate({search: true, disabled: true}),
+    simulate({disabled: true}),
     {focused: false, prevented: false},
   );
 });

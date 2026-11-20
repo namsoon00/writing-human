@@ -1,4 +1,6 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'paper.dart';
@@ -28,10 +30,26 @@ class PaperSearchField extends StatelessWidget {
   final int? maxLength;
   final ValueChanged<String>? onChanged, onSubmitted;
 
+  void _placeCaret(TapUpDetails details) {
+    final value = controller.value;
+    if (!enabled ||
+        (value.isComposingRangeValid && !value.composing.isCollapsed)) {
+      return;
+    }
+    final editor = focusNode.context
+        ?.findAncestorStateOfType<EditableTextState>();
+    if (editor == null) return;
+    editor.hideToolbar();
+    editor.renderEditable.selectPositionAt(
+      from: details.globalPosition,
+      cause: SelectionChangedCause.tap,
+    );
+    editor.requestKeyboard();
+  }
+
   @override
-  Widget build(BuildContext context) => Semantics(
-    identifier: 'paper-search-input',
-    child: TextField(
+  Widget build(BuildContext context) {
+    final input = TextField(
       key: fieldKey,
       controller: controller,
       focusNode: focusNode,
@@ -67,6 +85,24 @@ class PaperSearchField extends StatelessWidget {
           borderSide: BorderSide(color: line),
         ),
       ),
-    ),
-  );
+    );
+    return Semantics(
+      identifier: 'paper-search-input',
+      child: enabled && defaultTargetPlatform == TargetPlatform.iOS
+          ? Stack(
+              children: [
+                input,
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    excludeFromSemantics: true,
+                    supportedDevices: const {PointerDeviceKind.touch},
+                    onTapUp: _placeCaret,
+                  ),
+                ),
+              ],
+            )
+          : input,
+    );
+  }
 }

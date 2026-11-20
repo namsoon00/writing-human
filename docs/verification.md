@@ -1713,5 +1713,9 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - 번들 서체를 읽은 Flutter 테스트 렌더러에서 390×844의 기본·최대 크기와 도구
   화면을 확인했다. 320×640에서 기기 글자 배율 2와 최대 크기를 함께 적용해도
   견본과 메뉴가 넘치지 않고 스크롤로 조작할 수 있는 것을 검사했다.
+- [GitHub Pages 배포 44656517270](https://github.com/namsoon00/writing-human/actions/runs/44656517270)
+  후 Chrome 390×844에서 합성 기록으로 크기 버튼과 두 손가락 터치를 검사했다.
+  30으로 확대하고 16으로 축소한 뒤 새로고침해도 크기가 유지됐으며,
+  본문과 선택의 시작·끝은 바뀌지 않았다.
 - GitHub Pages용 웹 빌드를 생성했다. iOS·Android와 Safari 실기기의 두 손가락
   조작·키보드는 이번 변경에서 검증하지 않았다.

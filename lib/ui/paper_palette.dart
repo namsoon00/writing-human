@@ -7,6 +7,7 @@ const green = Color(0xff4e5a42);
 const burgundy = Color(0xff7a4a4a);
 const line = Color(0xffe4dacb);
 const paper = Color(0xfff7f2e8);
+const originalPanelColor = paper;
 const appPaper = Color(0xffeee9e0);
 const serif = 'NanumMyeongjo';
 const developmentSerif = 'WritingHumanDevelopment';

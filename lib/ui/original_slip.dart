@@ -48,7 +48,7 @@ Future<bool?> showOriginalSlip(
   RegisteredOriginal original,
   WritingStyle style,
 ) {
-  final panel = panelPaperColor(paperColors[style.paperIndex]);
+  const panel = originalPanelColor;
   final photoId = original.photoId;
   final link = RegisteredOriginal.webLink(original.citation);
   return Navigator.of(context).push<bool>(

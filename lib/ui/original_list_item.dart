@@ -35,7 +35,7 @@ class OriginalListItem extends StatelessWidget {
           onTap: onTap,
           child: SourceSlip(
             compact: true,
-            panelColor: panelPaperColor(paperColors[style.paperIndex]),
+            panelColor: originalPanelColor,
             choice: details.sourceSlip,
             child: ListTile(
               contentPadding: EdgeInsets.zero,

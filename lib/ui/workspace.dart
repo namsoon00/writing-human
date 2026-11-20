@@ -747,7 +747,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     final route = MaterialPageRoute<SourceImportResult>(
       fullscreenDialog: true,
       builder: (_) => Scaffold(
-        backgroundColor: paperColors[style.paperIndex],
+        backgroundColor: originalPanelColor,
         body: Center(
           child: SizedBox(
             width: writingSurfaceMaxWidth,
@@ -1295,9 +1295,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               ),
             ),
           ),
-          color: panelPaperColor(
-            paperColors[_paperStyle(selectedBook).paperIndex],
-          ),
+          color: originalPanelColor,
         );
         final action = await Navigator.of(context).push(route);
         await route.completed;

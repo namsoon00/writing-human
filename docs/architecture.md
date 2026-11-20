@@ -231,7 +231,8 @@ SQLite v13은 쪽에 선택 필드 `original_slip`을 추가한다. 쪽지를 �
 번들에 둔다. [원본 서체와 라이선스](https://github.com/google/fonts/tree/main/ofl/nanumpenscript)
 
 원문 읽기 패널은 `PaperBackdrop`, `SourceSlip`, `RecordDivider`와 필사
-밑칠 스타일을 재사용한다. 책의 내지와 글꼴·펜·책의 디테일 설정을 전달한다.
+밑칠 스타일을 재사용한다. 원문 화면에는 공통 미색 바탕과 옅은 결을 사용하고,
+글꼴·펜·쪽지와 구분 표시는 책에 설정된 값을 사용한다.
 읽은 원문 ID는 Workspace에서 현재 쪽과 책별로 유지한다. 책이 없는 기록은 기록별로
 기억한다. 현재 쪽에서 고른 구절, 연결된 구절, 마지막으로 읽은 구절을 순서대로
 확인해 원문을 열고, 목록으로 돌아가면 해당 행을 스크롤한다.
@@ -326,7 +327,7 @@ GitHub Pages·Sites의 빌드 스크립트에는 준비 단계가 포함된다.
 
 목차와 원문 목록은 `RecordDivider`로 항목 사이의 구분 표시를 그린다.
 담은 원문과 추천 작품 목록은 `OriginalListItem`으로 쪽지, 서체와 구분 표시를
-공유한다. 책별 꾸밈은 원문 담기를 열 때 정한 책의 값을 사용한다.
+공유한다. 쪽지·구분 표시·서체는 원문 담기를 열 때 정한 책의 값을 사용한다.
 `ui/reading_details.dart`는 꾸밈의 견본과 표지·장서표의 압화를 구성한다.
 이전 SQLite의 `books.index_label` 컬럼은 호환을 위해 남겨 둔다. 기존 웹 저장,
 백업, 동기화에서 읽은 `indexLabel`과 전역·책별 `indexTab`은 앱에서 무시한다.

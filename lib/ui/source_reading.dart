@@ -401,7 +401,7 @@ class _SourceReadingState extends State<SourceReading> {
   Future<void> _showPhoto(RegisteredOriginal original) => showOriginalPhoto(
     context,
     original.photoId!,
-    color: panelPaperColor(paperColors[widget.style.paperIndex]),
+    color: originalPanelColor,
     region: originalPhotoPreviewRegion(original),
     onSaveRegion: widget.onSavePhotoRegion == null
         ? null
@@ -478,7 +478,7 @@ class _SourceReadingState extends State<SourceReading> {
                 : () => _editReflection(original, match),
           );
     final style = widget.style;
-    final panel = panelPaperColor(paperColors[style.paperIndex]);
+    const panel = originalPanelColor;
     return PopScope(
       canPop: _canLeave && !editing,
       onPopInvokedWithResult: (didPop, _) {

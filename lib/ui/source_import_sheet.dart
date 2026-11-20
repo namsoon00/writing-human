@@ -66,9 +66,7 @@ class SourceImportSheet extends StatefulWidget {
   final String initialText, initialCitation;
   final WritingStyle style;
 
-  Color get paperColor => paperColors[style.paperIndex];
   Color get penColor => penColors[style.penIndex];
-  double get grainOpacity => paperGrainOpacity[style.paperIndex];
   final SourcePhoto? initialPhoto;
   final String? existingPhotoId;
   final Future<bool> Function(SourceImportResult)? onSaveExtraction;
@@ -1046,7 +1044,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     onSelected: _import,
     tooltip: '가져오기 더 보기',
     icon: const Icon(CupertinoIcons.ellipsis, size: 21),
-    color: panelPaperColor(widget.paperColor),
+    color: originalPanelColor,
     surfaceTintColor: Colors.transparent,
     itemBuilder: (_) => const [
       PopupMenuItem(value: _ImportAction.search, child: Text('새 원문 찾기')),
@@ -1184,7 +1182,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                 initialValue: _bookId ?? '',
                 decoration: _recordDecoration,
                 icon: const Icon(CupertinoIcons.chevron_down, size: 15),
-                dropdownColor: widget.paperColor,
+                dropdownColor: originalPanelColor,
                 isExpanded: true,
                 items: [
                   if (widget.allowUnbound)
@@ -1577,7 +1575,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         final chosen = await chooseOriginalPhotoRegion(
           context,
           photo.bytes,
-          color: widget.paperColor,
+          color: originalPanelColor,
           current: _photoRegion,
         );
         if (!mounted || chosen == null || _wholeEditor != editor) return;
@@ -1616,7 +1614,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     enabled: _editable,
     onSelected: _photoAction,
     icon: const Icon(CupertinoIcons.ellipsis, size: 21),
-    color: panelPaperColor(widget.paperColor),
+    color: originalPanelColor,
     surfaceTintColor: Colors.transparent,
     itemBuilder: (_) => [
       const PopupMenuItem(value: _PhotoAction.select, child: Text('구절 고르기')),
@@ -1716,7 +1714,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     final chosen = await chooseOriginalPhotoRegion(
       context,
       photo.bytes,
-      color: widget.paperColor,
+      color: originalPanelColor,
       current: _photoRegion,
     );
     if (!mounted || chosen == null || photo != _originalPhoto) return;
@@ -1785,8 +1783,8 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       canPop: !_savingPhoto,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: widget.paperColor,
-          image: paperGrain(widget.paperColor, widget.grainOpacity),
+          color: originalPanelColor,
+          image: paperGrain(originalPanelColor, panelGrainOpacity),
         ),
         child: SafeArea(
           child: LayoutBuilder(

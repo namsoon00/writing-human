@@ -29,7 +29,7 @@ class PageOriginalsPanel extends StatelessWidget {
     void choose(PageOriginalAction action, [String? id]) =>
         Navigator.pop(context, (action: action, id: id));
     return PaperPanel(
-      color: panelPaperColor(paperColors[style.paperIndex]),
+      color: originalPanelColor,
       child: Column(
         children: [
           const Padding(

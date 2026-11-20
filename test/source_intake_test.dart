@@ -1637,7 +1637,7 @@ void main() {
   );
 
   testWidgets(
-    'Originals use the book paper, note slips and in-between divider',
+    'Originals use a fixed background and keep the book slip and divider',
     (tester) async {
       const slip = BookDetailChoice(variant: 2, tone: 2);
       const divider = BookDetailChoice(variant: 1, tone: 3);
@@ -1680,6 +1680,10 @@ void main() {
           style: style,
         );
       await open(tester, store, FakeIntake());
+      final writingPaper = tester.widget<PaperBackdrop>(
+        find.ancestor(of: place, matching: find.byType(PaperBackdrop)),
+      );
+      expect(writingPaper.color, paperColors[3]);
       await tester.tap(place);
       await tester.pumpAndSettle();
       final surface = find.byKey(const ValueKey('source-paper'));
@@ -1687,7 +1691,8 @@ void main() {
         find.descendant(of: surface, matching: find.byType(PaperBackdrop)),
       );
       expect(tester.widget<PaperPanel>(surface).color, paper.color);
-      final panel = panelPaperColor(paperColors[3]);
+      const panel = originalPanelColor;
+      expect(panel, isNot(writingPaper.color));
       expect(paper.color, panel);
       expect(paper.grainOpacity, panelGrainOpacity);
       expect(paper.coverIndex, isNull);
@@ -1734,6 +1739,15 @@ void main() {
 
       await tester.tap(find.text('원문 담기'));
       await tester.pumpAndSettle();
+      final capture = find.byType(SourceImportSheet);
+      expect(
+        tester
+            .widget<Scaffold>(
+              find.ancestor(of: capture, matching: find.byType(Scaffold)).first,
+            )
+            .backgroundColor,
+        panel,
+      );
       final title = find.text('서시');
       await tester.ensureVisible(title);
       final row = find.ancestor(
@@ -1755,6 +1769,21 @@ void main() {
             .choice
             .toJson(),
         divider.toJson(),
+      );
+      final catalog = find.text('시 더 보기');
+      await tester.ensureVisible(catalog);
+      await tester.tap(catalog);
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<PaperPanel>(
+              find.ancestor(
+                of: find.text('새 원문 찾기'),
+                matching: find.byType(PaperPanel),
+              ),
+            )
+            .color,
+        panel,
       );
     },
   );

@@ -129,7 +129,7 @@ class _PageEditorState extends State<PageEditor> {
         textLength: text.text.length,
         style: widget.style,
       ),
-      color: panelPaperColor(paperColors[widget.style.paperIndex]),
+      color: originalPanelColor,
     );
     final choice = await Navigator.of(context).push(route);
     await route.completed;

@@ -12,6 +12,8 @@ import 'package:writing_human/source/page_originals.dart';
 import 'package:writing_human/source/originals.dart';
 import 'package:writing_human/source/transcription_comparison.dart';
 import 'package:writing_human/sync/merge.dart';
+import 'package:writing_human/ui/paper.dart';
+import 'package:writing_human/ui/paper_panel.dart';
 import 'package:writing_human/ui/transcription_guide.dart';
 import 'package:writing_human/ui/transcription_reference.dart';
 
@@ -211,7 +213,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      final data = fixture();
+      final data = fixture().copy(style: const WritingStyle(paperIndex: 3));
       final store = TestStore(data);
       await tester.pumpWidget(WritingHumanApp(store: store));
       await tester.pumpAndSettle();
@@ -267,6 +269,16 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('1/2 · 첫 책'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('page-originals-button')));
+      await tester.pumpAndSettle();
+      expect(find.text('끼운 원문'), findsOneWidget);
+      expect(
+        tester.widget<PaperPanel>(find.byType(PaperPanel)).color,
+        originalPanelColor,
+      );
+      await tester.tap(find.byTooltip('닫기'));
+      await tester.pumpAndSettle();
+      await tester.showKeyboard(field);
       tester.view.viewInsets = const FakeViewPadding(bottom: 290);
       addTearDown(tester.view.resetViewInsets);
       await tester.pumpAndSettle();

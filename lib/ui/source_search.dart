@@ -230,7 +230,7 @@ Future<SourceSearchChoice?> showSourceSearch(
 ) async {
   final route = paperPanelRoute<SourceSearchChoice>(
     (_) => _SourceSearch(style: style),
-    color: paperColors[style.paperIndex],
+    color: originalPanelColor,
   );
   final result = await Navigator.of(context).push(route);
   await route.completed;
@@ -578,7 +578,7 @@ class _SourceSearchState extends State<_SourceSearch> {
     return PopScope(
       canPop: !_pasting,
       child: PaperPanel(
-        color: paperColors[widget.style.paperIndex],
+        color: originalPanelColor,
         child: Column(
           children: [
             Padding(

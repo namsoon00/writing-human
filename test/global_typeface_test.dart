@@ -159,8 +159,6 @@ void main() {
       expect(tester.widget<TextField>(field).style!.fontSize, 20);
       await tester.tap(find.byTooltip('쓰기 도구'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('글씨 설정'));
-      await tester.pumpAndSettle();
       final control = find.byTooltip('글자 크게');
       await tester.ensureVisible(control);
       await tester.tap(control);
@@ -243,8 +241,6 @@ void main() {
       await tester.pumpWidget(WritingHumanApp(store: store));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('쓰기 도구'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('글씨 설정'));
       await tester.pumpAndSettle();
       final smaller = find.byTooltip('글자 작게');
       await tester.ensureVisible(smaller);
@@ -343,8 +339,6 @@ void main() {
       await tester.tap(find.text('취소'));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('쓰기 도구'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('글씨 설정'));
       await tester.pumpAndSettle();
       expectTypeface('쓰는 인간체');
       expect(

@@ -165,7 +165,7 @@ class ToolsScreen extends StatelessWidget {
                         (value) =>
                             controller.setStyle(style.copy(guides: value)),
                       ),
-                    ]),
+                    ], initiallyExpanded: true),
                     if (controller.saveError != null)
                       TextButton(
                         onPressed: controller.retrySave,
@@ -380,8 +380,13 @@ class LibrarySettings extends StatelessWidget {
   );
 }
 
-Widget _settingsGroup(String title, List<Widget> children) => ExpansionTile(
+Widget _settingsGroup(
+  String title,
+  List<Widget> children, {
+  bool initiallyExpanded = false,
+}) => ExpansionTile(
   title: Text(title),
+  initiallyExpanded: initiallyExpanded,
   textColor: brandInk,
   iconColor: muted,
   collapsedTextColor: ink,

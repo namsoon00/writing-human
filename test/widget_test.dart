@@ -625,14 +625,15 @@ void main() {
       expect(writingTools, findsOneWidget);
       await tester.tap(writingTools);
       await tester.pumpAndSettle();
-      expect(find.text('잉크'), findsNothing);
+      expect(find.text('잉크').hitTestable(), findsOneWidget);
       expect(find.text('책과 기록'), findsNothing);
       expect(find.text('기록 관리'), findsNothing);
-      await tester.tap(find.text('글씨 설정'));
-      await tester.pumpAndSettle();
       expect(find.text('쓰는 인간체'), findsOneWidget);
       await tester.tap(find.text('나눔고딕'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('글씨 설정'));
+      await tester.pumpAndSettle();
+      expect(find.text('잉크'), findsNothing);
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
@@ -676,8 +677,7 @@ void main() {
       }
       await tester.tap(writingTools);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('글씨 설정'));
-      await tester.pumpAndSettle();
+      expect(find.text('잉크').hitTestable(), findsOneWidget);
       final chip = tester.widget<ChoiceChip>(
         find.widgetWithText(ChoiceChip, '나눔고딕'),
       );

@@ -453,7 +453,7 @@ void main() {
     expect(controller.value, value);
     expect(find.text('저장 실패'), findsOneWidget);
     expect(
-      find.text('글을 저장하지 못했어요. 앱을 닫기 전에 ‘다시 저장’을 눌러 주세요.'),
+      find.text('글을 저장하지 못했어요.\n앱을 닫기 전에 ‘다시 저장’을 눌러 주세요.'),
       findsOneWidget,
     );
     expect(find.text('저장됨'), findsNothing);

@@ -8,7 +8,7 @@ import '../source/source_scan.dart';
 import 'original_photo_crop.dart';
 import 'paper_panel.dart';
 
-const _missingOriginalPhoto = '이 기기에 원본 사진이 없어요. 사진을 담은 기기에서 열어 주세요.';
+const _missingOriginalPhoto = '이 기기에 원본 사진이 없어요.\n사진을 담은 기기에서 열어 주세요.';
 
 Future<void> showOriginalPhoto(
   BuildContext context,
@@ -185,11 +185,14 @@ class _OriginalPhotoState extends State<OriginalPhoto> {
       final bytes = snapshot.data;
       if (bytes == null) {
         return Center(
-          child: Text(
-            snapshot.hasError
-                ? '사진을 열지 못했어요. 화면을 닫고 다시 열어 주세요.'
-                : _missingOriginalPhoto,
-            textAlign: TextAlign.center,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              snapshot.hasError
+                  ? '사진을 열지 못했어요.\n화면을 닫고 다시 열어 주세요.'
+                  : _missingOriginalPhoto,
+              textAlign: TextAlign.center,
+            ),
           ),
         );
       }

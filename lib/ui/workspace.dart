@@ -1979,7 +1979,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                           child: const Padding(
                             padding: EdgeInsets.symmetric(vertical: 8),
                             child: Text(
-                              '글을 저장하지 못했어요. 앱을 닫기 전에 ‘다시 저장’을 눌러 주세요.',
+                              '글을 저장하지 못했어요.\n앱을 닫기 전에 ‘다시 저장’을 눌러 주세요.',
                               style: TextStyle(fontSize: 13, height: 1.35),
                             ),
                           ),

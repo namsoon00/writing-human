@@ -544,9 +544,6 @@ class _PageEditorState extends State<PageEditor> {
         final end = active == null
             ? text.text.length
             : passageEnd(passages, active, text.text.length);
-        final linked = passages
-            .where((p) => passageOriginal(p) != null)
-            .toList();
         final hasChosenGuide = source != null;
         final paperHeight = math.max(0.0, constraints.maxHeight - overlap);
         final scaler = MediaQuery.textScalerOf(context);
@@ -591,30 +588,12 @@ class _PageEditorState extends State<PageEditor> {
                 scaler.scale(referenceStyle.fontSize!) * 4 + 12,
                 referenceBudget,
               );
-        final citation = source?.citation.trim() ?? '';
-        final linkSeparator = citation.lastIndexOf(' · ');
-        final displayCitation =
-            linkSeparator >= 0 &&
-                RegisteredOriginal.webLink(
-                      citation.substring(linkSeparator + 3),
-                    ) !=
-                    null
-            ? citation.substring(0, linkSeparator)
-            : citation;
-        final selectorHeight = math.max(48.0, scaler.scale(13) + 20);
-        final showOriginalSelector =
-            linked.isNotEmpty &&
-            paperHeight - referenceHeight >=
-                minimumWritingHeight + selectorHeight;
         final canCenter =
             hasChosenGuide &&
             keyboardVisible &&
             focus.hasFocus &&
             paperHeight / 2 >=
-                referenceHeight +
-                    (showOriginalSelector ? selectorHeight : 0) +
-                    lineHeight +
-                    visiblePadding.bottom;
+                referenceHeight + lineHeight + visiblePadding.bottom;
         final writingCenter = canCenter
             ? paperHeight / 2 - visiblePadding.top
             : null;
@@ -844,39 +823,6 @@ class _PageEditorState extends State<PageEditor> {
                   child: writing,
                 ),
               ),
-              if (showOriginalSelector)
-                Padding(
-                  padding: writingMargins,
-                  child: TextFieldTapRegion(
-                    child: TextButton(
-                      key: const ValueKey('page-originals-button'),
-                      onPressed: _composing ? null : _showPageOriginals,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              source == null
-                                  ? '필사 원문'
-                                  : displayCitation.isEmpty
-                                  ? (source.text.trim().isEmpty
-                                        ? '사진 원문'
-                                        : source.text.trim().split('\n').first)
-                                  : displayCitation,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: muted,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.expand_more, size: 18),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
               if (source != null && referenceHeight > 0)
                 Padding(
                   padding: writingMargins,
@@ -885,6 +831,7 @@ class _PageEditorState extends State<PageEditor> {
                     child: TranscriptionReference(
                       key: const ValueKey('transcription-reference'),
                       original: source,
+                      onOpen: _composing ? null : _showPageOriginals,
                       comparison: _comparison,
                       sourceOffset: active?.sourceOffset ?? 0,
                       startOffset: start,

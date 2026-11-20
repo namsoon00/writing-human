@@ -14,6 +14,7 @@ class TranscriptionReference extends StatefulWidget {
     super.key,
     required this.original,
     required this.comparison,
+    this.onOpen,
     this.startOffset = 0,
     this.sourceOffset = 0,
     this.endOffset,
@@ -23,6 +24,7 @@ class TranscriptionReference extends StatefulWidget {
 
   final RegisteredOriginal original;
   final TranscriptionComparison? comparison;
+  final VoidCallback? onOpen;
   final int startOffset, sourceOffset;
   final int? endOffset;
   final TextEditingController controller;
@@ -91,7 +93,7 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
         .substring(source.writingRange?.start ?? 0, source.writingRange?.end)
         .trimLeft();
     final scaler = MediaQuery.textScalerOf(context);
-    return DecoratedBox(
+    final reference = DecoratedBox(
       decoration: const BoxDecoration(
         border: Border(top: BorderSide(color: line)),
       ),
@@ -101,6 +103,8 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
         ),
         child: Semantics(
           label: '따라 쓰는 원문',
+          button: widget.onOpen != null,
+          onTap: widget.onOpen,
           child: TextFieldTapRegion(
             child: passage.isEmpty
                 ? (source.photoId == null
@@ -163,6 +167,12 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
           ),
         ),
       ),
+    );
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
+      onTap: widget.onOpen,
+      child: reference,
     );
   }
 

@@ -222,11 +222,10 @@ class _SourceHit {
 
 Future<SourceSearchChoice?> showSourceSearch(
   BuildContext context,
-  WritingStyle style, {
-  WikisourcePoem? initialPoem,
-}) async {
+  WritingStyle style,
+) async {
   final route = paperPanelRoute<SourceSearchChoice>(
-    (_) => _SourceSearch(style: style, initialPoem: initialPoem),
+    (_) => _SourceSearch(style: style),
     color: originalPanelColor,
   );
   final result = await Navigator.of(context).push(route);
@@ -235,10 +234,9 @@ Future<SourceSearchChoice?> showSourceSearch(
 }
 
 class _SourceSearch extends StatefulWidget {
-  const _SourceSearch({required this.style, this.initialPoem});
+  const _SourceSearch({required this.style});
 
   final WritingStyle style;
-  final WikisourcePoem? initialPoem;
 
   @override
   State<_SourceSearch> createState() => _SourceSearchState();
@@ -253,7 +251,7 @@ class _SourceSearchState extends State<_SourceSearch> {
   bool _webSearch = false;
   _SearchMode _mode = _SearchMode.title;
   _SourceHit? _selected;
-  Future<List<String>>? _preview;
+  Future<List<String>?>? _preview;
   final _stanzas = <int>{};
   List<(_Collection, List<_SourceHit>?)> _results = const [];
 
@@ -265,10 +263,6 @@ class _SourceSearchState extends State<_SourceSearch> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialPoem case final poem?) {
-      _selected = _SourceHit(_Collection.works, poem.title, poem.pageId);
-      _preview = poem.load(_client);
-    }
     _query.addListener(_queueCompletions);
     _focus.addListener(_queueCompletions);
   }
@@ -406,20 +400,29 @@ class _SourceSearchState extends State<_SourceSearch> {
     }
   }
 
+  Future<List<String>?> _loadPreview(WikisourcePoem poem) async {
+    try {
+      return await poem.load(_client);
+    } on Exception {
+      return null;
+    }
+  }
+
   void _showHit(_SourceHit hit) {
+    final poem = hit.poem;
     setState(() {
       _selected = hit;
       _linkError = null;
       _stanzas.clear();
-      _preview = hit.poem?.load(_client);
+      _preview = poem == null ? null : _loadPreview(poem);
     });
   }
 
   Widget _previewBody(
     _SourceHit hit,
     WikisourcePoem poem,
-    Future<List<String>> preview,
-  ) => FutureBuilder<List<String>>(
+    Future<List<String>?> preview,
+  ) => FutureBuilder<List<String>?>(
     future: preview,
     builder: (context, snapshot) {
       if (snapshot.connectionState != ConnectionState.done) {

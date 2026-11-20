@@ -13,12 +13,10 @@ import '../source/photo_lines.dart';
 import '../source/scan_passage.dart';
 import '../source/source_intake.dart';
 import '../source/source_scan.dart';
-import '../source/wikisource_preview.dart';
 import 'book_details.dart';
 import 'paper.dart';
 import 'photo_original_paper.dart';
 import 'paper_panel.dart';
-import 'original_list_item.dart';
 import 'original_photo_crop.dart';
 import 'original_range_sheet.dart';
 import 'original_text_cleanup.dart';
@@ -249,17 +247,10 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     }
   }
 
-  Future<void> _searchSources({
-    WikisourcePoem? initialPoem,
-    bool closeOnCancel = false,
-  }) async {
+  Future<void> _searchSources({bool closeOnCancel = false}) async {
     if (!_editable) return;
     FocusScope.of(context).unfocus();
-    final choice = await showSourceSearch(
-      context,
-      widget.style,
-      initialPoem: initialPoem,
-    );
+    final choice = await showSourceSearch(context, widget.style);
     if (!mounted || !_editable) return;
     if (choice == null) {
       if (closeOnCancel) await _close();
@@ -327,9 +318,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     }
     return true;
   }
-
-  Future<void> _pickPoem(WikisourcePoem poem) =>
-      _searchSources(initialPoem: poem);
 
   Future<void> _shareHelp() => showDialog<void>(
     context: context,
@@ -1125,31 +1113,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
           icon: const Icon(CupertinoIcons.doc_on_clipboard, size: 17),
           label: const Text('붙여넣기'),
         ),
-    ],
-  );
-
-  Widget _poemSuggestions() => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Divider(height: 24, color: line),
-      Semantics(
-        header: true,
-        child: Text('천천히 읽을 시', style: Theme.of(context).textTheme.titleSmall),
-      ),
-      const SizedBox(height: 8),
-      for (final (index, id) in const [1508, 1515, 3044].indexed)
-        if (WikisourcePoem.reviewed[id] case final poem?)
-          OriginalListItem(
-            style: widget.style,
-            title: poem.title,
-            subtitle: poem.author,
-            showDivider: index > 0,
-            onTap: _editable ? () => _pickPoem(poem) : null,
-          ),
-      TextButton(
-        onPressed: _editable ? _searchSources : null,
-        child: const Text('시 더 보기'),
-      ),
     ],
   );
 
@@ -2136,11 +2099,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                         const SizedBox(height: 12),
                         _details(),
                       ],
-                      if (widget.registration &&
-                          _originalPhoto == null &&
-                          !_selecting &&
-                          !_reviewing)
-                        _poemSuggestions(),
                     ],
                   ),
                 ),

@@ -387,6 +387,8 @@ void main() {
       expect(sourceField.hitTestable(), findsOneWidget);
       expect(find.text('붙여넣기').hitTestable(), findsOneWidget);
       expect(find.text('새 원문 찾기').hitTestable(), findsOneWidget);
+      expect(find.text('천천히 읽을 시'), findsNothing);
+      expect(find.byType(OriginalListItem), findsNothing);
       expect(find.byKey(const ValueKey('original-citation')), findsNothing);
       expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
 
@@ -1291,7 +1293,7 @@ void main() {
         final store = MemoryStore();
         await open(tester, store, FakeIntake());
         await openRegistration(tester);
-        final more = find.text('시 더 보기');
+        final more = find.text('새 원문 찾기');
         await tester.ensureVisible(more);
         await tester.tap(more);
         await tester.pumpAndSettle();
@@ -1336,7 +1338,7 @@ void main() {
 
   for (final existingText in [false, true]) {
     testWidgets(
-      'Poem suggestions preview, select and explicitly start writing (existing text: $existingText)',
+      'Poems from source search preview, select and explicitly start writing (existing text: $existingText)',
       (tester) async {
         final requests = <Uri>[];
         final client = MockClient((request) async {
@@ -1388,7 +1390,11 @@ void main() {
             await openRegistration(tester);
           }
           expect(requests, isEmpty);
+          expect(find.text('천천히 읽을 시'), findsNothing);
+          await tester.tap(find.text('새 원문 찾기'));
+          await tester.pumpAndSettle();
           expect(find.text('천천히 읽을 시'), findsOneWidget);
+          expect(requests, isEmpty);
           final poem = find.widgetWithText(ListTile, '서시');
           await tester.ensureVisible(poem);
           await tester.tap(poem);
@@ -1844,6 +1850,11 @@ void main() {
             .backgroundColor,
         panel,
       );
+      expect(find.text('서시'), findsNothing);
+      final catalog = find.text('새 원문 찾기');
+      await tester.ensureVisible(catalog);
+      await tester.tap(catalog);
+      await tester.pumpAndSettle();
       final title = find.text('서시');
       await tester.ensureVisible(title);
       final row = find.ancestor(
@@ -1866,10 +1877,6 @@ void main() {
             .toJson(),
         divider.toJson(),
       );
-      final catalog = find.text('시 더 보기');
-      await tester.ensureVisible(catalog);
-      await tester.tap(catalog);
-      await tester.pumpAndSettle();
       expect(
         tester
             .widget<PaperPanel>(

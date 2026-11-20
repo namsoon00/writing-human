@@ -49,6 +49,9 @@ dependencies:
   pdf: ^3.12.0
   image: 4.8.0
   flutter_tts: ^4.2.5
+  flutter_onnxruntime: 1.7.1
+  shared_preferences: ^2.5.5
+  unorm_dart: ^0.3.2
 
 dev_dependencies:
   flutter_test:
@@ -112,6 +115,8 @@ flutter:
     - assets/images/
     - assets/audio/page-turn.mp3
     - assets/audio/pencil-stroke.wav
+    - assets/audio/supertonic-license.txt
+    - assets/audio/supertonic-code-license.txt
     - assets/fonts/WritingHumanDevelopment-info.json
     - assets/fonts/NanumPenScript-OFL.txt
 

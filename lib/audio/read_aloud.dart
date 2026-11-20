@@ -5,6 +5,20 @@ abstract interface class ReadAloud {
   Future<void> stop();
 }
 
+abstract interface class BrandReadAloud implements ReadAloud {
+  @override
+  Future<void> speak(String text, {String? next});
+}
+
+enum NarrationVoice {
+  f3('여성 F3'),
+  m2('남성 M2'),
+  device('기기 음성');
+
+  const NarrationVoice(this.label);
+  final String label;
+}
+
 class KoreanVoiceUnavailable implements Exception {
   const KoreanVoiceUnavailable();
 }
@@ -17,25 +31,27 @@ bool isKoreanVoice(String locale) =>
 
 typedef ReadAloudPhrase = ({String text, Duration pauseBefore});
 
-/// Keep punctuation for the voice engine and leave more room between verses.
-Iterable<ReadAloudPhrase> readAloudPhrases(String text) sync* {
+/// Keep the shape of a paragraph or verse and its punctuation for the engine.
+Iterable<ReadAloudPhrase> readAloudPhrases(
+  String text, {
+  int limit = 180,
+}) sync* {
+  final paragraphs = text
+      .replaceAll(RegExp(r'\r\n?'), '\n')
+      .split(RegExp(r'\n[^\S\n]*\n'));
   var pause = Duration.zero;
-  for (final line in text.split(RegExp(r'\r\n|\r|\n'))) {
-    final content = line.trim();
-    if (content.isEmpty) {
-      if (pause != Duration.zero) pause = const Duration(milliseconds: 480);
-      continue;
-    }
-    for (final phrase in _splitLongLine(content)) {
+  for (final paragraph in paragraphs) {
+    final content = paragraph.trim();
+    if (content.isEmpty) continue;
+    for (final phrase in _splitLongParagraph(content, limit)) {
       yield (text: phrase, pauseBefore: pause);
       pause = const Duration(milliseconds: 70);
     }
-    pause = const Duration(milliseconds: 165);
+    pause = const Duration(milliseconds: 480);
   }
 }
 
-Iterable<String> _splitLongLine(String text) sync* {
-  const limit = 180;
+Iterable<String> _splitLongParagraph(String text, int limit) sync* {
   if (text.length <= limit) {
     yield text;
     return;

@@ -16,6 +16,7 @@ import 'live_source_camera.dart';
 import 'paper.dart';
 import 'original_photo_crop.dart';
 import 'original_range_sheet.dart';
+import 'original_text_cleanup.dart';
 import 'source_scan_preview.dart';
 import 'source_search.dart';
 import 'writing_pen.dart';
@@ -1062,6 +1063,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
           child: Text('${index + 1}번째 문단'),
         ),
       _field(controller, index),
+      OriginalTextCleanup(controller: controller, enabled: _editable),
       Wrap(
         spacing: 6,
         children: [
@@ -1245,6 +1247,10 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                           ),
                         ],
                         _field(_text, 0),
+                        OriginalTextCleanup(
+                          controller: _text,
+                          enabled: _editable,
+                        ),
                         const SizedBox(height: 5),
                         _importTools(),
                         if (!widget.shared)

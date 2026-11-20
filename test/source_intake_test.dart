@@ -229,6 +229,38 @@ Future<void> takePhoto(WidgetTester tester, {bool settle = true}) async {
 }
 
 void main() {
+  testWidgets('원문 정리는 저장 전 되돌릴 수 있고 저장한 글을 필사에 쓴다', (tester) async {
+    final store = MemoryStore();
+    await open(tester, store, FakeIntake());
+    await openRegistration(tester);
+    const original = '“봄”…\n별★바람';
+    const cleaned = '"봄"...\n별 바람';
+    await tester.enterText(sourceField, original);
+    await tester.pumpAndSettle();
+    final clean = find.text('특수문자 정리');
+    await tester.ensureVisible(clean);
+    await tester.tap(clean);
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(sourceField).controller!.text, cleaned);
+    expect(store.data.records, isEmpty);
+    await tester.tap(find.text('정리 되돌리기'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(sourceField).controller!.text, original);
+    await tester.tap(clean);
+    await tester.pumpAndSettle();
+    final transcribe = find.byKey(
+      const ValueKey('source-transcribe-after-save'),
+    );
+    await tester.ensureVisible(transcribe);
+    await tester.tap(transcribe);
+    await tester.pumpAndSettle();
+    await tester.tap(confirm);
+    await settleSourceSheets(tester);
+    expect(store.data.records.single.originals.single.text, cleaned);
+    expect(store.data.activePage!.text, isEmpty);
+    expect(remainingReference(tester), cleaned);
+  });
+
   testWidgets('Original editing keeps the draft through IME and save retry', (
     tester,
   ) async {
@@ -277,17 +309,26 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.enterText(text, '“고친 글”…');
+    await tester.pumpAndSettle();
+    final cleanup = find.text('특수문자 정리');
+    await tester.ensureVisible(cleanup);
+    await tester.tap(cleanup);
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(text).controller!.text, '"고친 글"...');
+    expect(store.data.records.single.originals.single.text, '고치기 전 원문');
+
     store.fail = true;
     await tester.tap(button);
     await tester.pumpAndSettle();
     expect(find.text('수정 내용을 저장하지 못했어요. 입력한 내용은 남아 있어요.'), findsOneWidget);
-    expect(tester.widget<TextField>(text).controller!.text, '고친 글');
+    expect(tester.widget<TextField>(text).controller!.text, '"고친 글"...');
     expect(store.data.records.single.originals.single.text, '고치기 전 원문');
     store.fail = false;
     await tester.tap(button);
     await tester.pumpAndSettle();
     expect(text, findsNothing);
-    expect(store.data.records.single.originals.single.text, '고친 글');
+    expect(store.data.records.single.originals.single.text, '"고친 글"...');
     expect(store.data.records.single.originals.single.citation, '개정판');
     expect(store.data.records.single.originals.single.id, 'source');
     expect(store.data.activePage!.toJson(), writing);
@@ -1411,10 +1452,14 @@ void main() {
         tester.widget<TextField>(sourceField).controller!.text,
         '둘째 문단입나다.',
       );
-      await tester.enterText(sourceField, '둘째 문단입니다.');
+      await tester.enterText(sourceField, '“둘째 문단입니다.”');
+      await tester.pumpAndSettle();
+      final cleanup = find.text('특수문자 정리');
+      await tester.ensureVisible(cleanup);
+      await tester.tap(cleanup);
       await tester.pumpAndSettle();
       await saveWithPhoto(tester);
-      expect(store.data.records.single.originals.single.text, '둘째 문단입니다.');
+      expect(store.data.records.single.originals.single.text, '"둘째 문단입니다."');
       expect(reading, findsNothing);
       expect(store.data.activePage!.text, isEmpty);
       expect(tester.widget<TextField>(bodyField).controller, same(body));

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/model.dart';
 import 'paper.dart';
 import 'paper_panel.dart';
+import 'original_text_cleanup.dart';
 
 class OriginalEdit extends StatefulWidget {
   const OriginalEdit({
@@ -110,6 +111,10 @@ class _OriginalEditState extends State<OriginalEdit> {
                             ? '원문은 50,000자까지 저장할 수 있어요.'
                             : null,
                       ),
+                    ),
+                    OriginalTextCleanup(
+                      controller: text,
+                      enabled: !saving && !composing,
                     ),
                     const SizedBox(height: 16),
                     TextField(

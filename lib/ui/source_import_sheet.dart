@@ -1276,6 +1276,20 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                     ],
                   ),
                 ),
+                if (_busy)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const LinearProgressIndicator(),
+                        const SizedBox(height: 8),
+                        Text(
+                          _readingPhoto ? '사진 속 글자를 읽고 있어요' : '원문을 가져오고 있어요',
+                        ),
+                      ],
+                    ),
+                  ),
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
@@ -1290,13 +1304,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                           ),
                         ),
                       const SizedBox(height: 12),
-                      if (_busy) ...[
-                        const LinearProgressIndicator(),
-                        const SizedBox(height: 10),
-                        Text(
-                          _readingPhoto ? '사진 속 글자를 읽고 있어요' : '원문을 가져오고 있어요',
-                        ),
-                      ],
                       if (_error case final error?)
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8),

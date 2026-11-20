@@ -215,7 +215,10 @@ Future<void> saveWithPhoto(WidgetTester tester) async {
 }
 
 Future<void> takePhoto(WidgetTester tester, {bool settle = true}) async {
-  await tester.tap(find.byKey(const ValueKey('source-photo-menu')));
+  final photoMenu = find.byKey(const ValueKey('source-photo-menu'));
+  await tester.ensureVisible(photoMenu);
+  await tester.pumpAndSettle();
+  await tester.tap(photoMenu);
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(const ValueKey('source-photo')));
   await tester.pumpAndSettle();

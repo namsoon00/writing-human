@@ -1936,6 +1936,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         page: currentPage,
                         style: style,
                         focusNode: editorFocus,
+                        showFirstWritingHint:
+                            fresh &&
+                            c.library.pages.isEmpty &&
+                            c.library.trashedPages.isEmpty &&
+                            originals.isEmpty,
                         originals: originals,
                         guidedOriginal: originals
                             .where(
@@ -1996,6 +2001,10 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               Transform.translate(
                 offset: Offset(0, preview ? 0 : -keyboardOverlap),
                 child: WritingFooter(
+                  offerSourceImport:
+                      !preview &&
+                      originals.isEmpty &&
+                      currentPage.originalCitations.isEmpty,
                   ornament: style.bookDetails.ornament,
                   onMenu: _menu,
                   paperTool: tool,

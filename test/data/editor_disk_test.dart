@@ -69,7 +69,11 @@ void main() {
     final heading = find.byKey(const ValueKey('writing-title'));
     final field = find.byKey(const ValueKey('page-text'));
     expect(tester.widget<Text>(heading).data, '쓰는 인간');
-    expect(tester.widget<TextField>(field).decoration!.hintText, isNull);
+    expect(
+      tester.widget<TextField>(field).decoration!.hintText,
+      '여기를 눌러 첫 문장을 써 보세요',
+    );
+    expect(tester.widget<TextField>(field).controller!.text, isEmpty);
     await tester.tap(find.text('책장'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('새 책'));

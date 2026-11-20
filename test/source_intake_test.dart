@@ -250,7 +250,10 @@ Future<void> preparePhotoStorage(WidgetTester tester) async {
 
 Future<void> saveWithPhoto(WidgetTester tester, {Finder? action}) async {
   await tester.runAsync(() async {
-    await tester.tap(action ?? confirm);
+    final archive = find.widgetWithText(TextButton, '원문만 담기');
+    await tester.tap(
+      action ?? (archive.evaluate().isEmpty ? confirm : archive),
+    );
     await tester.pump();
     for (
       var i = 0;
@@ -508,7 +511,7 @@ void main() {
       await takePhoto(tester);
       expect(photoDraft(tester).text, '$header\n\n$first\n$second\n\n$footer');
       final remove = find.byTooltip('선택한 글 지우기');
-      final save = find.widgetWithText(FilledButton, '선택한 글 담기');
+      final archive = find.widgetWithText(TextButton, '원문만 담기');
       final endHandle = find.byKey(const ValueKey('photo-selection-end'));
       expect(confirm, findsOneWidget);
 
@@ -535,7 +538,8 @@ void main() {
         const TextSelection.collapsed(offset: 0),
       );
       expect(tester.testTextInput.isVisible, isFalse);
-      expect(save, findsNothing);
+      expect(remove, findsNothing);
+      expect(archive.hitTestable(), findsOneWidget);
       expect(store.data.records, isEmpty);
 
       await correctPhoto(tester, '$first\n$second\n\n고친 마지막 줄');
@@ -558,7 +562,15 @@ void main() {
             .onPressed,
         isNull,
       );
-      expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+      expect(tester.widget<TextButton>(archive).onPressed, isNull);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, '이 구절로 필사하기'),
+            )
+            .onPressed,
+        isNull,
+      );
 
       tester.testTextInput.updateEditingValue(
         controller.value.copyWith(composing: TextRange.empty),
@@ -583,8 +595,20 @@ void main() {
         photoDraft(tester).selection.textInside(corrected),
         '남길 글.\n$second',
       );
-      await saveWithPhoto(tester, action: save);
+      await saveWithPhoto(
+        tester,
+        action: find.widgetWithText(FilledButton, '이 구절로 필사하기'),
+      );
+      await settleSourceSheets(tester);
 
+      final page = store.data.activePage!;
+      expect(
+        page.guidedOriginalId,
+        store.data.records.single.originals.single.id,
+      );
+      expect(page.text, isEmpty);
+      expect(reading, findsNothing);
+      expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isTrue);
       final original = store.data.records.single.originals.single;
       expect(original.text, '남길 글.\n$second');
       expect(original.photoId, isNotNull);
@@ -2209,7 +2233,7 @@ void main() {
     'Paragraph mode selects by photo and re-reads only the selected area',
     (tester) async {
       await preparePhotoStorage(tester);
-      final store = MemoryStore();
+      final store = MemoryStore()..data = existing();
       final intake = FakeIntake()..blocks = ['다시 읽은 구절'];
       intake.positioned = SourceScan(
         intake.photo.bytes,
@@ -2265,7 +2289,18 @@ void main() {
         tester.widget<TextField>(sourceField).controller!.text,
         '다시 읽은 구절',
       );
-      await saveWithPhoto(tester);
+      await saveWithPhoto(
+        tester,
+        action: find.widgetWithText(FilledButton, '이 구절로 필사하기'),
+      );
+      await settleSourceSheets(tester);
+      expect(store.data.pages.first.text, '기존에 적은 문장');
+      expect(store.data.pages, hasLength(2));
+      expect(store.data.activePage!.text, isEmpty);
+      expect(
+        store.data.activePage!.guidedOriginalId,
+        store.data.records.single.originals.single.id,
+      );
       expect(store.data.records.single.originals.single.text, '다시 읽은 구절');
       final region = store.data.records.single.originals.single.photoRegion!;
       expect(region[0], closeTo(.498, .001));

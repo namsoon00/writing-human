@@ -114,6 +114,7 @@ class WritingFooter extends StatelessWidget {
     this.pageCount = 1,
     this.onPages,
     this.onSource,
+    this.offerSourceImport = false,
     this.showKeyboardDismiss = false,
     this.onKeyboardDismiss,
     this.onPrevious,
@@ -132,6 +133,7 @@ class WritingFooter extends StatelessWidget {
   bool get _marking => paperTool != PaperTool.writing;
   final VoidCallback? onPages, onPrevious, onNext, onSource;
   final bool showKeyboardDismiss;
+  final bool offerSourceImport;
   final VoidCallback? onKeyboardDismiss;
   final String? pageLabel;
   final int pageCount;
@@ -159,17 +161,20 @@ class WritingFooter extends StatelessWidget {
         children: [
           Align(
             alignment: Alignment.centerLeft,
-            child: TextFieldTapRegion(
-              child: TextButton(
-                key: const ValueKey('writing-originals'),
-                onPressed: onSource,
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(48, 48),
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                ),
-                child: const _PaperActionLabel(
-                  '원문',
-                  CupertinoIcons.doc_plaintext,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: _pageSideInset),
+              child: TextFieldTapRegion(
+                child: TextButton(
+                  key: const ValueKey('writing-originals'),
+                  onPressed: onSource,
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(48, 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                  ),
+                  child: _PaperActionLabel(
+                    offerSourceImport ? '필사할 글 가져오기' : '원문',
+                    CupertinoIcons.doc_plaintext,
+                  ),
                 ),
               ),
             ),

@@ -28,6 +28,40 @@ class MemoryStore implements LibraryStore {
 }
 
 void main() {
+  testWidgets('Only the first blank writing surface prompts for a first line', (
+    tester,
+  ) async {
+    final store = MemoryStore();
+    await tester.pumpWidget(WritingHumanApp(store: store));
+    await tester.pumpAndSettle();
+    final field = find.byKey(const ValueKey('page-text'));
+    final hint = find.text('여기를 눌러 첫 문장을 써 보세요');
+    expect(hint, findsOneWidget);
+    expect(find.text('필사할 글 가져오기').hitTestable(), findsOneWidget);
+    expect(store.data.pages, isEmpty);
+    await tester.tapAt(tester.getTopLeft(hint) + const Offset(8, 8));
+    await tester.pumpAndSettle();
+    expect(hint, findsNothing);
+    expect(tester.widget<TextField>(field).focusNode!.hasFocus, isTrue);
+    const composing = TextEditingValue(
+      text: '하',
+      selection: TextSelection.collapsed(offset: 1),
+      composing: TextRange(start: 0, end: 1),
+    );
+    tester.testTextInput.updateEditingValue(composing);
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(field).controller!.value, composing);
+    tester.testTextInput.updateEditingValue(
+      composing.copyWith(composing: TextRange.empty),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('새 글'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(field).controller!.text, isEmpty);
+    expect(hint, findsNothing);
+    expect(store.data.pages.single.text, '하');
+  });
+
   testWidgets(
     'Paper tools mark and erase a stroke without moving the caret or page',
     (tester) async {

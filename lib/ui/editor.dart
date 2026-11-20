@@ -33,6 +33,7 @@ class PageEditor extends StatefulWidget {
     this.style = const WritingStyle(),
     this.focusNode,
     this.onEditingState,
+    this.showFirstWritingHint = false,
     this.onFontSizeChanged,
     this.onAddOriginal,
     this.onRemoveOriginal,
@@ -47,6 +48,7 @@ class PageEditor extends StatefulWidget {
     this.startAtTopRequest,
   });
   final FocusNode? focusNode;
+  final bool showFirstWritingHint;
   final VoidCallback? onAddOriginal, onWriteWithoutOriginal;
   final ValueChanged<String>? onRemoveOriginal;
   final ValueChanged<double>? onFontSizeChanged;
@@ -714,6 +716,20 @@ class _PageEditorState extends State<PageEditor> {
                         decoration: hasChosenGuide
                             ? null
                             : InputDecoration(
+                                hintText:
+                                    widget.showFirstWritingHint &&
+                                        !focus.hasFocus &&
+                                        !marking
+                                    ? '여기를 눌러 첫 문장을 써 보세요'
+                                    : null,
+                                hintMaxLines: 3,
+                                hintStyle: writingTextStyle(
+                                  style.fontIndex,
+                                  size: math.max(16.0, style.fontSize - 3),
+                                  color: muted,
+                                  useDevelopmentTypeface:
+                                      style.useDevelopmentTypeface,
+                                ),
                                 contentPadding: EdgeInsets.only(
                                   top: visiblePadding.top,
                                   bottom: visiblePadding.bottom,

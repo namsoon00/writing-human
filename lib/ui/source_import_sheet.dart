@@ -1862,33 +1862,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
   );
 
-  Widget _selectionActions(TextEditingValue value) {
-    final selected = normalizeSource(value.selection.textInside(value.text));
-    final canSave =
-        _editable &&
-        selected.isNotEmpty &&
-        selected.length <= sourceLengthLimit &&
-        _citation.text.trim().length <= 500;
-    return Row(
-      children: [
-        _photoCorrectionButton(),
-        IconButton(
-          tooltip: '선택한 글 지우기',
-          onPressed: _editable ? _deleteSelectedOriginal : null,
-          icon: const Icon(CupertinoIcons.trash, size: 20),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: FilledButton(
-            style: _confirmStyle,
-            onPressed: canSave ? () => _submit(selectedOnly: true) : null,
-            child: const Text('선택한 글 담기', textAlign: TextAlign.center),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _completionActions(
     Widget confirm, {
     required bool showWriting,
@@ -1904,12 +1877,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
           child: TextButton(
             key: const ValueKey('source-save-and-write'),
             style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
-            onPressed: canWrite
-                ? () => _submit(
-                    startWriting: true,
-                    selectedOnly: _selectedOriginal != null,
-                  )
-                : null,
+            onPressed: canWrite ? () => _submit(startWriting: true) : null,
             child: const Text('담고 필사하기', textAlign: TextAlign.center),
           ),
         ),
@@ -1923,14 +1891,36 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         .map((c) => normalizeSource(c.text))
         .where((value) => value.isNotEmpty)
         .join('\n\n');
+    final selection = _selectedOriginal;
+    final passage = selection == null
+        ? text
+        : normalizeSource(selection.selection.textInside(selection.text));
     final canSubmit =
         _editable &&
-        _hasContent(text) &&
-        text.length <= sourceLengthLimit &&
+        _hasContent(passage) &&
+        passage.length <= sourceLengthLimit &&
         _citation.text.trim().length <= 500;
+    final photoWriting =
+        _originalPhoto != null &&
+        !_selecting &&
+        !_offerExtraction &&
+        !_extractionOnly &&
+        text.isNotEmpty;
     final selectionReady = _mode == _ScanMode.page
         ? _selected.isNotEmpty
         : _paragraph != null;
+    final String confirmLabel;
+    if (_selecting) {
+      confirmLabel = _mode == _ScanMode.page ? '페이지 확인' : '선택한 구절 확인';
+    } else if (_offerExtraction) {
+      confirmLabel = '사진에서 글자 읽기';
+    } else if (photoWriting) {
+      confirmLabel = '이 구절로 필사하기';
+    } else if (selection != null) {
+      confirmLabel = '선택한 글 담기';
+    } else {
+      confirmLabel = _extractionOnly ? '원문에 글 추가' : '담기';
+    }
     final confirm = FilledButton(
       key: const ValueKey('source-confirm'),
       style: _confirmStyle,
@@ -1941,18 +1931,12 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
           : _offerExtraction
           ? (_editable ? _extractPhoto : null)
           : canSubmit
-          ? _submit
+          ? () => _submit(
+              startWriting: photoWriting,
+              selectedOnly: selection != null,
+            )
           : null,
-      child: Text(
-        _offerExtraction
-            ? '사진에서 글자 읽기'
-            : !_selecting
-            ? (_extractionOnly ? '원문에 글 추가' : '담기')
-            : _mode == _ScanMode.page
-            ? '페이지 확인'
-            : '선택한 구절 확인',
-        textAlign: TextAlign.center,
-      ),
+      child: Text(confirmLabel, textAlign: TextAlign.center),
     );
     return PopScope(
       canPop: _allowClose || (!_savingPhoto && !_hasDraft),
@@ -2162,12 +2146,21 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          if (_selectedOriginal case final selection?)
-                            _selectionActions(selection)
-                          else if (_wholeEditor != null)
+                          if (_wholeEditor != null)
                             Row(
                               children: [
                                 _photoCorrectionButton(),
+                                if (selection != null)
+                                  IconButton(
+                                    tooltip: '선택한 글 지우기',
+                                    onPressed: _editable
+                                        ? _deleteSelectedOriginal
+                                        : null,
+                                    icon: const Icon(
+                                      CupertinoIcons.trash,
+                                      size: 20,
+                                    ),
+                                  ),
                                 const SizedBox(width: 8),
                                 Expanded(child: confirm),
                               ],
@@ -2176,19 +2169,19 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                             _completionActions(
                               confirm,
                               showWriting:
+                                  !photoWriting &&
                                   !_selecting &&
                                   !_offerExtraction &&
                                   !_extractionOnly,
-                              canWrite: canSubmit && text.trim().isNotEmpty,
+                              canWrite: canSubmit && text.isNotEmpty,
                             ),
-                          if (_wholeEditor != null &&
-                              _selectedOriginal == null &&
-                              !_extractionOnly)
+                          if (photoWriting)
                             TextButton(
                               onPressed: canSubmit
-                                  ? () => _submit(startWriting: true)
+                                  ? () =>
+                                        _submit(selectedOnly: selection != null)
                                   : null,
-                              child: const Text('담고 필사하기'),
+                              child: const Text('원문만 담기'),
                             ),
                           if (_offerExtraction &&
                               !_readingPhoto &&

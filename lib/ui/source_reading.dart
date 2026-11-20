@@ -38,8 +38,6 @@ class SourceReading extends StatefulWidget {
     this.onTranscribe,
     this.onExtractPhoto,
     this.onSavePhotoRegion,
-    this.onAttachSlip,
-    this.hasOriginalSlip = false,
     this.onOpenWriting,
     this.onRetry,
     this.onSaveReflection,
@@ -62,8 +60,6 @@ class SourceReading extends StatefulWidget {
   onExtractPhoto;
   final Future<bool> Function(RegisteredOriginal, List<double>?)?
   onSavePhotoRegion;
-  final ValueChanged<RegisteredOriginal>? onAttachSlip;
-  final bool hasOriginalSlip;
   final ValueChanged<Passage>? onOpenWriting;
   final VoidCallback? onRetry;
   final Future<bool> Function(RegisteredOriginal, PencilMark?)? onSaveRange;
@@ -766,22 +762,12 @@ class _SourceReadingState extends State<SourceReading> {
                           ),
                           child: const Text('링크 열기'),
                         ),
-                      if (widget.onTranscribe != null && original.canTranscribe)
+                      if (widget.onTranscribe != null)
                         TextButton(
                           onPressed: saving
                               ? null
                               : () => widget.onTranscribe!(original),
                           child: Text(widget.transcribeLabel),
-                        ),
-                      if (widget.onAttachSlip != null)
-                        TextButton.icon(
-                          onPressed: saving
-                              ? null
-                              : () => widget.onAttachSlip!(original),
-                          icon: const Icon(CupertinoIcons.paperclip, size: 15),
-                          label: Text(
-                            widget.hasOriginalSlip ? '원문 쪽지 바꾸기' : '원문 쪽지 끼우기',
-                          ),
                         ),
                       if (writing != null && widget.onOpenWriting != null)
                         TextButton(

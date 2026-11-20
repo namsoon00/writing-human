@@ -6,6 +6,7 @@ import 'library_backup.dart';
 import 'original_removals.dart';
 import '../source/originals.dart';
 import '../source/photo_lines.dart';
+import '../source/page_originals.dart';
 
 class LibraryController extends ChangeNotifier {
   static const defaultPracticeBook = Book(
@@ -805,27 +806,139 @@ class LibraryController extends ChangeNotifier {
     return true;
   }
 
+  String _linkId() => 'link-${DateTime.now().microsecondsSinceEpoch}-${_id()}';
+
   void guidePage(String pageId, RegisteredOriginal original) {
-    if (!original.canTranscribe) return;
-    final page = library.pages.where((item) => item.id == pageId).firstOrNull;
-    if (page == null) return;
-    final changed = page.rememberOriginalCitation(original.citation);
-    if (page.guidedOriginalId == original.id && identical(page, changed)) {
-      return;
+    attachOriginal(pageId, original);
+  }
+
+  List<RegisteredOriginal> _originalsForPage(WritingPage page) {
+    final record = library.records
+        .where((r) => r.id == page.recordId)
+        .firstOrNull;
+    return originalsFor(
+      library,
+      bookId: record?.bookId,
+      recordId: page.recordId,
+    );
+  }
+
+  List<PagePassage> _insertPassage(WritingPage page, PagePassage inserted) {
+    final passages = [
+      for (final p in pageOriginals(page, _originalsForPage(page)))
+        p.copy(attached: true),
+    ];
+    if (inserted.start < page.text.length &&
+        !passages.any((p) => p.following && p.start == inserted.start)) {
+      passages.add(resumeAfterInsertion(page, passages, _linkId()));
     }
+    passages.add(inserted);
+    final ordered = passages.indexed.toList()
+      ..sort((a, b) {
+        final start = a.$2.start.compareTo(b.$2.start);
+        if (start != 0) return start;
+        if (a.$2.following != b.$2.following) return a.$2.following ? 1 : -1;
+        return a.$1.compareTo(b.$1);
+      });
+    return ordered.map((p) => p.$2).toList();
+  }
+
+  WritingPage attachedPage(WritingPage page, RegisteredOriginal original) {
+    final snapshot = originalSnapshot(original);
+    return page
+        .rememberOriginalCitation(original.citation)
+        .withDetails(
+          passages: _insertPassage(
+            page,
+            PagePassage(
+              id: _linkId(),
+              start: page.extent.clamp(0, page.text.length),
+              source: snapshot.text,
+              citation: snapshot.citation,
+              attached: true,
+              original: RegisteredOriginal.validList([snapshot])
+                  ? snapshot
+                  : null,
+            ),
+          ),
+          guidedOriginalId: original.id,
+          referenceOnly: page.text.isNotEmpty,
+          clearOriginalSlip: true,
+        );
+  }
+
+  bool attachOriginal(String pageId, RegisteredOriginal original) {
+    if (_disposed || composing || saveError != null) return false;
+    final page = library.pages.where((p) => p.id == pageId).firstOrNull;
+    if (page == null) return false;
     _publish(
       library.copy(
         pages: [
-          for (final item in library.pages)
-            if (item.id == pageId)
-              changed.withDetails(
-                guidedOriginalId: original.id,
-                referenceOnly: page.guidedOriginalId == original.id
-                    ? page.referenceOnly
-                    : page.text.isNotEmpty,
+          for (final p in library.pages)
+            if (p.id == pageId) attachedPage(p, original) else p,
+        ],
+      ),
+    );
+    return true;
+  }
+
+  void detachOriginal(String pageId, String passageId) {
+    if (_disposed || composing || saveError != null) return;
+    final page = library.pages.where((p) => p.id == pageId).firstOrNull;
+    if (page == null) return;
+    final passages = pageOriginals(page, _originalsForPage(page));
+    _publish(
+      library.copy(
+        pages: [
+          for (final p in library.pages)
+            if (p.id == pageId)
+              p.withDetails(
+                passages: [
+                  for (final link in passages)
+                    if (link.id == passageId)
+                      PagePassage(
+                        id: link.id,
+                        start: link.start,
+                        attached: true,
+                        following: link.following,
+                      )
+                    else
+                      link.copy(attached: true),
+                ],
+                clearGuide: true,
+                clearOriginalSlip: true,
               )
             else
-              item,
+              p,
+        ],
+      ),
+    );
+  }
+
+  void writeWithoutOriginal(String pageId) {
+    if (_disposed || composing || saveError != null) return;
+    final page = library.pages.where((p) => p.id == pageId).firstOrNull;
+    if (page == null) return;
+    final passages = _insertPassage(
+      page,
+      PagePassage(
+        id: _linkId(),
+        start: page.extent.clamp(0, page.text.length),
+        attached: true,
+      ),
+    );
+    _publish(
+      library.copy(
+        pages: [
+          for (final p in library.pages)
+            if (p.id == pageId)
+              p.withDetails(
+                passages: passages,
+                clearGuide: true,
+                clearOriginalSlip: true,
+              )
+            else
+              p,
         ],
       ),
     );
@@ -840,10 +953,38 @@ class LibraryController extends ChangeNotifier {
         ? library.activeRecord
         : library.records.where((item) => item.id == recordId).firstOrNull;
     if (record == null) return;
+    final previous = library.activePage;
+    final continuation =
+        guidedOriginalId == null && previous?.recordId == record.id
+        ? continuedOriginal(previous!, _originalsForPage(previous), _linkId())
+        : null;
+    final chosen = guidedOriginalId == null || previous == null
+        ? null
+        : _originalsForPage(
+            previous,
+          ).where((o) => o.id == guidedOriginalId).firstOrNull;
+    final snapshot = chosen == null ? null : originalSnapshot(chosen);
+    final selectedLink = snapshot == null
+        ? null
+        : PagePassage(
+            id: _linkId(),
+            start: 0,
+            source: snapshot.text,
+            citation: snapshot.citation,
+            attached: true,
+            original: RegisteredOriginal.validList([snapshot])
+                ? snapshot
+                : null,
+          );
     final page = WritingPage(
       id: _id(),
       recordId: record.id,
-      guidedOriginalId: guidedOriginalId,
+      passages: selectedLink != null
+          ? [selectedLink]
+          : continuation == null
+          ? const []
+          : [continuation],
+      guidedOriginalId: guidedOriginalId ?? continuation?.original?.id,
       writtenOn: _today(),
       number:
           [...library.pages, ...library.trashedPages]

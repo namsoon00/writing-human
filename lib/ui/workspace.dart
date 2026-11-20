@@ -16,7 +16,7 @@ import '../source/originals.dart';
 import '../source/source_platform.dart';
 import 'source_import_sheet.dart';
 import 'source_reading.dart';
-import 'original_slip.dart';
+import '../source/page_originals.dart';
 import 'collection_sheet.dart';
 import 'editor.dart';
 import 'new_book_dialog.dart';
@@ -1014,11 +1014,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     );
   }
 
-  bool _opensAsReference(String? bookId, WritingPage page) =>
-      page.text.isNotEmpty && (bookId == null || book?.id == bookId);
-
-  String _transcribeLabel(String? bookId, WritingPage page) =>
-      _opensAsReference(bookId, page) ? '쓰면서 원문 보기' : '이 구절 옮겨 쓰기';
+  String _transcribeLabel(String? bookId, WritingPage page) => '이 쪽에 끼우기';
 
   Future<void> _startTranscription(
     RegisteredOriginal original,
@@ -1053,7 +1049,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                     listEquals(item.photoRegion, original.photoRegion),
               )
               .firstOrNull;
-      if (source == null || !source.canTranscribe) return;
+      if (source == null) return;
       if (bookId == null
           ? page.recordId == origin.recordId
           : book?.id == bookId) {
@@ -1062,9 +1058,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           fresh = false;
           userFresh = false;
           c.saveDraft(
-            draft
-                .rememberOriginalCitation(source.citation)
-                .withDetails(guidedOriginalId: source.id),
+            c.attachedPage(draft, source),
             bookId: bookId,
             keepBlank: true,
           );
@@ -1082,9 +1076,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         fresh = false;
         userFresh = false;
         c.saveDraft(
-          _blank()
-              .rememberOriginalCitation(source.citation)
-              .withDetails(guidedOriginalId: source.id),
+          c.attachedPage(_blank(), source),
           bookId: bookId,
           keepBlank: true,
         );
@@ -1104,74 +1096,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         editorFocus.requestFocus();
       }
     });
-  }
-
-  Future<void> _openOriginalSlip(
-    WritingPage selected,
-    WritingStyle style,
-  ) async {
-    final slip = selected.originalSlip;
-    if (slip == null || !_canLeaveInput() || _accountLocked) return;
-    final owner = c;
-    _blur();
-    final remove = await showOriginalSlip(context, slip, style);
-    if (!mounted || c != owner || _accountLocked || selected.id != page.id) {
-      return;
-    }
-    if (remove == true && page.originalSlip == slip) {
-      c.setOriginalSlip(selected.id, null);
-    }
-  }
-
-  Future<void> _attachOriginalSlip(
-    BuildContext panelContext,
-    LibraryController owner,
-    WritingPage selected,
-    RegisteredOriginal original,
-  ) async {
-    if (!mounted || c != owner || _accountLocked || page.id != selected.id) {
-      return;
-    }
-    final previous = page.originalSlip;
-    if (previous != null) {
-      final replace = await showDialog<bool>(
-        context: panelContext,
-        builder: (dialog) => AlertDialog(
-          title: const Text('끼워 둔 쪽지를 바꿀까요?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialog, false),
-              child: const Text('취소'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialog, true),
-              child: const Text('바꾸기'),
-            ),
-          ],
-        ),
-      );
-      if (replace != true) return;
-    }
-    if (!mounted ||
-        !panelContext.mounted ||
-        c != owner ||
-        _accountLocked ||
-        page.id != selected.id ||
-        page.originalSlip != previous) {
-      return;
-    }
-    if (!owner.setOriginalSlip(selected.id, original)) {
-      ScaffoldMessenger.of(
-        panelContext,
-      ).showSnackBar(const SnackBar(content: Text('쪽지를 끼우지 못했어요.')));
-      return;
-    }
-    await owner.settled;
-    if (panelContext.mounted &&
-        owner.saveError == null &&
-        ModalRoute.of(panelContext)?.isCurrent == true) {
-      Navigator.pop(panelContext);
-    }
   }
 
   Future<void> _showOriginals({
@@ -1224,9 +1148,15 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         final pageChoice = bookDetails == null
             ? _originalByPage[selectedPage.id]
             : null;
-        final guided = bookDetails == null
-            ? selectedPage.guidedOriginalId
+        final activeLink = bookDetails == null
+            ? passageAt(
+                pageOriginals(selectedPage, available),
+                selectedPage.extent,
+              )
             : null;
+        final guided =
+            activeLink?.original?.id ??
+            (bookDetails == null ? selectedPage.guidedOriginalId : null);
         final initialId =
             availableId(openOriginalId) ??
             availableId(guided) ??
@@ -1311,19 +1241,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               },
               onTranscribe: owner.saveError == null
                   ? (original) => Navigator.of(context).pop(original)
-                  : null,
-              hasOriginalSlip: owner.library.activePage?.originalSlip != null,
-              onAttachSlip:
-                  bookDetails == null &&
-                      !fresh &&
-                      owner.saveError == null &&
-                      !owner.saving
-                  ? (original) => _attachOriginalSlip(
-                      context,
-                      owner,
-                      selectedPage,
-                      original,
-                    )
                   : null,
               onOpenWriting: (passage) =>
                   _openPageFromPanel(route, owner, () async {
@@ -2064,6 +1981,25 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                               (item) => item.id == currentPage.guidedOriginalId,
                             )
                             .firstOrNull,
+                        onAddOriginal: navigationEnabled
+                            ? () => _showOriginals()
+                            : null,
+                        onRemoveOriginal: (id) {
+                          if (navigationEnabled &&
+                              !_editorComposing &&
+                              !c.composing &&
+                              page.id == currentPage.id) {
+                            c.detachOriginal(currentPage.id, id);
+                          }
+                        },
+                        onWriteWithoutOriginal: () {
+                          if (navigationEnabled &&
+                              !_editorComposing &&
+                              !c.composing &&
+                              page.id == currentPage.id) {
+                            c.writeWithoutOriginal(currentPage.id);
+                          }
+                        },
                         keyboardOverlap: keyboardOverlap,
                         startAtTopRequest:
                             _firstPageView?.pageId == currentPage.id
@@ -2092,18 +2028,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                             isComposing: composing,
                           );
                         },
-                      ),
-                    if (currentPage.originalSlip != null)
-                      Positioned(
-                        right: -4,
-                        top: 0,
-                        child: OriginalSlipTab(
-                          key: const ValueKey('original-slip-tab'),
-                          paperColor: paperColors[style.paperIndex],
-                          onPressed: navigationEnabled
-                              ? () => _openOriginalSlip(currentPage, style)
-                              : null,
-                        ),
                       ),
                   ],
                 ),

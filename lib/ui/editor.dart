@@ -6,6 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../data/model.dart';
 import '../source/transcription_comparison.dart';
+import '../source/page_originals.dart';
 import 'notebook_reflection.dart';
 import 'paper.dart';
 import 'ink_reveal.dart';
@@ -20,6 +21,9 @@ import 'transcription_reference.dart';
 import 'transcription_guide.dart';
 import 'transcription_marks.dart';
 import 'editable_geometry.dart';
+import 'page_original_markers.dart';
+import 'page_originals_panel.dart';
+import 'paper_panel.dart';
 
 class PageEditor extends StatefulWidget {
   const PageEditor({
@@ -30,6 +34,9 @@ class PageEditor extends StatefulWidget {
     this.focusNode,
     this.onEditingState,
     this.onFontSizeChanged,
+    this.onAddOriginal,
+    this.onRemoveOriginal,
+    this.onWriteWithoutOriginal,
     this.onEraseHighlight,
     this.onHighlight,
     this.paperTool = PaperTool.writing,
@@ -40,6 +47,8 @@ class PageEditor extends StatefulWidget {
     this.startAtTopRequest,
   });
   final FocusNode? focusNode;
+  final VoidCallback? onAddOriginal, onWriteWithoutOriginal;
+  final ValueChanged<String>? onRemoveOriginal;
   final ValueChanged<double>? onFontSizeChanged;
   final void Function(bool focused, bool composing)? onEditingState;
   final WritingPage page;
@@ -62,18 +71,81 @@ class _PageEditorState extends State<PageEditor> {
   late TextEditingValue _observedText;
   WritingSound? _sound;
   final _guideLayout = TextPainter();
-  late TranscriptionComparison? _comparison = _compareChosen();
+  TranscriptionComparison? _comparison;
+  Object? _comparisonKey;
 
-  RegisteredOriginal? get _guidedSource {
-    final source = widget.guidedOriginal;
-    return source?.canTranscribe == true ? source : null;
+  List<PagePassage> get _passages => PagePassage.afterEdit(
+    widget.page.text,
+    text.text,
+    pageOriginals(widget.page, widget.originals),
+  );
+  PagePassage? get _activePassage {
+    final value = text.value;
+    final offset = value.isComposingRangeValid && !value.composing.isCollapsed
+        ? value.composing.start
+        : value.selection.extentOffset;
+    return passageAt(_passages, offset.clamp(0, value.text.length));
   }
 
-  TranscriptionComparison? _compareChosen() {
-    final source = _guidedSource;
-    return source == null || widget.page.referenceOnly
-        ? null
-        : TranscriptionComparison(source);
+  RegisteredOriginal? get _guidedSource {
+    final passage = _activePassage;
+    return passage == null ? null : passageOriginal(passage);
+  }
+
+  void _updateComparison(PagePassage? passage, RegisteredOriginal? source) {
+    final key = (
+      passage?.id,
+      source?.text,
+      passage?.sourceOffset,
+      passage?.referenceOnly,
+    );
+    if (_comparisonKey == key) return;
+    _comparisonKey = key;
+    _comparison =
+        source?.canTranscribe == true && passage?.referenceOnly != true
+        ? TranscriptionComparison(
+            source!,
+            sourceOffset: passage?.sourceOffset ?? 0,
+          )
+        : null;
+  }
+
+  void _selectOriginal(PagePassage passage) {
+    if (_composing || widget.paperTool != PaperTool.writing) return;
+    text.selection = TextSelection.collapsed(
+      offset: passage.start.clamp(0, text.text.length),
+    );
+    focus.requestFocus();
+    _followWritingLine();
+  }
+
+  Future<void> _showPageOriginals() async {
+    if (_composing) return;
+    focus.unfocus();
+    final passages = _passages;
+    final route = paperPanelRoute<PageOriginalChoice>(
+      (_) => PageOriginalsPanel(
+        passages: passages,
+        textLength: text.text.length,
+        style: widget.style,
+      ),
+      color: panelPaperColor(paperColors[widget.style.paperIndex]),
+    );
+    final choice = await Navigator.of(context).push(route);
+    await route.completed;
+    if (!mounted || choice == null || _composing) return;
+    switch (choice.action) {
+      case PageOriginalAction.jump:
+        final passage = _passages.where((p) => p.id == choice.id).firstOrNull;
+        if (passage != null) _selectOriginal(passage);
+      case PageOriginalAction.remove:
+        if (choice.id != null) widget.onRemoveOriginal?.call(choice.id!);
+      case PageOriginalAction.add:
+        widget.onAddOriginal?.call();
+      case PageOriginalAction.free:
+        widget.onWriteWithoutOriginal?.call();
+        focus.requestFocus();
+    }
   }
 
   late final focus = widget.focusNode ?? FocusNode();
@@ -148,13 +220,6 @@ class _PageEditorState extends State<PageEditor> {
     text.annotatedText = widget.page.text;
     text.marks = widget.page.pencilMarks;
     text.choice = widget.style.bookDetails.pencil;
-    if (oldWidget.guidedOriginal != widget.guidedOriginal ||
-        oldWidget.page.referenceOnly != widget.page.referenceOnly) {
-      _comparison = _compareChosen();
-      findEditable(
-        fieldRenderKey.currentContext?.findRenderObject(),
-      )?.markNeedsLayout();
-    }
     if (oldWidget.style.writingSound != widget.style.writingSound) {
       if (widget.style.writingSound) {
         _sound = WritingSound();
@@ -474,7 +539,20 @@ class _PageEditorState extends State<PageEditor> {
           right: padding.right,
         );
         final overlap = widget.keyboardOverlap;
-        final source = _guidedSource;
+        final passages = _passages;
+        final active = _activePassage;
+        final source = active == null ? null : passageOriginal(active);
+        _updateComparison(active, source);
+        final start = active?.start ?? 0;
+        final end = active == null
+            ? text.text.length
+            : passageEnd(passages, active, text.text.length);
+        final linked = passages
+            .where((p) => passageOriginal(p) != null)
+            .toList();
+        final number = active == null
+            ? 0
+            : linked.indexWhere((p) => p.id == active.id) + 1;
         final hasChosenGuide = source != null;
         final paperHeight = math.max(0.0, constraints.maxHeight - overlap);
         final scaler = MediaQuery.textScalerOf(context);
@@ -500,10 +578,15 @@ class _PageEditorState extends State<PageEditor> {
           _followWritingLine();
         }
         final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
-        final showInlineGuide = _comparison != null && !keyboardVisible;
+        final showInlineGuide =
+            _comparison != null &&
+            !keyboardVisible &&
+            active?.id == passages.lastOrNull?.id &&
+            end == text.text.length;
         final guide = showInlineGuide
             ? TranscriptionGuidePainter(
                 comparison: _comparison!,
+                startOffset: start,
                 controller: text,
                 scroll: scroll,
                 fieldKey: fieldRenderKey,
@@ -663,9 +746,22 @@ class _PageEditorState extends State<PageEditor> {
               Positioned.fill(
                 child: TranscriptionMarks(
                   comparison: comparison,
+                  startOffset: start,
+                  endOffset: end,
                   controller: text,
                   scroll: scroll,
                   fieldKey: fieldRenderKey,
+                ),
+              ),
+            if (linked.isNotEmpty)
+              Positioned.fill(
+                child: PageOriginalMarkers(
+                  key: const ValueKey('page-original-markers'),
+                  passages: passages,
+                  controller: text,
+                  scroll: scroll,
+                  fieldKey: fieldRenderKey,
+                  onSelect: _selectOriginal,
                 ),
               ),
             if (widget.originals.any((item) => item.reflection != null))
@@ -706,6 +802,35 @@ class _PageEditorState extends State<PageEditor> {
                   child: writing,
                 ),
               ),
+              if (linked.isNotEmpty && paperHeight >= scaler.scale(14) + 52)
+                Padding(
+                  padding: writingMargins,
+                  child: TextFieldTapRegion(
+                    child: TextButton(
+                      key: const ValueKey('page-originals-button'),
+                      onPressed: _composing ? null : _showPageOriginals,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              source == null
+                                  ? '이 쪽의 원문 ${linked.length}개'
+                                  : '${linked.length > 1 ? "$number/${linked.length}" : "$number"} · ${source.citation.trim().isEmpty ? (source.text.trim().isEmpty ? "사진 원문" : source.text.trim().split("\n").first) : source.citation}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: muted,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.expand_more, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               if (!showInlineGuide && source != null && referenceHeight > 0)
                 Padding(
                   padding: writingMargins,
@@ -715,6 +840,9 @@ class _PageEditorState extends State<PageEditor> {
                       key: const ValueKey('transcription-reference'),
                       original: source,
                       comparison: _comparison,
+                      sourceOffset: active?.sourceOffset ?? 0,
+                      startOffset: start,
+                      endOffset: end,
                       controller: text,
                       style: writingTextStyle(
                         style.fontIndex,

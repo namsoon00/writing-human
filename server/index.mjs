@@ -114,6 +114,10 @@ export function validLibrary(l) {
           !integer(entry.start) || entry.start < 0 || entry.start > p.text.length ||
           !text(entry.source) || !text(entry.citation, 500) ||
           ('continued' in entry && typeof entry.continued !== 'boolean') ||
+          ('attached' in entry && typeof entry.attached !== 'boolean') ||
+          ('referenceOnly' in entry && typeof entry.referenceOnly !== 'boolean') ||
+          ('following' in entry && typeof entry.following !== 'boolean') ||
+          ('original' in entry && (entry.attached !== true || !originals([entry.original]))) ||
           !integer(entry.paragraph) || entry.paragraph < 0 ||
           !integer(entry.sourceOffset) || entry.sourceOffset < 0 || entry.sourceOffset > entry.source.length))) return false;
       ids.add(p.id); numbers.add(n);

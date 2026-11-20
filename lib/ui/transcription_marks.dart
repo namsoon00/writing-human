@@ -10,11 +10,15 @@ class TranscriptionMarks extends StatelessWidget {
   const TranscriptionMarks({
     super.key,
     required this.comparison,
+    this.startOffset = 0,
+    this.endOffset,
     required this.controller,
     required this.scroll,
     required this.fieldKey,
   });
 
+  final int startOffset;
+  final int? endOffset;
   final TranscriptionComparison comparison;
   final TextEditingController controller;
   final ScrollController scroll;
@@ -54,6 +58,8 @@ class TranscriptionMarks extends StatelessWidget {
 
       final painter = _MarksPainter(
         comparison: comparison,
+        startOffset: startOffset,
+        endOffset: endOffset,
         value: controller.value,
         fieldKey: fieldKey,
         onOpen: show,
@@ -81,22 +87,38 @@ class TranscriptionMarks extends StatelessWidget {
 class _MarksPainter extends CustomPainter {
   _MarksPainter({
     required this.comparison,
+    required this.startOffset,
+    required this.endOffset,
     required this.value,
     required this.fieldKey,
     required this.onOpen,
   });
 
+  final int startOffset;
+  final int? endOffset;
   final TranscriptionComparison comparison;
   final TextEditingValue value;
   final GlobalKey fieldKey;
   final ValueChanged<TranscriptionDifference> onOpen;
   List<({Rect target, Rect dots, TranscriptionDifference difference})>
   _locations() {
-    final end = value.isComposingRangeValid && !value.composing.isCollapsed
+    final committed =
+        value.isComposingRangeValid && !value.composing.isCollapsed
         ? value.composing.start
         : value.text.length;
-    if (end == 0) return const [];
-    final differences = comparison.differencesFor(value.text.substring(0, end));
+    final end = committed.clamp(0, endOffset ?? value.text.length);
+    final start = startOffset.clamp(0, end);
+    if (end <= start) return const [];
+    final differences = comparison
+        .differencesFor(value.text.substring(start, end))
+        .map(
+          (d) => (
+            start: d.start + start,
+            end: d.end + start,
+            expected: d.expected,
+          ),
+        )
+        .toList();
     if (differences.isEmpty) return const [];
 
     final field = fieldKey.currentContext?.findRenderObject();

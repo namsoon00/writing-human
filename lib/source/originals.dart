@@ -1,6 +1,7 @@
 import '../data/model.dart';
 import '../data/library_search.dart';
 import '../data/original_removals.dart';
+import 'page_originals.dart';
 
 RegisteredOriginal _legacyOriginal(String text, [String citation = '']) =>
     RegisteredOriginal(
@@ -51,6 +52,7 @@ Iterable<_ScopedOriginal> _scopedOriginals(
   ]) {
     if (!ids.contains(page.recordId)) continue;
     for (final passage in page.passages) {
+      if (passage.original != null) continue;
       yield fromRecord(
         page.recordId,
         _legacyOriginal(passage.source, passage.citation),
@@ -309,6 +311,29 @@ Map<String, ({Passage passage, bool marked})> originalWritingLocations(
           marked: false,
         );
       }
+    }
+    for (final link in pageOriginals(page, originals)) {
+      final source = passageOriginal(link);
+      if (source == null) continue;
+      final stored = originals.where((o) => o.id == source.id).firstOrNull;
+      if (stored == null) continue;
+      final end = passageEnd(
+        pageOriginals(page, originals),
+        link,
+        page.text.length,
+      );
+      if (end <= link.start) continue;
+      locations[source.id] = (
+        passage: Passage(
+          page,
+          '',
+          page.text.substring(link.start, end).trim(),
+          offset: link.start,
+        ),
+        marked: page.pencilMarks.any(
+          (m) => m.start < end && m.end > link.start,
+        ),
+      );
     }
     // A mark can cover a single word or more than one line.
     for (final mark in page.pencilMarks) {

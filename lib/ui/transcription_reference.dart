@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart' show RenderParagraph;
 import '../data/model.dart';
 import '../source/transcription_comparison.dart';
 import 'paper.dart';
+import 'original_photo.dart';
 
 /// Scrolls the selected original independently of the editable paper.
 class TranscriptionReference extends StatefulWidget {
@@ -13,12 +14,17 @@ class TranscriptionReference extends StatefulWidget {
     super.key,
     required this.original,
     required this.comparison,
+    this.startOffset = 0,
+    this.sourceOffset = 0,
+    this.endOffset,
     required this.controller,
     required this.style,
   });
 
   final RegisteredOriginal original;
   final TranscriptionComparison? comparison;
+  final int startOffset, sourceOffset;
+  final int? endOffset;
   final TextEditingController controller;
   final TextStyle style;
 
@@ -67,7 +73,19 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Semantics(
           label: '따라 쓰는 원문',
-          child: TextFieldTapRegion(child: _textReference(passage, scaler)),
+          child: TextFieldTapRegion(
+            child: passage.isEmpty
+                ? (source.photoId == null
+                      ? SingleChildScrollView(
+                          child: Text(source.citation, style: widget.style),
+                        )
+                      : OriginalPhoto(
+                          id: source.photoId!,
+                          region: source.photoRegion,
+                          fitWidth: true,
+                        ))
+                : _textReference(passage, scaler),
+          ),
         ),
       ),
     );
@@ -83,10 +101,18 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
             ? math.min(caret, value.composing.start)
             : caret;
         final offset =
-            widget.comparison?.sourceOffsetFor(
-              value.text.substring(0, committed),
-            ) ??
-            0;
+            (widget.sourceOffset +
+                    (widget.comparison?.sourceOffsetFor(
+                          value.text.substring(
+                            widget.startOffset.clamp(0, value.text.length),
+                            committed.clamp(
+                              widget.startOffset.clamp(0, value.text.length),
+                              widget.endOffset ?? value.text.length,
+                            ),
+                          ),
+                        ) ??
+                        0))
+                .clamp(0, passage.length);
         if (widget.comparison != null) {
           _follow(offset, (
             offset,

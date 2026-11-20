@@ -8,6 +8,7 @@ import 'editable_geometry.dart';
 class TranscriptionGuidePainter extends CustomPainter {
   TranscriptionGuidePainter({
     required this.comparison,
+    this.startOffset = 0,
     required this.controller,
     required this.scroll,
     required this.fieldKey,
@@ -17,6 +18,7 @@ class TranscriptionGuidePainter extends CustomPainter {
   }) : super(repaint: Listenable.merge([controller, scroll]));
 
   final TranscriptionComparison comparison;
+  final int startOffset;
   final TextEditingController controller;
   final ScrollController scroll;
   final GlobalKey fieldKey;
@@ -37,7 +39,7 @@ class TranscriptionGuidePainter extends CustomPainter {
         composing.end == value.text.length;
     final committed = composingAtEnd ? composing.start : value.text.length;
     return _lastRemainder = comparison.remainderFor(
-      value.text.substring(0, committed),
+      value.text.substring(startOffset.clamp(0, committed), committed),
       composingLength: composingAtEnd
           ? composing.textInside(value.text).characters.length
           : 0,
@@ -113,6 +115,7 @@ class TranscriptionGuidePainter extends CustomPainter {
   @override
   bool shouldRepaint(TranscriptionGuidePainter oldDelegate) =>
       comparison != oldDelegate.comparison ||
+      startOffset != oldDelegate.startOffset ||
       style != oldDelegate.style ||
       controller != oldDelegate.controller ||
       scroll != oldDelegate.scroll ||

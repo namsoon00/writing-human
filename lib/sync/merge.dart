@@ -146,8 +146,12 @@ List<PagePassage> _mergePassages(
   final before = base == null ? <String, PagePassage>{} : aligned(base);
   final left = aligned(local);
   final right = aligned(remote);
-  return [
-    for (final id in {...left.keys, ...right.keys})
+  final merged = [
+    for (final id in {
+      ...before.keys,
+      ...left.keys,
+      ...right.keys,
+    }.where((id) => left.containsKey(id) || right.containsKey(id)))
       if (left[id] == null)
         right[id]!
       else if (right[id] == null ||
@@ -156,6 +160,17 @@ List<PagePassage> _mergePassages(
       else
         right[id]!,
   ];
+  final ordered = merged.indexed.toList()
+    ..sort((a, b) {
+      final start = a.$2.start.compareTo(b.$2.start);
+      if (start != 0) return start;
+      if (a.$2.following != b.$2.following) return a.$2.following ? 1 : -1;
+      if (a.$2.id.startsWith('link-') && b.$2.id.startsWith('link-')) {
+        return a.$2.id.compareTo(b.$2.id);
+      }
+      return a.$1.compareTo(b.$1);
+    });
+  return ordered.map((p) => p.$2).toList();
 }
 
 BookDetailChoice _mergeDetailChoice(

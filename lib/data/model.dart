@@ -516,11 +516,16 @@ class PagePassage {
     this.paragraph = 0,
     this.sourceOffset = 0,
     this.continued = false,
+    this.attached = false,
+    this.original,
+    this.referenceOnly = false,
+    this.following = false,
   });
 
   final String id, source, citation;
   final int start, paragraph, sourceOffset;
-  final bool continued;
+  final bool continued, attached, referenceOnly, following;
+  final RegisteredOriginal? original;
 
   PagePassage copy({
     int? start,
@@ -529,6 +534,11 @@ class PagePassage {
     int? paragraph,
     int? sourceOffset,
     bool? continued,
+    bool? attached,
+    RegisteredOriginal? original,
+    bool? referenceOnly,
+    bool? following,
+    bool clearOriginal = false,
   }) => PagePassage(
     id: id,
     start: start ?? this.start,
@@ -537,6 +547,10 @@ class PagePassage {
     paragraph: paragraph ?? this.paragraph,
     sourceOffset: sourceOffset ?? this.sourceOffset,
     continued: continued ?? this.continued,
+    attached: attached ?? this.attached,
+    original: clearOriginal ? null : original ?? this.original,
+    referenceOnly: referenceOnly ?? this.referenceOnly,
+    following: following ?? this.following,
   );
 
   Json toJson() => {
@@ -547,6 +561,10 @@ class PagePassage {
     'paragraph': paragraph,
     'sourceOffset': sourceOffset,
     if (continued) 'continued': true,
+    if (attached) 'attached': true,
+    if (original != null) 'original': original!.toJson(),
+    if (referenceOnly) 'referenceOnly': true,
+    if (following) 'following': true,
   };
 
   factory PagePassage.fromJson(Json j) => PagePassage(
@@ -557,6 +575,12 @@ class PagePassage {
     paragraph: j['paragraph'] as int,
     sourceOffset: j['sourceOffset'] as int,
     continued: j['continued'] as bool? ?? false,
+    attached: j['attached'] as bool? ?? (j['id'] as String).startsWith('link-'),
+    original: j['original'] == null
+        ? null
+        : RegisteredOriginal.fromJson(j['original'] as Json),
+    referenceOnly: j['referenceOnly'] as bool? ?? false,
+    following: j['following'] as bool? ?? false,
   );
 
   static List<PagePassage> afterEdit(
@@ -581,7 +605,9 @@ class PagePassage {
     }
     return [
       for (final entry in passages)
-        entry.start <= prefix
+        entry.start == prefix && oldEnd == prefix && entry.following
+            ? entry.copy(start: newEnd)
+            : entry.start <= prefix
             ? entry
             : entry.copy(
                 start: entry.start < oldEnd
@@ -1111,6 +1137,11 @@ class Library {
                 (entry) =>
                     entry.id.isEmpty ||
                     entry.id.length > 250 ||
+                    (entry.original != null &&
+                        (!entry.attached ||
+                            !RegisteredOriginal.validList([
+                              entry.original!,
+                            ]))) ||
                     entry.start < 0 ||
                     entry.start > p.text.length ||
                     entry.citation.length > 500 ||

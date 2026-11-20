@@ -21,8 +21,10 @@ class LibraryBackup {
       for (final original in book.originals) ?original.photoId,
     for (final record in library.records)
       for (final original in record.originals) ?original.photoId,
-    for (final page in [...library.pages, ...library.trashedPages])
+    for (final page in [...library.pages, ...library.trashedPages]) ...{
       ?page.originalSlip?.photoId,
+      for (final passage in page.passages) ?passage.original?.photoId,
+    },
   };
 
   static Future<LibraryBackup> collect(

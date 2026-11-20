@@ -235,3 +235,20 @@ test('Two simultaneous clients cannot both overwrite the same revision', async()
     assert.deepEqual(results.map(r=>r.status).sort(),[200,409]);
   } finally { db.close(); }
 });
+
+
+test('Multiple anchored originals retain independent text and photo snapshots', () => {
+  const library = empty();
+  library.records = [{id: 'r', bookId: null, title: '글', source: ''}];
+  const original = {id: 'original', text: '원문', citation: '출처', photoId: 'a'.repeat(64)};
+  const link = {id: 'link-a', start: 1, source: '원문', citation: '출처', paragraph: 0, sourceOffset: 0, attached: true, original};
+  library.pages = [{id: 'p', recordId: 'r', number: 1, text: '글쓰기', base: 1, extent: 1, scroll: 0, passages: [link, {...link, id: 'link-b', start: 2}]}];
+  assert.equal(validLibrary(library), true);
+  for (const invalid of [{attached: false}, {original: {...original, photoId: 'broken'}}, {referenceOnly: 'true'}, {start: 4}]) {
+    library.pages[0].passages = [{...link, ...invalid}];
+    assert.equal(validLibrary(library), false);
+  }
+  library.pages[0].passages = [{...link, original: undefined}];
+  delete library.pages[0].passages[0].original;
+  assert.equal(validLibrary(library), true);
+});

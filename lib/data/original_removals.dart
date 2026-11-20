@@ -51,16 +51,44 @@ Library applyOriginalRemovals(
     final clearGuide =
         ids?.contains(guide) == true ||
         guidesByBook[booksByRecord[page.recordId]]?.contains(guide) == true;
+    final attachedRemoved = <PagePassage>[];
+    final updated = [
+      for (final p in page.passages)
+        if (p.attached &&
+            (ids?.contains(
+                      p.original?.id ?? legacyOriginalId(p.source, p.citation),
+                    ) ==
+                    true ||
+                guidesByBook[booksByRecord[page.recordId]]?.contains(
+                      p.original?.id,
+                    ) ==
+                    true))
+          (() {
+            attachedRemoved.add(p);
+            return PagePassage(
+              id: p.id,
+              start: p.start,
+              attached: true,
+              following: p.following,
+            );
+          })()
+        else
+          p,
+    ];
     final passages = ids == null
-        ? page.passages
-        : page.passages
+        ? updated
+        : updated
               .where(
                 (entry) => !ids.contains(
                   legacyOriginalId(entry.source, entry.citation),
                 ),
               )
               .toList();
-    if (!clearGuide && passages.length == page.passages.length) return page;
+    if (!clearGuide &&
+        attachedRemoved.isEmpty &&
+        passages.length == page.passages.length) {
+      return page;
+    }
     final bookId = booksByRecord[page.recordId];
     final removedOriginal = clearGuide
         ? [
@@ -74,6 +102,7 @@ Library applyOriginalRemovals(
         : null;
     final preserved = [
       if (removedOriginal != null) removedOriginal.citation,
+      for (final p in attachedRemoved) p.citation,
       for (final entry in page.passages)
         if (!passages.contains(entry)) entry.citation,
     ].fold(page, (page, citation) => page.rememberOriginalCitation(citation));

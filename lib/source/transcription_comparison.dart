@@ -7,15 +7,21 @@ typedef TranscriptionDifference = ({int start, int end, String expected});
 /// Compares entered graphemes with the selected passage. One short lookahead
 /// distinguishes a wrong glyph from an extra or missing glyph.
 class TranscriptionComparison {
-  TranscriptionComparison(RegisteredOriginal original)
-    : _source = original.text
-          .substring(
-            original.writingRange?.start ?? 0,
-            original.writingRange?.end,
-          )
-          .trimLeft()
-          .characters
-          .toList(growable: false);
+  TranscriptionComparison(RegisteredOriginal original, {int sourceOffset = 0})
+    : _source = _remaining(
+        original,
+        sourceOffset,
+      ).characters.toList(growable: false);
+
+  static String _remaining(RegisteredOriginal original, int offset) {
+    final text = original.text
+        .substring(
+          original.writingRange?.start ?? 0,
+          original.writingRange?.end,
+        )
+        .trimLeft();
+    return text.substring(offset.clamp(0, text.length));
+  }
 
   final List<String> _source;
   String? _lastWritten;

@@ -275,8 +275,10 @@ void main() {
         expect(restored.style.writingSound, isTrue);
         expect(restored.pages.single.text, original.pages.single.text);
         expect(
-          restored.pages.single.passages.single.toJson(),
-          passage.toJson(),
+          restored.pages.single.passages
+              .firstWhere((p) => p.id == passage.id)
+              .toJson(),
+          passage.copy(attached: true).toJson(),
         );
         expect(
           restored.records.single.toJson()..remove('originals'),

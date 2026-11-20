@@ -197,7 +197,7 @@ String _words(String value) => value
 typedef SourceSearchChoice = ({
   String? citation,
   String? text,
-  bool reviewedPoem,
+  WikisourcePoem? poem,
 });
 
 class _SourceHit {
@@ -226,20 +226,21 @@ class _SourceHit {
 
 Future<SourceSearchChoice?> showSourceSearch(
   BuildContext context,
-  WritingStyle style, {
-  WikisourcePoem? initialPoem,
-}) => Navigator.of(context).push(
-  paperPanelRoute<SourceSearchChoice>(
-    (_) => _SourceSearch(style: style, initialPoem: initialPoem),
+  WritingStyle style,
+) async {
+  final route = paperPanelRoute<SourceSearchChoice>(
+    (_) => _SourceSearch(style: style),
     color: paperColors[style.paperIndex],
-  ),
-);
+  );
+  final result = await Navigator.of(context).push(route);
+  await route.completed;
+  return result;
+}
 
 class _SourceSearch extends StatefulWidget {
-  const _SourceSearch({required this.style, this.initialPoem});
+  const _SourceSearch({required this.style});
 
   final WritingStyle style;
-  final WikisourcePoem? initialPoem;
 
   @override
   State<_SourceSearch> createState() => _SourceSearchState();
@@ -266,10 +267,6 @@ class _SourceSearchState extends State<_SourceSearch> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialPoem case final poem?) {
-      _selected = _SourceHit(_Collection.works, poem.title, poem.pageId);
-      _preview = poem.load(_client);
-    }
     _query.addListener(_queueCompletions);
     _focus.addListener(_queueCompletions);
   }
@@ -378,11 +375,7 @@ class _SourceSearchState extends State<_SourceSearch> {
       launchLabel: kIsWeb ? '새 탭에서 열기' : '웹페이지 열기',
     );
     if (mounted && excerpt != null) {
-      Navigator.pop(context, (
-        citation: citation,
-        text: excerpt,
-        reviewedPoem: false,
-      ));
+      Navigator.pop(context, (citation: citation, text: excerpt, poem: null));
     }
   }
 
@@ -396,11 +389,7 @@ class _SourceSearchState extends State<_SourceSearch> {
     try {
       final text = await readSourceExcerpt();
       if (!mounted) return;
-      Navigator.pop(context, (
-        citation: hit.citation,
-        text: text,
-        reviewedPoem: false,
-      ));
+      Navigator.pop(context, (citation: hit.citation, text: text, poem: null));
     } on FormatException catch (exception) {
       error = exception.message;
     } on Exception {
@@ -492,7 +481,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                   onPressed: () => Navigator.pop(context, (
                     citation: poem.citation,
                     text: stanzas.join('\n\n'),
-                    reviewedPoem: true,
+                    poem: null,
                   )),
                   child: const Text('전체 담기'),
                 ),
@@ -503,7 +492,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                           final selected = _stanzas.toList()..sort();
                           Navigator.pop(context, (
                             citation: poem.citation,
-                            reviewedPoem: true,
+                            poem: null,
                             text: selected
                                 .map((index) => stanzas[index])
                                 .join('\n\n'),
@@ -559,7 +548,7 @@ class _SourceSearchState extends State<_SourceSearch> {
               : () => Navigator.pop(context, (
                   citation: hit.citation,
                   text: null,
-                  reviewedPoem: false,
+                  poem: null,
                 )),
           child: const Text('출처만 넣기'),
         ),
@@ -598,15 +587,9 @@ class _SourceSearchState extends State<_SourceSearch> {
                 children: [
                   if (selected != null)
                     IconButton(
-                      tooltip: widget.initialPoem != null
-                          ? '원문 담기로 돌아가기'
-                          : _webSearch
-                          ? '검색 결과로 돌아가기'
-                          : '바로 담기 목록으로 돌아가기',
+                      tooltip: '검색 결과로 돌아가기',
                       onPressed: _pasting
                           ? null
-                          : widget.initialPoem != null
-                          ? () => Navigator.pop(context)
                           : () => setState(() {
                               _selected = null;
                               _preview = null;
@@ -809,12 +792,9 @@ class _SourceSearchState extends State<_SourceSearch> {
                           title: poem.title,
                           subtitle: poem.author,
                           showDivider: index > 0,
-                          onTap: () => _showHit(
-                            _SourceHit(
-                              _Collection.works,
-                              poem.title,
-                              poem.pageId,
-                            ),
+                          onTap: () => Navigator.pop<SourceSearchChoice>(
+                            context,
+                            (citation: null, text: null, poem: poem),
                           ),
                         ),
                     ],

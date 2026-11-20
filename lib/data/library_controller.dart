@@ -831,7 +831,11 @@ class LibraryController extends ChangeNotifier {
     );
   }
 
-  void addPage({String? recordId, String? guidedOriginalId}) {
+  void addPage({
+    String? recordId,
+    String? guidedOriginalId,
+    String? originalCitation,
+  }) {
     final record = recordId == null
         ? library.activeRecord
         : library.records.where((item) => item.id == recordId).firstOrNull;
@@ -846,7 +850,7 @@ class LibraryController extends ChangeNotifier {
               .where((p) => p.recordId == record.id)
               .fold<int>(0, (max, p) => p.number > max ? p.number : max) +
           1,
-    );
+    ).rememberOriginalCitation(originalCitation ?? '');
     _publish(
       library.copy(
         pages: [...library.pages, page],

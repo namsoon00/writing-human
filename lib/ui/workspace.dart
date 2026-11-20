@@ -732,7 +732,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     Future<bool> Function(SourceImportResult)? onSaveExtraction,
     String? bookId,
     bool allowUnbound = true,
-    String Function(String?)? saveAndWriteLabel,
   }) async {
     final books = {for (final book in c.library.books) book.id: book.title};
     final targetBook = c.library.books
@@ -767,7 +766,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               books: books,
               bookId: bookId,
               allowUnbound: allowUnbound,
-              saveAndWriteLabel: saveAndWriteLabel,
             ),
           ),
         ),
@@ -795,11 +793,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         initialPhoto: initialPhoto,
         bookId: bookId,
         allowUnbound: selectedPage != null,
-        saveAndWriteLabel: selectedPage == null
-            ? null
-            : (id) => _opensAsReference(id, selectedPage)
-                  ? '담고 쓰면서 원문 보기'
-                  : '담고 옮겨 쓰기',
       );
       if (result == null ||
           !mounted ||
@@ -1004,7 +997,12 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     if (page.id != origin.id) return;
     if (saved.startWriting) {
       setState(() => _savedSource = null);
-      await _startTranscription(saved.original, saved.bookId, origin);
+      await _startTranscription(
+        saved.original,
+        saved.bookId,
+        origin,
+        newPageIfWritten: true,
+      );
       return;
     }
     setState(
@@ -1025,8 +1023,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   Future<void> _startTranscription(
     RegisteredOriginal original,
     String? bookId,
-    WritingPage origin,
-  ) async {
+    WritingPage origin, {
+    bool newPageIfWritten = false,
+  }) async {
     if (page.id != origin.id) return;
     String? target;
     final owner = c;
@@ -1068,6 +1067,12 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 .withDetails(guidedOriginalId: source.id),
             bookId: bookId,
             keepBlank: true,
+          );
+        } else if (newPageIfWritten && page.text.isNotEmpty) {
+          c.addPage(
+            recordId: page.recordId,
+            guidedOriginalId: source.id,
+            originalCitation: source.citation,
           );
         } else {
           c.guidePage(page.id, source);
@@ -1381,7 +1386,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         await route.completed;
         if (savedAfterPanel case final saved?) {
           if (mounted && c == owner && !_accountLocked) {
-            await _afterOriginalSave(selectedPage, saved);
+            if (bookDetails != null && saved.startWriting) {
+              await _afterSheet(() => _afterOriginalSave(selectedPage, saved));
+            } else {
+              await _afterOriginalSave(selectedPage, saved);
+            }
           }
           return;
         }

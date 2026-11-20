@@ -1169,7 +1169,7 @@ void main() {
     },
   );
 
-  testWidgets('The collection opens a reviewed edition without a search', (
+  testWidgets('A collection poem saves directly as a guide without a preview', (
     tester,
   ) async {
     final requests = <Uri>[];
@@ -1222,27 +1222,27 @@ void main() {
         findsOneWidget,
       );
       await tester.tap(poem);
-      await tester.pumpAndSettle();
+      await settleSourceSheets(tester);
       expect(requests.single.queryParameters['oldid'], '430577');
-      expect(find.text('다른 판본'), findsNothing);
-      await tester.tap(find.text('전체 담기'));
-      await tester.pumpAndSettle();
-      expect(
-        tester.widget<TextField>(sourceField).controller!.text,
-        '첫 줄\n둘째 줄',
-      );
-      expect(find.text('담고 옮겨 쓰기'), findsOneWidget);
-      expect(store.data.records, isEmpty);
+      expect(find.text('원문 미리보기'), findsNothing);
+      expect(find.byType(SourceImportSheet), findsNothing);
+      final saved = store.data.records.single.originals.single;
+      expect(saved.text, '첫 줄\n둘째 줄');
+      expect(store.data.activePage!.guidedOriginalId, saved.id);
+      expect(remainingInline(tester), saved.text);
     }, () => client);
   });
 
   for (final existingText in [false, true]) {
     testWidgets(
-      'Poem suggestions can save and open a guide (existing text: $existingText)',
+      'Poem suggestions save and open a guide with one tap (existing text: $existingText)',
       (tester) async {
         final requests = <Uri>[];
         final client = MockClient((request) async {
           requests.add(request.url);
+          if (!existingText && requests.length == 1) {
+            return http.Response('', 503);
+          }
           return http.Response.bytes(
             utf8.encode(
               jsonEncode({
@@ -1291,36 +1291,34 @@ void main() {
           final poem = find.widgetWithText(ListTile, '서시');
           await tester.ensureVisible(poem);
           await tester.tap(poem);
-          await tester.pumpAndSettle();
-          expect(requests.single.queryParameters['oldid'], '387685');
-          await tester.tap(find.text('옮겨 쓸 연'));
-          await tester.pumpAndSettle();
-          await tester.tap(find.text('선택한 구절 담기'));
-          await tester.pumpAndSettle();
-          expect(
-            tester.widget<TextField>(sourceField).controller!.text,
-            '옮겨 쓸 연',
-          );
-          expect(store.writes, 0);
-          expect(find.text('담기'), findsOneWidget);
-
-          await tester.tap(
-            find.text(existingText ? '담고 쓰면서 원문 보기' : '담고 옮겨 쓰기'),
-          );
           await settleSourceSheets(tester);
+          if (!existingText) {
+            expect(find.textContaining('작품을 불러오지 못했어요'), findsOneWidget);
+            expect(store.writes, 0);
+            await tester.ensureVisible(poem);
+            await tester.tap(poem);
+            await settleSourceSheets(tester);
+          }
+          expect(
+            requests.map((request) => request.queryParameters['oldid']),
+            List.filled(existingText ? 1 : 2, '387685'),
+          );
+          expect(find.text('원문 미리보기'), findsNothing);
           final saved = store.data.records.single.originals.last;
           final page = store.data.activePage!;
-          expect(saved.text, '옮겨 쓸 연');
+          expect(saved.text, '첫 번째 연\n\n옮겨 쓸 연');
           expect(saved.citation, contains('oldid=387685'));
           expect(page.guidedOriginalId, saved.id);
-          expect(page.text, existingText ? '이미 쓴 글' : isEmpty);
-          expect(page.referenceOnly, existingText);
+          expect(page.text, isEmpty);
+          expect(page.referenceOnly, isFalse);
+          if (existingText) {
+            expect(store.data.pages.first.text, '이미 쓴 글');
+            expect(store.data.pages.first.guidedOriginalId, isNull);
+            expect(page.number, 2);
+          }
           expect(reading, findsNothing);
           expect(find.byType(SourceImportSheet), findsNothing);
-          expect(
-            existingText ? remainingReference(tester) : remainingInline(tester),
-            '옮겨 쓸 연',
-          );
+          expect(remainingInline(tester), saved.text);
         }, () => client);
       },
     );

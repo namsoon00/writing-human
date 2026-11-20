@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 
 import '../data/model.dart';
 import '../data/original_photo_store.dart';
@@ -58,7 +59,6 @@ class SourceImportSheet extends StatefulWidget {
     this.books = const {},
     this.bookId,
     this.allowUnbound = true,
-    this.saveAndWriteLabel,
   });
 
   final SourceIntake intake;
@@ -75,7 +75,6 @@ class SourceImportSheet extends StatefulWidget {
   final bool shared, registration, allowUnbound;
   final Map<String, String> books;
   final String? bookId;
-  final String Function(String?)? saveAndWriteLabel;
 
   @override
   State<SourceImportSheet> createState() => _SourceImportSheetState();
@@ -117,7 +116,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   bool _savingPhoto = false;
   bool _showDetails = false;
   bool _showPhotoText = false;
-  bool _pickedPoem = false;
   late final OriginalPhotoStore _photos = const OriginalPhotoStore();
   _ScanMode _mode = _ScanMode.page;
   List<int> _order = [];
@@ -203,27 +201,47 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     }
   }
 
-  Future<void> _searchSources({WikisourcePoem? poem}) async {
+  Future<void> _searchSources() async {
     if (!_editable) return;
     FocusScope.of(context).unfocus();
-    final choice = await showSourceSearch(
-      context,
-      widget.style,
-      initialPoem: poem,
-    );
+    final choice = await showSourceSearch(context, widget.style);
     if (!mounted || choice == null || !_editable) return;
-    final (:text, :citation, :reviewedPoem) = choice;
+    final (:text, :citation, :poem) = choice;
+    if (poem != null) {
+      await _pickPoem(poem);
+      return;
+    }
+    if (!await _confirmSourceReplacement(text: text, citation: citation) ||
+        !mounted ||
+        !_editable) {
+      return;
+    }
+    if (text != null) _text.text = text;
+    if (citation != null) _citation.text = citation;
+  }
+
+  Future<bool> _confirmSourceReplacement({
+    String? text,
+    String? citation,
+    bool replacePhoto = false,
+  }) async {
     final replacesText =
         text != null && _text.text.trim().isNotEmpty && _text.text != text;
     final replacesCitation =
         citation != null &&
         _citation.text.trim().isNotEmpty &&
         _citation.text != citation;
-    if (replacesText || replacesCitation) {
+    if (replacePhoto || replacesText || replacesCitation) {
       final replace = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text(replacesText ? '입력한 원문을 바꿀까요?' : '입력한 출처를 바꿀까요?'),
+          title: Text(
+            replacePhoto
+                ? '담을 사진을 이 시로 바꿀까요?'
+                : replacesText
+                ? '입력한 원문을 바꿀까요?'
+                : '입력한 출처를 바꿀까요?',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -236,14 +254,43 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
           ],
         ),
       );
-      if (!mounted || replace != true || !_editable) return;
+      return replace == true;
     }
-    if (text != null) {
-      _text.text = text;
-      setState(() => _pickedPoem = reviewedPoem);
+    return true;
+  }
+
+  Future<void> _pickPoem(WikisourcePoem poem) async {
+    if (!_editable) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final client = http.Client();
+    String? text;
+    try {
+      text = (await poem.load(client)).join('\n\n');
+    } on Exception {
+      if (mounted) {
+        setState(() => _error = '작품을 불러오지 못했어요. 작품을 다시 눌러 주세요.');
+        if (_bodyScroll.hasClients) _bodyScroll.jumpTo(0);
+      }
+    } finally {
+      client.close();
+      if (mounted) setState(() => _busy = false);
     }
-    if (citation != null) _citation.text = citation;
-    if (reviewedPoem && _bodyScroll.hasClients) _bodyScroll.jumpTo(0);
+    if (!mounted || text == null || !_editable) return;
+    final citation = poem.citation;
+    if (!await _confirmSourceReplacement(
+          text: text,
+          citation: citation,
+          replacePhoto: _originalPhoto != null,
+        ) ||
+        !mounted ||
+        !_editable) {
+      return;
+    }
+    await _submit(poemText: (text: text, citation: citation));
   }
 
   Future<void> _shareHelp() => showDialog<void>(
@@ -837,22 +884,25 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   }
 
   Future<void> _submit({
-    bool startWriting = false,
+    ({String text, String citation})? poemText,
     bool photoOnly = false,
     bool selectedOnly = false,
   }) async {
     if (photoOnly && (_extractionOnly || _originalPhoto == null)) return;
     final selection = selectedOnly ? _selectedOriginal : null;
     if (selectedOnly && selection == null) return;
-    final text = photoOnly
-        ? ''
-        : selection == null
-        ? _confirmedText
-        : normalizeSource(selection.selection.textInside(selection.text));
+    final text =
+        poemText?.text ??
+        (photoOnly
+            ? ''
+            : selection == null
+            ? _confirmedText
+            : normalizeSource(selection.selection.textInside(selection.text)));
+    final citation = poemText?.citation ?? _citation.text.trim();
     if (!_editable ||
         (!photoOnly && !_hasContent(text)) ||
         text.length > sourceLengthLimit ||
-        _citation.text.trim().length > 500) {
+        citation.length > 500) {
       return;
     }
     final isFullPage = !photoOnly && _isPageReview;
@@ -860,8 +910,8 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       setState(() => _error = '원문이 바뀌었어요. 옮겨 쓸 구절을 다시 골라 주세요.');
       return;
     }
-    final photo = _originalPhoto;
-    final citation = _citation.text.trim(), bookId = _bookId;
+    final photo = poemText == null ? _originalPhoto : null;
+    final bookId = _bookId;
     final passage = _reviewing && _mode == _ScanMode.paragraph
         ? _passage
         : null;
@@ -911,8 +961,8 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       writingRange: range,
       photoLines: photoLines,
       photoId: photoId,
-      photoRegion: photoRegion,
-      startWriting: startWriting,
+      photoRegion: photo == null ? null : photoRegion,
+      startWriting: poemText != null,
     );
     if (widget.onSaveExtraction case final save?) {
       FocusScope.of(context).unfocus();
@@ -1046,7 +1096,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
             title: poem.title,
             subtitle: poem.author,
             showDivider: index > 0,
-            onTap: _editable ? () => _searchSources(poem: poem) : null,
+            onTap: _editable ? () => _pickPoem(poem) : null,
           ),
       TextButton(
         onPressed: _editable ? _searchSources : null,
@@ -1717,14 +1767,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         _hasContent(text) &&
         text.length <= sourceLengthLimit &&
         _citation.text.trim().length <= 500;
-    final writeLabel =
-        _pickedPoem &&
-            !_selecting &&
-            !_reviewing &&
-            _originalPhoto == null &&
-            text.isNotEmpty
-        ? widget.saveAndWriteLabel?.call(_bookId)
-        : null;
     final selectionReady = _mode == _ScanMode.page
         ? _selected.isNotEmpty
         : _paragraph != null;
@@ -1934,11 +1976,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                           _selectionActions(selection)
                         else
                           FilledButton(
-                            key: ValueKey(
-                              writeLabel == null
-                                  ? 'source-confirm'
-                                  : 'source-save-and-write',
-                            ),
+                            key: const ValueKey('source-confirm'),
                             style: _confirmStyle,
                             onPressed: _selecting
                                 ? selectionReady && !_busy
@@ -1947,26 +1985,18 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                                 : _offerExtraction
                                 ? (_editable ? _extractPhoto : null)
                                 : canSubmit
-                                ? () =>
-                                      _submit(startWriting: writeLabel != null)
+                                ? _submit
                                 : null,
                             child: Text(
-                              writeLabel ??
-                                  (_offerExtraction
-                                      ? '사진에서 글자 읽기'
-                                      : !_selecting
-                                      ? (_extractionOnly ? '원문에 글 추가' : '담기')
-                                      : _mode == _ScanMode.page
-                                      ? '페이지 확인'
-                                      : '선택한 구절 확인'),
+                              _offerExtraction
+                                  ? '사진에서 글자 읽기'
+                                  : !_selecting
+                                  ? (_extractionOnly ? '원문에 글 추가' : '담기')
+                                  : _mode == _ScanMode.page
+                                  ? '페이지 확인'
+                                  : '선택한 구절 확인',
                               textAlign: TextAlign.center,
                             ),
-                          ),
-                        if (writeLabel != null)
-                          TextButton(
-                            key: const ValueKey('source-confirm'),
-                            onPressed: canSubmit ? _submit : null,
-                            child: const Text('담기'),
                           ),
                         if (_offerExtraction &&
                             !_readingPhoto &&

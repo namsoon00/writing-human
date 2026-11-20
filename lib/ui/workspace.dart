@@ -996,6 +996,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     );
   }
 
+  String _transcribeLabel(String? bookId, WritingPage page) =>
+      page.text.isNotEmpty && (bookId == null || book?.id == bookId)
+      ? '쓰면서 원문 보기'
+      : '이 구절 옮겨 쓰기';
+
   Future<void> _startTranscription(
     RegisteredOriginal original,
     String? bookId,
@@ -1211,6 +1216,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             listenable: owner,
             builder: (context, _) => SourceReading(
               originals: originals(),
+              transcribeLabel: _transcribeLabel(bookId, selectedPage),
               previousCitations: bookDetails == null
                   ? selectedPage.originalCitations
                   : const [],
@@ -1943,16 +1949,16 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                               : null,
                           child: Text(
                             saved.original.canTranscribe
-                                ? '이 구절 필사하기'
+                                ? _transcribeLabel(saved.bookId, currentPage)
                                 : saved.original.photoId != null
                                 ? '담은 사진 열기'
-                                : '보관한 원문 열기',
+                                : '담은 원문 열기',
                           ),
                         ),
                       ),
                     ),
                     IconButton(
-                      tooltip: '필사 안내 닫기',
+                      tooltip: '원문 안내 닫기',
                       onPressed: () => setState(() => _savedSource = null),
                       icon: const Icon(CupertinoIcons.xmark, size: 16),
                     ),

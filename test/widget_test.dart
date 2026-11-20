@@ -768,7 +768,7 @@ void main() {
     await tester.tap(find.byTooltip('쓰기 도구'));
     await tester.pumpAndSettle();
     expect(find.textContaining('11,172'), findsNothing);
-    final archive = find.text('기록 보관');
+    final archive = find.text('기록 관리');
     addTearDown(tester.view.resetPadding);
     tester.view.padding = const FakeViewPadding(top: 47, bottom: 34);
     await tester.pumpAndSettle();

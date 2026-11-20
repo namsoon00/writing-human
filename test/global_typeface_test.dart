@@ -248,9 +248,9 @@ void main() {
       await tester.tap(smaller);
       await tester.pumpAndSettle();
       expect(Library.decode(store.snapshot).style.fontSize, 29);
-      await tester.ensureVisible(find.text('기록 보관'));
+      await tester.ensureVisible(find.text('기록 관리'));
       await tester.pumpAndSettle();
-      expect(find.text('기록 보관').hitTestable(), findsOneWidget);
+      expect(find.text('기록 관리').hitTestable(), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

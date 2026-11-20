@@ -220,7 +220,7 @@ Future<void> saveWithPhoto(WidgetTester tester, {Finder? action}) async {
 Future<void> openSourceSearch(WidgetTester tester) async {
   await tester.tap(find.byKey(const ValueKey('source-import-more')));
   await tester.pumpAndSettle();
-  await tester.tap(find.text('시·문장 검색'));
+  await tester.tap(find.text('새 원문 찾기'));
   await tester.pumpAndSettle();
 }
 
@@ -233,12 +233,12 @@ Future<void> showSourceDetails(WidgetTester tester) async {
 }
 
 Future<void> extractPhoto(WidgetTester tester, {bool settle = true}) async {
-  final secondary = find.widgetWithText(TextButton, '사진에서 글자 뽑기');
+  final secondary = find.widgetWithText(TextButton, '사진에서 글자 읽기');
   if (secondary.evaluate().isNotEmpty) {
     await tester.ensureVisible(secondary);
     await tester.tap(secondary);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, '글자 뽑기'));
+    await tester.tap(find.widgetWithText(FilledButton, '사진에서 글자 읽기'));
   } else {
     await tester.tap(confirm);
   }
@@ -291,7 +291,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('first-slip')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('이 쪽에 끼우기'));
+      await tester.tap(find.text('원문 쪽지 끼우기'));
       await settleSourceSheets(tester);
       expect(tab, findsOneWidget);
       expect(store.data.activePage!.originalSlip?.text, '먼저 끼울 구절');
@@ -305,7 +305,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('second-slip')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('쪽지 바꾸기'));
+      await tester.tap(find.text('원문 쪽지 바꾸기'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('바꾸기'));
       await settleSourceSheets(tester);
@@ -340,7 +340,7 @@ void main() {
       expect(find.text('사진 찍기').hitTestable(), findsOneWidget);
       expect(sourceField.hitTestable(), findsOneWidget);
       expect(find.text('붙여넣기').hitTestable(), findsOneWidget);
-      expect(find.text('시·문장 검색'), findsNothing);
+      expect(find.text('새 원문 찾기'), findsNothing);
       expect(find.byKey(const ValueKey('original-citation')), findsNothing);
       expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
 
@@ -354,7 +354,7 @@ void main() {
       expect(store.data.records.single.originals.single.photoId, isNotNull);
       expect(store.data.records.single.originals.single.canTranscribe, isFalse);
       expect(find.text('담은 사진 열기'), findsOneWidget);
-      expect(find.text('이 구절 필사하기'), findsNothing);
+      expect(find.text('이 구절 옮겨 쓰기'), findsNothing);
       expect(store.data.activePage!.guidedOriginalId, isNull);
     },
   );
@@ -381,7 +381,7 @@ void main() {
         find.byKey(const ValueKey('original-photo-preview')),
         findsOneWidget,
       );
-      expect(find.text('글자 뽑기'), findsOneWidget);
+      expect(find.text('사진에서 글자 읽기'), findsOneWidget);
       await extractPhoto(tester);
       expect(intake.scans, 1);
       expect(find.text('원문 확인'), findsOneWidget);
@@ -445,7 +445,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(confirm);
     await settleSourceSheets(tester);
-    await tester.tap(find.text('이 구절 필사하기'));
+    await tester.tap(find.text('이 구절 옮겨 쓰기'));
     await tester.pumpAndSettle();
     expect(store.data.records.single.originals.single.text, cleaned);
     expect(store.data.activePage!.text, isEmpty);
@@ -619,7 +619,7 @@ void main() {
     final writes = store.writes;
     await tester.tap(place);
     await tester.pumpAndSettle();
-    final search = find.widgetWithText(TextButton, '원문 검색');
+    final search = find.widgetWithText(TextButton, '담은 원문 찾기');
     final register = find.widgetWithText(TextButton, '원문 담기');
     expect(
       tester.getTopLeft(search).dy,
@@ -1302,7 +1302,7 @@ void main() {
       tester.widget<Text>(readingText).textSpan!.toPlainText(),
       '정오의 종소리가 들렸다.',
     );
-    expect(find.text('이 구절 필사하기'), findsOneWidget);
+    expect(find.text('쓰면서 원문 보기'), findsOneWidget);
     await tester.tap(closeIn(reading));
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(bodyField).controller, same(body));
@@ -1713,7 +1713,7 @@ void main() {
       await tester.ensureVisible(citation);
       await tester.enterText(citation, '12쪽');
       await tester.pumpAndSettle();
-      final chooseRange = find.text('필사 범위 · 전체 페이지');
+      final chooseRange = find.text('옮겨 쓸 구절 · 원문 전체');
       await tester.ensureVisible(chooseRange);
       await tester.tap(chooseRange);
       await tester.pumpAndSettle();
@@ -1778,7 +1778,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(highlighted(), '오른쪽 문단');
-      await tester.tap(find.text('범위 적용'));
+      await tester.tap(find.text('이 구절 선택'));
       await tester.pumpAndSettle();
       await saveWithPhoto(tester);
       final original = store.data.records.single.originals.single;
@@ -2154,7 +2154,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(confirm);
       await settleSourceSheets(tester);
-      await tester.tap(find.text('이 구절 필사하기'));
+      await tester.tap(find.text('이 구절 옮겨 쓰기'));
       await settleSourceSheets(tester);
       final field = tester.widget<TextField>(bodyField);
       expect(field.controller!.text, isEmpty);
@@ -2570,7 +2570,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(confirm);
       await settleSourceSheets(tester);
-      await tester.tap(find.text('이 구절 필사하기'));
+      await tester.tap(find.text('쓰면서 원문 보기'));
       await settleSourceSheets(tester);
 
       expect(reading, findsNothing);
@@ -2705,18 +2705,18 @@ void main() {
       }
 
       await loadPhotoAfter(find.text('원본 사진').last);
-      expect(find.text('이 구절 필사하기'), findsNothing);
+      expect(find.text('이 구절 옮겨 쓰기'), findsNothing);
       expect(find.byType(OriginalPhoto), findsOneWidget);
       expect(store.data.activePage!.guidedOriginalId, isNull);
       tester.view.physicalSize = const Size(320, 640);
       await tester.pumpAndSettle();
       final extract = find.ancestor(
-        of: find.text('사진에서 글자 뽑기'),
+        of: find.text('사진에서 글자 읽기'),
         matching: find.byWidgetPredicate((widget) => widget is FilledButton),
       );
       final photo = tester.getRect(find.byType(OriginalPhoto));
       final action = tester.getRect(extract);
-      final slip = tester.getRect(find.text('이 쪽에 끼우기'));
+      final slip = tester.getRect(find.text('원문 쪽지 끼우기'));
       expect(action.width, 320 - 48);
       expect(action.top - photo.bottom, greaterThanOrEqualTo(12));
       expect(slip.top, greaterThan(action.bottom));
@@ -2748,6 +2748,7 @@ void main() {
       await tester.enterText(sourceField, '사진에서 확인한 첫 문단.');
       await tester.pumpAndSettle();
 
+      expect(find.text('원문에 글 추가'), findsOneWidget);
       store.fail = true;
       await loadPhotoAfter(confirm);
       expect(find.text('원문 글을 저장하지 못했어요. 다시 저장해 주세요.'), findsOneWidget);
@@ -2766,7 +2767,7 @@ void main() {
       expect(saved.citation, '책 72쪽');
       expect(saved.text, '사진에서 확인한 첫 문단.\n\n둘째 문단입나다.');
       expect(store.data.activePage!.guidedOriginalId, isNull);
-      await loadPhotoAfter(find.text('이 구절 필사하기'));
+      await loadPhotoAfter(find.text('이 구절 옮겨 쓰기'));
       expect(store.data.activePageId, 'p');
       expect(store.data.activePage!.text, isEmpty);
       expect(store.data.activePage!.guidedOriginalId, original.id);
@@ -2849,7 +2850,7 @@ void main() {
         find.byKey(const ValueKey('original-photo-preview')),
         findsOneWidget,
       );
-      expect(find.text('글자 뽑기'), findsOneWidget);
+      expect(find.text('사진에서 글자 읽기'), findsOneWidget);
       expect(intake.scans, 0);
       expect(intake.photos, 0);
       expect(store.writes, 0);

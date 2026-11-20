@@ -587,7 +587,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                   Expanded(
                     child: Text(
                       selected == null
-                          ? '시·문장 검색'
+                          ? '새 원문 찾기'
                           : preview != null
                           ? '원문 미리보기'
                           : '자료 가져오기',

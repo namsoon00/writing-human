@@ -327,7 +327,7 @@ class _TrashPageDialogState extends State<_TrashPageDialog> {
             Text(
               failed
                   ? '옮기지 못했어요. 쪽은 목록에 남아 있어요.'
-                  : '기록 보관의 휴지통에서 이 쪽을 복원할 수 있어요.',
+                  : '기록 관리의 휴지통에서 이 쪽을 복원할 수 있어요.',
             ),
           ],
         ),

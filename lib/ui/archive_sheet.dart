@@ -162,7 +162,7 @@ class _ArchiveSheetState extends State<ArchiveSheet> {
     if (!await _controller.restoreBackup(library)) {
       throw const FormatException('가져온 기록을 저장하지 못했어요. 다시 저장해 주세요.');
     }
-    return '백업을 보관함에 가져왔어요.';
+    return '백업을 가져왔어요.';
   }
 
   String _fileName(String title, String extension) {
@@ -208,7 +208,7 @@ class _ArchiveSheetState extends State<ArchiveSheet> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(28, 6, 16, 8),
-              child: PaperPanelHeader('기록 보관', canClose: !_busy),
+              child: PaperPanelHeader('기록 관리', canClose: !_busy),
             ),
             Expanded(
               child: ListView(

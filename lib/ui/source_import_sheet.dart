@@ -316,7 +316,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('글자 뽑기'),
+              child: const Text('사진에서 글자 읽기'),
             ),
           ],
         ),
@@ -652,7 +652,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     }
     final isFullPage = _isPageReview;
     if (isFullPage && _range != null && _range!.text != text) {
-      setState(() => _error = '원문이 바뀌었어요. 필사 범위를 다시 정해 주세요.');
+      setState(() => _error = '원문이 바뀌었어요. 옮겨 쓸 구절을 다시 골라 주세요.');
       return;
     }
     final photo = _originalPhoto;
@@ -778,7 +778,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     color: panelPaperColor(widget.paperColor),
     surfaceTintColor: Colors.transparent,
     itemBuilder: (_) => const [
-      PopupMenuItem(value: _ImportAction.search, child: Text('시·문장 검색')),
+      PopupMenuItem(value: _ImportAction.search, child: Text('새 원문 찾기')),
       PopupMenuItem(value: _ImportAction.share, child: Text('다른 앱에서 공유')),
     ],
   );
@@ -1280,10 +1280,10 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
               : null,
           icon: const Icon(CupertinoIcons.scope, size: 16),
           label: Text(switch (_range) {
-            null => '필사 범위 · 전체 페이지',
+            null => '옮겨 쓸 구절 · 원문 전체',
             (text: final text, range: _) when text == _confirmedText =>
-              '필사 범위 · 구간 선택됨',
-            _ => '필사 범위 · 다시 선택',
+              '옮겨 쓸 구절 · 일부 선택됨',
+            _ => '옮겨 쓸 구절 · 다시 선택',
           }),
         ),
       ),
@@ -1391,7 +1391,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                               : _reviewing
                               ? '원문 확인'
                               : _extractionOnly
-                              ? '사진에서 글자 뽑기'
+                              ? '사진에서 글자 읽기'
                               : widget.shared
                               ? '공유한 원문'
                               : '원문 담기',
@@ -1486,7 +1486,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                               if (!_offerExtraction)
                                 TextButton(
                                   onPressed: _editable ? _extractPhoto : null,
-                                  child: const Text('사진에서 글자 뽑기'),
+                                  child: const Text('사진에서 글자 읽기'),
                                 ),
                               if (!_extractionOnly &&
                                   !_showPhotoText &&
@@ -1567,9 +1567,9 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                               : null,
                           child: Text(
                             _offerExtraction
-                                ? '글자 뽑기'
+                                ? '사진에서 글자 읽기'
                                 : !_selecting
-                                ? (_extractionOnly ? '원문 글 저장' : '담기')
+                                ? (_extractionOnly ? '원문에 글 추가' : '담기')
                                 : _mode == _ScanMode.page
                                 ? '페이지 확인'
                                 : '선택한 구절 확인',

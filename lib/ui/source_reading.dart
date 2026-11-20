@@ -28,6 +28,7 @@ class SourceReading extends StatefulWidget {
   const SourceReading({
     super.key,
     required this.originals,
+    required this.transcribeLabel,
     this.match,
     this.initialOriginalId,
     this.previousCitations = const [],
@@ -49,6 +50,7 @@ class SourceReading extends StatefulWidget {
   });
 
   final List<RegisteredOriginal> originals;
+  final String transcribeLabel;
   final OriginalMatch? match;
   final String? initialOriginalId;
   final List<String> previousCitations;
@@ -381,7 +383,7 @@ class _SourceReadingState extends State<SourceReading> {
       if (mounted && !saved) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('필사 범위를 저장하지 못했어요.')));
+        ).showSnackBar(const SnackBar(content: Text('옮겨 쓸 구절을 저장하지 못했어요.')));
       }
     } finally {
       if (mounted) setState(() => saving = false);
@@ -545,7 +547,7 @@ class _SourceReadingState extends State<SourceReading> {
                               : CupertinoIcons.search,
                           size: 16,
                         ),
-                        label: Text(searching ? '검색 닫기' : '원문 검색'),
+                        label: Text(searching ? '검색 닫기' : '담은 원문 찾기'),
                       ),
                       FilterChip(
                         label: const Text('밑칠만 보기'),
@@ -614,8 +616,8 @@ class _SourceReadingState extends State<SourceReading> {
                                   : () => _changeRange(original),
                               child: Text(
                                 original.writingRange == null
-                                    ? '필사 범위 · 전체 페이지'
-                                    : '필사 범위 · 구간 선택됨',
+                                    ? '옮겨 쓸 구절 · 원문 전체'
+                                    : '옮겨 쓸 구절 · 일부 선택됨',
                               ),
                             ),
                         ],
@@ -768,7 +770,7 @@ class _SourceReadingState extends State<SourceReading> {
                         size: 17,
                       ),
                       label: const Text(
-                        '사진에서 글자 뽑기',
+                        '사진에서 글자 읽기',
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -797,7 +799,7 @@ class _SourceReadingState extends State<SourceReading> {
                           onPressed: saving
                               ? null
                               : () => widget.onTranscribe!(original),
-                          child: const Text('이 구절 필사하기'),
+                          child: Text(widget.transcribeLabel),
                         ),
                       if (widget.onAttachSlip != null)
                         TextButton.icon(
@@ -806,7 +808,7 @@ class _SourceReadingState extends State<SourceReading> {
                               : () => widget.onAttachSlip!(original),
                           icon: const Icon(CupertinoIcons.paperclip, size: 15),
                           label: Text(
-                            widget.hasOriginalSlip ? '쪽지 바꾸기' : '이 쪽에 끼우기',
+                            widget.hasOriginalSlip ? '원문 쪽지 바꾸기' : '원문 쪽지 끼우기',
                           ),
                         ),
                       if (writing != null && widget.onOpenWriting != null)

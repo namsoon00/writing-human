@@ -178,7 +178,7 @@ class _OriginalRangeSheetState extends State<_OriginalRangeSheet> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const PaperPanelHeader('필사 범위'),
+        const PaperPanelHeader('옮겨 쓸 구절'),
         const SizedBox(height: 8),
         if (widget.photo != null)
           Align(
@@ -272,7 +272,7 @@ class _OriginalRangeSheetState extends State<_OriginalRangeSheet> {
                     TextButton(
                       onPressed: () =>
                           Navigator.pop(context, (range: null as PencilMark?)),
-                      child: const Text('전체 페이지'),
+                      child: const Text('원문 전체'),
                     ),
                     FilledButton(
                       onPressed: validOriginalRange(widget.text, range)
@@ -284,7 +284,7 @@ class _OriginalRangeSheetState extends State<_OriginalRangeSheet> {
                                   : range,
                             ))
                           : null,
-                      child: const Text('범위 적용'),
+                      child: const Text('이 구절 선택'),
                     ),
                   ],
                 ),

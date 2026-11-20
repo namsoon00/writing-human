@@ -818,8 +818,8 @@ void main() {
       expect(tester.widget<TextField>(field).controller!.text, '둘째 페이지');
       await tester.tap(find.byTooltip('쓰기 도구'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('기록 보관'));
-      await tester.tap(find.text('기록 보관'));
+      await tester.ensureVisible(find.text('기록 관리'));
+      await tester.tap(find.text('기록 관리'));
       await tester.pumpAndSettle();
       final trash = find.text('휴지통');
       await tester.tap(trash);

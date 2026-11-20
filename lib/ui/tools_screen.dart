@@ -275,7 +275,7 @@ class ToolsScreen extends StatelessWidget {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(CupertinoIcons.archivebox, size: 20),
-                      title: const Text('기록 보관'),
+                      title: const Text('기록 관리'),
                       onTap: onArchive,
                     ),
                     if (onSync != null)

@@ -2157,3 +2157,15 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   후 공개 웹에서도 두 화면 크기로 같은 동선을 확인했다.
 - 이번 변경의 낭독 검증은 재생 화면과 범위를 여는 동선까지이며,
   실제 음성 재생·iOS와 Android 실기기·Safari는 검증하지 않았다.
+
+## 2026-11-21 · 글씨 설정 기본 펼치기
+
+- Dart 포맷 검사와 Flutter 정적 분석, Flutter 전체 테스트 202개를 통과했다.
+- 위젯 테스트에서 쓰기 도구를 열면 잉크·글꼴 선택이 표시되고, 제목으로 접은 뒤
+  쓰기 도구를 다시 열면 글씨 설정이 펼쳐지는 것을 확인했다. 320×640에서 시스템
+  글씨를 두 배로 늘린 상태로 글자 크기도 조절했다.
+- GitHub Pages용 로컬 웹 빌드를 Chrome 390×844와 320×640에서 열었다.
+  글씨 설정의 기본 펼침과 접기·다시 열기, 소리와 효과의 기본 접힘을 확인했다.
+- [GitHub Pages 배포 44827371608](https://github.com/namsoon00/writing-human/actions/runs/44827371608)
+  후 공개 웹의 두 Chrome 화면 크기에서 같은 동작을 확인했다.
+- iOS·Android 실기기와 Safari는 이번 변경에서 검증하지 않았다.

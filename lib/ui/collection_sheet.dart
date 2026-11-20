@@ -470,29 +470,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
                     icon: const Icon(CupertinoIcons.chevron_left, size: 18),
                   ),
                 if (topLevel)
-                  Expanded(
-                    child: Row(
-                      children: [
-                        if (topLevel) ...[
-                          const InkMark(size: 20),
-                          const SizedBox(width: 8),
-                        ],
-                        Flexible(
-                          child: Text(
-                            shelf ? '책장' : '내 글',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: appFontFamily,
-                              fontFamilyFallback: appFontFallback,
-                              fontSize: 21,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
+                  Expanded(child: PaperPanelTitle(shelf ? '책장' : '내 글'))
                 else if (book != null) ...[
                   if (showingPractice)
                     Expanded(
@@ -545,6 +523,10 @@ class _CollectionSheetState extends State<CollectionSheet> {
                 ),
               ],
             ),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24),
+            child: Divider(height: 1),
           ),
           if (topLevel && !showSearch)
             Padding(

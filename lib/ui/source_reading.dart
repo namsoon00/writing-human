@@ -502,13 +502,11 @@ class _SourceReadingState extends State<SourceReading> {
                       icon: const Icon(CupertinoIcons.chevron_left, size: 19),
                     ),
                   Expanded(
-                    child: Text(
+                    child: PaperPanelTitle(
                       original?.citation.trim().isNotEmpty == true
                           ? original!.citation
                           : '원문',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleLarge,
+                      fontSize: 22,
                     ),
                   ),
                   if (widget.onRegister != null && !editing)

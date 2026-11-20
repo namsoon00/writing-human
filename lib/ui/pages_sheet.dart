@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../data/model.dart';
 import 'paper.dart';
+import 'paper_panel.dart';
 import 'book_details.dart';
 import 'pencil_marks.dart';
 
@@ -55,25 +56,7 @@ class PagesSheet extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 12, 12),
-          child: Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  '쪽 목록',
-                  style: TextStyle(
-                    fontFamily: appFontFamily,
-                    fontFamilyFallback: appFontFallback,
-                    fontSize: 21,
-                  ),
-                ),
-              ),
-              IconButton(
-                tooltip: '닫기',
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(CupertinoIcons.xmark, size: 18),
-              ),
-            ],
-          ),
+          child: const PaperPanelHeader('쪽 목록'),
         ),
         Expanded(
           child: GridView.builder(

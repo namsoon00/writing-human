@@ -145,16 +145,9 @@ void main() {
       );
       await tester.pumpAndSettle();
       await capture('resting');
-      final number = find.byKey(const ValueKey('page-number'));
-      final reveal = find.byKey(const ValueKey('page-turn-reveal'));
-      final forward = await tester.startGesture(tester.getCenter(number));
-      await forward.moveBy(const Offset(-160, 0));
-      await tester.pump();
-      expect(reveal, findsOneWidget);
-      await capture('forward-middle');
-      await forward.up();
+      await tester.tap(find.byKey(const ValueKey('page-number')));
       await tester.pumpAndSettle();
-      await capture('back-cover');
+      await capture('overview');
       await tester.tap(find.text('한 쪽 더'));
       await tester.pumpAndSettle();
       await capture('new-page');
@@ -163,26 +156,10 @@ void main() {
         '새는 알에서 나오려고\n투쟁한다. 알은 세계다.',
       );
       await tester.pumpAndSettle();
-      final backward = await tester.startGesture(tester.getCenter(number));
-      await backward.moveBy(const Offset(165, 0));
-      await tester.pump();
-      expect(reveal, findsOneWidget);
-      await capture('backward-middle');
-      await backward.up();
-      await tester.pumpAndSettle();
-      final close = await tester.startGesture(tester.getCenter(number));
-      await close.moveBy(const Offset(160, 0));
-      await tester.pump();
-      await capture('cover-middle');
-      await close.up();
-      await tester.pumpAndSettle();
-      await capture('cover');
-      await tester.tap(find.byKey(const ValueKey('open-front-cover')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('page-number')));
-      await tester.pumpAndSettle();
-      await capture('overview');
-      await tester.tap(find.byTooltip('닫기'));
+      await tester.tapAt(
+        tester.getTopLeft(find.byKey(const ValueKey('page-text'))) +
+            const Offset(12, 180),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('쓰기 도구'));
       await tester.pumpAndSettle();
@@ -197,6 +174,70 @@ void main() {
       tester.view.physicalSize = const Size(1440, 1000);
       await tester.pumpAndSettle();
       await capture('desktop');
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+      tester.view.physicalSize = const Size(390, 844);
+      final library = DemoStore();
+      await library.save(
+        const Library(
+          books: [
+            Book(
+              id: 'poems',
+              title: '오래 곁에 둘 문장',
+              author: '나의 필사',
+              originals: [
+                RegisteredOriginal(
+                  'quote',
+                  '바쁜 걸음을 멈추고,\n오늘의 문장을 천천히 옮겨 적습니다.',
+                  citation: '직접 쓴 검수 문장',
+                ),
+              ],
+            ),
+            Book(id: 'notes', title: '낮은 목소리', coverIndex: 2),
+          ],
+          records: [
+            WritingRecord(id: 'reading', bookId: 'poems', title: '한 줄의 기록'),
+          ],
+          pages: [
+            WritingPage(
+              id: 'first',
+              recordId: 'reading',
+              number: 1,
+              text: '바쁜 걸음을 멈추고,\n오늘의 문장을 천천히 옮겨 적습니다.',
+            ),
+          ],
+          activePageId: 'first',
+          writing: true,
+        ),
+      );
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: boundary,
+          child: WritingHumanApp(store: library),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await capture('book-writing');
+      await tester.tap(find.byKey(const ValueKey('writing-originals')));
+      await tester.pumpAndSettle();
+      await capture('originals');
+      await tester.tap(find.byTooltip('닫기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
+      await tester.pumpAndSettle();
+      await capture('bookshelf');
+      await tester.tap(find.byKey(const ValueKey('shelf-details-poems')));
+      await tester.pumpAndSettle();
+      await capture('contents');
+      await tester.tap(find.byTooltip('닫기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('쓰기 도구'));
+      await tester.pumpAndSettle();
+      tester.view.physicalSize = const Size(320, 700);
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      await tester.pumpAndSettle();
+      await capture('tools-large-text');
+      tester.platformDispatcher.clearTextScaleFactorTestValue();
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();
       debugDisableShadows = previousShadows;

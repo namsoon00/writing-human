@@ -42,19 +42,28 @@ class WritingHeader extends StatelessWidget {
           ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 88),
-          child: Text(
-            bookTitle ?? (loosePage ? '낱장' : '쓰는 인간'),
-            key: const ValueKey('writing-title'),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: appFontFamily,
-              fontFamilyFallback: appFontFallback,
-              fontSize: 20,
-              color: brandInk,
-              height: 1.3,
-              letterSpacing: .4,
-            ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (!compact) ...[
+                const InkMark(size: 12),
+                const SizedBox(height: 8),
+              ],
+              Text(
+                bookTitle ?? (loosePage ? '낱장' : '쓰는 인간'),
+                key: const ValueKey('writing-title'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: appFontFamily,
+                  fontFamilyFallback: appFontFallback,
+                  fontSize: 20,
+                  color: brandInk,
+                  height: 1.3,
+                  letterSpacing: .4,
+                ),
+              ),
+            ],
           ),
         ),
         Align(

@@ -5,7 +5,7 @@ import 'paper_palette.dart';
 /// Shared appearance for the app's Material controls.
 ThemeData withPaperControls(ThemeData theme) {
   const corners = RoundedRectangleBorder(
-    borderRadius: BorderRadius.all(Radius.circular(6)),
+    borderRadius: BorderRadius.all(Radius.circular(3)),
   );
   const actionInk = panelSwitchTrack;
   const actionPaper = panelSwitchThumb;
@@ -37,6 +37,59 @@ ThemeData withPaperControls(ThemeData theme) {
     focusColor: pressedPaper,
     highlightColor: pressedPaper,
     splashColor: pressedPaper,
+    dividerTheme: const DividerThemeData(color: line, thickness: .7),
+    sliderTheme: theme.sliderTheme.copyWith(
+      activeTrackColor: actionInk,
+      inactiveTrackColor: line,
+      thumbColor: actionInk,
+      overlayColor: pressedPaper,
+      trackHeight: 1.5,
+      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+      tickMarkShape: const RoundSliderTickMarkShape(tickMarkRadius: 1),
+      activeTickMarkColor: actionInk,
+      inactiveTickMarkColor: muted.withValues(alpha: .45),
+    ),
+    popupMenuTheme: theme.popupMenuTheme.copyWith(
+      color: paper,
+      surfaceTintColor: Colors.transparent,
+      elevation: 3,
+      shadowColor: brandInk.withValues(alpha: .18),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(3)),
+        side: BorderSide(color: line, width: .7),
+      ),
+    ),
+    expansionTileTheme: theme.expansionTileTheme.copyWith(
+      iconColor: actionInk,
+      collapsedIconColor: muted,
+      textColor: actionInk,
+      collapsedTextColor: ink,
+    ),
+    inputDecorationTheme: theme.inputDecorationTheme.copyWith(
+      border: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(3)),
+        borderSide: BorderSide(color: line),
+      ),
+      enabledBorder: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(3)),
+        borderSide: BorderSide(color: line),
+      ),
+      focusedBorder: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(3)),
+        borderSide: BorderSide(color: actionInk, width: 1.2),
+      ),
+    ),
+    dialogTheme: theme.dialogTheme.copyWith(
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(6)),
+        side: BorderSide(color: line, width: .7),
+      ),
+    ),
+    bottomSheetTheme: theme.bottomSheetTheme.copyWith(
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(6)),
+      ),
+    ),
     textButtonTheme: TextButtonThemeData(style: quietAction),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: quietAction.copyWith(

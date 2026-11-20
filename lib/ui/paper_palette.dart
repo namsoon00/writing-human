@@ -31,4 +31,4 @@ Color panelSelectedColor(Color panel) => Color.lerp(panel, brandInk, .12)!;
 
 const panelSwitchTrack = Color(0xff74503c);
 const panelSwitchThumb = Color(0xfffffaf1);
-const panelGrainOpacity = .08;
+const panelGrainOpacity = .14;

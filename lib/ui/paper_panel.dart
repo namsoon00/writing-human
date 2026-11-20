@@ -51,16 +51,64 @@ class PaperPanelHeader extends StatelessWidget {
   final bool canClose;
 
   @override
-  Widget build(BuildContext context) => Row(
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      Expanded(
-        child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+      Row(
+        children: [
+          Expanded(child: PaperPanelTitle(title)),
+          IconButton(
+            tooltip: '닫기',
+            onPressed: canClose ? () => Navigator.maybePop(context) : null,
+            icon: const Icon(CupertinoIcons.xmark, size: 18),
+          ),
+        ],
       ),
-      IconButton(
-        tooltip: '닫기',
-        onPressed: canClose ? () => Navigator.maybePop(context) : null,
-        icon: const Icon(CupertinoIcons.xmark, size: 18),
+      const SizedBox(height: 12),
+      const DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: line)),
+        ),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: SizedBox(
+            width: 36,
+            height: 2,
+            child: ColoredBox(color: brandInk),
+          ),
+        ),
       ),
+      const SizedBox(height: 8),
     ],
+  );
+}
+
+class PaperPanelTitle extends StatelessWidget {
+  const PaperPanelTitle(this.title, {super.key, this.fontSize = 25});
+  final String title;
+  final double fontSize;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    header: true,
+    child: Row(
+      children: [
+        const InkMark(size: 13),
+        const SizedBox(width: 10),
+        Flexible(
+          child: Text(
+            title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: fontSize,
+              color: brandInk,
+              height: 1.3,
+              letterSpacing: -.5,
+            ),
+          ),
+        ),
+      ],
+    ),
   );
 }

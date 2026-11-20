@@ -68,8 +68,22 @@ class _FontSizeControlState extends State<FontSizeControl> {
             widget.onChanged(value);
           },
         ),
-        ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 68),
+        Container(
+          key: const ValueKey('font-paper-specimen'),
+          constraints: const BoxConstraints(minHeight: 86),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+          decoration: BoxDecoration(
+            color: paperColors[widget.style.paperIndex],
+            image: paperGrain(paperColors[widget.style.paperIndex], .20),
+            border: Border.all(color: line, width: .7),
+            boxShadow: [
+              BoxShadow(
+                color: ink.withValues(alpha: .05),
+                blurRadius: 3,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
           child: AnimatedSwitcher(
             duration: MediaQuery.disableAnimationsOf(context)
                 ? Duration.zero
@@ -82,6 +96,7 @@ class _FontSizeControlState extends State<FontSizeControl> {
               style: writingTextStyle(
                 widget.style.fontIndex,
                 size: size,
+                color: penColors[widget.style.penIndex],
                 useDevelopmentTypeface: widget.style.useDevelopmentTypeface,
               ),
             ),

@@ -17,6 +17,7 @@ import '../source/source_scan.dart';
 import '../source/wikisource_preview.dart';
 import 'book_details.dart';
 import 'paper.dart';
+import 'paper_panel.dart';
 import 'original_list_item.dart';
 import 'original_photo_crop.dart';
 import 'original_range_sheet.dart';
@@ -1796,7 +1797,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: Text(
+                        child: PaperPanelTitle(
                           _selecting
                               ? _mode == _ScanMode.page
                                     ? '페이지 인식 결과'
@@ -1808,9 +1809,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                               : widget.shared
                               ? '공유한 원문'
                               : '원문 담기',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 22),
+                          fontSize: 22,
                         ),
                       ),
                       if (_wholeEditor != null) ...[

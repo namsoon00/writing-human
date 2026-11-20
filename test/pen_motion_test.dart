@@ -1,9 +1,13 @@
+import 'dart:ui' show ImageByteFormat;
+
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ShaderMaskLayer;
+import 'package:flutter/rendering.dart'
+    show RenderRepaintBoundary, ShaderMaskLayer;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/ui/editor.dart';
+import 'package:writing_human/ui/paper.dart';
 
 class PenHarness extends StatefulWidget {
   const PenHarness({super.key, this.initial = ''});
@@ -55,13 +59,58 @@ class PenHarnessState extends State<PenHarness> {
 final _field = find.byKey(const ValueKey('page-text'));
 final _stroke = find.byKey(const ValueKey('writing-caret-stroke'));
 
-Offset strokeCenter(WidgetTester tester) {
-  final box = tester.renderObject<RenderBox>(_stroke);
-  return box.localToGlobal(box.size.center(Offset.zero));
+RRect paintedStroke(WidgetTester tester) {
+  late RRect stroke;
+  expect(
+    tester.renderObject(_stroke),
+    paints..something((method, arguments) {
+      if (method != #drawRRect) return false;
+      stroke = arguments.first as RRect;
+      return true;
+    }),
+  );
+  return stroke;
+}
+
+Offset strokeCenter(WidgetTester tester) => tester
+    .renderObject<RenderBox>(_stroke)
+    .localToGlobal(paintedStroke(tester).outerRect.center);
+
+Offset expectedCaretCenter(WidgetTester tester) {
+  final editable = tester
+      .state<EditableTextState>(find.byType(EditableText))
+      .renderEditable;
+  final value = tester.widget<TextField>(_field).controller!.value;
+  final caret = editable.getLocalRectForCaret(value.selection.extent);
+  return editable.localToGlobal(caret.center);
+}
+
+Future<void> expectCaretInFrame(WidgetTester tester, Offset previous) async {
+  final boundary =
+      tester.renderObject(_stroke).parent! as RenderRepaintBoundary;
+  final next = boundary.globalToLocal(expectedCaretCenter(tester));
+  final old = boundary.globalToLocal(previous);
+  expect((next - old).distance, greaterThan(2));
+  await tester.runAsync(() async {
+    const ratio = 3.0;
+    final image = await boundary.toImage(pixelRatio: ratio);
+    try {
+      final pixels = (await image.toByteData(format: ImageByteFormat.rawRgba))!;
+      int alpha(Offset point) => pixels.getUint8(
+        ((point.dy * ratio).floor() * image.width +
+                    (point.dx * ratio).floor()) *
+                4 +
+            3,
+      );
+      expect(alpha(next), greaterThan(60));
+      expect(alpha(old), 0);
+    } finally {
+      image.dispose();
+    }
+  });
 }
 
 void expectStrokeAtCaret(WidgetTester tester) {
-  expect(_stroke, findsOneWidget);
   final editable = tester
       .state<EditableTextState>(find.byType(EditableText))
       .renderEditable;
@@ -72,7 +121,9 @@ void expectStrokeAtCaret(WidgetTester tester) {
   expect((strokeCenter(tester) - expected).distance, lessThan(.2));
   final height =
       (editable.localToGlobal(caret.bottomCenter).dy - expected.dy) * 1.44;
-  expect(tester.getSize(_stroke).height, closeTo(height, .2));
+  final painted = paintedStroke(tester).outerRect;
+  expect(painted.height, closeTo(height, .2));
+  expect(painted.width, closeTo(1.2, .001));
 }
 
 Iterable<ShaderMaskLayer> _inkLayers(WidgetTester tester) => tester.layers
@@ -102,11 +153,16 @@ void main() {
     (tester) async {
       final key = await open(tester);
       expectStrokeAtCaret(tester);
-      final stroke = tester.widget<DecoratedBox>(_stroke);
-      expect((stroke.decoration as BoxDecoration).color!.a, closeTo(.5, .001));
+      expect(
+        tester.renderObject(_stroke),
+        paints..rrect(
+          color: penColors[const WritingStyle().penIndex].withValues(alpha: .5),
+        ),
+      );
       final first = strokeCenter(tester);
       await tester.enterText(_field, '한');
       await tester.pump();
+      await expectCaretInFrame(tester, first);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 40));
       final duringStroke = strokeCenter(tester);
@@ -138,7 +194,6 @@ void main() {
             .toRect(),
         glyphBefore,
       );
-      expect(tester.getSize(_stroke).width, closeTo(1.2, .001));
       expect(duringStroke.dx, greaterThan(first.dx));
       expect(duringStroke, strokeCenter(tester));
       expect(_inkLayers(tester), isEmpty);
@@ -167,11 +222,16 @@ void main() {
       final beforeIdle = controller.value;
       await tester.pump(const Duration(milliseconds: 650));
       expectStrokeAtCaret(tester);
-      expect(tester.getSize(_stroke).width, closeTo(1.2, .001));
       expect(controller.value, beforeIdle);
-      // The ink overlay must not intercept a tap in the writing field.
-      await tester.tapAt(tester.getCenter(_field));
-      await tester.pumpAndSettle();
+      // A touch on the paper paints the new location in its first frame.
+      final tap = editable.localToGlobal(
+        editable.getLocalRectForCaret(const TextPosition(offset: 1)).center,
+      );
+      final beforeTap = strokeCenter(tester);
+      await tester.tapAt(tap);
+      await tester.pump();
+      expect(controller.selection.extentOffset, 1);
+      await expectCaretInFrame(tester, beforeTap);
       expect(controller.text, prose);
       expect(tester.takeException(), isNull);
     },
@@ -217,7 +277,7 @@ void main() {
         extentOffset: 2,
       );
       await tester.pumpAndSettle();
-      expect(_stroke, findsNothing);
+      expect(tester.renderObject(_stroke), paintsNothing);
       expect(
         controller.selection,
         const TextSelection(baseOffset: 0, extentOffset: 2),
@@ -241,7 +301,7 @@ void main() {
       expectStrokeAtCaret(tester);
       field.scrollController!.jumpTo(800);
       await tester.pumpAndSettle();
-      expect(_stroke, findsNothing);
+      expect(tester.renderObject(_stroke), paintsNothing);
       field.scrollController!.jumpTo(0);
       await tester.pumpAndSettle();
       tester.view.viewInsets = const FakeViewPadding(bottom: 240);
@@ -286,7 +346,7 @@ void main() {
       expect(field.controller!.value, typed);
       field.focusNode!.unfocus();
       await tester.pumpAndSettle();
-      expect(_stroke, findsNothing);
+      expect(tester.renderObject(_stroke), paintsNothing);
       expect(tester.takeException(), isNull);
     },
   );

@@ -2366,7 +2366,20 @@ void main() {
       final sourceCaret = find.descendant(of: sheet, matching: caret);
       expect(sourceCaret, findsOneWidget);
       expect(tester.widget<TextField>(sourceField).showCursor, isFalse);
-      final initialCaret = tester.getTopLeft(sourceCaret);
+      double caretLeft() {
+        late double left;
+        expect(
+          tester.renderObject(sourceCaret),
+          paints..something((method, arguments) {
+            if (method != #drawRRect) return false;
+            left = (arguments.first as RRect).left;
+            return true;
+          }),
+        );
+        return left;
+      }
+
+      final initialCaret = caretLeft();
       tester.view.viewInsets = const FakeViewPadding(bottom: 270);
       const composing = TextEditingValue(
         text: '하ㄴ',
@@ -2381,8 +2394,7 @@ void main() {
         tester.widget<TextField>(sourceField).controller!.value,
         composing,
       );
-      expect(sourceCaret, findsOneWidget);
-      expect(tester.getTopLeft(sourceCaret).dx, greaterThan(initialCaret.dx));
+      expect(caretLeft(), greaterThan(initialCaret));
       expect(store.writes, 0);
       tester.testTextInput.updateEditingValue(
         const TextEditingValue(

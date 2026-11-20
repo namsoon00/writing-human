@@ -32,11 +32,7 @@ import 'book_details.dart';
 import 'page_read_preview.dart';
 import 'archive_sheet.dart';
 
-typedef _SavedOriginal = ({
-  String? bookId,
-  RegisteredOriginal original,
-  bool startTranscription,
-});
+typedef _SavedOriginal = ({String? bookId, RegisteredOriginal original});
 
 enum _BookLeaf { frontCover, bookplate, backCover }
 
@@ -762,7 +758,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               books: books,
               bookId: bookId,
               allowUnbound: allowUnbound,
-              allowTranscription: shared == null,
             ),
           ),
         ),
@@ -827,11 +822,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         _sourceNotice('원문을 저장하지 못했어요. 다시 저장해 주세요.');
         return null;
       }
-      return (
-        bookId: result.bookId,
-        original: registered,
-        startTranscription: result.startTranscription,
-      );
+      return (bookId: result.bookId, original: registered);
     } finally {
       _sourceBusy = false;
     }
@@ -855,7 +846,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         selectedPage: selectedPage,
         initialPhoto: initialPhoto,
       );
-      if (saved != null) await _afterOriginalSave(selectedPage, saved);
+      if (saved != null) _afterOriginalSave(selectedPage, saved);
       return;
     }
     _sourceBusy = true;
@@ -932,21 +923,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _afterOriginalSave(
-    WritingPage origin,
-    _SavedOriginal saved, {
-    bool fromContents = false,
-  }) async {
-    if (saved.startTranscription) {
-      Future<void> start() =>
-          _startTranscription(saved.original, saved.bookId, origin);
-      if (fromContents) {
-        await _afterSheet(start);
-      } else {
-        await start();
-      }
-      return;
-    }
+  void _afterOriginalSave(WritingPage origin, _SavedOriginal saved) {
     if (page.id != origin.id) return;
     setState(
       () => _savedSource = (
@@ -1067,8 +1044,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           selectedPage.originalCitations.isEmpty) {
         final saved = await register();
         if (saved != null) {
-          await _afterOriginalSave(selectedPage, saved);
-          if (saved.startTranscription) return;
+          _afterOriginalSave(selectedPage, saved);
         }
       } else {
         final match = bookDetails == null
@@ -1118,7 +1094,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                   : () async {
                       final saved = await register();
                       if (saved == null) return null;
-                      if (saved.bookId != bookId || saved.startTranscription) {
+                      if (saved.bookId != bookId) {
                         if (context.mounted &&
                             ModalRoute.of(context)?.isCurrent == true) {
                           savedAfterPanel = saved;
@@ -1199,11 +1175,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         await route.completed;
         if (savedAfterPanel case final saved?) {
           if (mounted && c == owner && !_accountLocked) {
-            await _afterOriginalSave(
-              selectedPage,
-              saved,
-              fromContents: bookDetails != null,
-            );
+            _afterOriginalSave(selectedPage, saved);
           }
           return;
         }

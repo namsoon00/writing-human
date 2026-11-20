@@ -87,7 +87,7 @@ void main() {
       find.descendant(of: collection, matching: find.text('원문')),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('원문 등록'));
+    await tester.tap(find.text('원문 담기'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('source-text')),

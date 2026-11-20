@@ -488,7 +488,7 @@ class _SourceReadingState extends State<SourceReading> {
                       child: TextButton.icon(
                         onPressed: saving ? null : _register,
                         icon: const Icon(CupertinoIcons.plus, size: 16),
-                        label: const Text('원문 등록', textAlign: TextAlign.center),
+                        label: const Text('원문 담기', textAlign: TextAlign.center),
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                         ),

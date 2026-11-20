@@ -29,7 +29,6 @@ import 'package:writing_human/ui/original_range_sheet.dart';
 import 'package:writing_human/ui/reading_details.dart';
 import 'package:writing_human/ui/source_import_sheet.dart';
 import 'package:writing_human/ui/source_reading.dart';
-import 'package:writing_human/ui/transcription_marks.dart';
 import 'package:writing_human/ui/writing_chrome.dart';
 import 'package:writing_human/ui/transcription_guide.dart';
 
@@ -1609,7 +1608,6 @@ void main() {
     await tester.enterText(bodyField, '내 글을 쓰고\n\n햇빛이 책장에');
     await tester.pumpAndSettle();
     expect(overlay, findsNothing);
-    expect(find.byType(TranscriptionMarks), findsNothing);
     final before = body.value;
     tester.widget<TextField>(bodyField).focusNode!.unfocus();
     await settleSourceSheets(tester);
@@ -2572,7 +2570,7 @@ void main() {
       expect(store.data.pages.single.text, isEmpty);
       await tester.enterText(bodyField, '한 문쟝을');
       await tester.pumpAndSettle();
-      expect(remainingInline(tester), ' 옮겨 쓴다.\n$second');
+      expect(remainingInline(tester), '장을 옮겨 쓴다.\n$second');
       expect(store.data.pages.single.text, '한 문쟝을');
       const composing = TextEditingValue(
         text: '한 문쟝을 ㅇ',
@@ -2581,7 +2579,7 @@ void main() {
       );
       tester.testTextInput.updateEditingValue(composing);
       await tester.pumpAndSettle();
-      expect(remainingInline(tester), '겨 쓴다.\n$second');
+      expect(remainingInline(tester), '장을 옮겨 쓴다.\n$second');
       expect(field.controller!.value, composing);
       await tester.enterText(bodyField, '한 문장을');
       await tester.pumpAndSettle();
@@ -2615,64 +2613,60 @@ void main() {
     },
   );
 
-  test(
-    'Transcription comparison resumes after an extra or missing grapheme',
-    () {
-      final comparison = TranscriptionComparison(
-        const RegisteredOriginal('o', '가나다라마바사.'),
-      );
-      expect(comparison.differencesFor('가나다라'), isEmpty);
-      expect(comparison.differencesFor('가낙다라'), [
-        (start: 1, end: 2, expected: '나'),
-      ]);
-      expect(comparison.differencesFor('가X나다라'), [
-        (start: 1, end: 2, expected: ''),
-      ]);
-      expect(comparison.remainderFor('가X나다라'), '마바사.');
-      expect(comparison.differencesFor('가다라'), [
-        (start: 1, end: 1, expected: '나'),
-      ]);
-      expect(comparison.remainderFor('가다라'), '마바사.');
-      expect(comparison.differencesFor('가나다라'), isEmpty);
-      expect(comparison.differencesFor('가나다라마바사.'), isEmpty);
-      expect(comparison.differencesFor('가나다라마바사.X'), [
-        (start: 8, end: 9, expected: ''),
-      ]);
-    },
-  );
+  test('Transcription waits for the text to resume after an interruption', () {
+    final comparison = TranscriptionComparison(
+      const RegisteredOriginal('o', '가나다라마바사.'),
+    );
+    expect(comparison.remainderFor('가나다라'), '마바사.');
+    expect(comparison.remainderFor('가X나'), '나다라마바사.');
+    expect(comparison.remainderFor('가X나다라'), '마바사.');
+    expect(comparison.remainderFor('가낙다라마'), '바사.');
+    expect(comparison.remainderFor('가나다라마바사.X'), isEmpty);
+    expect(comparison.remainderFor('가나'), '다라마바사.');
+  });
 
-  test(
-    'Punctuation and newlines are optional while Hanja stays comparable',
-    () {
-      const original = '가😀·「漢」\r\n나, 다!';
-      final comparison = TranscriptionComparison(
-        const RegisteredOriginal('o', original),
-      );
+  test('Reference progress waits when a forward match is repeated', () {
+    final comparison = TranscriptionComparison(
+      const RegisteredOriginal('o', '첫 문장. 중간 구절. 나무 아래 새가 울고 나무 아래 바람이 분다.'),
+    );
+    const note = '첫 문장.\n메모를 남겨요.\n';
+    const remainder = ' 중간 구절. 나무 아래 새가 울고 나무 아래 바람이 분다.';
+    expect(comparison.remainderFor('$note나무 아래'), remainder);
+    expect(comparison.remainderFor('$note나무 아래 바람'), '이 분다.');
+  });
 
-      expect(comparison.differencesFor('가!?1️⃣漢나 다'), isEmpty);
-      expect(comparison.sourceOffsetFor('가漢나 다'), original.length);
-      expect(comparison.remainderFor('가--漢\n'), '나, 다!');
-      expect(comparison.remainderFor('가--漢'), '」\r\n나, 다!');
-      expect(comparison.remainderFor('가--漢', composingLength: 1), ', 다!');
-      expect(comparison.differencesFor('가😀、字\n나'), [
-        (start: 4, end: 5, expected: '漢'),
-      ]);
-      expect(comparison.differencesFor('가!?漢나다'), [
-        (start: 5, end: 5, expected: ' '),
-      ]);
-    },
-  );
+  test('Reference ignores formatting and tracks the original offsets', () {
+    const original = '가😀·「漢」\r\n나, 다!';
+    final comparison = TranscriptionComparison(
+      const RegisteredOriginal('o', original),
+    );
+
+    expect(comparison.sourceOffsetFor('가!?1️⃣漢  나 다'), original.length);
+    expect(comparison.remainderFor('가漢나다'), isEmpty);
+    expect(comparison.remainderFor('가--漢\n'), '나, 다!');
+    expect(comparison.remainderFor('가--漢'), '」\r\n나, 다!');
+    expect(comparison.remainderFor('가--漢', composingLength: 1), ', 다!');
+    expect(
+      comparison.remainderFor('가—字', composingLength: 1),
+      '😀·「漢」\r\n나, 다!',
+    );
+  });
 
   testWidgets(
-    'A transcription mark opens the original letter after composition',
+    'The visible original waits through a detour and resumes at the next matching passage',
     (tester) async {
+      const first = '첫 문장을 씁니다.';
+      const skipped = '중간에 건너뛸 문장이 있습니다.';
+      const next = '다음 구절을 이어 씁니다.';
+      const last = '마지막 줄입니다.';
+      const original = '$first\n$skipped\n$next\n$last';
       final store = MemoryStore()
         ..data = const Library(
           records: [
             WritingRecord(
               id: 'r',
               title: '필사',
-              originals: [RegisteredOriginal('o', '한 문장을·\n 계속 이어 쓴다.')],
+              originals: [RegisteredOriginal('o', original)],
             ),
           ],
           pages: [
@@ -2687,47 +2681,41 @@ void main() {
           writing: true,
         );
       await open(tester, store, FakeIntake());
-      await tester.tap(bodyField);
-      await tester.pumpAndSettle();
-      const composing = TextEditingValue(
-        text: '한 문쟝',
-        selection: TextSelection.collapsed(offset: 4),
-        composing: TextRange(start: 3, end: 4),
-      );
-      tester.testTextInput.updateEditingValue(composing);
-      await tester.pumpAndSettle();
-      final painting = find.descendant(
-        of: find.byType(TranscriptionMarks),
-        matching: find.byType(CustomPaint),
-      );
-      List<CustomPainterSemantics> marks() => tester
-          .widget<CustomPaint>(painting)
-          .painter!
-          .semanticsBuilder!(tester.getSize(painting));
-      expect(marks(), isEmpty);
-      final field = tester.widget<TextField>(bodyField);
-      expect(field.controller!.value, composing);
-      await tester.enterText(bodyField, '한 문쟝을 계속');
-      await tester.pumpAndSettle();
-      expect(marks(), hasLength(1));
-
-      final target = marks().single.rect.center;
-      await tester.tapAt(tester.getTopLeft(painting) + target);
-      await tester.pumpAndSettle();
-      expect(find.text('원문 글자 ‘장’'), findsOneWidget);
-      expect(field.controller!.text, '한 문쟝을 계속');
-      await tester.tap(find.widgetWithText(TextButton, '닫기'));
-      await tester.pumpAndSettle();
-      await tester.enterText(bodyField, '한 문장을 계속');
-      await tester.pumpAndSettle();
-      expect(marks(), isEmpty);
-      expect(store.data.activePage!.text, '한 문장을 계속');
-
       tester.view.viewInsets = const FakeViewPadding(bottom: 290);
+      await tester.showKeyboard(bodyField);
       await tester.pumpAndSettle();
-      expect(remainingReference(tester), ' 이어 쓴다.');
-      expect(referenceText(tester).toPlainText(), '한 문장을·\n 계속 이어 쓴다.');
-      expect(marks(), isEmpty);
+
+      const note = '첫문장을씁니다!\n잠시 내 생각을 적습니다.\n';
+      await tester.enterText(bodyField, note);
+      await tester.pumpAndSettle();
+      expect(remainingReference(tester), '$skipped\n$next\n$last');
+      expect(referenceText(tester).toPlainText(), original);
+      expect(store.data.activePage!.text, note);
+
+      final partial = TextEditingValue(
+        text: '$note다음 구',
+        selection: TextSelection.collapsed(offset: note.length + 4),
+        composing: TextRange(start: note.length + 3, end: note.length + 4),
+      );
+      tester.testTextInput.updateEditingValue(partial);
+      await tester.pumpAndSettle();
+      final field = tester.widget<TextField>(bodyField);
+      expect(field.controller!.value, partial);
+      expect(remainingReference(tester), '$skipped\n$next\n$last');
+
+      const resumed = '$note다음 구절';
+      await tester.enterText(bodyField, resumed);
+      await tester.pumpAndSettle();
+      expect(remainingReference(tester), '을 이어 씁니다.\n$last');
+      expect(store.data.activePage!.text, resumed);
+      expect(referenceText(tester).toPlainText(), original);
+      final semantics = tester.ensureSemantics();
+      try {
+        await tester.pump();
+        expect(find.bySemanticsLabel('원문과 다른 글자 확인'), findsNothing);
+      } finally {
+        semantics.dispose();
+      }
     },
   );
 
@@ -2885,7 +2873,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(transcriptionGuide, findsOneWidget);
       expect(transcriptionReference, findsNothing);
-      expect(remainingInline(tester), passage.substring(4));
+      expect(remainingInline(tester), passage.substring(3));
       expect(store.data.activePage!.text, '첫 줄윽');
       expect(store.data.activePage!.guidedOriginalId, 'o');
       expect(tester.takeException(), isNull);

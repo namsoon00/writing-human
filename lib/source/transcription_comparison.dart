@@ -2,12 +2,11 @@ import 'package:flutter/widgets.dart' show StringCharacters;
 
 import '../data/model.dart';
 
-typedef TranscriptionDifference = ({int start, int end, String expected});
-
 typedef _ComparedCharacter = ({String value, int start, int end});
+typedef _Anchor = (String, String, String);
 
-/// Compares the text of a passage while allowing punctuation and line breaks
-/// to be copied freely. Offsets always refer to the original UTF-16 strings.
+/// Finds the next part of the original to show while the writer transcribes.
+/// Offsets always refer to the original UTF-16 text.
 class TranscriptionComparison {
   TranscriptionComparison(RegisteredOriginal original, {int sourceOffset = 0})
     : _original = _remaining(original, sourceOffset);
@@ -24,15 +23,11 @@ class TranscriptionComparison {
 
   final String _original;
   late final _source = _comparedCharacters(_original);
+  late final _anchors = _indexAnchors();
   String? _lastWritten;
   var _progress = 0;
   var _offset = 0;
-  List<TranscriptionDifference> _differences = const [];
-
-  List<TranscriptionDifference> differencesFor(String written) {
-    _compare(written);
-    return _differences;
-  }
+  var _following = true;
 
   int sourceOffsetFor(String written) {
     _compare(written);
@@ -41,7 +36,7 @@ class TranscriptionComparison {
 
   String remainderFor(String written, {int composingLength = 0}) {
     _compare(written);
-    if (composingLength <= 0 || _progress >= _source.length) {
+    if (composingLength <= 0 || !_following || _progress >= _source.length) {
       return _original.substring(_offset);
     }
     final end = (_progress + composingLength).clamp(0, _source.length);
@@ -51,7 +46,7 @@ class TranscriptionComparison {
   }
 
   static final _optionalCharacter = RegExp(
-    r'^[\p{P}\p{S}\r\n\u2028\u2029]',
+    r'^[\p{P}\p{S}\p{White_Space}]',
     unicode: true,
   );
 
@@ -91,81 +86,94 @@ class TranscriptionComparison {
     return matched;
   }
 
+  static _Anchor _anchorAt(List<_ComparedCharacter> text, int index) =>
+      (text[index].value, text[index + 1].value, text[index + 2].value);
+
+  Map<_Anchor, List<int>> _indexAnchors() {
+    final anchors = <_Anchor, List<int>>{};
+    for (var i = 0; i + 2 < _source.length; i++) {
+      (anchors[_anchorAt(_source, i)] ??= []).add(i);
+    }
+    return anchors;
+  }
+
+  int _matchLength(List<_ComparedCharacter> typed, int input, int source) {
+    var length = 0;
+    while (length < 12 &&
+        input + length < typed.length &&
+        source + length < _source.length &&
+        typed[input + length].value == _source[source + length].value) {
+      length++;
+    }
+    return length;
+  }
+
+  int? _resumeAt(List<_ComparedCharacter> typed, int input, int source) {
+    final expected = _matchLength(typed, input, source);
+    if (expected >= 3 ||
+        (expected > 0 &&
+            input + expected == typed.length &&
+            source + expected == _source.length)) {
+      return source;
+    }
+    if (input + 2 >= typed.length) return null;
+
+    int? match;
+    var best = 2;
+    for (final candidate
+        in _anchors[_anchorAt(typed, input)] ?? const <int>[]) {
+      if (candidate <= source) continue;
+      final length = _matchLength(typed, input, candidate);
+      final startsWord = _source[candidate].start > _source[candidate - 1].end;
+      // A short ending within a word is easy to match in unrelated notes.
+      if (candidate > source + 1 && !startsWord && length < 6) continue;
+      if (length > best) {
+        match = candidate;
+        best = length;
+      } else if (length == best) {
+        // A repeated phrase does not establish where the writer resumed.
+        match = null;
+      }
+    }
+    return match;
+  }
+
   void _compare(String written) {
     if (_lastWritten == written) return;
     _lastWritten = written;
     if (_source.isEmpty) return;
     final typed = _comparedCharacters(written);
-    final differences = <TranscriptionDifference>[];
-    var input = 0;
     var source = 0;
+    var lastMatch = -1;
+    var following = true;
 
-    int matchingRun(int nextInput, int nextSource) {
-      var count = 0;
-      while (count < 6 &&
-          nextInput + count < typed.length &&
-          nextSource + count < _source.length &&
-          typed[nextInput + count].value == _source[nextSource + count].value) {
-        count++;
-      }
-      return count;
-    }
-
-    bool hasAnchor(int run, int nextInput, int nextSource) =>
-        run >= 2 ||
-        (run == 1 &&
-            nextInput + run == typed.length &&
-            nextSource + run == _source.length);
-
-    while (input < typed.length && source < _source.length) {
-      final character = typed[input];
-      if (character.value != _source[source].value) {
-        final substitution = matchingRun(input + 1, source + 1);
-        final insertion = matchingRun(input + 1, source);
-        final omission = matchingRun(input, source + 1);
-        if (hasAnchor(omission, input, source + 1) &&
-            omission > substitution &&
-            omission > insertion) {
-          differences.add((
-            start: character.start,
-            end: character.start,
-            expected: _source[source].value,
-          ));
-          source++;
+    for (
+      var input = 0;
+      input < typed.length && source < _source.length;
+      input++
+    ) {
+      if (!following || typed[input].value != _source[source].value) {
+        final match = _resumeAt(typed, input, source);
+        if (match == null) {
+          following = false;
           continue;
         }
-        if (hasAnchor(insertion, input + 1, source) &&
-            insertion > substitution) {
-          differences.add((
-            start: character.start,
-            end: character.end,
-            expected: '',
-          ));
-          input++;
-          continue;
-        }
-        differences.add((
-          start: character.start,
-          end: character.end,
-          expected: _source[source].value,
-        ));
+        following = true;
+        source = match;
       }
       source++;
-      input++;
+      lastMatch = input;
     }
-    for (; input < typed.length; input++) {
-      final character = typed[input];
-      differences.add((
-        start: character.start,
-        end: character.end,
-        expected: '',
-      ));
-    }
+
     _progress = source;
+    _following = following;
+    final formattingStart = lastMatch < 0 ? 0 : typed[lastMatch].end;
+    final formattingEnd = lastMatch + 1 < typed.length
+        ? typed[lastMatch + 1].start
+        : written.length;
     _offset = _sourcePosition(
       source,
-      written.substring(typed.lastOrNull?.end ?? 0),
+      written.substring(formattingStart, formattingEnd),
     );
-    _differences = differences;
   }
 }

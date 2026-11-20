@@ -446,9 +446,8 @@ void main() {
       const RegisteredOriginal('a', '가나\r\n다'),
     );
     expect(comparison.remainderFor('가\n'), '나\r\n다');
-    expect(comparison.differencesFor('가\n'), isEmpty);
     expect(comparison.remainderFor('가\n나\n'), '다');
-    expect(comparison.differencesFor('가\n나\n다\n'), isEmpty);
+    expect(comparison.remainderFor('가\n나\n다\n'), isEmpty);
   });
 
   test(

@@ -19,7 +19,6 @@ import 'writing_sound.dart';
 import 'pencil_marks.dart';
 import 'transcription_reference.dart';
 import 'transcription_guide.dart';
-import 'transcription_marks.dart';
 import 'editable_geometry.dart';
 import 'page_originals_panel.dart';
 import 'paper_panel.dart';
@@ -772,17 +771,6 @@ class _PageEditorState extends State<PageEditor> {
                       painter: guide,
                     ),
                   ),
-                ),
-              ),
-            if (_comparison case final comparison?)
-              Positioned.fill(
-                child: TranscriptionMarks(
-                  comparison: comparison,
-                  startOffset: start,
-                  endOffset: end,
-                  controller: text,
-                  scroll: scroll,
-                  fieldKey: fieldRenderKey,
                 ),
               ),
             if (widget.originals.any((item) => item.reflection != null))

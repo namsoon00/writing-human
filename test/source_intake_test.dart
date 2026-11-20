@@ -229,6 +229,32 @@ Future<void> takePhoto(WidgetTester tester, {bool settle = true}) async {
 }
 
 void main() {
+  testWidgets('A compensated reread can return to the first result', (
+    tester,
+  ) async {
+    final intake = FakeIntake()..blocks = ['처음 읽은 문장'];
+    await open(tester, MemoryStore(), intake);
+    await openRegistration(tester);
+    await takePhoto(tester);
+    expect(find.text('처음 읽은 문장'), findsOneWidget);
+
+    intake.blocks = ['보정 후 다시 읽은 문장'];
+    await tester.runAsync(() async {
+      await tester.tap(find.text('보정해 다시 읽기'));
+      for (var frame = 0; frame < 40; frame++) {
+        await tester.pump(const Duration(milliseconds: 30));
+        if (find.text('보정 전 결과 보기').evaluate().isNotEmpty) break;
+        await Future<void>.delayed(const Duration(milliseconds: 15));
+      }
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('보정 후 다시 읽은 문장'), findsOneWidget);
+    await tester.tap(find.text('보정 전 결과 보기'));
+    await tester.pumpAndSettle();
+    expect(find.text('처음 읽은 문장'), findsOneWidget);
+    expect(find.text('보정 후 다시 읽은 문장'), findsNothing);
+  });
+
   testWidgets('원문 정리는 저장 전 되돌릴 수 있고 저장한 글을 필사에 쓴다', (tester) async {
     final store = MemoryStore();
     await open(tester, store, FakeIntake());

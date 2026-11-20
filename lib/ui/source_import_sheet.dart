@@ -1,12 +1,14 @@
 import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/model.dart';
 import '../data/original_photo_store.dart';
 import '../source/camera_page.dart';
+import '../source/ocr_photo_adjustment.dart';
 import '../source/photo_lines.dart';
 import '../source/scan_passage.dart';
 import '../source/source_intake.dart';
@@ -88,6 +90,21 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   SourcePhoto? _originalPhoto;
   List<double>? _photoRegion;
   CameraPage? _cameraPage;
+  SourceScan? _photoBeforeAdjustment;
+  ({
+    SourceScan? scan,
+    CameraPage? page,
+    bool live,
+    List<int> order,
+    Set<int> selected,
+    int? paragraph,
+    int first,
+    int last,
+    int? photoAnchor,
+    ({String text, PencilMark range})? range,
+    String? reread,
+  })?
+  _beforeAdjustment;
   bool _fromLiveCamera = false;
   ({String text, PencilMark range})? _range;
   bool _savingPhoto = false, _startTranscription = false;
@@ -302,6 +319,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     SourcePhoto photo, {
     Rect? region,
     List<Rect> mask = const [],
+    Future<SourcePhoto> Function()? preparePhoto,
   }) async {
     setState(() {
       _busy = true;
@@ -309,8 +327,10 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       _error = null;
     });
     try {
+      final input = preparePhoto == null ? photo : await preparePhoto();
+      if (!mounted) return null;
       final scan = await widget.intake
-          .scan(photo, region: region, mask: mask)
+          .scan(input, region: region, mask: mask)
           .timeout(const Duration(seconds: 90));
       if (!mounted) return null;
       if (scan.paragraphs.isEmpty) {
@@ -338,8 +358,17 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
 
   Future<void> _read(SourcePhoto photo, _ScanMode mode) async {
     setState(() {
-      if (_originalPhoto != photo) _photoRegion = null;
+      if (_originalPhoto != photo) {
+        _photoRegion = null;
+        _scan = null;
+        _cameraPage = null;
+        _fromLiveCamera = false;
+        _savedReviews.clear();
+      }
       _originalPhoto = photo;
+      _beforeAdjustment = null;
+      _photoBeforeAdjustment = null;
+      _mode = mode;
     });
     final scan = await _recognize(photo);
     if (scan == null || !mounted) return;
@@ -352,8 +381,14 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     _ScanMode mode, {
     CameraPage? cameraPage,
     bool live = false,
+    bool adjusted = false,
   }) {
     setState(() {
+      if (!adjusted) {
+        _beforeAdjustment = null;
+        _photoBeforeAdjustment = null;
+        _savedReviews.clear();
+      }
       _scan = scan;
       _cameraPage = cameraPage;
       _fromLiveCamera = live;
@@ -361,7 +396,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       if (_originalPhoto != photo) _photoRegion = null;
       _originalPhoto = photo;
       _range = null;
-      _savedReviews.clear();
       _mode = mode;
       _reread = null;
       _paragraph = null;
@@ -370,6 +404,75 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       _selected = _order.toSet();
     });
   }
+
+  Future<void> _readAdjusted() async {
+    final photo = _originalPhoto;
+    if (photo == null || !_editable || _beforeAdjustment != null) return;
+    final baseline = (
+      scan: _scan,
+      page: _cameraPage,
+      live: _fromLiveCamera,
+      order: _order,
+      selected: _selected,
+      paragraph: _paragraph,
+      first: _first,
+      last: _last,
+      photoAnchor: _photoAnchor,
+      range: _range,
+      reread: _reread,
+    );
+    CameraPage? projection;
+    SourceScan? originalView;
+    final adjusted = await _recognize(
+      photo,
+      preparePhoto: () async {
+        final normalized = await ScanImage.decode(photo.bytes);
+        originalView = SourceScan(
+          normalized.bytes,
+          const [],
+          width: normalized.width,
+          height: normalized.height,
+        );
+        final result = await compute(adjustOcrPhoto, normalized.bytes);
+        projection = result.projection;
+        return SourcePhoto(photo.path, result.bytes);
+      },
+    );
+    if (!mounted || adjusted == null) return;
+    _beforeAdjustment = baseline;
+    _photoBeforeAdjustment = originalView;
+    _useScan(photo, adjusted, _mode, cameraPage: projection, adjusted: true);
+  }
+
+  void _restoreUnadjusted() {
+    final before = _beforeAdjustment;
+    if (before == null || !_editable) return;
+    setState(() {
+      _scan = before.scan;
+      _cameraPage = before.page;
+      _fromLiveCamera = before.live;
+      _order = before.order;
+      _selected = before.selected;
+      _paragraph = before.paragraph;
+      _first = before.first;
+      _last = before.last;
+      _reread = before.reread;
+      _photoAnchor = before.photoAnchor;
+      _range = before.range;
+      _error = null;
+      _beforeAdjustment = null;
+      _photoBeforeAdjustment = null;
+    });
+  }
+
+  Widget _adjustButton() => TextButton(
+    onPressed: !_editable
+        ? null
+        : _beforeAdjustment == null
+        ? _readAdjusted
+        : _restoreUnadjusted,
+    child: Text(_beforeAdjustment == null ? '보정해 다시 읽기' : '보정 전 결과 보기'),
+  );
 
   void _pickParagraph(int index) {
     final passage = ScanPassage(_scan!.paragraphs[index]);
@@ -441,7 +544,9 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     if (boxes.isEmpty || _busy) return;
     final bounds = boxes.reduce((a, b) => a.expandToInclude(b));
     final region = bounds.inflate(.007).intersect(scanPageBounds);
-    final photo = _cameraPage == null ? _originalPhoto : null;
+    final photo = _cameraPage == null && _beforeAdjustment == null
+        ? _originalPhoto
+        : null;
     final result = await _recognize(
       photo ?? SourcePhoto('', _scan!.photo),
       region: region,
@@ -837,6 +942,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
             child: const Text('다른 사진'),
           ),
           _largePhotoButton(scan, selectedBoxes),
+          if (_originalPhoto != null) _adjustButton(),
         ],
       ),
       Text(
@@ -995,36 +1101,43 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     ),
   );
 
-  Future<void> _compareLine(ScanLine line, Rect bounds) => showDialog<void>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('사진과 대조'),
-      content: SizedBox(
-        width: 420,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SourceScanPreview(
-              scan: _scan!,
-              focus: bounds,
-              selection: [
-                for (final word in line.words)
-                  if ((word.confidence ?? 1) < .65) ?word.bounds,
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(line.text),
-          ],
+  Future<void> _compareLine(ScanLine line, Rect bounds) {
+    final original = _photoBeforeAdjustment;
+    Rect onPhoto(Rect box) =>
+        original != null ? _cameraPage?.originalBounds(box) ?? box : box;
+    return showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('사진과 대조'),
+        content: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SourceScanPreview(
+                scan: original ?? _scan!,
+                focus: onPhoto(bounds),
+                selection: [
+                  for (final word in line.words)
+                    if (word.bounds case final box?
+                        when (word.confidence ?? 1) < .65)
+                      onPhoto(box),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(line.text),
+            ],
+          ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('닫기'),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('닫기'),
-        ),
-      ],
-    ),
-  );
+    );
+  }
 
   List<Widget> _reviewPanel() => [
     Wrap(
@@ -1233,6 +1346,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                                     : null,
                                 child: const Text('사진에서 글자 읽기'),
                               ),
+                              _adjustButton(),
                               TextButton(
                                 onPressed: _editable
                                     ? () => setState(() {

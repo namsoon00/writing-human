@@ -1455,6 +1455,20 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                         if (!_extractionOnly) _importTools(),
                         const SizedBox(height: 8),
                         if (_originalPhoto case final photo?) ...[
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton.icon(
+                              onPressed: _editable
+                                  ? () => _chooseRegion(photo)
+                                  : null,
+                              icon: const Icon(CupertinoIcons.crop, size: 16),
+                              label: Text(
+                                _photoRegion == null
+                                    ? '글자 영역 고르기'
+                                    : '글자 영역 바꾸기',
+                              ),
+                            ),
+                          ),
                           Image.memory(
                             photo.bytes,
                             key: const ValueKey('original-photo-preview'),
@@ -1469,16 +1483,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                           ),
                           Wrap(
                             children: [
-                              TextButton(
-                                onPressed: _editable
-                                    ? () => _chooseRegion(photo)
-                                    : null,
-                                child: Text(
-                                  _photoRegion == null
-                                      ? '글자 영역 고르기'
-                                      : '글자 영역 바꾸기',
-                                ),
-                              ),
                               if (!_offerExtraction)
                                 TextButton(
                                   onPressed: _editable ? _extractPhoto : null,

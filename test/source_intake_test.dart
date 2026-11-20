@@ -2708,10 +2708,32 @@ void main() {
       expect(find.text('이 구절 필사하기'), findsNothing);
       expect(find.byType(OriginalPhoto), findsOneWidget);
       expect(store.data.activePage!.guidedOriginalId, isNull);
-      await loadPhotoAfter(find.text('사진에서 글자 뽑기'));
+      tester.view.physicalSize = const Size(320, 640);
+      await tester.pumpAndSettle();
+      final extract = find.ancestor(
+        of: find.text('사진에서 글자 뽑기'),
+        matching: find.byWidgetPredicate((widget) => widget is FilledButton),
+      );
+      final photo = tester.getRect(find.byType(OriginalPhoto));
+      final action = tester.getRect(extract);
+      final slip = tester.getRect(find.text('이 쪽에 끼우기'));
+      expect(action.width, 320 - 48);
+      expect(action.top - photo.bottom, greaterThanOrEqualTo(12));
+      expect(slip.top, greaterThan(action.bottom));
+
+      await loadPhotoAfter(extract);
       expect(intake.scans, 0);
       expect(find.text('사진만 담기'), findsNothing);
-      await loadPhotoAfter(find.text('글자 영역 고르기'));
+      final pickRegion = find.text('글자 영역 고르기');
+      final preview = find.byKey(const ValueKey('original-photo-preview'));
+      expect(pickRegion.hitTestable(), findsOneWidget);
+      expect(
+        tester.getBottomLeft(pickRegion).dy,
+        lessThan(tester.getTopLeft(preview).dy),
+      );
+      tester.view.physicalSize = const Size(390, 844);
+      await tester.pumpAndSettle();
+      await loadPhotoAfter(pickRegion);
       final frame = tester.getRect(find.byType(Image).last);
       await tester.dragFrom(
         frame.topLeft + Offset(frame.width * .1, frame.height * .15),

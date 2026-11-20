@@ -752,6 +752,28 @@ class _SourceReadingState extends State<SourceReading> {
                         ),
                       ),
               ),
+              if (original != null &&
+                  original.photoId != null &&
+                  !original.canTranscribe &&
+                  widget.onExtractPhoto != null &&
+                  !editing)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12, bottom: 6),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: saving ? null : () => _extractPhoto(original),
+                      icon: const Icon(
+                        CupertinoIcons.doc_text_viewfinder,
+                        size: 17,
+                      ),
+                      label: const Text(
+                        '사진에서 글자 뽑기',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ),
               if (original != null && !editing)
                 Align(
                   alignment: Alignment.centerLeft,
@@ -769,15 +791,6 @@ class _SourceReadingState extends State<SourceReading> {
                             hasCitation: true,
                           ),
                           child: const Text('링크 열기'),
-                        ),
-                      if (original.photoId != null &&
-                          !original.canTranscribe &&
-                          widget.onExtractPhoto != null)
-                        FilledButton(
-                          onPressed: saving
-                              ? null
-                              : () => _extractPhoto(original),
-                          child: const Text('사진에서 글자 뽑기'),
                         ),
                       if (widget.onTranscribe != null && original.canTranscribe)
                         TextButton(

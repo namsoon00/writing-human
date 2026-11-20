@@ -54,8 +54,17 @@ class _OriginalPhotoCropState extends State<_OriginalPhotoCrop> {
     color: widget.color,
     child: Column(
       children: [
-        const PaperPanelHeader('사진 범위'),
-        const Text('남길 부분의 한쪽 모서리에서 반대쪽으로 끌어 주세요.'),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 8, 12, 0),
+          child: PaperPanelHeader('사진 범위'),
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text('원하는 범위를 대각선으로 그려 주세요.'),
+          ),
+        ),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.all(16),

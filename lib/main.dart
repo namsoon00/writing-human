@@ -167,6 +167,7 @@ class _BootstrapState extends State<_Bootstrap> with WidgetsBindingObserver {
       );
     }
     return Scaffold(
+      backgroundColor: paper,
       body: Center(
         child: error == null
             ? const CircularProgressIndicator()

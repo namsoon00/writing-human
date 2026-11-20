@@ -109,7 +109,7 @@ void main() {
       await tester.tap(find.byTooltip('쓰기 도구'));
       await tester.pumpAndSettle();
       expect(find.text('이 책의 내지'), findsNothing);
-      expect(find.byTooltip('크림지'), findsNothing);
+      expect(find.text('크림지'), findsNothing);
       expect(find.text('책 꾸미기'), findsNothing);
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();

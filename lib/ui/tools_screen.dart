@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../data/library_controller.dart';
 import 'paper.dart';
+import 'paper_choice.dart';
 import 'paper_panel.dart';
 import 'paper_tool.dart';
 import 'font_size_control.dart';
@@ -57,7 +58,7 @@ class ToolsScreen extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             for (var i = 0; i < 3; i++)
-                              _swatch(
+                              _inkSwatch(
                                 label: ['먹빛', '브라운', '블루'][i],
                                 color: penColors[i],
                                 selected: style.penIndex == i,
@@ -337,16 +338,17 @@ class LibrarySettings extends StatelessWidget {
                     style: TextStyle(fontSize: 13, color: muted),
                   ),
                   Wrap(
+                    spacing: 8,
                     children: [
-                      for (final (index, name) in paperNames.indexed)
-                        _swatch(
-                          label: name,
-                          color: paperColors[index],
-                          sheet: true,
-                          selected: style.paperIndex == index,
-                          onTap: () => controller.setStyle(
-                            style.copy(paperIndex: index),
-                          ),
+                      for (var i = 0; i < paperNames.length; i++)
+                        PaperChoice(
+                          index: i,
+                          selected: style.paperIndex == i,
+                          onSelected: (selected) {
+                            if (selected) {
+                              controller.setStyle(style.copy(paperIndex: i));
+                            }
+                          },
                         ),
                     ],
                   ),
@@ -422,12 +424,11 @@ Widget _row(String label, Widget child) => Row(
   ],
 );
 
-Widget _swatch({
+Widget _inkSwatch({
   required String label,
   required Color color,
   required bool selected,
   required VoidCallback onTap,
-  bool sheet = false,
 }) => Semantics(
   label: label,
   selected: selected,
@@ -436,36 +437,19 @@ Widget _swatch({
     message: label,
     child: InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(sheet ? 7 : 22),
+      borderRadius: BorderRadius.circular(22),
       child: Container(
         width: 48,
         height: 48,
         padding: const EdgeInsets.all(5),
         decoration: BoxDecoration(
-          shape: sheet ? BoxShape.rectangle : BoxShape.circle,
-          borderRadius: sheet ? BorderRadius.circular(7) : null,
+          shape: BoxShape.circle,
           border: Border.all(color: selected ? brandInk : Colors.transparent),
         ),
-        child: sheet
-            ? DecoratedBox(
-                decoration: BoxDecoration(
-                  color: color,
-                  image: paperGrain(color, .3),
-                  borderRadius: BorderRadius.circular(2),
-                  border: Border.all(color: ink.withValues(alpha: .12)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: ink.withValues(alpha: .09),
-                      offset: const Offset(1, 2),
-                      blurRadius: 2,
-                    ),
-                  ],
-                ),
-              )
-            : Padding(
-                padding: const EdgeInsets.all(3),
-                child: InkMark(size: 30, color: color),
-              ),
+        child: Padding(
+          padding: const EdgeInsets.all(3),
+          child: InkMark(size: 30, color: color),
+        ),
       ),
     ),
   ),

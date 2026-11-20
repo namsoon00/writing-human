@@ -31,7 +31,13 @@ void main() {
       expect(reading, findsOneWidget);
       expect(sourceField, findsNothing);
       expect(find.text('새 원문 찾기').hitTestable(), findsOneWidget);
-      expect(find.text('원문 담기').hitTestable(), findsOneWidget);
+      final add = find.widgetWithText(FilledButton, '원문 담기');
+      expect(add.hitTestable(), findsOneWidget);
+      expect(
+        tester.getTopLeft(add).dy -
+            tester.getBottomLeft(find.text('담은 원문이 없어요.')).dy,
+        inInclusiveRange(0, 20),
+      );
       await tester.tap(find.text('새 원문 찾기'));
       await settleSourceSheets(tester);
       expect(find.text('천천히 읽을 시'), findsOneWidget);

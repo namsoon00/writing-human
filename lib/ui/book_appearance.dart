@@ -9,6 +9,7 @@ import 'book_detail_design.dart';
 import 'book_detail_tools.dart';
 import 'book_details.dart';
 import 'paper.dart';
+import 'paper_choice.dart';
 import 'reading_details.dart';
 
 Future<void> showBookAppearance(
@@ -266,12 +267,9 @@ class _BookAppearanceState extends State<BookAppearance> {
                                   if (selected) _save(useDefaultPaper: true);
                                 },
                               ),
-                              for (final (i, name) in paperNames.indexed)
-                                ChoiceChip(
-                                  avatar: CircleAvatar(
-                                    backgroundColor: paperColors[i],
-                                  ),
-                                  label: Text(name),
+                              for (var i = 0; i < paperNames.length; i++)
+                                PaperChoice(
+                                  index: i,
                                   selected: selectedPaper == i,
                                   onSelected: (selected) {
                                     setState(() => showCover = false);

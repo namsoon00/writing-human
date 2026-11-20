@@ -130,11 +130,10 @@ class Bookshelf extends StatelessWidget {
       onTap: onPractice,
     );
 
-    Widget details(Book book) => IconButton(
+    Widget contents(Book book) => TextButton(
       key: ValueKey('shelf-details-${book.id}'),
-      tooltip: '${book.title} 상세',
       onPressed: () => onDetails(book),
-      icon: const Icon(CupertinoIcons.ellipsis, size: 17, color: muted),
+      child: Text('목차', semanticsLabel: '${book.title} 목차'),
     );
 
     return LayoutBuilder(
@@ -203,9 +202,9 @@ class Bookshelf extends StatelessWidget {
                         child: _ShelfLabel('최근 책'),
                       ),
                       const SizedBox(height: 8),
+                      Center(child: contents(recent)),
                       Center(child: openCover(recent, featuredWidth)),
                       const _WoodShelf(),
-                      Center(child: details(recent)),
                     ],
                   if (shelfCount > 0)
                     Padding(
@@ -246,38 +245,25 @@ class Bookshelf extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: padding),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         for (final book in slots)
                           SizedBox(
                             width: slotWidth,
-                            child: Center(
-                              child: book == null
-                                  ? practiceCover(coverWidth)
-                                  : openCover(book, coverWidth),
-                            ),
+                            child: book == null
+                                ? Center(child: practiceCover(coverWidth))
+                                : Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      contents(book),
+                                      openCover(book, coverWidth),
+                                    ],
+                                  ),
                           ),
                       ],
                     ),
                   ),
                   const _WoodShelf(),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: padding),
-                    child: Row(
-                      children: [
-                        for (final book in slots)
-                          SizedBox(
-                            width: slotWidth,
-                            child: Center(
-                              child: book == null
-                                  ? const SizedBox(
-                                      height: kMinInteractiveDimension,
-                                    )
-                                  : details(book),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             );

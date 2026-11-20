@@ -641,7 +641,7 @@ void main() {
       await tester.tap(find.text('설정'));
       await tester.pumpAndSettle();
       for (final index in [3, 2]) {
-        await tester.tap(find.byTooltip(paperNames[index]));
+        await tester.tap(find.widgetWithText(ChoiceChip, paperNames[index]));
         await tester.pumpAndSettle();
         expect(store.data.style.paperIndex, index);
       }

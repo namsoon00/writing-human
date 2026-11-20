@@ -410,7 +410,7 @@ void main() {
       );
       await tester.tap(find.widgetWithText(TextButton, '책장').last);
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('오래 곁에 둘 문장들 상세'));
+      await tester.tap(find.bySemanticsLabel('오래 곁에 둘 문장들 목차'));
       await tester.pumpAndSettle();
       expect(find.byType(Bookplate), findsNothing);
       await tester.tap(find.byTooltip('책 더 보기'));

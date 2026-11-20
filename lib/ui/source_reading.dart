@@ -411,6 +411,32 @@ class _SourceReadingState extends State<SourceReading> {
         },
       );
 
+  Widget _findNewOriginal() => TextButton.icon(
+    key: const ValueKey('originals-find-new'),
+    onPressed: saving ? null : () => _register(find: true),
+    icon: const Icon(CupertinoIcons.search, size: 17),
+    label: const Text('새 원문 찾기'),
+  );
+
+  Widget _emptyLibrary() => Center(
+    child: SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('담은 원문이 없어요.', textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          if (widget.onRegister != null)
+            FilledButton.icon(
+              onPressed: saving ? null : _register,
+              icon: const Icon(CupertinoIcons.plus, size: 16),
+              label: const Text('원문 담기'),
+            ),
+          if (widget.onFind != null) _findNewOriginal(),
+        ],
+      ),
+    ),
+  );
+
   Widget _readingActions(RegisteredOriginal original, Passage? writing) {
     final transcribe = widget.onTranscribe;
     final openWriting = widget.onOpenWriting;
@@ -551,7 +577,9 @@ class _SourceReadingState extends State<SourceReading> {
                       fontSize: 22,
                     ),
                   ),
-                  if (original == null && widget.onRegister != null)
+                  if (original == null &&
+                      widget.originals.isNotEmpty &&
+                      widget.onRegister != null)
                     ConstrainedBox(
                       constraints: BoxConstraints(
                         maxWidth: MediaQuery.sizeOf(context).width * .42,
@@ -579,15 +607,12 @@ class _SourceReadingState extends State<SourceReading> {
                 ],
               ),
               const Divider(),
-              if (original == null && widget.onFind != null)
+              if (original == null &&
+                  widget.originals.isNotEmpty &&
+                  widget.onFind != null)
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    key: const ValueKey('originals-find-new'),
-                    onPressed: saving ? null : () => _register(find: true),
-                    icon: const Icon(CupertinoIcons.search, size: 17),
-                    label: const Text('새 원문 찾기'),
-                  ),
+                  child: _findNewOriginal(),
                 ),
               if (original == null && widget.originals.isNotEmpty)
                 Align(
@@ -687,14 +712,12 @@ class _SourceReadingState extends State<SourceReading> {
                                 child: originalText!,
                               ),
                       )
+                    : widget.originals.isEmpty
+                    ? _emptyLibrary()
                     : visibleOriginals.isEmpty
                     ? Center(
                         child: Text(
-                          pattern != null
-                              ? '일치하는 원문이 없어요.'
-                              : markedOnly
-                              ? '밑칠한 구절이 없어요.'
-                              : '담은 원문이 없어요.',
+                          pattern != null ? '일치하는 원문이 없어요.' : '밑칠한 구절이 없어요.',
                         ),
                       )
                     : SingleChildScrollView(

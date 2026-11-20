@@ -2199,3 +2199,17 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   작품 목록이 없고 ‘새 원문 찾기’에서 보이는 것을 각각 확인했다.
 - [GitHub Pages 배포 44828721285](https://github.com/namsoon00/writing-human/actions/runs/44828721285)
   후 공개 웹에서도 같은 두 흐름을 확인했다. iOS·Android 실기기는 검증하지 않았다.
+
+## 2026-11-21 · 원문 전체로 필사 시작
+
+- Dart 포맷 검사, Flutter 정적 분석과 전체 Flutter 테스트 209개를 통과했다.
+- 위젯 테스트에서 사진에서 읽은 글을 편집한 뒤 전체를 담고 필사하는 흐름,
+  사진 확대·영역 재인식·보정 전 결과 복원, 한글 조합 중 저장 대기를 확인했다.
+  검토한 시는 전문의 줄바꿈과 출처를 유지한다. 이전에 범위를 지정한 쪽은
+  기존 가이드를 이어가고, 새로 연결한 쪽은 원문 전체를 사용한다.
+- GitHub Pages용 로컬 웹 빌드의 Chrome 390×844에서 검수용 한글 사진을 실제로
+  인식하고 교정한 뒤 원본 사진과 전체 글을 저장해 새 쪽에서 필사를 시작했다.
+  320×640에서는 검수용 위키문헌 응답의 모든 연을 한 번에 가져와 같은 흐름을 확인했다.
+- [GitHub Pages 배포 44830049559](https://github.com/namsoon00/writing-human/actions/runs/44830049559)
+  후 공개 웹의 같은 Chrome 화면 크기에서 두 동선을 다시 확인했다.
+- iOS·Android 실기기의 촬영·키보드 및 Safari는 이번 변경에서 검증하지 않았다.

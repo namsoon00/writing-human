@@ -82,6 +82,7 @@ class FakeIntake extends SourceIntake {
   Completer<List<String>>? reading;
   int photos = 0, cancellations = 0, scans = 0;
   bool cancelPicker = false;
+  bool? pickedWithCamera;
   SourcePhoto? recovered;
   SourceScan? positioned;
   Rect? recognizedRegion;
@@ -103,6 +104,7 @@ class FakeIntake extends SourceIntake {
   @override
   Future<SourcePhoto?> pickPhoto({required bool camera}) async {
     photos++;
+    pickedWithCamera = camera;
     return cancelPicker ? null : photo;
   }
 
@@ -313,7 +315,7 @@ void main() {
   );
 
   testWidgets(
-    'The capture sheet opens with two import actions and a single save',
+    'The capture sheet opens with camera, paste, photo, and a single save',
     (tester) async {
       await preparePhotoStorage(tester);
       final store = MemoryStore();
@@ -322,6 +324,7 @@ void main() {
       await openRegistration(tester);
 
       expect(find.text('원문 담기'), findsOneWidget);
+      expect(find.text('카메라로 읽기').hitTestable(), findsOneWidget);
       expect(sourceField.hitTestable(), findsOneWidget);
       expect(find.text('붙여넣기').hitTestable(), findsOneWidget);
       expect(find.text('시·문장 검색'), findsNothing);
@@ -340,6 +343,30 @@ void main() {
       expect(store.data.records.single.originals.single.photoId, isNotNull);
       expect(find.text('이 구절 필사하기'), findsOneWidget);
       expect(store.data.activePage!.guidedOriginalId, isNull);
+    },
+  );
+
+  testWidgets(
+    'The primary camera action goes straight to capture and reads it',
+    (tester) async {
+      final intake = FakeIntake();
+      await open(tester, MemoryStore(), intake);
+      await openRegistration(tester);
+      final camera = find.byKey(const ValueKey('source-camera-direct'));
+      expect(
+        tester.getTopLeft(camera).dy,
+        lessThan(tester.getTopLeft(sourceField).dy),
+      );
+
+      await tester.tap(camera);
+      await tester.pumpAndSettle();
+
+      expect(intake.photos, 1);
+      expect(intake.pickedWithCamera, isTrue);
+      expect(intake.scans, 1);
+      expect(find.byType(SimpleDialog), findsNothing);
+      expect(find.text('페이지 인식 결과'), findsOneWidget);
+      expect(find.text('첫 문단입니다.'), findsOneWidget);
     },
   );
 
@@ -2510,7 +2537,7 @@ void main() {
         findsNothing,
       );
       expect(
-        find.descendant(of: registration, matching: find.byType(FilledButton)),
+        find.descendant(of: registration, matching: find.text('담기')),
         findsOneWidget,
       );
       expect(find.widgetWithText(CheckboxListTile, '바로 필사하기'), findsNothing);

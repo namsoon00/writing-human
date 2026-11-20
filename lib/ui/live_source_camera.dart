@@ -10,7 +10,7 @@ import '../source/source_scan.dart';
 
 typedef LiveSourceResult = ({
   SourcePhoto photo,
-  SourceScan scan,
+  SourceScan? scan,
   CameraPage? page,
   int? paragraph,
 });
@@ -41,6 +41,7 @@ class _LiveSourceCameraState extends State<_LiveSourceCamera>
   LiveCamera? _camera;
   LiveSourceResult? _candidate;
   bool _ready = false, _confirming = false;
+  bool _choosingPhoto = false;
   String? _error;
 
   @override
@@ -149,6 +150,54 @@ class _LiveSourceCameraState extends State<_LiveSourceCamera>
     ));
   }
 
+  Future<void> _captureFrame() async {
+    final camera = _camera;
+    if (camera == null || !_ready || _confirming) return;
+    setState(() => _confirming = true);
+    SourcePhoto? photo;
+    try {
+      photo = await camera.frame();
+    } catch (_) {
+      // A frame can become unavailable while the device is changing state.
+    }
+    if (!mounted || _camera != camera) return;
+    if (photo != null) {
+      _finishWithPhoto(photo);
+    } else {
+      setState(() {
+        _confirming = false;
+        _error = '책을 화면에 비춘 뒤 다시 읽어 주세요.';
+      });
+    }
+  }
+
+  Future<void> _pickPhoto() async {
+    if (_choosingPhoto) return;
+    setState(() => _choosingPhoto = true);
+    try {
+      final photo = await widget.intake.pickPhoto(camera: false);
+      if (mounted && photo != null) _finishWithPhoto(photo);
+    } on SourceIntakeException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = '사진을 열지 못했어요. 다른 사진을 골라 주세요.');
+      }
+    } finally {
+      if (mounted) setState(() => _choosingPhoto = false);
+    }
+  }
+
+  void _finishWithPhoto(SourcePhoto photo) {
+    _stop();
+    Navigator.pop(context, (
+      photo: photo,
+      scan: null,
+      page: null,
+      paragraph: null,
+    ));
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -249,12 +298,24 @@ class _LiveSourceCameraState extends State<_LiveSourceCamera>
                       child: LinearProgressIndicator(),
                     ),
                   if (!_ready && !_confirming && _error != null)
-                    FilledButton(
-                      onPressed: () {
-                        setState(() => _error = null);
-                        unawaited(_open());
-                      },
-                      child: const Text('카메라 다시 열기'),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      children: [
+                        FilledButton(
+                          onPressed: _choosingPhoto
+                              ? null
+                              : () {
+                                  setState(() => _error = null);
+                                  unawaited(_open());
+                                },
+                          child: const Text('카메라 다시 열기'),
+                        ),
+                        FilledButton.tonal(
+                          onPressed: _choosingPhoto ? null : _pickPhoto,
+                          child: const Text('사진 고르기'),
+                        ),
+                      ],
                     ),
                   if (_ready &&
                       !_confirming &&
@@ -265,9 +326,13 @@ class _LiveSourceCameraState extends State<_LiveSourceCamera>
                       onPressed: () => _confirm(candidate!),
                       child: const Text('문단 고르기'),
                     ),
-                  if (_ready && !_confirming && widget.pageMode)
+                  if (_ready && widget.pageMode)
                     FilledButton(
-                      onPressed: canConfirm ? () => _confirm(candidate!) : null,
+                      onPressed: _confirming
+                          ? null
+                          : canConfirm
+                          ? () => _confirm(candidate!)
+                          : _captureFrame,
                       child: Text(
                         candidate?.page != null ? '이 페이지 사용' : '현재 화면 읽기',
                       ),

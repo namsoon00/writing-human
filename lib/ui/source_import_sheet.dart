@@ -240,38 +240,43 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     ),
   );
 
-  Future<void> _choosePhoto(_ScanMode mode) async {
+  Future<void> _choosePhoto(_ScanMode mode, {_PhotoInput? preferred}) async {
     if (!_editable) return;
     FocusScope.of(context).unfocus();
     final live = mode != _ScanMode.photo && widget.intake.canUseLiveCamera;
-    final input = !live && !widget.intake.canUseCamera
-        ? _PhotoInput.library
-        : await showDialog<_PhotoInput>(
-            context: context,
-            builder: (context) => SimpleDialog(
-              title: Text(switch (mode) {
-                _ScanMode.page => '책 한 페이지 인식',
-                _ScanMode.paragraph => '문단 인식',
-                _ScanMode.photo => '사진 담기',
-              }),
-              children: [
-                if (live)
-                  SimpleDialogOption(
-                    onPressed: () => Navigator.pop(context, _PhotoInput.live),
-                    child: const Text('카메라로 바로 읽기'),
-                  ),
-                if (widget.intake.canUseCamera)
-                  SimpleDialogOption(
-                    onPressed: () => Navigator.pop(context, _PhotoInput.camera),
-                    child: const Text('사진 찍기'),
-                  ),
-                SimpleDialogOption(
-                  onPressed: () => Navigator.pop(context, _PhotoInput.library),
-                  child: const Text('사진 고르기'),
+    final input =
+        preferred ??
+        (!live && !widget.intake.canUseCamera
+            ? _PhotoInput.library
+            : await showDialog<_PhotoInput>(
+                context: context,
+                builder: (context) => SimpleDialog(
+                  title: Text(switch (mode) {
+                    _ScanMode.page => '책 한 페이지 인식',
+                    _ScanMode.paragraph => '문단 인식',
+                    _ScanMode.photo => '사진 담기',
+                  }),
+                  children: [
+                    if (live)
+                      SimpleDialogOption(
+                        onPressed: () =>
+                            Navigator.pop(context, _PhotoInput.live),
+                        child: const Text('카메라로 바로 읽기'),
+                      ),
+                    if (widget.intake.canUseCamera)
+                      SimpleDialogOption(
+                        onPressed: () =>
+                            Navigator.pop(context, _PhotoInput.camera),
+                        child: const Text('사진 찍기'),
+                      ),
+                    SimpleDialogOption(
+                      onPressed: () =>
+                          Navigator.pop(context, _PhotoInput.library),
+                      child: const Text('사진 고르기'),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          );
+              ));
     if (!mounted || input == null || !_editable) return;
     if (input == _PhotoInput.live) {
       final result = await showLiveSourceCamera(
@@ -280,14 +285,12 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         pageMode: mode == _ScanMode.page,
       );
       if (!mounted || result == null) return;
-      _useScan(
-        result.photo,
-        result.scan,
-        mode,
-        cameraPage: result.page,
-        live: true,
-      );
-      if (result.paragraph case final index?) _pickParagraph(index);
+      if (result.scan case final scan?) {
+        _useScan(result.photo, scan, mode, cameraPage: result.page, live: true);
+        if (result.paragraph case final index?) _pickParagraph(index);
+      } else {
+        await _read(result.photo, mode);
+      }
       return;
     }
     setState(() {
@@ -787,6 +790,26 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       ),
       PopupMenuItem(value: _ImportAction.share, child: Text('다른 앱에서 공유')),
     ],
+  );
+
+  Widget _cameraAction() => FilledButton.tonalIcon(
+    key: const ValueKey('source-camera-direct'),
+    style: FilledButton.styleFrom(
+      minimumSize: const Size(0, 48),
+      backgroundColor: brandInk.withValues(alpha: .1),
+      foregroundColor: brandInk,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+    ),
+    onPressed: _editable
+        ? () => _choosePhoto(
+            _ScanMode.page,
+            preferred: widget.intake.canUseLiveCamera
+                ? _PhotoInput.live
+                : _PhotoInput.camera,
+          )
+        : null,
+    icon: const Icon(CupertinoIcons.camera, size: 21),
+    label: const Text('카메라로 읽기'),
   );
 
   Widget _importTools() => Wrap(
@@ -1426,6 +1449,12 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                       else if (_reviewing)
                         ..._reviewPanel()
                       else ...[
+                        if (!widget.shared &&
+                            (widget.intake.canUseLiveCamera ||
+                                widget.intake.canUseCamera))
+                          _cameraAction(),
+                        _importTools(),
+                        const SizedBox(height: 8),
                         if (_originalPhoto case final photo?) ...[
                           Image.memory(
                             photo.bytes,
@@ -1495,7 +1524,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                             enabled: _editable,
                           ),
                         ],
-                        _importTools(),
                       ],
                       if (text.length > sourceLengthLimit)
                         const Text('원문이 너무 길어요. 옮겨 쓸 구절만 남겨 주세요.'),

@@ -22,6 +22,7 @@ import 'package:writing_human/ui/book_detail_design.dart';
 import 'package:writing_human/ui/paper.dart';
 import 'package:writing_human/ui/paper_panel.dart';
 import 'package:writing_human/ui/original_photo.dart';
+import 'package:writing_human/ui/original_range_sheet.dart';
 import 'package:writing_human/ui/reading_details.dart';
 import 'package:writing_human/ui/source_import_sheet.dart';
 import 'package:writing_human/ui/source_reading.dart';
@@ -1373,7 +1374,8 @@ void main() {
       await tester.enterText(field, note);
       await tester.pump(const Duration(milliseconds: 450));
       await tester.pumpAndSettle();
-      final retry = find.text('느낀 점 저장 실패 · 다시 시도');
+      expect(find.text('느낀 점을 저장하지 못했어요.'), findsOneWidget);
+      final retry = find.descendant(of: reading, matching: find.text('다시 저장'));
       expect(retry, findsOneWidget);
       expect(tester.widget<TextField>(field).controller!.text, note);
       store.fail = false;
@@ -1713,7 +1715,7 @@ void main() {
       await tester.ensureVisible(citation);
       await tester.enterText(citation, '12쪽');
       await tester.pumpAndSettle();
-      final chooseRange = find.text('옮겨 쓸 구절 · 원문 전체');
+      final chooseRange = find.text('옮겨 쓸 구절');
       await tester.ensureVisible(chooseRange);
       await tester.tap(chooseRange);
       await tester.pumpAndSettle();
@@ -1780,6 +1782,13 @@ void main() {
       expect(highlighted(), '오른쪽 문단');
       await tester.tap(find.text('이 구절 선택'));
       await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(OriginalRangeButton),
+          matching: find.text('오른쪽 문단'),
+        ),
+        findsOneWidget,
+      );
       await saveWithPhoto(tester);
       final original = store.data.records.single.originals.single;
       expect(original.text, '왼쪽 문단\n\n오른쪽 문단');
@@ -2071,12 +2080,12 @@ void main() {
       store.fail = true;
       await tester.tap(confirm);
       await tester.pumpAndSettle();
-      expect(find.text('저장 재시도'), findsOneWidget);
+      expect(find.text('다시 저장'), findsOneWidget);
       expect(store.data.records, hasLength(1));
       expect(intake.shares, hasLength(1));
       expect(intake.acknowledged, isEmpty);
       store.fail = false;
-      await tester.tap(find.text('저장 재시도'));
+      await tester.tap(find.text('다시 저장'));
       await tester.pumpAndSettle();
       expect(store.data.records, hasLength(2));
       expect(intake.acknowledged, ['retry-id']);

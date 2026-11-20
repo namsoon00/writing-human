@@ -364,9 +364,11 @@ class _SourceReadingState extends State<SourceReading> {
           }
         } catch (_) {
           if (mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('원본 사진을 읽지 못했어요.')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('원본 사진을 열지 못했어요. 글에서 옮겨 쓸 구절을 골라 주세요.'),
+              ),
+            );
           }
         }
       }
@@ -425,6 +427,13 @@ class _SourceReadingState extends State<SourceReading> {
         ),
       ],
     ),
+  );
+
+  Widget _saveNotice(String message, VoidCallback? onRetry) => Row(
+    children: [
+      Expanded(child: Semantics(liveRegion: true, child: Text(message))),
+      TextButton(onPressed: onRetry, child: const Text('다시 저장')),
+    ],
   );
 
   @override
@@ -610,15 +619,12 @@ class _SourceReadingState extends State<SourceReading> {
                               label: const Text('원본 사진'),
                             ),
                           if (original.isFullPage && widget.onSaveRange != null)
-                            TextButton(
+                            OriginalRangeButton(
+                              text: original.text,
+                              range: original.writingRange,
                               onPressed: saving
                                   ? null
                                   : () => _changeRange(original),
-                              child: Text(
-                                original.writingRange == null
-                                    ? '옮겨 쓸 구절 · 원문 전체'
-                                    : '옮겨 쓸 구절 · 일부 선택됨',
-                              ),
                             ),
                         ],
                       ),
@@ -654,10 +660,7 @@ class _SourceReadingState extends State<SourceReading> {
                   ],
                 ),
               if (widget.onRetry != null && !editing)
-                TextButton(
-                  onPressed: widget.onRetry,
-                  child: const Text('저장 실패 · 다시 저장'),
-                ),
+                _saveNotice('원문을 저장하지 못했어요.', widget.onRetry),
               if (original == null && widget.previousCitations.isNotEmpty)
                 Align(
                   alignment: Alignment.centerLeft,
@@ -822,10 +825,7 @@ class _SourceReadingState extends State<SourceReading> {
                   ),
                 ),
               if (failed && editing)
-                TextButton(
-                  onPressed: _composing ? null : _flush,
-                  child: const Text('느낀 점 저장 실패 · 다시 시도'),
-                ),
+                _saveNotice('느낀 점을 저장하지 못했어요.', _composing ? null : _flush),
             ],
           ),
         ),

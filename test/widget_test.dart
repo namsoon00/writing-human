@@ -452,9 +452,13 @@ void main() {
     expect(tester.widget<TextField>(editor).controller, same(controller));
     expect(controller.value, value);
     expect(find.text('저장 실패'), findsOneWidget);
+    expect(
+      find.text('글을 저장하지 못했어요. 앱을 닫기 전에 ‘다시 저장’을 눌러 주세요.'),
+      findsOneWidget,
+    );
     expect(find.text('저장됨'), findsNothing);
     store.fail = false;
-    await tester.tap(find.text('저장 재시도'));
+    await tester.tap(find.text('다시 저장'));
     await tester.pumpAndSettle();
     expect(store.data.activePage!.text, value.text);
     expect(find.text('저장됨'), findsOneWidget);

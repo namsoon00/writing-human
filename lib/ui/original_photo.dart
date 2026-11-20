@@ -8,6 +8,8 @@ import '../source/source_scan.dart';
 import 'original_photo_crop.dart';
 import 'paper_panel.dart';
 
+const _missingOriginalPhoto = '이 기기에 원본 사진이 없어요. 사진을 담은 기기에서 열어 주세요.';
+
 Future<void> showOriginalPhoto(
   BuildContext context,
   String id, {
@@ -58,7 +60,7 @@ class _OriginalPhotoPanelState extends State<_OriginalPhotoPanel> {
       final bytes = await const OriginalPhotoStore().load(widget.id);
       if (!mounted) return;
       if (bytes == null) {
-        setState(() => _error = '이 기기에 보관된 사진이 없어요.');
+        setState(() => _error = _missingOriginalPhoto);
         return;
       }
       final chosen = await chooseOriginalPhotoRegion(
@@ -184,7 +186,10 @@ class _OriginalPhotoState extends State<OriginalPhoto> {
       if (bytes == null) {
         return Center(
           child: Text(
-            snapshot.hasError ? '사진을 읽지 못했어요.' : '이 기기에 보관된 사진이 없어요.',
+            snapshot.hasError
+                ? '사진을 열지 못했어요. 화면을 닫고 다시 열어 주세요.'
+                : _missingOriginalPhoto,
+            textAlign: TextAlign.center,
           ),
         );
       }
@@ -194,7 +199,10 @@ class _OriginalPhotoState extends State<OriginalPhoto> {
         width: widget.fitWidth ? double.infinity : null,
         fit: widget.fitWidth ? BoxFit.fitWidth : BoxFit.contain,
         semanticLabel: '저장한 원본 사진',
-        errorBuilder: (_, _, _) => const Text('이 사진을 표시할 수 없어요.'),
+        errorBuilder: (_, _, _) => const Text(
+          '사진을 표시할 수 없어요. 원본 파일이 열리는지 확인해 주세요.',
+          textAlign: TextAlign.center,
+        ),
       );
       return widget.fitWidth
           ? SingleChildScrollView(primary: false, child: photo)

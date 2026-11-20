@@ -1274,17 +1274,14 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     if (_isPageReview) ...[
       Align(
         alignment: Alignment.centerLeft,
-        child: TextButton.icon(
+        child: OriginalRangeButton(
+          text: _confirmedText,
+          range: _range?.range,
+          needsReselection: _range != null && _range!.text != _confirmedText,
           onPressed: _editable && _confirmedText.isNotEmpty
               ? _pickWritingRange
               : null,
           icon: const Icon(CupertinoIcons.scope, size: 16),
-          label: Text(switch (_range) {
-            null => '옮겨 쓸 구절 · 원문 전체',
-            (text: final text, range: _) when text == _confirmedText =>
-              '옮겨 쓸 구절 · 일부 선택됨',
-            _ => '옮겨 쓸 구절 · 다시 선택',
-          }),
         ),
       ),
     ],

@@ -330,9 +330,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(controller.value, selected);
       expect(tester.widget<TextField>(field).controller, same(controller));
-      expect(find.text('저장 재시도'), findsOneWidget);
+      expect(find.text('다시 저장'), findsOneWidget);
       store.fail = false;
-      await tester.tap(find.text('저장 재시도'));
+      await tester.tap(find.text('다시 저장'));
       await tester.pumpAndSettle();
       expect(ranges(store.data.activePage!.pencilMarks), [
         [0, 7],

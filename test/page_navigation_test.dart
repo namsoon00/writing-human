@@ -973,7 +973,7 @@ void main() {
     );
     expect(overlay, findsNothing);
     store.fail = false;
-    await tester.tap(find.text('저장 재시도'));
+    await tester.tap(find.text('다시 저장'));
     await tester.pumpAndSettle();
     await nextSheet(tester);
     await tester.pumpAndSettle();

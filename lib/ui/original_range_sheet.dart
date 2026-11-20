@@ -10,6 +10,47 @@ import 'source_scan_preview.dart';
 
 typedef OriginalRangeChoice = ({PencilMark? range});
 
+class OriginalRangeButton extends StatelessWidget {
+  const OriginalRangeButton({
+    super.key,
+    required this.text,
+    required this.onPressed,
+    this.range,
+    this.needsReselection = false,
+    this.icon,
+  });
+
+  final String text;
+  final PencilMark? range;
+  final VoidCallback? onPressed;
+  final bool needsReselection;
+  final Widget? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = range;
+    final subtitle = needsReselection
+        ? '구절을 다시 골라 주세요'
+        : selected == null || !validOriginalRange(text, selected)
+        ? '원문 전체'
+        : text.substring(selected.start, selected.end).trim().split('\n').first;
+    final label = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('옮겨 쓸 구절'),
+        Text(
+          subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 12),
+        ),
+      ],
+    );
+    return TextButton.icon(onPressed: onPressed, icon: icon, label: label);
+  }
+}
+
 Future<OriginalRangeChoice?> chooseOriginalRange(
   BuildContext context,
   String text, {

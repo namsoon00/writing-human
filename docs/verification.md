@@ -2269,3 +2269,15 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - [GitHub Pages 배포 44833840562](https://github.com/namsoon00/writing-human/actions/runs/44833840562)
   후 공개 웹에서도 같은 두 화면 크기에서 한글 입력과 커서 이동을 확인했다.
   iOS·Android 실기기의 입력 지연과 모바일 Safari는 검증하지 않았다.
+
+## 2026-11-21 · 새 원문 찾기의 터치 입력과 커서
+
+- Dart 포맷 검사와 Flutter 정적 분석, 전체 Flutter 테스트 213개, Node 터치
+  테스트 9개를 통과했다.
+- iOS 플랫폼 위젯 테스트에서 검색칸 첫 탭으로 입력이 시작되는 것, 글 가운데
+  탭으로 커서가 이동하는 것, 한글 조합 중의 값과 선택이 보존되는 것을 확인했다.
+- Chrome 320×640에서 실제 터치 이벤트를 보내 ‘새 원문 찾기 → 웹 검색’을 열고,
+  검색칸을 눌러 한글을 입력했다. 탭과 방향키로 커서를 옮겨 글을 넣고, 수정한
+  검색어가 검색 요청에 사용되는 것을 로컬 웹과 공개 웹에서 확인했다.
+- [GitHub Pages 배포 44835885544](https://github.com/namsoon00/writing-human/actions/runs/44835885544)
+  를 완료했다. iOS·Android 실기기와 모바일 Safari의 시스템 키보드는 검증하지 않았다.

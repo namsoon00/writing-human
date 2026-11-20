@@ -2562,6 +2562,95 @@ void main() {
     },
   );
 
+  testWidgets('The original photo stays visible and scrollable while typing', (
+    tester,
+  ) async {
+    await preparePhotoStorage(tester);
+    final photo = FakeIntake();
+    final id = (await tester.runAsync(
+      () => const OriginalPhotoStore().save(photo.photo.bytes),
+    ))!;
+    final store = MemoryStore()
+      ..data = Library(
+        records: [
+          WritingRecord(
+            id: 'r',
+            title: '필사',
+            originals: [RegisteredOriginal('o', '따라 쓸 구절', photoId: id)],
+          ),
+        ],
+        pages: const [
+          WritingPage(id: 'p', recordId: 'r', number: 1, guidedOriginalId: 'o'),
+        ],
+        activePageId: 'p',
+        writing: true,
+      );
+    await open(tester, store, photo);
+    final image = find.byKey(const ValueKey('saved-original-photo'));
+    final preview = find.descendant(
+      of: transcriptionReference,
+      matching: find.byType(OriginalPhoto),
+    );
+    await tester.tap(find.text('사진 보기'));
+    await tester.pump();
+    await tester.runAsync(() async {
+      for (var frame = 0; frame < 60; frame++) {
+        await tester.pump(const Duration(milliseconds: 25));
+        if (image.evaluate().isNotEmpty && tester.getSize(image).height > 0) {
+          break;
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+    await tester.pumpAndSettle();
+    expect(preview, findsOneWidget);
+    expect(tester.getSize(image).height, greaterThan(0));
+
+    // Leave less than 64 px for the reference, where it used to switch to text.
+    tester.view.physicalSize = const Size(320, 600);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 340);
+    await tester.showKeyboard(bodyField);
+    await tester.pumpAndSettle();
+    final referenceBounds = tester.getRect(transcriptionReference);
+    expect(referenceBounds.height, lessThan(72));
+    expect(referenceBounds.bottom, lessThanOrEqualTo(260));
+    expect(image, findsOneWidget);
+    expect(find.byTooltip('글 보기'), findsOneWidget);
+    expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isTrue);
+
+    final photoScroll = find.descendant(
+      of: preview,
+      matching: find.byType(Scrollable),
+    );
+    final scrollState = tester.state<ScrollableState>(photoScroll);
+    final scrollStart = scrollState.position.pixels;
+    await tester.drag(photoScroll, const Offset(0, -95));
+    await tester.pumpAndSettle();
+    expect(scrollState.position.pixels, greaterThan(scrollStart));
+    expect(tester.testTextInput.isVisible, isTrue);
+    expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isTrue);
+
+    const composing = TextEditingValue(
+      text: '따라 ㅆ',
+      selection: TextSelection.collapsed(offset: 4),
+      composing: TextRange(start: 3, end: 4),
+    );
+    tester.testTextInput.updateEditingValue(composing);
+    await tester.pumpAndSettle();
+    final field = tester.widget<TextField>(bodyField);
+    expect(field.controller!.value, composing);
+    expect(image, findsOneWidget);
+    final committed = composing.copyWith(
+      text: '따라 씀',
+      composing: TextRange.empty,
+    );
+    tester.testTextInput.updateEditingValue(committed);
+    await tester.pumpAndSettle();
+    expect(image, findsOneWidget);
+    expect(store.data.activePage!.text, '따라 씀');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'Shared photo opens as a guide without recognition or prefilled writing',
     (tester) async {

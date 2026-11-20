@@ -474,9 +474,6 @@ class _PageEditorState extends State<PageEditor> {
           right: padding.right,
         );
         final overlap = widget.keyboardOverlap;
-        final visiblePadding = padding.copyWith(
-          bottom: overlap > 0 ? 12 : padding.bottom,
-        );
         final source = widget.guidedOriginal;
         final hasChosenGuide = source != null;
         final paperHeight = math.max(0.0, constraints.maxHeight - overlap);
@@ -488,6 +485,19 @@ class _PageEditorState extends State<PageEditor> {
               )
             : math.min(232.0, paperHeight * .40);
         final lineHeight = scaler.scale(style.fontSize) * 1.8;
+        final bottomPadding = overlap > 0 ? 12.0 : padding.bottom;
+        final visiblePadding = padding.copyWith(
+          top: source?.photoId == null
+              ? padding.top
+              : math.min(
+                  padding.top,
+                  math.max(
+                    0.0,
+                    paperHeight - referenceHeight - lineHeight - bottomPadding,
+                  ),
+                ),
+          bottom: bottomPadding,
+        );
         final canCenter =
             hasChosenGuide &&
             focus.hasFocus &&
@@ -532,7 +542,7 @@ class _PageEditorState extends State<PageEditor> {
                     child: CustomPaint(
                       painter: WritingGuides(
                         enabled: style.guides,
-                        top: padding.top,
+                        top: visiblePadding.top,
                         left: padding.left,
                         right: padding.right,
                         lineHeight:

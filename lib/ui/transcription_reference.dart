@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderParagraph;
 
@@ -93,39 +94,72 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
               ? _textReference(passage, scaler)
               : LayoutBuilder(
                   builder: (context, constraints) {
-                    if (constraints.maxHeight < 64 && passage.isNotEmpty) {
-                      return _textReference(passage, scaler);
-                    }
+                    final compact = constraints.maxHeight < 132;
+                    final showingPhoto = _showPhoto || passage.isEmpty;
+                    final canSwitch = passage.isNotEmpty;
+                    final switchLabel = _showPhoto ? '글 보기' : '사진 보기';
+                    void toggle() => setState(() => _showPhoto = !_showPhoto);
+                    void open() => _openPhoto(source.photoId!, region);
+
                     return TextFieldTapRegion(
-                      child: Column(
+                      child: Flex(
+                        direction: compact ? Axis.horizontal : Axis.vertical,
+                        textDirection: compact ? TextDirection.rtl : null,
                         children: [
-                          if (constraints.maxHeight >= 64)
-                            Row(
-                              children: [
-                                if (passage.isNotEmpty)
-                                  TextButton(
-                                    onPressed: () => setState(
-                                      () => _showPhoto = !_showPhoto,
+                          if (compact)
+                            SizedBox(
+                              width: 42,
+                              height: constraints.maxHeight,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  if (canSwitch)
+                                    Flexible(
+                                      child: IconButton(
+                                        tooltip: switchLabel,
+                                        onPressed: toggle,
+                                        icon: Icon(
+                                          _showPhoto
+                                              ? CupertinoIcons.text_alignleft
+                                              : CupertinoIcons.photo,
+                                          size: 18,
+                                        ),
+                                      ),
                                     ),
-                                    child: Text(_showPhoto ? '글 보기' : '사진 보기'),
+                                  Flexible(
+                                    child: IconButton(
+                                      tooltip: '사진 크게 보기',
+                                      onPressed: open,
+                                      icon: const Icon(
+                                        CupertinoIcons
+                                            .arrow_up_left_arrow_down_right,
+                                        size: 18,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            Wrap(
+                              children: [
+                                if (canSwitch)
+                                  TextButton(
+                                    onPressed: toggle,
+                                    child: Text(switchLabel),
                                   ),
                                 TextButton(
-                                  onPressed: () =>
-                                      _openPhoto(source.photoId!, region),
+                                  onPressed: open,
                                   child: const Text('사진 크게 보기'),
                                 ),
                               ],
                             ),
                           Expanded(
-                            child: _showPhoto || passage.isEmpty
-                                ? InkWell(
-                                    onTap: () =>
-                                        _openPhoto(source.photoId!, region),
-                                    child: OriginalPhoto(
-                                      id: source.photoId!,
-                                      region: region,
-                                      fitWidth: true,
-                                    ),
+                            child: showingPhoto
+                                ? OriginalPhoto(
+                                    id: source.photoId!,
+                                    region: region,
+                                    fitWidth: true,
                                   )
                                 : _textReference(passage, scaler),
                           ),

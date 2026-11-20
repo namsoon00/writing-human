@@ -1094,7 +1094,10 @@ void main() {
       final store = MemoryStore();
       await open(tester, store, FakeIntake());
       await openRegistration(tester);
-      await openSourceSearch(tester);
+      final more = find.text('시 더 보기');
+      await tester.ensureVisible(more);
+      await tester.tap(more);
+      await tester.pumpAndSettle();
       expect(find.text('바로 담을 수 있는 시'), findsOneWidget);
       expect(find.widgetWithText(TextField, '검색어'), findsNothing);
       expect(requests, isEmpty);
@@ -1121,6 +1124,7 @@ void main() {
         tester.widget<TextField>(sourceField).controller!.text,
         '첫 줄\n둘째 줄',
       );
+      expect(find.text('담고 옮겨 쓰기'), findsOneWidget);
       expect(store.data.records, isEmpty);
     }, () => client);
   });

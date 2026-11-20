@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import '../data/library_search.dart';
 import '../data/model.dart';
 
+import '../source/source_intake.dart';
 import '../source/wikisource_preview.dart';
 import 'original_list_item.dart';
 import 'paper.dart';
@@ -194,7 +195,12 @@ String _words(String value) => value
     .replaceAll(RegExp(r'[^가-힣ㄱ-ㅎㅏ-ㅣ一-龯a-z0-9]+'), ' ')
     .trim();
 
-typedef SourceSearchChoice = ({String? citation, String? text});
+class SourceSearchChoice {
+  const SourceSearchChoice({this.citation, this.text, this.photo});
+
+  final String? citation, text;
+  final SourcePhoto? photo;
+}
 
 class _SourceHit {
   const _SourceHit(this.collection, this.title, this.id);
@@ -223,9 +229,10 @@ class _SourceHit {
 Future<SourceSearchChoice?> showSourceSearch(
   BuildContext context,
   WritingStyle style,
+  SourceIntake intake,
 ) async {
   final route = paperPanelRoute<SourceSearchChoice>(
-    (_) => _SourceSearch(style: style),
+    (_) => _SourceSearch(style: style, intake: intake),
     color: originalPanelColor,
   );
   final result = await Navigator.of(context).push(route);
@@ -234,9 +241,10 @@ Future<SourceSearchChoice?> showSourceSearch(
 }
 
 class _SourceSearch extends StatefulWidget {
-  const _SourceSearch({required this.style});
+  const _SourceSearch({required this.style, required this.intake});
 
   final WritingStyle style;
+  final SourceIntake intake;
 
   @override
   State<_SourceSearch> createState() => _SourceSearchState();
@@ -247,7 +255,7 @@ class _SourceSearchState extends State<_SourceSearch> {
   final _client = http.Client();
   final _focus = FocusNode();
   String? _searched, _linkError;
-  bool _loading = false, _pasting = false;
+  bool _loading = false, _importing = false;
   bool _webSearch = false;
   _SearchMode _mode = _SearchMode.title;
   _SourceHit? _selected;
@@ -361,38 +369,57 @@ class _SourceSearchState extends State<_SourceSearch> {
     });
   }
 
+  Future<SourcePhoto?> _pickScreenshot() =>
+      widget.intake.pickPhoto(camera: false);
+
   Future<void> _open(Uri url, {required String title, String? citation}) async {
-    final excerpt = await openSourceBrowser(
+    final choice = await openSourceBrowser(
       context,
       url: url,
       title: title,
       hasCitation: citation != null,
       launchLabel: kIsWeb ? '새 탭에서 열기' : '웹페이지 열기',
+      pickScreenshot: _pickScreenshot,
     );
-    if (mounted && excerpt != null) {
-      Navigator.pop(context, (citation: citation, text: excerpt));
+    if (mounted && ModalRoute.isCurrentOf(context) == true && choice != null) {
+      Navigator.pop(
+        context,
+        SourceSearchChoice(
+          citation: citation,
+          text: choice.text,
+          photo: choice.photo,
+        ),
+      );
     }
   }
 
-  Future<void> _collect(_SourceHit hit) async {
-    if (_pasting) return;
+  Future<void> _collect(
+    Future<SourceSearchChoice?> Function() read, {
+    required String failure,
+  }) async {
+    if (_importing) return;
     setState(() {
-      _pasting = true;
+      _importing = true;
       _linkError = null;
     });
     String? error;
     try {
-      final text = await readSourceExcerpt();
-      if (!mounted) return;
-      Navigator.pop(context, (citation: hit.citation, text: text));
+      final choice = await read();
+      if (mounted &&
+          ModalRoute.isCurrentOf(context) == true &&
+          choice != null) {
+        Navigator.pop(context, choice);
+      }
     } on FormatException catch (exception) {
       error = exception.message;
+    } on SourceIntakeException catch (exception) {
+      error = exception.message;
     } on Exception {
-      error = '붙여넣지 못했어요. 글을 다시 복사해 주세요.';
+      error = failure;
     } finally {
       if (mounted) {
         setState(() {
-          _pasting = false;
+          _importing = false;
           _linkError = error;
         });
       }
@@ -462,10 +489,13 @@ class _SourceSearchState extends State<_SourceSearch> {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
             child: FilledButton(
-              onPressed: () => Navigator.pop(context, (
-                citation: poem.citation,
-                text: stanzas.join('\n\n'),
-              )),
+              onPressed: () => Navigator.pop(
+                context,
+                SourceSearchChoice(
+                  citation: poem.citation,
+                  text: stanzas.join('\n\n'),
+                ),
+              ),
               child: const Text('원문 가져오기'),
             ),
           ),
@@ -482,17 +512,17 @@ class _SourceSearchState extends State<_SourceSearch> {
       if (previewFailed) ...[
         const Text('원문 미리보기를 불러오지 못했어요.'),
         TextButton(
-          onPressed: _pasting ? null : () => _showHit(hit),
+          onPressed: _importing ? null : () => _showHit(hit),
           child: const Text('다시 시도'),
         ),
       ],
       if (_mode != _SearchMode.author) ...[
         const SizedBox(height: 12),
-        const Text('원문을 복사한 뒤 ‘복사한 글 가져오기’를 누르세요.'),
+        const Text('원문을 복사하거나 화면을 캡처한 뒤 가져오세요.'),
       ],
       const SizedBox(height: 12),
       OutlinedButton.icon(
-        onPressed: _pasting
+        onPressed: _importing
             ? null
             : () => _open(
                 hit.url,
@@ -505,16 +535,39 @@ class _SourceSearchState extends State<_SourceSearch> {
       if (_mode != _SearchMode.author) ...[
         const SizedBox(height: 8),
         FilledButton(
-          onPressed: _pasting ? null : () => _collect(hit),
+          onPressed: _importing
+              ? null
+              : () => _collect(
+                  () async => SourceSearchChoice(
+                    citation: hit.citation,
+                    text: await readSourceExcerpt(),
+                  ),
+                  failure: '붙여넣지 못했어요. 글을 다시 복사해 주세요.',
+                ),
           child: const Text('복사한 글 가져오기'),
         ),
-        TextButton(
-          onPressed: _pasting
+        OutlinedButton.icon(
+          onPressed: _importing
               ? null
-              : () => Navigator.pop(context, (
-                  citation: hit.citation,
-                  text: null,
-                )),
+              : () => _collect(() async {
+                  final photo = await _pickScreenshot();
+                  return photo == null
+                      ? null
+                      : SourceSearchChoice(
+                          citation: hit.citation,
+                          photo: photo,
+                        );
+                }, failure: '캡처를 가져오지 못했어요. 다시 골라 주세요.'),
+          icon: const Icon(CupertinoIcons.photo, size: 17),
+          label: const Text('캡처 가져오기'),
+        ),
+        TextButton(
+          onPressed: _importing
+              ? null
+              : () => Navigator.pop(
+                  context,
+                  SourceSearchChoice(citation: hit.citation),
+                ),
           child: const Text('출처만 넣기'),
         ),
       ],
@@ -541,7 +594,7 @@ class _SourceSearchState extends State<_SourceSearch> {
     final preview = _preview;
     final hasHits = _results.any((entry) => entry.$2?.isNotEmpty ?? false);
     return PopScope(
-      canPop: !_pasting,
+      canPop: !_importing,
       child: PaperPanel(
         color: originalPanelColor,
         child: Column(
@@ -553,7 +606,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                   if (selected != null)
                     IconButton(
                       tooltip: '검색 결과로 돌아가기',
-                      onPressed: _pasting
+                      onPressed: _importing
                           ? null
                           : () => setState(() {
                               _selected = null;
@@ -574,7 +627,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                   ),
                   IconButton(
                     tooltip: '검색 닫기',
-                    onPressed: _pasting ? null : () => Navigator.pop(context),
+                    onPressed: _importing ? null : () => Navigator.pop(context),
                     icon: const Icon(CupertinoIcons.xmark, size: 18),
                   ),
                 ],
@@ -665,7 +718,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                     children: [
                       const Padding(
                         padding: EdgeInsets.all(8),
-                        child: Text('‘복사 필요’가 표시된 자료는 웹에서 원문을 열고 본문을 복사해 주세요.'),
+                        child: Text('웹 원문은 본문을 복사하거나 화면을 캡처해서 가져올 수 있어요.'),
                       ),
                       if (searched == null)
                         Padding(
@@ -710,7 +763,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                                     ? const Text('원문 미리보기')
                                     : _mode == _SearchMode.author
                                     ? null
-                                    : const Text('웹 원문 · 복사 필요'),
+                                    : const Text('웹 원문 · 복사 또는 캡처'),
                                 onTap: () => _showHit(hit),
                               ),
                         ],
@@ -731,7 +784,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                         ),
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Text('네이버에서 원문을 복사한 뒤 ‘복사한 글 가져오기’를 누르세요.'),
+                          child: Text('네이버에서 글을 복사하거나 캡처한 뒤 가져오세요.'),
                         ),
                       ],
                     ],

@@ -209,20 +209,25 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   Future<void> _searchSources({bool closeOnCancel = false}) async {
     if (!_editable) return;
     FocusScope.of(context).unfocus();
-    final choice = await showSourceSearch(context, widget.style);
+    final choice = await showSourceSearch(context, widget.style, widget.intake);
     if (!mounted || !_editable) return;
     if (choice == null) {
       if (closeOnCancel) await _close();
       return;
     }
-    final (:text, :citation) = choice;
+    final SourceSearchChoice(:text, :citation, :photo) = choice;
     if (!await _confirmSourceReplacement(
-          text: text,
+          text: photo == null ? text : '',
           citation: citation,
-          replacePhoto: text != null && _originalPhoto != null,
+          replacePhoto:
+              (text != null || photo != null) && _originalPhoto != null,
         ) ||
         !mounted ||
         !_editable) {
+      return;
+    }
+    if (photo != null) {
+      await _importScreenshot(photo, citation);
       return;
     }
     if (text != null) {
@@ -235,6 +240,20 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       _text.text = text;
     }
     if (citation != null) _citation.text = citation;
+  }
+
+  Future<void> _importScreenshot(SourcePhoto photo, String? citation) async {
+    final hasDraft = _text.text.trim().isNotEmpty || _originalPhoto != null;
+    final scan = hasDraft ? await _recognize(photo) : null;
+    if (!mounted || (hasDraft && scan == null)) return;
+    setState(() => _setPickedPhoto(photo));
+    if (citation != null) _citation.text = citation;
+    if (scan == null) {
+      await _extractPhoto();
+    } else {
+      _text.clear();
+      _reviewScan(scan);
+    }
   }
 
   Future<bool> _confirmSourceReplacement({
@@ -310,15 +329,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         replacement = await _recognize(photo);
         if (!mounted || replacement == null) return;
       }
-      setState(() {
-        _clearWholeEditor();
-        _originalPhoto = photo;
-        _photoRegion = null;
-        _scan = null;
-        _scanRegion = null;
-        _beforeAdjustment = null;
-        _photoBeforeAdjustment = null;
-      });
+      setState(() => _setPickedPhoto(photo));
       if (replacement != null) {
         _reviewScan(replacement);
         return;
@@ -335,6 +346,16 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       if (mounted) setState(() => _busy = false);
     }
     if (mounted && _text.text.trim().isEmpty) await _extractPhoto();
+  }
+
+  void _setPickedPhoto(SourcePhoto photo) {
+    _clearWholeEditor();
+    _originalPhoto = photo;
+    _photoRegion = null;
+    _scan = null;
+    _scanRegion = null;
+    _beforeAdjustment = null;
+    _photoBeforeAdjustment = null;
   }
 
   Future<SourceScan?> _recognize(

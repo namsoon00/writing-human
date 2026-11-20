@@ -17,20 +17,24 @@ Future<String> readSourceExcerpt() async {
   return text;
 }
 
-Future<String?> openSourceBrowser(
+typedef SourceBrowserChoice = ({String? text, SourcePhoto? photo});
+
+Future<SourceBrowserChoice?> openSourceBrowser(
   BuildContext context, {
   required Uri url,
   required String title,
   required String launchLabel,
   required bool hasCitation,
-}) => Navigator.of(context).push<String>(
-  MaterialPageRoute<String>(
+  Future<SourcePhoto?> Function()? pickScreenshot,
+}) => Navigator.of(context).push<SourceBrowserChoice>(
+  MaterialPageRoute<SourceBrowserChoice>(
     fullscreenDialog: true,
     builder: (_) => _SourceBrowser(
       url: url,
       title: title,
       launchLabel: launchLabel,
       hasCitation: hasCitation,
+      pickScreenshot: pickScreenshot,
     ),
   ),
 );
@@ -41,18 +45,20 @@ class _SourceBrowser extends StatefulWidget {
     required this.title,
     required this.launchLabel,
     required this.hasCitation,
+    this.pickScreenshot,
   });
 
   final Uri url;
   final String title, launchLabel;
   final bool hasCitation;
+  final Future<SourcePhoto?> Function()? pickScreenshot;
 
   @override
   State<_SourceBrowser> createState() => _SourceBrowserState();
 }
 
 class _SourceBrowserState extends State<_SourceBrowser> {
-  bool _readingClipboard = false, _opening = false;
+  bool _collecting = false, _opening = false;
   String? _error;
 
   @override
@@ -75,7 +81,7 @@ class _SourceBrowserState extends State<_SourceBrowser> {
     try {
       opened = await browser.launchSourcePage(widget.url);
     } on Exception {
-      // The source can still be collected from the clipboard.
+      // Import actions remain available if launching the browser fails.
     }
     if (!mounted) return;
     setState(() {
@@ -84,23 +90,30 @@ class _SourceBrowserState extends State<_SourceBrowser> {
     });
   }
 
-  Future<void> _collect() async {
-    if (_readingClipboard) return;
+  Future<void> _collect(
+    Future<SourceBrowserChoice?> Function() read, {
+    required String failure,
+  }) async {
+    if (_collecting) return;
     setState(() {
-      _readingClipboard = true;
+      _collecting = true;
       _error = null;
     });
     try {
-      final excerpt = await readSourceExcerpt();
-      if (mounted && ModalRoute.isCurrentOf(context) == true) {
-        Navigator.pop(context, excerpt);
+      final choice = await read();
+      if (choice != null &&
+          mounted &&
+          ModalRoute.isCurrentOf(context) == true) {
+        Navigator.pop(context, choice);
       }
     } on FormatException catch (error) {
       if (mounted) setState(() => _error = error.message);
+    } on SourceIntakeException catch (error) {
+      if (mounted) setState(() => _error = error.message);
     } on Exception {
-      if (mounted) setState(() => _error = '붙여넣지 못했어요. 구절을 다시 복사해 주세요.');
+      if (mounted) setState(() => _error = failure);
     } finally {
-      if (mounted) setState(() => _readingClipboard = false);
+      if (mounted) setState(() => _collecting = false);
     }
   }
 
@@ -134,7 +147,9 @@ class _SourceBrowserState extends State<_SourceBrowser> {
                   Text(widget.url.host),
                   const SizedBox(height: 12),
                   Text(
-                    browser.collectionInstructions,
+                    widget.pickScreenshot != null
+                        ? '웹에서 글을 복사하거나 화면을 캡처한 뒤 돌아오세요.'
+                        : browser.collectionInstructions,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -159,10 +174,29 @@ class _SourceBrowserState extends State<_SourceBrowser> {
                 child: Text(error, textAlign: TextAlign.center),
               ),
             FilledButton.icon(
-              onPressed: _readingClipboard ? null : _collect,
+              onPressed: _collecting
+                  ? null
+                  : () => _collect(
+                      () async =>
+                          (text: await readSourceExcerpt(), photo: null),
+                      failure: '붙여넣지 못했어요. 글을 다시 복사해 주세요.',
+                    ),
               icon: const Icon(CupertinoIcons.doc_on_clipboard, size: 17),
               label: Text(widget.hasCitation ? '복사한 글과 출처 가져오기' : '복사한 글 가져오기'),
             ),
+            if (widget.pickScreenshot case final pick?)
+              OutlinedButton.icon(
+                onPressed: _collecting
+                    ? null
+                    : () => _collect(() async {
+                        final photo = await pick();
+                        return photo == null
+                            ? null
+                            : (text: null, photo: photo);
+                      }, failure: '캡처를 가져오지 못했어요. 다시 골라 주세요.'),
+                icon: const Icon(CupertinoIcons.photo, size: 17),
+                label: const Text('캡처 가져오기'),
+              ),
           ],
         ),
       ),

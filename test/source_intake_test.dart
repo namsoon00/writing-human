@@ -1053,7 +1053,7 @@ void main() {
       expect(requests.last.queryParameters['srsearch'], 'intitle:바람');
       final result = find.widgetWithText(ListTile, '바람');
       expect(result, findsOneWidget);
-      expect(find.text('웹 원문 · 복사 필요'), findsOneWidget);
+      expect(find.text('웹 원문 · 복사 또는 캡처'), findsOneWidget);
       await tester.tap(find.widgetWithText(ChoiceChip, '시 둘러보기'));
       await tester.pumpAndSettle();
       expect(find.text('천천히 읽을 시'), findsOneWidget);
@@ -1065,7 +1065,7 @@ void main() {
       expect(find.text('두시언해/서시흥'), findsNothing);
       await tester.tap(result);
       await tester.pumpAndSettle();
-      expect(find.text('원문을 복사한 뒤 ‘복사한 글 가져오기’를 누르세요.'), findsOneWidget);
+      expect(find.text('원문을 복사하거나 화면을 캡처한 뒤 가져오세요.'), findsOneWidget);
       await tester.tap(find.text('출처만 넣기'));
       await tester.pumpAndSettle();
       await showSourceDetails(tester);
@@ -1129,6 +1129,120 @@ void main() {
       );
     }, () => client);
   });
+
+  for (final fromBrowser in [false, true]) {
+    testWidgets(
+      'A web screenshot is read with its source (from browser: $fromBrowser)',
+      (tester) async {
+        final client = MockClient(
+          (_) async => http.Response.bytes(
+            utf8.encode(
+              jsonEncode({
+                'query': {
+                  'search': [
+                    {'title': '검수 작품', 'pageid': 5182},
+                  ],
+                },
+              }),
+            ),
+            200,
+          ),
+        );
+        await http.runWithClient(() async {
+          await preparePhotoStorage(tester);
+          final store = MemoryStore()..data = existing();
+          final intake = FakeIntake();
+          await open(tester, store, intake);
+          await openRegistration(tester);
+
+          Future<void> findSource() async {
+            await openSourceSearch(tester);
+            await tester.tap(find.widgetWithText(ChoiceChip, '웹 검색'));
+            await tester.pumpAndSettle();
+            await tester.enterText(
+              find.widgetWithText(TextField, '검색어'),
+              '검수 작품',
+            );
+            await tester.tap(find.byTooltip('자료 검색'));
+            await tester.pumpAndSettle();
+            await tester.tap(find.widgetWithText(ListTile, '검수 작품'));
+            await tester.pumpAndSettle();
+            if (fromBrowser) {
+              await tester.tap(find.text('원문 열기'));
+              await tester.pumpAndSettle();
+              expect(find.byTooltip('원문 브라우저 닫기'), findsOneWidget);
+            }
+          }
+
+          const oldText = '직접 적은 초안';
+          const oldCitation = '메모해 둔 출처';
+          if (fromBrowser) {
+            await tester.enterText(sourceField, oldText);
+            await showSourceDetails(tester);
+            await tester.enterText(
+              find.byKey(const ValueKey('original-citation')),
+              oldCitation,
+            );
+          }
+          await findSource();
+          final capture = find.text('캡처 가져오기');
+          expect(capture.hitTestable(), findsOneWidget);
+          intake.cancelPicker = true;
+          await tester.tap(capture);
+          await tester.pumpAndSettle();
+          expect(capture.hitTestable(), findsOneWidget);
+          expect(intake.scans, 0);
+          intake.cancelPicker = false;
+
+          if (fromBrowser) {
+            intake.blocks = [];
+            await tester.tap(capture);
+            await tester.pumpAndSettle();
+            expect(find.text('입력한 원문을 바꿀까요?'), findsOneWidget);
+            await tester.tap(find.text('바꾸기'));
+            await tester.pumpAndSettle();
+            expect(intake.scans, 1);
+            expect(
+              tester.widget<TextField>(sourceField).controller!.text,
+              oldText,
+            );
+            expect(
+              tester
+                  .widget<TextField>(
+                    find.byKey(const ValueKey('original-citation')),
+                  )
+                  .controller!
+                  .text,
+              oldCitation,
+            );
+            expect(find.textContaining('읽힌 글자가 없어요.'), findsOneWidget);
+            intake.blocks = ['캡처 첫 문단', '캡처 둘째 문단'];
+            await findSource();
+          } else {
+            intake.blocks = ['캡처 첫 문단', '캡처 둘째 문단'];
+          }
+          await tester.tap(capture);
+          await tester.pumpAndSettle();
+          if (fromBrowser) {
+            await tester.tap(find.text('바꾸기'));
+            await tester.pumpAndSettle();
+          }
+          expect(intake.photos, fromBrowser ? 3 : 2);
+          expect(intake.pickedWithCamera, isFalse);
+          expect(intake.scans, fromBrowser ? 2 : 1);
+          expect(find.text('원문 확인'), findsOneWidget);
+          expect(photoDraft(tester).data, '캡처 첫 문단\n\n캡처 둘째 문단');
+          expect(store.data.records.single.originals, isEmpty);
+          await saveWithPhoto(tester);
+          final saved = store.data.records.single.originals.single;
+          expect(saved.text, '캡처 첫 문단\n\n캡처 둘째 문단');
+          expect(saved.citation, contains('curid=5182'));
+          expect(saved.photoId, isNotNull);
+          expect(store.data.activePage!.text, existing().activePage!.text);
+        }, () => client);
+      },
+    );
+  }
 
   testWidgets('Reviewed poem imports all stanzas and keeps line breaks', (
     tester,

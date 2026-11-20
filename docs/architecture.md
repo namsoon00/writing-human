@@ -302,6 +302,8 @@ GitHub Pages·Sites의 빌드 스크립트에는 준비 단계가 포함된다.
 ## 구분 표시와 압화
 
 목차와 원문 목록은 `RecordDivider`로 항목 사이의 구분 표시를 그린다.
+담은 원문과 추천 작품 목록은 `OriginalListItem`으로 쪽지, 서체와 구분 표시를
+공유한다. 책별 꾸밈은 원문 담기를 열 때 정한 책의 값을 사용한다.
 `ui/reading_details.dart`는 꾸밈의 견본과 표지·장서표의 압화를 구성한다.
 이전 SQLite의 `books.index_label` 컬럼은 호환을 위해 남겨 둔다. 기존 웹 저장,
 백업, 동기화에서 읽은 `indexLabel`과 전역·책별 `indexTab`은 앱에서 무시한다.

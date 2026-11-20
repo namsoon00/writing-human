@@ -10,16 +10,15 @@ import '../data/original_photo_store.dart';
 import '../source/originals.dart';
 import '../source/photo_lines.dart';
 import '../source/source_scan.dart';
-import 'book_details.dart';
 import 'paper.dart';
 import 'paper_panel.dart';
 import 'original_edit.dart';
+import 'original_list_item.dart';
 import 'original_photo.dart';
 import 'source_browser.dart';
 import 'paper_search_field.dart';
 import 'original_range_sheet.dart';
 import 'pencil_marks.dart';
-import 'reading_details.dart';
 import 'reflection_ink.dart';
 import 'search_completions.dart';
 import 'writing_pen.dart';
@@ -483,7 +482,6 @@ class _SourceReadingState extends State<SourceReading> {
                 : () => _editReflection(original, match),
           );
     final style = widget.style;
-    final details = style.bookDetails;
     final panel = panelPaperColor(paperColors[style.paperIndex]);
     return PopScope(
       canPop: _canLeave && !editing,
@@ -708,51 +706,22 @@ class _SourceReadingState extends State<SourceReading> {
                         child: Column(
                           children: [
                             for (final (index, (_, item))
-                                in visibleOriginals.indexed) ...[
-                              if (index > 0)
-                                details.recordDivider.enabled
-                                    ? RecordDivider(
-                                        choice: details.recordDivider,
-                                        compact: true,
-                                      )
-                                    : const SizedBox(height: 8),
-                              InkWell(
+                                in visibleOriginals.indexed)
+                              OriginalListItem(
                                 key: item.id == _readingId
                                     ? readingItem
                                     : ValueKey(item.id),
+                                style: style,
+                                title: _originalPreview(item, pattern),
+                                subtitle:
+                                    item.citation.isEmpty ||
+                                        (!item.canTranscribe &&
+                                            item.photoId == null)
+                                    ? null
+                                    : item.citation,
+                                showDivider: index > 0,
                                 onTap: () => _open(item.id),
-                                child: SourceSlip(
-                                  compact: true,
-                                  panelColor: panel,
-                                  choice: details.sourceSlip,
-                                  child: ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    title: Text(
-                                      _originalPreview(item, pattern),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: writingTextStyle(
-                                        style.fontIndex,
-                                        size: 17,
-                                        useDevelopmentTypeface:
-                                            style.useDevelopmentTypeface,
-                                        color: ink,
-                                      ),
-                                    ),
-                                    subtitle:
-                                        item.citation.isEmpty ||
-                                            (!item.canTranscribe &&
-                                                item.photoId == null)
-                                        ? null
-                                        : Text(
-                                            item.citation,
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                  ),
-                                ),
                               ),
-                            ],
                           ],
                         ),
                       ),

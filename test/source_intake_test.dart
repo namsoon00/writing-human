@@ -21,6 +21,7 @@ import 'package:writing_human/ui/book_details.dart';
 import 'package:writing_human/ui/book_detail_design.dart';
 import 'package:writing_human/ui/paper.dart';
 import 'package:writing_human/ui/paper_panel.dart';
+import 'package:writing_human/ui/original_list_item.dart';
 import 'package:writing_human/ui/original_photo.dart';
 import 'package:writing_human/ui/original_range_sheet.dart';
 import 'package:writing_human/ui/reading_details.dart';
@@ -1120,6 +1121,10 @@ void main() {
       );
       await tester.ensureVisible(poem);
       await tester.pumpAndSettle();
+      expect(
+        find.ancestor(of: poem, matching: find.byType(OriginalListItem)),
+        findsOneWidget,
+      );
       await tester.tap(poem);
       await tester.pumpAndSettle();
       expect(requests.single.queryParameters['oldid'], '430577');
@@ -1615,6 +1620,31 @@ void main() {
         ).withValues(alpha: .26),
       );
       expect(find.text('내일도 읽고 싶다.'), findsOneWidget);
+
+      await tester.tap(find.text('원문 담기'));
+      await tester.pumpAndSettle();
+      final title = find.text('서시');
+      await tester.ensureVisible(title);
+      final row = find.ancestor(
+        of: title,
+        matching: find.byType(OriginalListItem),
+      );
+      final suggestionCard = tester.widget<SourceSlip>(
+        find.descendant(of: row, matching: find.byType(SourceSlip)),
+      );
+      expect(suggestionCard.choice.toJson(), sourceCard.choice.toJson());
+      expect(suggestionCard.panelColor, sourceCard.panelColor);
+      expect(suggestionCard.compact, sourceCard.compact);
+      expect(tester.widget<Text>(title).style!.fontFamily, 'NanumGothic');
+      expect(
+        tester
+            .widget<RecordDivider>(
+              find.descendant(of: row, matching: find.byType(RecordDivider)),
+            )
+            .choice
+            .toJson(),
+        divider.toJson(),
+      );
     },
   );
 

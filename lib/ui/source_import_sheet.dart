@@ -16,6 +16,7 @@ import '../source/source_scan.dart';
 import '../source/wikisource_preview.dart';
 import 'book_details.dart';
 import 'paper.dart';
+import 'original_list_item.dart';
 import 'original_photo_crop.dart';
 import 'original_range_sheet.dart';
 import 'original_text_cleanup.dart';
@@ -46,14 +47,11 @@ class SourceImportSheet extends StatefulWidget {
     super.key,
     required this.intake,
     required this.initialText,
-    required this.choice,
+    required this.style,
     this.initialPhoto,
     this.existingPhotoId,
     this.onSaveExtraction,
     this.initialPhotoRegion,
-    this.paperColor = paper,
-    this.penColor = ink,
-    this.grainOpacity = .16,
     this.initialCitation = '',
     this.shared = false,
     this.registration = false,
@@ -65,9 +63,11 @@ class SourceImportSheet extends StatefulWidget {
 
   final SourceIntake intake;
   final String initialText, initialCitation;
-  final BookDetailChoice choice;
-  final Color paperColor, penColor;
-  final double grainOpacity;
+  final WritingStyle style;
+
+  Color get paperColor => paperColors[style.paperIndex];
+  Color get penColor => penColors[style.penIndex];
+  double get grainOpacity => paperGrainOpacity[style.paperIndex];
   final SourcePhoto? initialPhoto;
   final String? existingPhotoId;
   final Future<bool> Function(SourceImportResult)? onSaveExtraction;
@@ -208,7 +208,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     FocusScope.of(context).unfocus();
     final choice = await showSourceSearch(
       context,
-      widget.paperColor,
+      widget.style,
       initialPoem: poem,
     );
     if (!mounted || choice == null || !_editable) return;
@@ -966,14 +966,14 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
           style: Theme.of(context).textTheme.titleSmall,
         ),
       ),
-      for (final id in [1508, 1515, 3044])
+      const SizedBox(height: 8),
+      for (final (index, id) in const [1508, 1515, 3044].indexed)
         if (WikisourcePoem.reviewed[id] case final poem?)
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            title: Text(poem.title),
-            subtitle: Text(poem.author),
-            trailing: const Icon(CupertinoIcons.chevron_right, size: 15),
+          OriginalListItem(
+            style: widget.style,
+            title: poem.title,
+            subtitle: poem.author,
+            showDivider: index > 0,
             onTap: _editable ? () => _searchSources(poem: poem) : null,
           ),
       TextButton(
@@ -1356,7 +1356,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   }
 
   Widget _field(TextEditingController controller, int index) => SourceSlip(
-    choice: widget.choice,
+    choice: widget.style.bookDetails.sourceSlip,
     compact: _reviewing,
     showCaption: false,
     child: WritingCaret(

@@ -8,8 +8,11 @@ import 'package:html/parser.dart' as html;
 import 'package:http/http.dart' as http;
 
 import '../data/library_search.dart';
+import '../data/model.dart';
 
 import '../source/wikisource_preview.dart';
+import 'original_list_item.dart';
+import 'paper.dart';
 import 'source_browser.dart';
 import 'paper_panel.dart';
 import 'paper_search_field.dart';
@@ -223,19 +226,19 @@ class _SourceHit {
 
 Future<SourceSearchChoice?> showSourceSearch(
   BuildContext context,
-  Color paperColor, {
+  WritingStyle style, {
   WikisourcePoem? initialPoem,
 }) => Navigator.of(context).push(
   paperPanelRoute<SourceSearchChoice>(
-    (_) => _SourceSearch(paperColor: paperColor, initialPoem: initialPoem),
-    color: paperColor,
+    (_) => _SourceSearch(style: style, initialPoem: initialPoem),
+    color: paperColors[style.paperIndex],
   ),
 );
 
 class _SourceSearch extends StatefulWidget {
-  const _SourceSearch({required this.paperColor, this.initialPoem});
+  const _SourceSearch({required this.style, this.initialPoem});
 
-  final Color paperColor;
+  final WritingStyle style;
   final WikisourcePoem? initialPoem;
 
   @override
@@ -586,7 +589,7 @@ class _SourceSearchState extends State<_SourceSearch> {
     return PopScope(
       canPop: !_pasting,
       child: PaperPanel(
-        color: widget.paperColor,
+        color: paperColors[widget.style.paperIndex],
         child: Column(
           children: [
             Padding(
@@ -799,14 +802,13 @@ class _SourceSearchState extends State<_SourceSearch> {
                         padding: EdgeInsets.all(8),
                         child: Text('바로 담을 수 있는 시'),
                       ),
-                      for (final poem in WikisourcePoem.reviewed.values)
-                        ListTile(
-                          title: Text(poem.title),
-                          subtitle: Text(poem.author),
-                          trailing: const Icon(
-                            CupertinoIcons.chevron_right,
-                            size: 15,
-                          ),
+                      for (final (index, poem)
+                          in WikisourcePoem.reviewed.values.indexed)
+                        OriginalListItem(
+                          style: widget.style,
+                          title: poem.title,
+                          subtitle: poem.author,
+                          showDivider: index > 0,
                           onTap: () => _showHit(
                             _SourceHit(
                               _Collection.works,

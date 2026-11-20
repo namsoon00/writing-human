@@ -52,6 +52,7 @@ class _NativeSourceIntake extends SourceIntake {
         photo.bytes,
         region: region,
         mask: mask,
+        preserveRegionDetail: true,
       );
       final result = await channel.invokeListMethod<Object?>(
         'scan',

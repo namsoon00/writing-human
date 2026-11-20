@@ -440,9 +440,9 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     if (boxes.isEmpty || _busy) return;
     final bounds = boxes.reduce((a, b) => a.expandToInclude(b));
     final region = bounds.inflate(.007).intersect(scanPageBounds);
-    final scan = _scan!;
+    final photo = _cameraPage == null ? _originalPhoto : null;
     final result = await _recognize(
-      SourcePhoto('', scan.photo),
+      photo ?? SourcePhoto('', _scan!.photo),
       region: region,
       mask: boxes.map((box) => box.inflate(.003)).toList(),
     );

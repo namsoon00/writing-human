@@ -55,6 +55,7 @@ class _WebSourceIntake extends SourceIntake {
         photo.bytes,
         region: region,
         mask: mask,
+        preserveRegionDetail: true,
       );
       if (live && generation != _liveGeneration) {
         return SourceScan.fromText(photo.bytes, const []);

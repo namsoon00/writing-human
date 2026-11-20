@@ -170,14 +170,20 @@ class ScanImage {
     Uint8List bytes, {
     Rect? region,
     List<Rect> mask = const [],
+    bool preserveRegionDetail = false,
   }) async {
+    // Limit the full-page and live previews. A selected passage is cropped
+    // after decoding, so the extra pixels are only passed to OCR in that area.
+    final maxDimension = preserveRegionDetail && region != null ? 3600 : 2400;
     final codec = await instantiateImageCodecWithSize(
       await ImmutableBuffer.fromUint8List(bytes),
       getTargetSize: (width, height) {
-        if (math.max(width, height) <= 2400) return const TargetImageSize();
+        if (math.max(width, height) <= maxDimension) {
+          return const TargetImageSize();
+        }
         return width >= height
-            ? const TargetImageSize(width: 2400)
-            : const TargetImageSize(height: 2400);
+            ? TargetImageSize(width: maxDimension)
+            : TargetImageSize(height: maxDimension);
       },
     );
     try {

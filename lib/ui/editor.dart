@@ -499,10 +499,8 @@ class _PageEditorState extends State<PageEditor> {
           _centeredLine = null;
           _followWritingLine();
         }
-        final showInlineGuide =
-            _comparison != null &&
-            paperHeight - referenceHeight - visiblePadding.vertical >=
-                lineHeight * 5;
+        final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+        final showInlineGuide = _comparison != null && !keyboardVisible;
         final guide = showInlineGuide
             ? TranscriptionGuidePainter(
                 comparison: _comparison!,

@@ -2566,8 +2566,9 @@ void main() {
     addTearDown(tester.view.resetViewInsets);
     await tester.showKeyboard(bodyField);
     await tester.pumpAndSettle();
-    expect(transcriptionGuide, findsOneWidget);
-    expect(transcriptionReference, findsNothing);
+    expect(transcriptionGuide, findsNothing);
+    expect(transcriptionReference, findsOneWidget);
+    expect(remainingReference(tester), '$first\n$second\n$third');
     final editable = tester
         .state<EditableTextState>(
           find.descendant(of: bodyField, matching: find.byType(EditableText)),
@@ -2587,7 +2588,7 @@ void main() {
     await tester.enterText(bodyField, '$first\n');
     await tester.pumpAndSettle();
     expect(caretY(), closeTo(middle, 5));
-    expect(remainingInline(tester), '$second\n$third');
+    expect(remainingReference(tester), '$second\n$third');
     const draft = '$first\n두';
     final composing = TextEditingValue(
       text: draft,
@@ -2608,7 +2609,7 @@ void main() {
   });
 
   testWidgets(
-    'The original switches between paper and bottom reference without changing input',
+    'Keyboard visibility switches the original without changing Korean composition',
     (tester) async {
       final passage = [
         '첫 줄을 옮겨 적는다.',
@@ -2656,6 +2657,11 @@ void main() {
         greaterThan(500),
       );
 
+      tester.view.physicalSize = const Size(320, 350);
+      await tester.pumpAndSettle();
+      expect(transcriptionGuide, findsOneWidget);
+      expect(transcriptionReference, findsNothing);
+
       tester.view.physicalSize = const Size(320, 640);
       tester.view.viewInsets = const FakeViewPadding(bottom: 290);
       await tester.showKeyboard(bodyField);
@@ -2671,7 +2677,8 @@ void main() {
       );
       tester.testTextInput.updateEditingValue(composing);
       await tester.pumpAndSettle();
-      tester.view.physicalSize = const Size(390, 844);
+      expect(remainingReference(tester), passage.substring(5));
+      expect(field.controller!.value, composing);
       tester.view.resetViewInsets();
       await tester.pumpAndSettle();
       expect(transcriptionGuide, findsOneWidget);

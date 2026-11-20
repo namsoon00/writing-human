@@ -172,7 +172,7 @@ class ScanImage {
     List<Rect> mask = const [],
     bool preserveRegionDetail = false,
   }) async {
-    // Limit the full-page and live previews. A selected passage is cropped
+    // Limit the full-page preview. A selected passage is cropped
     // after decoding, so the extra pixels are only passed to OCR in that area.
     final maxDimension = preserveRegionDetail && region != null ? 3600 : 2400;
     final codec = await instantiateImageCodecWithSize(

@@ -4,7 +4,6 @@
   const asset = (name) => new URL(name, directory).href;
   let loading;
   let active;
-  let liveWorker;
 
   function engine() {
     if (window.Tesseract) return Promise.resolve();
@@ -75,16 +74,9 @@
 
   window.writingHumanCancelOcr = () => active?.cancel(new Error('Cancelled'));
 
-  window.writingHumanEndLiveOcr = () => {
-    if (active?.live) active.cancel(new Error('Cancelled'));
-    const worker = liveWorker;
-    liveWorker = undefined;
-    if (worker) void worker.terminate().catch(() => {});
-  };
-
-  window.writingHumanScanPhoto = async (bytes, width, height, tight, live = false) => {
+  window.writingHumanScanPhoto = async (bytes, width, height, tight) => {
     window.writingHumanCancelOcr();
-    const job = {cancelled: false, live};
+    const job = {cancelled: false};
     const interrupted = new Promise((_, reject) => {
       job.cancel = (error) => {
         job.cancelled = true;
@@ -94,24 +86,18 @@
     active = job;
     try {
       await Promise.race([engine(), interrupted]);
-      const initializing = live && liveWorker ? Promise.resolve(liveWorker) : window.Tesseract.createWorker(['kor'], 1, {
+      const initializing = window.Tesseract.createWorker(['kor'], 1, {
         workerPath: asset('worker.min.js'),
         corePath: directory.href,
         langPath: directory.href.replace(/\/$/, ''),
         workerBlobURL: false,
         legacyCore: false,
-        errorHandler: () => {
-          const running = live ? active : job;
-          if (running && (!live || running.live)) {
-            running.cancel(new Error('OCR worker failed'));
-          }
-        },
+        errorHandler: () => job.cancel(new Error('OCR worker failed')),
       }).then(async (worker) => {
         if (job.cancelled) {
           await worker.terminate();
           throw new Error('Cancelled');
         }
-        if (live) liveWorker = worker;
         return worker;
       });
       job.worker = await Promise.race([initializing, interrupted]);
@@ -158,15 +144,9 @@
       return recognized.map((paragraph) => paragraph.map((line) => ({
         ...word(line), words: (line.words ?? []).filter((item) => item.text.trim()).map(word),
       })));
-    } catch (error) {
-      if (live && liveWorker === job.worker) {
-        liveWorker = undefined;
-        if (job.worker) await job.worker.terminate();
-      }
-      throw error;
     } finally {
       if (active === job) active = undefined;
-      if (!live && job.worker) await job.worker.terminate();
+      if (job.worker) await job.worker.terminate();
     }
   };
 

@@ -82,7 +82,9 @@ List<RegisteredOriginal> originalsFor(
   )) {
     final original = item.original;
     if (!removed.contains(item.key) &&
-        (original.canTranscribe || original.citation.trim().isNotEmpty)) {
+        (original.canTranscribe ||
+            original.photoId != null ||
+            original.citation.trim().isNotEmpty)) {
       originals.putIfAbsent(_originalContent(original), () => original);
     }
   }
@@ -106,6 +108,33 @@ Iterable<OriginalRemoval> removalKeysFor(
   }
 }
 
+typedef OriginalExtraction = ({
+  bool isFullPage,
+  PencilMark? writingRange,
+  List<OriginalPhotoLine> photoLines,
+  List<double>? photoRegion,
+});
+
+RegisteredOriginal editOriginal(
+  RegisteredOriginal original,
+  String text,
+  String citation, {
+  String? newId,
+  OriginalExtraction? extraction,
+}) {
+  final edited = original.edited(text, citation, newId: newId);
+  return extraction == null
+      ? edited
+      : edited.withDetails(
+          reflection: edited.reflection,
+          writingRange: extraction.writingRange,
+          isFullPage: extraction.isFullPage,
+          photoLines: extraction.photoLines,
+          photoRegion: extraction.photoRegion,
+          clearPhotoRegion: extraction.photoRegion == null,
+        );
+}
+
 /// Replace every stored copy that appears as this single list item.
 Library editOriginalInScope(
   Library library, {
@@ -115,6 +144,7 @@ Library editOriginalInScope(
   required String text,
   required String citation,
   required String Function() newId,
+  OriginalExtraction? extraction,
 }) {
   final keys = removalKeysFor(
     library,
@@ -137,13 +167,27 @@ Library editOriginalInScope(
     final updated = [
       for (final item in values)
         if (keys.contains((ownerId: id, originalId: item.id, book: book)))
-          item.edited(text, citation, newId: legacyIds[item.id])
+          editOriginal(
+            item,
+            text,
+            citation,
+            newId: legacyIds[item.id],
+            extraction: extraction,
+          )
         else
           item,
     ];
     if (promotedId != null && owner.ownerId == id && owner.book == book) {
       if (!updated.any((item) => item.id == promotedId)) {
-        updated.add(original.edited(text, citation, newId: promotedId));
+        updated.add(
+          editOriginal(
+            original,
+            text,
+            citation,
+            newId: promotedId,
+            extraction: extraction,
+          ),
+        );
       }
     }
     return updated;
@@ -174,13 +218,16 @@ Library editOriginalInScope(
           record,
     ],
   );
+  final photoRegion = extraction == null
+      ? original.photoRegion
+      : extraction.photoRegion;
   final selected = originalsFor(changed, bookId: bookId, recordId: recordId)
       .firstWhere(
         (item) =>
             item.text == text &&
             item.citation == citation &&
             item.photoId == original.photoId &&
-            item.photoRegion?.join(',') == original.photoRegion?.join(','),
+            item.photoRegion?.join(',') == photoRegion?.join(','),
       );
   final previousIds = keys.map((item) => item.originalId).toSet();
   WritingPage relinkGuide(WritingPage page) =>
@@ -188,7 +235,10 @@ Library editOriginalInScope(
           scopedRecords.contains(page.recordId)
       ? page
             .rememberOriginalCitation(original.citation)
-            .withDetails(guidedOriginalId: selected.id)
+            .withDetails(
+              guidedOriginalId: selected.id,
+              clearGuide: extraction != null,
+            )
       : page;
   return applyOriginalRemovals(
     changed.copy(

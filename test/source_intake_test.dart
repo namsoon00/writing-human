@@ -201,9 +201,9 @@ Future<void> preparePhotoStorage(WidgetTester tester) async {
   });
 }
 
-Future<void> saveWithPhoto(WidgetTester tester) async {
+Future<void> saveWithPhoto(WidgetTester tester, {Finder? action}) async {
   await tester.runAsync(() async {
-    await tester.tap(confirm);
+    await tester.tap(action ?? confirm);
     await tester.pump();
     for (
       var i = 0;
@@ -232,20 +232,33 @@ Future<void> showSourceDetails(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> takePhoto(WidgetTester tester, {bool settle = true}) async {
-  final photoMenu = find.byKey(const ValueKey('source-import-more'));
-  await tester.ensureVisible(photoMenu);
-  await tester.pumpAndSettle();
-  await tester.tap(photoMenu);
-  await tester.pumpAndSettle();
-  await tester.tap(find.byKey(const ValueKey('source-photo')));
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('사진 찍기'));
+Future<void> extractPhoto(WidgetTester tester, {bool settle = true}) async {
+  final secondary = find.widgetWithText(TextButton, '사진에서 글자 뽑기');
+  if (secondary.evaluate().isNotEmpty) {
+    await tester.ensureVisible(secondary);
+    await tester.tap(secondary);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '글자 뽑기'));
+  } else {
+    await tester.tap(confirm);
+  }
   if (settle) {
     await tester.pumpAndSettle();
   } else {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
+  }
+}
+
+Future<void> takePhoto(WidgetTester tester, {bool selection = false}) async {
+  await tester.tap(find.byKey(const ValueKey('source-camera-direct')));
+  await tester.pumpAndSettle();
+  final preview = find.byKey(const ValueKey('original-photo-preview'));
+  if (preview.evaluate().isEmpty) return;
+  await extractPhoto(tester);
+  if (selection) {
+    await tester.tap(find.text('구절 고르기'));
+    await tester.pumpAndSettle();
   }
 }
 
@@ -324,30 +337,30 @@ void main() {
       await openRegistration(tester);
 
       expect(find.text('원문 담기'), findsOneWidget);
-      expect(find.text('카메라로 읽기').hitTestable(), findsOneWidget);
+      expect(find.text('사진 찍기').hitTestable(), findsOneWidget);
       expect(sourceField.hitTestable(), findsOneWidget);
       expect(find.text('붙여넣기').hitTestable(), findsOneWidget);
       expect(find.text('시·문장 검색'), findsNothing);
       expect(find.byKey(const ValueKey('original-citation')), findsNothing);
       expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
 
-      await tester.tap(find.text('사진 담기'));
-      await tester.pumpAndSettle();
       await tester.tap(find.text('사진 고르기'));
       await tester.pumpAndSettle();
       expect(intake.photos, 1);
       expect(intake.scans, 0);
       expect(sourceField, findsNothing);
       expect(find.text('책 없이 담기'), findsOneWidget);
-      await saveWithPhoto(tester);
+      await saveWithPhoto(tester, action: find.text('사진만 보관'));
       expect(store.data.records.single.originals.single.photoId, isNotNull);
-      expect(find.text('이 구절 필사하기'), findsOneWidget);
+      expect(store.data.records.single.originals.single.canTranscribe, isFalse);
+      expect(find.text('보관한 사진 열기'), findsOneWidget);
+      expect(find.text('이 구절 필사하기'), findsNothing);
       expect(store.data.activePage!.guidedOriginalId, isNull);
     },
   );
 
   testWidgets(
-    'The primary camera action goes straight to capture and reads it',
+    'Camera capture waits for extraction and opens the editable text',
     (tester) async {
       final intake = FakeIntake();
       await open(tester, MemoryStore(), intake);
@@ -363,10 +376,25 @@ void main() {
 
       expect(intake.photos, 1);
       expect(intake.pickedWithCamera, isTrue);
+      expect(intake.scans, 0);
+      expect(
+        find.byKey(const ValueKey('original-photo-preview')),
+        findsOneWidget,
+      );
+      expect(find.text('글자 뽑기'), findsOneWidget);
+      await extractPhoto(tester);
       expect(intake.scans, 1);
-      expect(find.byType(SimpleDialog), findsNothing);
-      expect(find.text('페이지 인식 결과'), findsOneWidget);
-      expect(find.text('첫 문단입니다.'), findsOneWidget);
+      expect(find.text('원문 확인'), findsOneWidget);
+      expect(
+        tester.widget<TextField>(sourceField).controller!.text,
+        '첫 문단입니다.',
+      );
+      await tester.tap(find.byTooltip('1번째 문단 빼기'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(sourceField).controller!.text,
+        '둘째 문단입나다.',
+      );
     },
   );
 
@@ -1596,7 +1624,7 @@ void main() {
       await open(tester, store, intake);
       final body = tester.widget<TextField>(bodyField).controller!;
       await openRegistration(tester);
-      await takePhoto(tester);
+      await takePhoto(tester, selection: true);
       expect(intake.photos, 1);
       expect(find.text('페이지 인식 결과'), findsOneWidget);
       expect(store.data.records, isEmpty);
@@ -1653,7 +1681,7 @@ void main() {
       );
       await open(tester, store, intake);
       await openRegistration(tester);
-      await takePhoto(tester);
+      await takePhoto(tester, selection: true);
       final preview = find.byKey(const ValueKey('source-scan-preview'));
       final inlineHeight = tester.getSize(preview).height;
       expect(inlineHeight, greaterThan(350));
@@ -1812,11 +1840,8 @@ void main() {
       );
       await open(tester, store, intake);
       await openRegistration(tester);
-      await tester.tap(find.byKey(const ValueKey('source-import-more')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('source-paragraph-photo')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('사진 찍기'));
+      await takePhoto(tester, selection: true);
+      await tester.tap(find.widgetWithText(ChoiceChip, '문단'));
       await tester.pumpAndSettle();
       final preview = find.byKey(const ValueKey('source-scan-preview'));
       await tester.tap(preview);
@@ -1945,13 +1970,13 @@ void main() {
       intake.cancelPicker = false;
       intake.blocks = [];
       await takePhoto(tester);
-      expect(find.textContaining('읽을 수 있는 글자가 없어요'), findsOneWidget);
+      expect(find.textContaining('읽힌 글자가 없어요'), findsOneWidget);
       expect(
         tester.widget<TextField>(sourceField).controller!.text,
         '직접 입력한 원문',
       );
       intake.reading = Completer<List<String>>();
-      await takePhoto(tester, settle: false);
+      await extractPhoto(tester, settle: false);
       expect(find.text('사진 속 글자를 읽고 있어요'), findsOneWidget);
       await tester.tap(closeIn(find.byType(SourceImportSheet)));
       await tester.pumpAndSettle();
@@ -2562,97 +2587,74 @@ void main() {
     },
   );
 
-  testWidgets('The original photo stays visible and scrollable while typing', (
-    tester,
-  ) async {
-    await preparePhotoStorage(tester);
-    final photo = FakeIntake();
-    final id = (await tester.runAsync(
-      () => const OriginalPhotoStore().save(photo.photo.bytes),
-    ))!;
-    final store = MemoryStore()
-      ..data = Library(
-        records: [
-          WritingRecord(
-            id: 'r',
-            title: '필사',
-            originals: [RegisteredOriginal('o', '따라 쓸 구절', photoId: id)],
-          ),
-        ],
-        pages: const [
-          WritingPage(id: 'p', recordId: 'r', number: 1, guidedOriginalId: 'o'),
-        ],
-        activePageId: 'p',
-        writing: true,
+  testWidgets(
+    'Only the extracted text guides transcription on a compact keyboard layout',
+    (tester) async {
+      await preparePhotoStorage(tester);
+      final photo = FakeIntake();
+      final id = (await tester.runAsync(
+        () => const OriginalPhotoStore().save(photo.photo.bytes),
+      ))!;
+      final store = MemoryStore()
+        ..data = Library(
+          records: [
+            WritingRecord(
+              id: 'r',
+              title: '필사',
+              originals: [RegisteredOriginal('o', '따라 쓸 구절', photoId: id)],
+            ),
+          ],
+          pages: const [
+            WritingPage(
+              id: 'p',
+              recordId: 'r',
+              number: 1,
+              guidedOriginalId: 'o',
+            ),
+          ],
+          activePageId: 'p',
+          writing: true,
+        );
+      await open(tester, store, photo);
+      final image = find.byKey(const ValueKey('saved-original-photo'));
+      expect(transcriptionReference, findsOneWidget);
+      expect(remainingReference(tester), '따라 쓸 구절');
+      expect(image, findsNothing);
+      expect(find.text('사진 보기'), findsNothing);
+      tester.view.physicalSize = const Size(320, 600);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 340);
+      await tester.showKeyboard(bodyField);
+      await tester.pumpAndSettle();
+      expect(
+        tester.getRect(transcriptionReference).bottom,
+        lessThanOrEqualTo(260),
       );
-    await open(tester, store, photo);
-    final image = find.byKey(const ValueKey('saved-original-photo'));
-    final preview = find.descendant(
-      of: transcriptionReference,
-      matching: find.byType(OriginalPhoto),
-    );
-    await tester.tap(find.text('사진 보기'));
-    await tester.pump();
-    await tester.runAsync(() async {
-      for (var frame = 0; frame < 60; frame++) {
-        await tester.pump(const Duration(milliseconds: 25));
-        if (image.evaluate().isNotEmpty && tester.getSize(image).height > 0) {
-          break;
-        }
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
-    await tester.pumpAndSettle();
-    expect(preview, findsOneWidget);
-    expect(tester.getSize(image).height, greaterThan(0));
+      expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isTrue);
 
-    // Leave less than 64 px for the reference, where it used to switch to text.
-    tester.view.physicalSize = const Size(320, 600);
-    tester.view.viewInsets = const FakeViewPadding(bottom: 340);
-    await tester.showKeyboard(bodyField);
-    await tester.pumpAndSettle();
-    final referenceBounds = tester.getRect(transcriptionReference);
-    expect(referenceBounds.height, lessThan(72));
-    expect(referenceBounds.bottom, lessThanOrEqualTo(260));
-    expect(image, findsOneWidget);
-    expect(find.byTooltip('글 보기'), findsOneWidget);
-    expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isTrue);
-
-    final photoScroll = find.descendant(
-      of: preview,
-      matching: find.byType(Scrollable),
-    );
-    final scrollState = tester.state<ScrollableState>(photoScroll);
-    final scrollStart = scrollState.position.pixels;
-    await tester.drag(photoScroll, const Offset(0, -95));
-    await tester.pumpAndSettle();
-    expect(scrollState.position.pixels, greaterThan(scrollStart));
-    expect(tester.testTextInput.isVisible, isTrue);
-    expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isTrue);
-
-    const composing = TextEditingValue(
-      text: '따라 ㅆ',
-      selection: TextSelection.collapsed(offset: 4),
-      composing: TextRange(start: 3, end: 4),
-    );
-    tester.testTextInput.updateEditingValue(composing);
-    await tester.pumpAndSettle();
-    final field = tester.widget<TextField>(bodyField);
-    expect(field.controller!.value, composing);
-    expect(image, findsOneWidget);
-    final committed = composing.copyWith(
-      text: '따라 씀',
-      composing: TextRange.empty,
-    );
-    tester.testTextInput.updateEditingValue(committed);
-    await tester.pumpAndSettle();
-    expect(image, findsOneWidget);
-    expect(store.data.activePage!.text, '따라 씀');
-    expect(tester.takeException(), isNull);
-  });
+      const composing = TextEditingValue(
+        text: '따라 ㅆ',
+        selection: TextSelection.collapsed(offset: 4),
+        composing: TextRange(start: 3, end: 4),
+      );
+      tester.testTextInput.updateEditingValue(composing);
+      await tester.pumpAndSettle();
+      final field = tester.widget<TextField>(bodyField);
+      expect(field.controller!.value, composing);
+      expect(image, findsNothing);
+      final committed = composing.copyWith(
+        text: '따라 씀',
+        composing: TextRange.empty,
+      );
+      tester.testTextInput.updateEditingValue(committed);
+      await tester.pumpAndSettle();
+      expect(image, findsNothing);
+      expect(store.data.activePage!.text, '따라 씀');
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
-    'Shared photo opens as a guide without recognition or prefilled writing',
+    'Shared photo remains archived until its text is extracted and chosen',
     (tester) async {
       await preparePhotoStorage(tester);
       final store = MemoryStore()
@@ -2676,7 +2678,7 @@ void main() {
         '책 72쪽',
       );
       await tester.pumpAndSettle();
-      await saveWithPhoto(tester);
+      await saveWithPhoto(tester, action: find.text('사진만 보관'));
       final original = store.data.books.single.originals.single;
       expect(original.text, isEmpty);
       expect(original.photoId, isNotNull);
@@ -2703,37 +2705,52 @@ void main() {
       }
 
       await loadPhotoAfter(find.text('원본 사진').last);
+      expect(find.text('이 구절 필사하기'), findsNothing);
+      expect(find.byType(OriginalPhoto), findsOneWidget);
+      expect(store.data.activePage!.guidedOriginalId, isNull);
+      await loadPhotoAfter(find.text('사진에서 글자 뽑기'));
+      expect(intake.scans, 0);
+      expect(find.text('사진만 보관'), findsNothing);
+      await loadPhotoAfter(find.text('글자 영역 고르기'));
+      final frame = tester.getRect(find.byType(Image).last);
+      await tester.dragFrom(
+        frame.topLeft + Offset(frame.width * .1, frame.height * .15),
+        Offset(frame.width * .6, frame.height * .45),
+      );
+      await tester.pumpAndSettle();
+      await loadPhotoAfter(find.text('이 부분 사용'));
+      expect(find.text('글자 영역 바꾸기'), findsOneWidget);
+      await extractPhoto(tester);
+      expect(intake.scans, 1);
+      expect(intake.recognizedRegion!.width, closeTo(.6, .02));
+      await tester.enterText(sourceField, '사진에서 확인한 첫 문단.');
+      await tester.pumpAndSettle();
+
+      store.fail = true;
+      await loadPhotoAfter(confirm);
+      expect(find.text('원문 글을 저장하지 못했어요. 다시 저장해 주세요.'), findsOneWidget);
+      expect(
+        tester.widget<TextField>(sourceField).controller!.text,
+        '사진에서 확인한 첫 문단.',
+      );
+      expect(store.data.books.single.originals.single.text, isEmpty);
+      store.fail = false;
+      await saveWithPhoto(tester);
+
+      final saved = store.data.books.single.originals.single;
+      expect(saved.id, original.id);
+      expect(saved.photoId, original.photoId);
+      expect(saved.photoRegion, isNotNull);
+      expect(saved.citation, '책 72쪽');
+      expect(saved.text, '사진에서 확인한 첫 문단.\n\n둘째 문단입나다.');
+      expect(store.data.activePage!.guidedOriginalId, isNull);
       await loadPhotoAfter(find.text('이 구절 필사하기'));
       expect(store.data.activePageId, 'p');
       expect(store.data.activePage!.text, isEmpty);
       expect(store.data.activePage!.guidedOriginalId, original.id);
       expect(store.data.activePage!.originalCitations, ['책 72쪽']);
-      expect(find.text('사진 크게 보기'), findsOneWidget);
-      final preview = find.descendant(
-        of: transcriptionReference,
-        matching: find.byType(OriginalPhoto),
-      );
-      expect(tester.widget<OriginalPhoto>(preview).fitWidth, isTrue);
-      await loadPhotoAfter(find.text('사진 크게 보기'));
-      await loadPhotoAfter(find.text('볼 부분 고르기'));
-      final frame = tester.getRect(find.byType(Image).last);
-      await tester.dragFrom(
-        frame.topLeft + const Offset(10, 20),
-        Offset(frame.width * .6, frame.height * .4),
-      );
-      await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<FilledButton>(find.widgetWithText(FilledButton, '이 부분 사용'))
-            .onPressed,
-        isNotNull,
-      );
-      await loadPhotoAfter(find.text('이 부분 사용'));
-      final saved = store.data.books.single.originals.single;
-      expect(saved.photoRegion, isNotNull);
-      expect(saved.photoId, original.photoId);
-      expect(store.data.activePage!.text, isEmpty);
-      expect(find.text('사진 전체 보기'), findsOneWidget);
+      expect(remainingReference(tester), saved.text);
+      expect(find.byType(OriginalPhoto), findsNothing);
     },
   );
 
@@ -2799,15 +2816,21 @@ void main() {
     );
   });
 
-  testWidgets('Recovered Android picker photo enters review without saving', (
-    tester,
-  ) async {
-    final store = MemoryStore();
-    final intake = FakeIntake();
-    intake.recovered = intake.photo;
-    await open(tester, store, intake);
-    expect(find.text('페이지 인식 결과'), findsOneWidget);
-    expect(intake.photos, 0);
-    expect(store.writes, 0);
-  });
+  testWidgets(
+    'Recovered Android picker photo waits for extraction without saving',
+    (tester) async {
+      final store = MemoryStore();
+      final intake = FakeIntake();
+      intake.recovered = intake.photo;
+      await open(tester, store, intake);
+      expect(
+        find.byKey(const ValueKey('original-photo-preview')),
+        findsOneWidget,
+      );
+      expect(find.text('글자 뽑기'), findsOneWidget);
+      expect(intake.scans, 0);
+      expect(intake.photos, 0);
+      expect(store.writes, 0);
+    },
+  );
 }

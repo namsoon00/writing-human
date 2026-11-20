@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 import '../data/library_controller.dart';
 import '../data/library_search.dart';
 import '../data/model.dart';
+import '../data/original_photo_store.dart';
 import '../sync/coordinator.dart';
 import '../source/source_intake.dart';
 import '../source/originals.dart';
@@ -723,6 +724,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   Future<SourceImportResult?> _reviewOriginal({
     IncomingSource? shared,
     SourcePhoto? initialPhoto,
+    RegisteredOriginal? extractFrom,
+    Future<bool> Function(SourceImportResult)? onSaveExtraction,
     String? bookId,
     bool allowUnbound = true,
   }) async {
@@ -747,15 +750,18 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             child: SourceImportSheet(
               intake: _intake,
               initialText: linkOnly ? '' : sharedText,
-              initialCitation: linkOnly ? sharedText : '',
+              initialCitation:
+                  extractFrom?.citation ?? (linkOnly ? sharedText : ''),
               initialPhoto: photo,
-              initialPhotoOnly: shared?.hasPhoto == true,
+              existingPhotoId: extractFrom?.photoId,
+              onSaveExtraction: onSaveExtraction,
+              initialPhotoRegion: extractFrom?.photoRegion,
               choice: style.bookDetails.sourceSlip,
               penColor: penColors[style.penIndex],
               paperColor: paperColors[style.paperIndex],
               grainOpacity: paperGrainOpacity[style.paperIndex],
               shared: shared != null,
-              registration: shared == null,
+              registration: shared == null && extractFrom == null,
               books: books,
               bookId: bookId,
               allowUnbound: allowUnbound,
@@ -924,6 +930,61 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     }
   }
 
+  Future<RegisteredOriginal?> _extractArchivedPhoto(
+    LibraryController owner,
+    String? bookId,
+    String recordId,
+    RegisteredOriginal original,
+  ) async {
+    final photoId = original.photoId;
+    if (_sourceBusy ||
+        _accountLocked ||
+        original.canTranscribe ||
+        photoId == null) {
+      return null;
+    }
+    _sourceBusy = true;
+    try {
+      final bytes = await const OriginalPhotoStore().load(photoId);
+      if (!mounted || c != owner || _accountLocked || owner.saveError != null) {
+        return null;
+      }
+      if (bytes == null) {
+        _sourceNotice('이 기기에 보관된 사진이 없어요.');
+        return null;
+      }
+      RegisteredOriginal? saved;
+      await _reviewOriginal(
+        initialPhoto: SourcePhoto(photoId, bytes),
+        bookId: bookId,
+        extractFrom: original,
+        onSaveExtraction: (result) async {
+          if (!mounted || c != owner || _accountLocked) return false;
+          saved = await owner.saveOriginalEdit(
+            bookId: bookId,
+            recordId: recordId,
+            original: original,
+            text: result.text,
+            citation: result.citation,
+            extraction: (
+              isFullPage: result.isFullPage,
+              writingRange: result.writingRange,
+              photoLines: result.photoLines,
+              photoRegion: result.photoRegion,
+            ),
+          );
+          return saved != null;
+        },
+      );
+      return saved;
+    } catch (_) {
+      if (mounted) _sourceNotice('사진에서 원문을 가져오지 못했어요.');
+      return null;
+    } finally {
+      _sourceBusy = false;
+    }
+  }
+
   void _afterOriginalSave(WritingPage origin, _SavedOriginal saved) {
     if (page.id != origin.id) return;
     setState(
@@ -1082,13 +1143,17 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _showOriginals({Book? bookDetails}) async {
+  Future<void> _showOriginals({
+    Book? bookDetails,
+    Book? originalBook,
+    String? openOriginalId,
+  }) async {
     if (_readingSource || _sourceBusy || _accountLocked || !_canLeaveInput()) {
       return;
     }
     final owner = c;
     final selectedPage = page;
-    final selectedBook = bookDetails ?? book;
+    final selectedBook = bookDetails ?? originalBook ?? book;
     final bookId = selectedBook?.id;
     // Web accessibility can move focus to the button before its handler.
     final wasEditing =
@@ -1132,6 +1197,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             ? selectedPage.guidedOriginalId
             : null;
         final initialId =
+            availableId(openOriginalId) ??
             availableId(guided) ??
             availableId(pageChoice) ??
             match?.original.id ??
@@ -1180,6 +1246,37 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                   recordId: selectedPage.recordId,
                 ),
               ),
+              onExtractPhoto: owner.saveError == null
+                  ? (original) => _extractArchivedPhoto(
+                      owner,
+                      bookId,
+                      selectedPage.recordId,
+                      original,
+                    )
+                  : null,
+              onSavePhotoRegion: (original, region) async {
+                if (!mounted ||
+                    c != owner ||
+                    _accountLocked ||
+                    owner.composing ||
+                    owner.saveError != null) {
+                  return false;
+                }
+                final latest = originals()
+                    .where(
+                      (item) =>
+                          item.id == original.id &&
+                          item.photoId == original.photoId,
+                    )
+                    .firstOrNull;
+                if (latest == null) return false;
+                return owner.saveOriginalPhotoRegion(
+                  bookId: bookId,
+                  recordId: selectedPage.recordId,
+                  original: latest,
+                  region: region,
+                );
+              },
               onTranscribe: owner.saveError == null
                   ? (original) => Navigator.of(context).pop(original)
                   : null,
@@ -1821,16 +1918,36 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                               ? () {
                                   if (!_canLeaveInput()) return;
                                   setState(() => _savedSource = null);
-                                  unawaited(
-                                    _startTranscription(
-                                      saved.original,
-                                      saved.bookId,
-                                      currentPage,
-                                    ),
-                                  );
+                                  if (saved.original.canTranscribe) {
+                                    unawaited(
+                                      _startTranscription(
+                                        saved.original,
+                                        saved.bookId,
+                                        currentPage,
+                                      ),
+                                    );
+                                  } else {
+                                    final destination = c.library.books
+                                        .where(
+                                          (item) => item.id == saved.bookId,
+                                        )
+                                        .firstOrNull;
+                                    unawaited(
+                                      _showOriginals(
+                                        originalBook: destination,
+                                        openOriginalId: saved.original.id,
+                                      ),
+                                    );
+                                  }
                                 }
                               : null,
-                          child: const Text('이 구절 필사하기'),
+                          child: Text(
+                            saved.original.canTranscribe
+                                ? '이 구절 필사하기'
+                                : saved.original.photoId != null
+                                ? '보관한 사진 열기'
+                                : '보관한 원문 열기',
+                          ),
                         ),
                       ),
                     ),
@@ -1908,33 +2025,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                               (item) => item.id == currentPage.guidedOriginalId,
                             )
                             .firstOrNull,
-                        onSaveOriginalPhotoRegion: (source, region) {
-                          if (_accountLocked ||
-                              c.saveError != null ||
-                              c.composing ||
-                              page.id != currentPage.id) {
-                            return Future.value(false);
-                          }
-                          final latest =
-                              originalsFor(
-                                    c.library,
-                                    bookId: bookId,
-                                    recordId: currentPage.recordId,
-                                  )
-                                  .where(
-                                    (item) =>
-                                        item.id == source.id &&
-                                        item.photoId == source.photoId,
-                                  )
-                                  .firstOrNull;
-                          if (latest == null) return Future.value(false);
-                          return c.saveOriginalPhotoRegion(
-                            bookId: bookId,
-                            recordId: currentPage.recordId,
-                            original: latest,
-                            region: region,
-                          );
-                        },
                         keyboardOverlap: keyboardOverlap,
                         startAtTopRequest:
                             _firstPageView?.pageId == currentPage.id

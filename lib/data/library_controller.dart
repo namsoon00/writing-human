@@ -339,6 +339,7 @@ class LibraryController extends ChangeNotifier {
     required RegisteredOriginal original,
     required String text,
     required String citation,
+    OriginalExtraction? extraction,
   }) async {
     await settled;
     if (_disposed ||
@@ -357,10 +358,17 @@ class LibraryController extends ChangeNotifier {
         )
         .firstOrNull;
     if (latest == null ||
-        !RegisteredOriginal.validList([latest.edited(text, citation)])) {
+        (extraction != null &&
+            (latest.canTranscribe || latest.photoId == null))) {
       return null;
     }
-    if (text == latest.text && citation == latest.citation) return latest;
+    final edited = editOriginal(latest, text, citation, extraction: extraction);
+    if (!RegisteredOriginal.validList([edited])) return null;
+    if (extraction == null &&
+        text == latest.text &&
+        citation == latest.citation) {
+      return latest;
+    }
     final next = editOriginalInScope(
       library,
       original: latest,
@@ -369,13 +377,15 @@ class LibraryController extends ChangeNotifier {
       text: text,
       citation: citation,
       newId: _id,
+      extraction: extraction,
     );
     final saved = originalsFor(next, bookId: bookId, recordId: recordId)
         .where(
           (item) =>
               item.text == text &&
               item.citation == citation &&
-              item.photoId == latest.photoId,
+              item.photoId == latest.photoId &&
+              listEquals(item.photoRegion, edited.photoRegion),
         )
         .firstOrNull;
     if (saved == null) return null;
@@ -796,6 +806,7 @@ class LibraryController extends ChangeNotifier {
   }
 
   void guidePage(String pageId, RegisteredOriginal original) {
+    if (!original.canTranscribe) return;
     final page = library.pages.where((item) => item.id == pageId).firstOrNull;
     if (page == null) return;
     final changed = page.rememberOriginalCitation(original.citation);

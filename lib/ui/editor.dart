@@ -36,7 +36,6 @@ class PageEditor extends StatefulWidget {
     this.keyboardOverlap = 0,
     this.originals = const [],
     this.guidedOriginal,
-    this.onSaveOriginalPhotoRegion,
     this.reveal,
     this.startAtTopRequest,
   });
@@ -50,8 +49,6 @@ class PageEditor extends StatefulWidget {
   final PaperTool paperTool;
   final List<RegisteredOriginal> originals;
   final RegisteredOriginal? guidedOriginal;
-  final Future<bool> Function(RegisteredOriginal, List<double>?)?
-  onSaveOriginalPhotoRegion;
   final double keyboardOverlap;
   final ({int offset, int request})? reveal;
   final int? startAtTopRequest;
@@ -67,11 +64,14 @@ class _PageEditorState extends State<PageEditor> {
   final _guideLayout = TextPainter();
   late TranscriptionComparison? _comparison = _compareChosen();
 
-  TranscriptionComparison? _compareChosen() {
+  RegisteredOriginal? get _guidedSource {
     final source = widget.guidedOriginal;
-    return source == null ||
-            widget.page.referenceOnly ||
-            source.text.trim().isEmpty
+    return source?.canTranscribe == true ? source : null;
+  }
+
+  TranscriptionComparison? _compareChosen() {
+    final source = _guidedSource;
+    return source == null || widget.page.referenceOnly
         ? null
         : TranscriptionComparison(source);
   }
@@ -214,7 +214,7 @@ class _PageEditorState extends State<PageEditor> {
   bool _centerQueued = false;
 
   void _followWritingLine() {
-    if (_centerQueued || widget.guidedOriginal == null) return;
+    if (_centerQueued || _guidedSource == null) return;
     _centerQueued = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _centerQueued = false;
@@ -280,7 +280,7 @@ class _PageEditorState extends State<PageEditor> {
   void _textChanged() {
     final previous = _observedText;
     final next = _observedText = text.value;
-    if (widget.guidedOriginal != null &&
+    if (_guidedSource != null &&
         previous.text == next.text &&
         previous.composing != next.composing) {
       findEditable(
@@ -474,29 +474,17 @@ class _PageEditorState extends State<PageEditor> {
           right: padding.right,
         );
         final overlap = widget.keyboardOverlap;
-        final source = widget.guidedOriginal;
+        final source = _guidedSource;
         final hasChosenGuide = source != null;
         final paperHeight = math.max(0.0, constraints.maxHeight - overlap);
         final scaler = MediaQuery.textScalerOf(context);
-        final referenceHeight = source?.photoId == null
-            ? math.min(
-                scaler.scale((style.fontSize * .8).clamp(14, 22)) * 4 + 12,
-                paperHeight * .34,
-              )
-            : math.min(232.0, paperHeight * .40);
+        final referenceHeight = math.min(
+          scaler.scale((style.fontSize * .8).clamp(14, 22)) * 4 + 12,
+          paperHeight * .34,
+        );
         final lineHeight = scaler.scale(style.fontSize) * 1.8;
-        final bottomPadding = overlap > 0 ? 12.0 : padding.bottom;
         final visiblePadding = padding.copyWith(
-          top: source?.photoId == null
-              ? padding.top
-              : math.min(
-                  padding.top,
-                  math.max(
-                    0.0,
-                    paperHeight - referenceHeight - lineHeight - bottomPadding,
-                  ),
-                ),
-          bottom: bottomPadding,
+          bottom: overlap > 0 ? 12 : padding.bottom,
         );
         final canCenter =
             hasChosenGuide &&
@@ -686,7 +674,7 @@ class _PageEditorState extends State<PageEditor> {
               Positioned.fill(
                 child: NotebookReflection(
                   originals: widget.originals,
-                  guided: widget.guidedOriginal,
+                  guided: _guidedSource,
                   controller: text,
                   scroll: scroll,
                   fieldKey: fieldRenderKey,
@@ -728,17 +716,7 @@ class _PageEditorState extends State<PageEditor> {
                     child: TranscriptionReference(
                       key: const ValueKey('transcription-reference'),
                       original: source,
-                      onSavePhotoRegion:
-                          widget.onSaveOriginalPhotoRegion == null
-                          ? null
-                          : (region) => widget.onSaveOriginalPhotoRegion!(
-                              source,
-                              region,
-                            ),
                       comparison: _comparison,
-                      photoPanelColor: panelPaperColor(
-                        paperColors[style.paperIndex],
-                      ),
                       controller: text,
                       style: writingTextStyle(
                         style.fontIndex,

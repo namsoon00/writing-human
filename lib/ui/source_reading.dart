@@ -8,6 +8,7 @@ import '../data/model.dart';
 import '../data/library_search.dart';
 import '../data/original_photo_store.dart';
 import '../source/originals.dart';
+import '../source/photo_lines.dart';
 import '../source/source_scan.dart';
 import 'book_details.dart';
 import 'paper.dart';
@@ -35,6 +36,8 @@ class SourceReading extends StatefulWidget {
     this.onRegister,
     this.writingLocations = const {},
     this.onTranscribe,
+    this.onExtractPhoto,
+    this.onSavePhotoRegion,
     this.onAttachSlip,
     this.hasOriginalSlip = false,
     this.onOpenWriting,
@@ -54,6 +57,10 @@ class SourceReading extends StatefulWidget {
   final Future<RegisteredOriginal?> Function()? onRegister;
   final Map<String, ({Passage passage, bool marked})> writingLocations;
   final ValueChanged<RegisteredOriginal>? onTranscribe;
+  final Future<RegisteredOriginal?> Function(RegisteredOriginal)?
+  onExtractPhoto;
+  final Future<bool> Function(RegisteredOriginal, List<double>?)?
+  onSavePhotoRegion;
   final ValueChanged<RegisteredOriginal>? onAttachSlip;
   final bool hasOriginalSlip;
   final ValueChanged<Passage>? onOpenWriting;
@@ -381,10 +388,25 @@ class _SourceReadingState extends State<SourceReading> {
     }
   }
 
-  Future<void> _showPhoto(String id) => showOriginalPhoto(
+  Future<void> _extractPhoto(RegisteredOriginal original) async {
+    if (saving) return;
+    setState(() => saving = true);
+    try {
+      final updated = await widget.onExtractPhoto!(original);
+      if (mounted && updated != null) _open(updated.id);
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  Future<void> _showPhoto(RegisteredOriginal original) => showOriginalPhoto(
     context,
-    id,
+    original.photoId!,
     color: panelPaperColor(paperColors[widget.style.paperIndex]),
+    region: originalPhotoPreviewRegion(original),
+    onSaveRegion: widget.onSavePhotoRegion == null
+        ? null
+        : (region) => widget.onSavePhotoRegion!(original, region),
   );
 
   Future<void> _showCitations() => showDialog<void>(
@@ -577,9 +599,11 @@ class _SourceReadingState extends State<SourceReading> {
                       child: Wrap(
                         spacing: 8,
                         children: [
-                          if (original.photoId case final id?)
+                          if (original.photoId != null)
                             TextButton.icon(
-                              onPressed: saving ? null : () => _showPhoto(id),
+                              onPressed: saving
+                                  ? null
+                                  : () => _showPhoto(original),
                               icon: const Icon(CupertinoIcons.photo, size: 16),
                               label: const Text('원본 사진'),
                             ),
@@ -649,7 +673,7 @@ class _SourceReadingState extends State<SourceReading> {
                               child: InkWell(
                                 onTap: saving
                                     ? null
-                                    : () => _showPhoto(original.photoId!),
+                                    : () => _showPhoto(original),
                                 child: OriginalPhoto(
                                   id: original.photoId!,
                                   region: original.photoRegion,
@@ -713,7 +737,7 @@ class _SourceReadingState extends State<SourceReading> {
                                     subtitle:
                                         item.citation.isEmpty ||
                                             (!item.canTranscribe &&
-                                                item.text.isEmpty)
+                                                item.photoId == null)
                                         ? null
                                         : Text(
                                             item.citation,
@@ -745,6 +769,15 @@ class _SourceReadingState extends State<SourceReading> {
                             hasCitation: true,
                           ),
                           child: const Text('링크 열기'),
+                        ),
+                      if (original.photoId != null &&
+                          !original.canTranscribe &&
+                          widget.onExtractPhoto != null)
+                        FilledButton(
+                          onPressed: saving
+                              ? null
+                              : () => _extractPhoto(original),
+                          child: const Text('사진에서 글자 뽑기'),
                         ),
                       if (widget.onTranscribe != null && original.canTranscribe)
                         TextButton(

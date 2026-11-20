@@ -45,7 +45,7 @@ class RegisteredOriginal {
 
   final String id, text, citation;
 
-  bool get canTranscribe => text.trim().isNotEmpty || photoId != null;
+  bool get canTranscribe => text.trim().isNotEmpty;
 
   static Uri? webLink(String value) {
     final link = Uri.tryParse(value.trim());
@@ -178,7 +178,9 @@ class RegisteredOriginal {
         (value) =>
             value.id.isNotEmpty &&
             value.id.length <= 250 &&
-            (value.canTranscribe || webLink(value.citation) != null) &&
+            (value.canTranscribe ||
+                value.photoId != null ||
+                webLink(value.citation) != null) &&
             value.text.length <= 50000 &&
             value.citation.length <= 500 &&
             (value.registeredAt == null || value.registeredAt! > 0) &&

@@ -28,9 +28,6 @@ class _NativeSourceIntake extends SourceIntake {
   bool get canUseCamera => _mobile;
 
   @override
-  bool get canUseLiveCamera => _mobile;
-
-  @override
   Future<SourcePhoto?> recoverPhoto() async {
     if (!Platform.isAndroid) return null;
     final result = await ImagePicker().retrieveLostData();

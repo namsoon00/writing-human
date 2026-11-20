@@ -14,7 +14,6 @@ import '../source/scan_passage.dart';
 import '../source/source_intake.dart';
 import '../source/source_scan.dart';
 import 'book_details.dart';
-import 'live_source_camera.dart';
 import 'paper.dart';
 import 'original_photo_crop.dart';
 import 'original_range_sheet.dart';
@@ -34,11 +33,9 @@ typedef SourceImportResult = ({
   String? bookId,
 });
 
-enum _ScanMode { page, paragraph, photo }
+enum _ScanMode { page, paragraph }
 
-enum _PhotoInput { live, camera, library }
-
-enum _ImportAction { search, page, paragraph, share }
+enum _ImportAction { search, share }
 
 class SourceImportSheet extends StatefulWidget {
   const SourceImportSheet({
@@ -47,7 +44,9 @@ class SourceImportSheet extends StatefulWidget {
     required this.initialText,
     required this.choice,
     this.initialPhoto,
-    this.initialPhotoOnly = false,
+    this.existingPhotoId,
+    this.onSaveExtraction,
+    this.initialPhotoRegion,
     this.paperColor = paper,
     this.penColor = ink,
     this.grainOpacity = .16,
@@ -65,7 +64,9 @@ class SourceImportSheet extends StatefulWidget {
   final Color paperColor, penColor;
   final double grainOpacity;
   final SourcePhoto? initialPhoto;
-  final bool initialPhotoOnly;
+  final String? existingPhotoId;
+  final Future<bool> Function(SourceImportResult)? onSaveExtraction;
+  final List<double>? initialPhotoRegion;
   final bool shared, registration, allowUnbound;
   final Map<String, String> books;
   final String? bookId;
@@ -86,14 +87,14 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   List<(_ScanMode, int, String)> _reviewKeys = const [];
   final _savedReviews = <(_ScanMode, int, String), String>{};
   SourceScan? _scan;
-  SourcePhoto? _originalPhoto;
-  List<double>? _photoRegion;
+  late SourcePhoto? _originalPhoto = widget.initialPhoto;
+  late List<double>? _photoRegion = widget.initialPhotoRegion;
+  Rect? _scanRegion;
   CameraPage? _cameraPage;
   SourceScan? _photoBeforeAdjustment;
   ({
     SourceScan? scan,
     CameraPage? page,
-    bool live,
     List<int> order,
     Set<int> selected,
     int? paragraph,
@@ -104,7 +105,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     String? reread,
   })?
   _beforeAdjustment;
-  bool _fromLiveCamera = false;
   ({String text, PencilMark range})? _range;
   bool _savingPhoto = false;
   bool _showDetails = false;
@@ -129,20 +129,9 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   ].any((c) => c.value.isComposingRangeValid && !c.value.composing.isCollapsed);
   bool get _editable => !_busy && !_composing;
 
-  @override
-  void initState() {
-    super.initState();
-    if (widget.initialPhoto case final photo?) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        if (widget.initialPhotoOnly) {
-          setState(() => _originalPhoto = photo);
-        } else {
-          _read(photo, _ScanMode.page);
-        }
-      });
-    }
-  }
+  bool get _extractionOnly => widget.existingPhotoId != null;
+  bool get _photoReady => _originalPhoto != null && _scan == null;
+  bool get _offerExtraction => _photoReady && _text.text.trim().isEmpty;
 
   void _changed() => setState(() {});
 
@@ -227,7 +216,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     builder: (context) => AlertDialog(
       title: const Text('다른 앱에서 공유'),
       content: Text(
-        widget.intake.canUseCamera
+        !kIsWeb && widget.intake.canUseCamera
             ? '다른 앱에서 문장을 고르고 공유 메뉴의 ‘쓰는 인간’을 누르세요. 앱으로 돌아오면 받은 문장을 확인할 수 있어요.'
             : '다른 앱에서 문장을 복사한 뒤 이 화면에서 붙여넣으세요.',
       ),
@@ -240,77 +229,25 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     ),
   );
 
-  Future<void> _choosePhoto(_ScanMode mode, {_PhotoInput? preferred}) async {
+  Future<void> _choosePhoto({required bool camera}) async {
     if (!_editable) return;
     FocusScope.of(context).unfocus();
-    final live = mode != _ScanMode.photo && widget.intake.canUseLiveCamera;
-    final input =
-        preferred ??
-        (!live && !widget.intake.canUseCamera
-            ? _PhotoInput.library
-            : await showDialog<_PhotoInput>(
-                context: context,
-                builder: (context) => SimpleDialog(
-                  title: Text(switch (mode) {
-                    _ScanMode.page => '책 한 페이지 인식',
-                    _ScanMode.paragraph => '문단 인식',
-                    _ScanMode.photo => '사진 담기',
-                  }),
-                  children: [
-                    if (live)
-                      SimpleDialogOption(
-                        onPressed: () =>
-                            Navigator.pop(context, _PhotoInput.live),
-                        child: const Text('카메라로 바로 읽기'),
-                      ),
-                    if (widget.intake.canUseCamera)
-                      SimpleDialogOption(
-                        onPressed: () =>
-                            Navigator.pop(context, _PhotoInput.camera),
-                        child: const Text('사진 찍기'),
-                      ),
-                    SimpleDialogOption(
-                      onPressed: () =>
-                          Navigator.pop(context, _PhotoInput.library),
-                      child: const Text('사진 고르기'),
-                    ),
-                  ],
-                ),
-              ));
-    if (!mounted || input == null || !_editable) return;
-    if (input == _PhotoInput.live) {
-      final result = await showLiveSourceCamera(
-        context,
-        widget.intake,
-        pageMode: mode == _ScanMode.page,
-      );
-      if (!mounted || result == null) return;
-      if (result.scan case final scan?) {
-        _useScan(result.photo, scan, mode, cameraPage: result.page, live: true);
-        if (result.paragraph case final index?) _pickParagraph(index);
-      } else {
-        await _read(result.photo, mode);
-      }
-      return;
-    }
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      final photo = await widget.intake.pickPhoto(
-        camera: input == _PhotoInput.camera,
-      );
-      if (photo != null && mounted) {
-        if (mode == _ScanMode.photo) {
-          setState(() {
-            _originalPhoto = photo;
-            _photoRegion = null;
-          });
-        } else {
-          await _read(photo, mode);
-        }
-      }
+      final photo = await widget.intake.pickPhoto(camera: camera);
+      if (!mounted || photo == null) return;
+      setState(() {
+        _originalPhoto = photo;
+        _photoRegion = null;
+        _scan = null;
+        _scanRegion = null;
+        _savedReviews.clear();
+        _beforeAdjustment = null;
+        _photoBeforeAdjustment = null;
+      });
     } on SourceIntakeException catch (error) {
       if (mounted) setState(() => _error = error.message);
     } catch (_) {
@@ -341,7 +278,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
           .timeout(const Duration(seconds: 90));
       if (!mounted) return null;
       if (scan.paragraphs.isEmpty) {
-        setState(() => _error = '읽을 수 있는 글자가 없어요. 구절이 선명한 사진을 골라 주세요.');
+        setState(() => _error = '읽힌 글자가 없어요. 글자 영역을 고르거나 선명한 사진으로 다시 시도해 주세요.');
         return null;
       }
       return scan;
@@ -363,45 +300,72 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     return null;
   }
 
-  Future<void> _read(SourcePhoto photo, _ScanMode mode) async {
-    setState(() {
-      if (_originalPhoto != photo) {
-        _photoRegion = null;
-        _scan = null;
-        _cameraPage = null;
-        _fromLiveCamera = false;
-        _savedReviews.clear();
-      }
-      _originalPhoto = photo;
-      _beforeAdjustment = null;
-      _photoBeforeAdjustment = null;
-      _mode = mode;
-    });
-    final scan = await _recognize(photo);
+  Future<void> _extractPhoto() async {
+    final photo = _originalPhoto;
+    if (photo == null || !_editable || !_photoReady) return;
+    if (_text.text.trim().isNotEmpty) {
+      final replace = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('사진에서 원문 글을 새로 뽑을까요?'),
+          content: const Text('추출한 글을 확인하고 담으면 지금 입력한 글을 대신합니다.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('글자 뽑기'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || replace != true || !_editable) return;
+    }
+    FocusScope.of(context).unfocus();
+    final region = _cropRegion;
+    final scan = await _recognize(photo, region: region);
     if (scan == null || !mounted) return;
-    _useScan(photo, scan, mode);
+    _scanRegion = region;
+    _useScan(scan, _ScanMode.page);
+    _reviewSelection();
+  }
+
+  Rect? get _cropRegion {
+    final region = _photoRegion;
+    return region == null
+        ? null
+        : Rect.fromLTRB(region[0], region[1], region[2], region[3]);
+  }
+
+  Rect _onOriginalPhoto(Rect bounds) {
+    final box = _cameraPage?.originalBounds(bounds) ?? bounds;
+    final region = _scanRegion;
+    return region == null
+        ? box
+        : Rect.fromLTRB(
+            region.left + box.left * region.width,
+            region.top + box.top * region.height,
+            region.left + box.right * region.width,
+            region.top + box.bottom * region.height,
+          );
   }
 
   void _useScan(
-    SourcePhoto photo,
     SourceScan scan,
     _ScanMode mode, {
     CameraPage? cameraPage,
-    bool live = false,
     bool adjusted = false,
   }) {
     setState(() {
       if (!adjusted) {
         _beforeAdjustment = null;
         _photoBeforeAdjustment = null;
-        _savedReviews.clear();
       }
       _scan = scan;
       _cameraPage = cameraPage;
-      _fromLiveCamera = live;
       _error = null;
-      if (_originalPhoto != photo) _photoRegion = null;
-      _originalPhoto = photo;
       _range = null;
       _mode = mode;
       _reread = null;
@@ -415,10 +379,11 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   Future<void> _readAdjusted() async {
     final photo = _originalPhoto;
     if (photo == null || !_editable || _beforeAdjustment != null) return;
+    final wasReviewing = _reviewing;
+    if (wasReviewing) _backToSelection();
     final baseline = (
       scan: _scan,
       page: _cameraPage,
-      live: _fromLiveCamera,
       order: _order,
       selected: _selected,
       paragraph: _paragraph,
@@ -433,7 +398,11 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     final adjusted = await _recognize(
       photo,
       preparePhoto: () async {
-        final normalized = await ScanImage.decode(photo.bytes);
+        final normalized = await ScanImage.decode(
+          photo.bytes,
+          region: _scanRegion,
+          preserveRegionDetail: true,
+        );
         originalView = SourceScan(
           normalized.bytes,
           const [],
@@ -445,19 +414,26 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         return SourcePhoto(photo.path, result.bytes);
       },
     );
-    if (!mounted || adjusted == null) return;
+    if (!mounted) return;
+    if (adjusted == null) {
+      final message = _error;
+      if (wasReviewing) _reviewSelection();
+      setState(() => _error = message);
+      return;
+    }
     _beforeAdjustment = baseline;
     _photoBeforeAdjustment = originalView;
-    _useScan(photo, adjusted, _mode, cameraPage: projection, adjusted: true);
+    _useScan(adjusted, _mode, cameraPage: projection, adjusted: true);
+    if (_mode == _ScanMode.page) _reviewSelection();
   }
 
   void _restoreUnadjusted() {
     final before = _beforeAdjustment;
     if (before == null || !_editable) return;
+    if (_reviewing) _backToSelection();
     setState(() {
       _scan = before.scan;
       _cameraPage = before.page;
-      _fromLiveCamera = before.live;
       _order = before.order;
       _selected = before.selected;
       _paragraph = before.paragraph;
@@ -470,6 +446,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       _beforeAdjustment = null;
       _photoBeforeAdjustment = null;
     });
+    if (_mode == _ScanMode.page) _reviewSelection();
   }
 
   Widget _adjustButton() => TextButton(
@@ -546,7 +523,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   ScanPassage? get _passage =>
       _paragraph == null ? null : ScanPassage(_scan!.paragraphs[_paragraph!]);
 
-  Future<void> _readRegion(ScanPassage passage, {bool quiet = false}) async {
+  Future<void> _readRegion(ScanPassage passage) async {
     final boxes = passage.lineBoxes(_first, _last);
     if (boxes.isEmpty || _busy) return;
     final bounds = boxes.reduce((a, b) => a.expandToInclude(b));
@@ -556,30 +533,24 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         : null;
     final result = await _recognize(
       photo ?? SourcePhoto('', _scan!.photo),
-      region: region,
-      mask: boxes.map((box) => box.inflate(.003)).toList(),
+      region: photo == null ? region : _onOriginalPhoto(region),
+      mask: [
+        for (final box in boxes.map((box) => box.inflate(.003)))
+          photo == null ? box : _onOriginalPhoto(box),
+      ],
     );
     if (!mounted) return;
     if (result != null) {
       setState(
         () => _reread = result.paragraphs.map((p) => p.text).join('\n\n'),
       );
-    } else if (quiet) {
-      setState(() => _error = null);
     }
   }
 
-  Future<void> _reviewSelection() async {
+  void _reviewSelection() {
     if (_busy) return;
     final paragraphs = _scan!.paragraphs;
     final passage = _passage;
-    if (_fromLiveCamera &&
-        _mode == _ScanMode.paragraph &&
-        passage != null &&
-        _reread == null) {
-      await _readRegion(passage, quiet: true);
-      if (!mounted) return;
-    }
     final texts = _mode == _ScanMode.page
         ? [
             for (final index in _order.where(_selected.contains))
@@ -629,6 +600,14 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     });
   }
 
+  void _omitParagraph(int index) {
+    if (!_editable || !_isPageReview || _editors.length < 2) return;
+    final paragraph = _reviewKeys[index].$2;
+    _backToSelection();
+    _selected.remove(paragraph);
+    _reviewSelection();
+  }
+
   String get _confirmedText => _fields
       .map((c) => normalizeSource(c.text))
       .where((text) => text.isNotEmpty)
@@ -638,7 +617,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       mapPhotoLines([
         for (final (index, editor) in _editors.indexed)
           (normalizeSource(editor.text), _reviewLines[index]),
-      ], transformBounds: original ? _cameraPage?.originalBounds : null);
+      ], transformBounds: original ? _onOriginalPhoto : null);
 
   bool get _isPageReview => _reviewing && _mode == _ScanMode.page;
 
@@ -686,16 +665,14 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         (passage == null
             ? null
             : photoExcerptRegion(
-                passage
-                    .lineBoxes(_first, _last)
-                    .map((box) => _cameraPage?.originalBounds(box) ?? box),
+                passage.lineBoxes(_first, _last).map(_onOriginalPhoto),
               ));
     final range = isFullPage ? _range?.range : null;
     final photoLines = isFullPage
         ? _photoLines(original: true)
         : const <OriginalPhotoLine>[];
-    String? photoId;
-    if (photo != null) {
+    var photoId = widget.existingPhotoId;
+    if (photo != null && photoId == null) {
       FocusScope.of(context).unfocus();
       setState(() {
         _busy = true;
@@ -719,7 +696,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       }
     }
     if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
-    Navigator.pop<SourceImportResult>(context, (
+    final result = (
       text: text,
       citation: citation,
       bookId: bookId,
@@ -728,7 +705,33 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       photoLines: photoLines,
       photoId: photoId,
       photoRegion: photoRegion,
-    ));
+    );
+    if (widget.onSaveExtraction case final save?) {
+      FocusScope.of(context).unfocus();
+      setState(() {
+        _busy = true;
+        _savingPhoto = true;
+        _error = null;
+      });
+      var saved = false;
+      try {
+        saved = await save(result);
+      } catch (_) {
+        // Keep editable text on this screen if the save fails.
+      } finally {
+        if (mounted) {
+          setState(() {
+            _busy = false;
+            _savingPhoto = false;
+            if (!saved) _error = '원문 글을 저장하지 못했어요. 다시 저장해 주세요.';
+          });
+        }
+      }
+      if (!saved || !mounted || ModalRoute.of(context)?.isCurrent != true) {
+        return;
+      }
+    }
+    Navigator.pop<SourceImportResult>(context, result);
   }
 
   Future<void> _joinLines(TextEditingController field) async {
@@ -763,8 +766,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
 
   Future<void> _import(_ImportAction action) => switch (action) {
     _ImportAction.search => _searchSources(),
-    _ImportAction.page => _choosePhoto(_ScanMode.page),
-    _ImportAction.paragraph => _choosePhoto(_ScanMode.paragraph),
     _ImportAction.share => _shareHelp(),
   };
 
@@ -778,63 +779,42 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     surfaceTintColor: Colors.transparent,
     itemBuilder: (_) => const [
       PopupMenuItem(value: _ImportAction.search, child: Text('시·문장 검색')),
-      PopupMenuItem(
-        key: ValueKey('source-photo'),
-        value: _ImportAction.page,
-        child: Text('책 한 페이지 인식'),
-      ),
-      PopupMenuItem(
-        key: ValueKey('source-paragraph-photo'),
-        value: _ImportAction.paragraph,
-        child: Text('문단 인식'),
-      ),
       PopupMenuItem(value: _ImportAction.share, child: Text('다른 앱에서 공유')),
     ],
-  );
-
-  Widget _cameraAction() => FilledButton.tonalIcon(
-    key: const ValueKey('source-camera-direct'),
-    style: FilledButton.styleFrom(
-      minimumSize: const Size(0, 48),
-      backgroundColor: brandInk.withValues(alpha: .1),
-      foregroundColor: brandInk,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-    ),
-    onPressed: _editable
-        ? () => _choosePhoto(
-            _ScanMode.page,
-            preferred: widget.intake.canUseLiveCamera
-                ? _PhotoInput.live
-                : _PhotoInput.camera,
-          )
-        : null,
-    icon: const Icon(CupertinoIcons.camera, size: 21),
-    label: const Text('카메라로 읽기'),
   );
 
   Widget _importTools() => Wrap(
     crossAxisAlignment: WrapCrossAlignment.center,
     spacing: 8,
     children: [
-      TextButton.icon(
-        key: const ValueKey('source-paste'),
-        onPressed: _editable
-            ? () {
-                if (_originalPhoto != null) {
-                  setState(() => _showPhotoText = true);
-                }
-                _paste();
-              }
-            : null,
-        icon: const Icon(CupertinoIcons.doc_on_clipboard, size: 17),
-        label: const Text('붙여넣기'),
-      ),
-      if (!widget.shared)
+      if (!widget.shared && !_extractionOnly) ...[
+        if (widget.intake.canUseCamera)
+          TextButton.icon(
+            key: const ValueKey('source-camera-direct'),
+            onPressed: _editable ? () => _choosePhoto(camera: true) : null,
+            icon: const Icon(CupertinoIcons.camera, size: 19),
+            label: const Text('사진 찍기'),
+          ),
         TextButton.icon(
           key: const ValueKey('source-photo-direct'),
-          onPressed: _editable ? () => _choosePhoto(_ScanMode.photo) : null,
-          icon: const Icon(CupertinoIcons.photo, size: 17),
-          label: Text(_originalPhoto == null ? '사진 담기' : '사진 바꾸기'),
+          onPressed: _editable ? () => _choosePhoto(camera: false) : null,
+          icon: const Icon(CupertinoIcons.photo, size: 19),
+          label: Text(_originalPhoto == null ? '사진 고르기' : '사진 바꾸기'),
+        ),
+      ],
+      if (!_extractionOnly)
+        TextButton.icon(
+          key: const ValueKey('source-paste'),
+          onPressed: _editable
+              ? () {
+                  if (_originalPhoto != null) {
+                    setState(() => _showPhotoText = true);
+                  }
+                  _paste();
+                }
+              : null,
+          icon: const Icon(CupertinoIcons.doc_on_clipboard, size: 17),
+          label: const Text('붙여넣기'),
         ),
     ],
   );
@@ -1072,8 +1052,13 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                 : (_) => setState(() => _mode = _ScanMode.paragraph),
           ),
           TextButton(
-            onPressed: _editable ? () => _choosePhoto(_mode) : null,
-            child: const Text('다른 사진'),
+            onPressed: _editable
+                ? () => setState(() {
+                    _scan = null;
+                    _error = null;
+                  })
+                : null,
+            child: const Text('사진 화면으로'),
           ),
           _largePhotoButton(scan, selectedBoxes),
           if (_originalPhoto != null) _adjustButton(),
@@ -1222,6 +1207,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         focusNode: focus,
         scrollController: scroll,
         showCursor: false,
+        readOnly: _busy,
         minLines: _reviewing ? 2 : 4,
         maxLines: 8,
         keyboardType: TextInputType.multiline,
@@ -1279,13 +1265,13 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       children: [
         TextButton(
           onPressed: _editable ? _backToSelection : null,
-          child: Text(_isPageReview ? '페이지 인식 결과' : '구절 다시 고르기'),
+          child: Text(_isPageReview ? '구절 고르기' : '구절 다시 고르기'),
         ),
         _largePhotoButton(_scan!),
+        if (_isPageReview) _adjustButton(),
       ],
     ),
     if (_isPageReview) ...[
-      const Text('한 페이지를 원문 하나로 저장합니다.'),
       Align(
         alignment: Alignment.centerLeft,
         child: TextButton.icon(
@@ -1302,12 +1288,18 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         ),
       ),
     ],
-    if (_originalPhoto != null) const Text('원본 사진을 이 기기에 함께 보관합니다.'),
+    if (!_extractionOnly) const Text('글을 담으면 원본 사진도 이 기기에 보관돼요.'),
     for (final (index, controller) in _editors.indexed) ...[
       if (_editors.length > 1)
-        Padding(
-          padding: const EdgeInsets.only(top: 10),
-          child: Text('${index + 1}번째 문단'),
+        Row(
+          children: [
+            Expanded(child: Text('${index + 1}번째 문단')),
+            IconButton(
+              tooltip: '${index + 1}번째 문단 빼기',
+              onPressed: _editable ? () => _omitParagraph(index) : null,
+              icon: const Icon(CupertinoIcons.minus_circle, size: 18),
+            ),
+          ],
         ),
       _field(controller, index),
       OriginalTextCleanup(controller: controller, enabled: _editable),
@@ -1347,13 +1339,19 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       current: _photoRegion,
     );
     if (!mounted || chosen == null || photo != _originalPhoto) return;
-    setState(() => _photoRegion = chosen.isEmpty ? null : chosen);
+    setState(() {
+      _photoRegion = chosen.isEmpty ? null : chosen;
+      _error = null;
+    });
   }
 
   bool _hasContent(String text) =>
       text.isNotEmpty ||
-      _originalPhoto != null ||
-      (widget.shared && RegisteredOriginal.webLink(_citation.text) != null);
+      (!_extractionOnly &&
+          !_reviewing &&
+          (_originalPhoto != null ||
+              (widget.shared &&
+                  RegisteredOriginal.webLink(_citation.text) != null)));
 
   @override
   Widget build(BuildContext context) {
@@ -1392,6 +1390,8 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                                     : '문단 고르기'
                               : _reviewing
                               ? '원문 확인'
+                              : _extractionOnly
+                              ? '사진에서 글자 뽑기'
                               : widget.shared
                               ? '공유한 원문'
                               : '원문 담기',
@@ -1400,7 +1400,10 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                           style: const TextStyle(fontSize: 22),
                         ),
                       ),
-                      if (!_selecting && !_reviewing && !widget.shared)
+                      if (!_selecting &&
+                          !_reviewing &&
+                          !widget.shared &&
+                          !_extractionOnly)
                         _otherImports(),
                       IconButton(
                         tooltip: '닫기',
@@ -1449,17 +1452,13 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                       else if (_reviewing)
                         ..._reviewPanel()
                       else ...[
-                        if (!widget.shared &&
-                            (widget.intake.canUseLiveCamera ||
-                                widget.intake.canUseCamera))
-                          _cameraAction(),
-                        _importTools(),
+                        if (!_extractionOnly) _importTools(),
                         const SizedBox(height: 8),
                         if (_originalPhoto case final photo?) ...[
                           Image.memory(
                             photo.bytes,
                             key: const ValueKey('original-photo-preview'),
-                            height: (constraints.maxHeight * .34).clamp(
+                            height: (constraints.maxHeight * .5).clamp(
                               100,
                               300,
                             ),
@@ -1476,18 +1475,18 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                                     : null,
                                 child: Text(
                                   _photoRegion == null
-                                      ? '사진 범위 고르기'
-                                      : '사진 범위 바꾸기',
+                                      ? '글자 영역 고르기'
+                                      : '글자 영역 바꾸기',
                                 ),
                               ),
-                              TextButton(
-                                onPressed: _editable
-                                    ? () => _read(photo, _ScanMode.page)
-                                    : null,
-                                child: const Text('사진에서 글자 읽기'),
-                              ),
-                              _adjustButton(),
-                              if (!_showPhotoText && _text.text.isEmpty)
+                              if (!_offerExtraction)
+                                TextButton(
+                                  onPressed: _editable ? _extractPhoto : null,
+                                  child: const Text('사진에서 글자 뽑기'),
+                                ),
+                              if (!_extractionOnly &&
+                                  !_showPhotoText &&
+                                  _text.text.isEmpty)
                                 TextButton(
                                   onPressed: _editable
                                       ? () {
@@ -1502,16 +1501,18 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                                       : null,
                                   child: const Text('글 적기'),
                                 ),
-                              TextButton(
-                                onPressed: _editable
-                                    ? () => setState(() {
-                                        _originalPhoto = null;
-                                        _photoRegion = null;
-                                        _error = null;
-                                      })
-                                    : null,
-                                child: const Text('사진 빼기'),
-                              ),
+                              if (!_extractionOnly)
+                                TextButton(
+                                  onPressed: _editable
+                                      ? () => setState(() {
+                                          _originalPhoto = null;
+                                          _photoRegion = null;
+                                          _savedReviews.clear();
+                                          _error = null;
+                                        })
+                                      : null,
+                                  child: const Text('사진 빼기'),
+                                ),
                             ],
                           ),
                         ],
@@ -1539,29 +1540,44 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
                   child: SizedBox(
                     width: double.infinity,
-                    child: FilledButton(
-                      key: const ValueKey('source-confirm'),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(0, 48),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        FilledButton(
+                          key: const ValueKey('source-confirm'),
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size(0, 48),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                          onPressed: _selecting
+                              ? selectionReady && !_busy
+                                    ? _reviewSelection
+                                    : null
+                              : _offerExtraction
+                              ? (_editable ? _extractPhoto : null)
+                              : canSubmit
+                              ? _submit
+                              : null,
+                          child: Text(
+                            _offerExtraction
+                                ? '글자 뽑기'
+                                : !_selecting
+                                ? (_extractionOnly ? '원문 글 저장' : '담기')
+                                : _mode == _ScanMode.page
+                                ? '페이지 확인'
+                                : '선택한 구절 확인',
+                            textAlign: TextAlign.center,
+                          ),
                         ),
-                      ),
-                      onPressed: _selecting
-                          ? selectionReady && !_busy
-                                ? _reviewSelection
-                                : null
-                          : canSubmit
-                          ? _submit
-                          : null,
-                      child: Text(
-                        !_selecting
-                            ? '담기'
-                            : _mode == _ScanMode.page
-                            ? '페이지 확인'
-                            : '선택한 구절 확인',
-                        textAlign: TextAlign.center,
-                      ),
+                        if (_offerExtraction && !_extractionOnly)
+                          TextButton(
+                            onPressed: canSubmit ? _submit : null,
+                            child: const Text('사진만 보관'),
+                          ),
+                      ],
                     ),
                   ),
                 ),

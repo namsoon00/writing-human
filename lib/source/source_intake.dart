@@ -41,7 +41,6 @@ class SourceIntakeException implements Exception {
 /// Platform acquisition only. A photo or an OS share never writes a record.
 abstract class SourceIntake {
   bool get canUseCamera => false;
-  bool get canUseLiveCamera => false;
   final ImagePicker _picker = ImagePicker();
 
   Future<SourcePhoto?> pickPhoto({required bool camera}) async {
@@ -75,8 +74,6 @@ abstract class SourceIntake {
     List<Rect> mask = const [],
   });
 
-  Future<SourceScan> scanLiveFrame(SourcePhoto photo) => scan(photo);
-  void endLiveRecognition() => cancelRecognition();
   void cancelRecognition() {}
   Stream<void> get incomingChanges => const Stream.empty();
   Future<List<IncomingSource>> pendingShares() async => const [];

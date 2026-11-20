@@ -1,6 +1,8 @@
 import 'dart:js_interop';
 import 'dart:ui' show Rect;
 
+import 'package:flutter/foundation.dart';
+
 import 'source_intake.dart';
 import 'source_scan.dart';
 
@@ -10,46 +12,28 @@ external JSPromise<JSArray<JSAny?>> _scan(
   JSNumber width,
   JSNumber height,
   JSBoolean tight,
-  JSBoolean live,
 );
 
 @JS('writingHumanCancelOcr')
 external void _cancel();
 
-@JS('writingHumanEndLiveOcr')
-external void _endLive();
-
 SourceIntake createSourceIntake() => _WebSourceIntake();
 
 class _WebSourceIntake extends SourceIntake {
-  int _liveGeneration = 0;
   @override
-  bool get canUseLiveCamera => true;
+  bool get canUseCamera =>
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.android;
 
-  @override
-  Future<SourceScan> scanLiveFrame(SourcePhoto photo) =>
-      _read(photo, live: true);
-
-  @override
-  void endLiveRecognition() {
-    _liveGeneration++;
-    _endLive();
-  }
+  int _generation = 0;
 
   @override
   Future<SourceScan> scan(
     SourcePhoto photo, {
     Rect? region,
     List<Rect> mask = const [],
-  }) => _read(photo, region: region, mask: mask);
-
-  Future<SourceScan> _read(
-    SourcePhoto photo, {
-    Rect? region,
-    List<Rect> mask = const [],
-    bool live = false,
   }) async {
-    final generation = _liveGeneration;
+    final generation = ++_generation;
     try {
       final image = await ScanImage.decode(
         photo.bytes,
@@ -57,7 +41,7 @@ class _WebSourceIntake extends SourceIntake {
         mask: mask,
         preserveRegionDetail: true,
       );
-      if (live && generation != _liveGeneration) {
+      if (generation != _generation) {
         return SourceScan.fromText(photo.bytes, const []);
       }
       final result = await _scan(
@@ -65,7 +49,6 @@ class _WebSourceIntake extends SourceIntake {
         image.width.toJS,
         image.height.toJS,
         (region != null).toJS,
-        live.toJS,
       ).toDart;
       return SourceScan.fromPlatform(image, result.dartify() as List<Object?>);
     } catch (_) {
@@ -74,5 +57,8 @@ class _WebSourceIntake extends SourceIntake {
   }
 
   @override
-  void cancelRecognition() => _cancel();
+  void cancelRecognition() {
+    _generation++;
+    _cancel();
+  }
 }

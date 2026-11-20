@@ -2236,3 +2236,16 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - [GitHub Pages 배포 44831490940](https://github.com/namsoon00/writing-human/actions/runs/44831490940)
   후 공개 웹에서도 두 원문의 필사 표시와 저장한 사진 열기를 확인했다.
   iOS·Android 실기기는 이번 변경에서 확인하지 않았다.
+
+## 2026-11-21 · 웹 원문 캡처 가져오기
+
+- Dart 포맷 검사, Flutter 정적 분석, 전체 Flutter 테스트 212개를 통과했다.
+- 위젯 테스트에서 원문 브라우저와 검색 결과의 캡처 가져오기, 선택 취소,
+  인식 실패 뒤 기존 초안과 출처 유지, 두 문단과 사진·원문 주소 저장을 확인했다.
+  기존 복사·붙여넣기 경로도 전체 테스트에서 통과했다.
+- Chrome 390×844에서는 글자 선택이 꺼진 검수용 웹 원문 화면에서, 320×640에서는
+  검색 결과 상세에서 캡처 파일을 골랐다. 실제 웹 OCR로 두 문단을 인식하고
+  이미지와 출처를 함께 저장했으며 이미 쓰던 글이 유지되는 것을 확인했다.
+- [GitHub Pages 배포 44832395629](https://github.com/namsoon00/writing-human/actions/runs/44832395629)
+  후 공개 웹에서도 같은 두 Chrome 크기로 캡처 선택과 OCR, 사진·출처 저장을 확인했다.
+- iOS·Android 실제 사진 앱의 선택 동작과 Safari는 이번 변경에서 검증하지 않았다.

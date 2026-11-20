@@ -2175,3 +2175,17 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - [GitHub Pages 배포 44827371608](https://github.com/namsoon00/writing-human/actions/runs/44827371608)
   후 공개 웹의 두 Chrome 화면 크기에서 같은 동작을 확인했다.
 - iOS·Android 실기기와 Safari는 이번 변경에서 검증하지 않았다.
+
+## 2026-11-21 · 필사 중 원문과 원문 담기 정리
+
+- Dart 포맷 검사, Flutter 정적 분석, 전체 Flutter 테스트 208개를 통과했다.
+- 위젯 테스트에서 320×640 키보드 레이아웃의 원문 출처 줄을 걷어내고, 원문이
+  온전한 글줄 단위로 보이면서 스크롤되는 것을 확인했다. 390×844에서는
+  하단 구절을 눌러 연결된 원문과 출처를 확인했다.
+- 원문 담기에서 추천 작품 영역을 숨기고, ‘새 원문 찾기’에서 작품 미리보기,
+  불러오기 재시도, 구절 선택과 필사 시작을 확인했다.
+- GitHub Pages용 로컬 빌드를 Chrome 390×844와 320×640에서 확인했다.
+  쓰는 쪽에서 제목이 사라지고 ‘원문’에서 출처가 열리는 것과, 원문 담기에는
+  작품 목록이 없고 ‘새 원문 찾기’에서 보이는 것을 각각 확인했다.
+- [GitHub Pages 배포 44828721285](https://github.com/namsoon00/writing-human/actions/runs/44828721285)
+  후 공개 웹에서도 같은 두 흐름을 확인했다. iOS·Android 실기기는 검증하지 않았다.

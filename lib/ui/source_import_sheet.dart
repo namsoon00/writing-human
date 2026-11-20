@@ -750,6 +750,69 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     ], transformBounds: transform);
   }
 
+  TextEditingValue? get _selectedOriginal {
+    final value = _wholeEditor?.value;
+    if (value == null) return null;
+    final selection = value.selection;
+    if (!selection.isValid ||
+        selection.isCollapsed ||
+        selection.end > value.text.length) {
+      return null;
+    }
+    bool atCharacterBoundary(int index) =>
+        index == value.text.length ||
+        (value.text.codeUnitAt(index) & 0xfc00) != 0xdc00;
+    return atCharacterBoundary(selection.start) &&
+            atCharacterBoundary(selection.end)
+        ? value
+        : null;
+  }
+
+  void _deleteSelectedOriginal() {
+    final value = _selectedOriginal;
+    if (!_editable || value == null) return;
+    final selection = value.selection;
+    _wholeEditor!.value = TextEditingValue(
+      text: value.text.replaceRange(selection.start, selection.end, ''),
+      selection: TextSelection.collapsed(offset: selection.start),
+    );
+    if (_error != null) setState(() => _error = null);
+  }
+
+  List<OriginalPhotoLine> _selectedPhotoLines(
+    TextEditingValue value,
+    String excerpt,
+  ) {
+    final raw = value.selection.textInside(value.text);
+    final visibleStart =
+        value.selection.start + raw.length - raw.trimLeft().length;
+    final documentStart = value.text.length - value.text.trimLeft().length;
+    final before = value.text.substring(documentStart, visibleStart);
+    final start = before.replaceAll('\r\n', '\n').length;
+    if (!_confirmedText.startsWith(excerpt, start)) return const [];
+    final end = start + excerpt.length;
+    final lines = <OriginalPhotoLine>[];
+    for (final line in _photoLines(original: true)) {
+      if (line.range.end <= start || line.range.start >= end) continue;
+      final range = PencilMark(
+        math.max(line.range.start, start) - start,
+        math.min(line.range.end, end) - start,
+      );
+      if (validOriginalRange(excerpt, range)) {
+        lines.add(
+          OriginalPhotoLine(
+            range,
+            line.left,
+            line.top,
+            line.right,
+            line.bottom,
+          ),
+        );
+      }
+    }
+    return lines;
+  }
+
   bool get _isPageReview => _reviewing && _mode == _ScanMode.page;
 
   Future<void> _pickWritingRange() async {
@@ -776,9 +839,16 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   Future<void> _submit({
     bool startWriting = false,
     bool photoOnly = false,
+    bool selectedOnly = false,
   }) async {
     if (photoOnly && (_extractionOnly || _originalPhoto == null)) return;
-    final text = photoOnly ? '' : _confirmedText;
+    final selection = selectedOnly ? _selectedOriginal : null;
+    if (selectedOnly && selection == null) return;
+    final text = photoOnly
+        ? ''
+        : selection == null
+        ? _confirmedText
+        : normalizeSource(selection.selection.textInside(selection.text));
     if (!_editable ||
         (!photoOnly && !_hasContent(text)) ||
         text.length > sourceLengthLimit ||
@@ -786,7 +856,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       return;
     }
     final isFullPage = !photoOnly && _isPageReview;
-    if (isFullPage && _range != null && _range!.text != text) {
+    if (isFullPage && !selectedOnly && _range != null && _range!.text != text) {
       setState(() => _error = '원문이 바뀌었어요. 옮겨 쓸 구절을 다시 골라 주세요.');
       return;
     }
@@ -802,10 +872,12 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
             : photoExcerptRegion(
                 passage.lineBoxes(_first, _last).map(_onOriginalPhoto),
               ));
-    final range = isFullPage ? _range?.range : null;
-    final photoLines = isFullPage
+    final range = isFullPage && !selectedOnly ? _range?.range : null;
+    final photoLines = !isFullPage
+        ? const <OriginalPhotoLine>[]
+        : selection == null
         ? _photoLines(original: true)
-        : const <OriginalPhotoLine>[];
+        : _selectedPhotoLines(selection, text);
     var photoId = widget.existingPhotoId;
     if (photo != null && photoId == null) {
       FocusScope.of(context).unfocus();
@@ -1599,6 +1671,41 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
               (widget.shared &&
                   RegisteredOriginal.webLink(_citation.text) != null)));
 
+  static final _confirmStyle = FilledButton.styleFrom(
+    minimumSize: const Size(0, 48),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+  );
+
+  Widget _selectionActions(TextEditingValue value) {
+    final selected = normalizeSource(value.selection.textInside(value.text));
+    final canSave =
+        _editable &&
+        selected.isNotEmpty &&
+        selected.length <= sourceLengthLimit &&
+        _citation.text.trim().length <= 500;
+    return TextFieldTapRegion(
+      child: Row(
+        children: [
+          Expanded(
+            child: TextButton(
+              style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
+              onPressed: _editable ? _deleteSelectedOriginal : null,
+              child: const Text('선택한 글 지우기', textAlign: TextAlign.center),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: FilledButton(
+              style: _confirmStyle,
+              onPressed: canSave ? () => _submit(selectedOnly: true) : null,
+              child: const Text('선택한 글 담기', textAlign: TextAlign.center),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = _fields
@@ -1823,39 +1930,38 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        FilledButton(
-                          key: ValueKey(
-                            writeLabel == null
-                                ? 'source-confirm'
-                                : 'source-save-and-write',
-                          ),
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size(0, 48),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6),
+                        if (_selectedOriginal case final selection?)
+                          _selectionActions(selection)
+                        else
+                          FilledButton(
+                            key: ValueKey(
+                              writeLabel == null
+                                  ? 'source-confirm'
+                                  : 'source-save-and-write',
+                            ),
+                            style: _confirmStyle,
+                            onPressed: _selecting
+                                ? selectionReady && !_busy
+                                      ? _reviewSelection
+                                      : null
+                                : _offerExtraction
+                                ? (_editable ? _extractPhoto : null)
+                                : canSubmit
+                                ? () =>
+                                      _submit(startWriting: writeLabel != null)
+                                : null,
+                            child: Text(
+                              writeLabel ??
+                                  (_offerExtraction
+                                      ? '사진에서 글자 읽기'
+                                      : !_selecting
+                                      ? (_extractionOnly ? '원문에 글 추가' : '담기')
+                                      : _mode == _ScanMode.page
+                                      ? '페이지 확인'
+                                      : '선택한 구절 확인'),
+                              textAlign: TextAlign.center,
                             ),
                           ),
-                          onPressed: _selecting
-                              ? selectionReady && !_busy
-                                    ? _reviewSelection
-                                    : null
-                              : _offerExtraction
-                              ? (_editable ? _extractPhoto : null)
-                              : canSubmit
-                              ? () => _submit(startWriting: writeLabel != null)
-                              : null,
-                          child: Text(
-                            writeLabel ??
-                                (_offerExtraction
-                                    ? '사진에서 글자 읽기'
-                                    : !_selecting
-                                    ? (_extractionOnly ? '원문에 글 추가' : '담기')
-                                    : _mode == _ScanMode.page
-                                    ? '페이지 확인'
-                                    : '선택한 구절 확인'),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
                         if (writeLabel != null)
                           TextButton(
                             key: const ValueKey('source-confirm'),

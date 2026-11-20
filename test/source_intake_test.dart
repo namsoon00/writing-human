@@ -407,6 +407,102 @@ void main() {
     expect(controller.text, '둘째 문단입니다.');
   });
 
+  testWidgets(
+    'Selected photo text can be deleted, edited, and saved on its own',
+    (tester) async {
+      await preparePhotoStorage(tester);
+      final store = MemoryStore();
+      final intake = FakeIntake();
+      const header = '사진의 머리글';
+      const first = '처음 남길 글.';
+      const second = '둘째 줄입니다.';
+      const footer = '마지막 줄';
+      intake.positioned = SourceScan(
+        intake.photo.bytes,
+        const [
+          ScanParagraph([
+            ScanLine(header, bounds: Rect.fromLTWH(.1, .1, .7, .04)),
+          ]),
+          ScanParagraph([
+            ScanLine(first, bounds: Rect.fromLTWH(.1, .3, .7, .04)),
+            ScanLine(second, bounds: Rect.fromLTWH(.1, .35, .7, .04)),
+          ]),
+          ScanParagraph([
+            ScanLine(footer, bounds: Rect.fromLTWH(.1, .9, .7, .04)),
+          ]),
+        ],
+        width: 800,
+        height: 1000,
+      );
+      await open(tester, store, intake);
+      tester.view.physicalSize = const Size(320, 640);
+      await openRegistration(tester);
+      await takePhoto(tester);
+      await tester.showKeyboard(sourceField);
+      final controller = tester.widget<TextField>(sourceField).controller!;
+      expect(controller.text, '$header\n\n$first\n$second\n\n$footer');
+      final remove = find.widgetWithText(TextButton, '선택한 글 지우기');
+      final save = find.widgetWithText(FilledButton, '선택한 글 담기');
+      expect(confirm, findsOneWidget);
+
+      final selectedHeader = controller.value.copyWith(
+        selection: TextSelection(
+          baseOffset: header.length + 2,
+          extentOffset: 0,
+        ),
+      );
+      const composing = TextRange(start: 0, end: header.length + 2);
+      tester.testTextInput.updateEditingValue(
+        selectedHeader.copyWith(composing: composing),
+      );
+      await tester.pumpAndSettle();
+      expect(controller.value.composing, composing);
+      expect(tester.widget<TextButton>(remove).onPressed, isNull);
+      expect(tester.widget<FilledButton>(save).onPressed, isNull);
+
+      tester.testTextInput.updateEditingValue(selectedHeader);
+      await tester.pumpAndSettle();
+      await tester.tap(remove);
+      await tester.pumpAndSettle();
+      expect(controller.text, '$first\n$second\n\n$footer');
+      expect(controller.selection, const TextSelection.collapsed(offset: 0));
+      expect(save, findsNothing);
+      expect(store.data.records, isEmpty);
+
+      await tester.enterText(sourceField, '$first\n$second\n\n고친 마지막 줄');
+      final corrected = controller.text;
+      tester.testTextInput.updateEditingValue(
+        controller.value.copyWith(
+          selection: TextSelection(
+            baseOffset: corrected.indexOf(second) + second.length,
+            extentOffset: corrected.indexOf(' 남길'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await saveWithPhoto(tester, action: save);
+
+      final original = store.data.records.single.originals.single;
+      expect(original.text, '남길 글.\n$second');
+      expect(original.photoId, isNotNull);
+      expect(original.writingRange, isNull);
+      expect(
+        OriginalPhotoLine.validList(original.text, original.photoLines),
+        isTrue,
+      );
+      expect(
+        original.photoLines.map(
+          (line) => original.text.substring(line.range.start, line.range.end),
+        ),
+        ['남길 글.', second],
+      );
+      expect(original.photoLines.first.top, 3000);
+      expect(original.photoLines.last.top, 3500);
+      expect(store.data.activePage!.text, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('A compensated reread can return to the first result', (
     tester,
   ) async {

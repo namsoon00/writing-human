@@ -45,6 +45,9 @@ class TranscriptionComparison {
     return _source.skip(_progress + composingLength).join();
   }
 
+  static bool _isLineBreak(String value) =>
+      value == '\n' || value == '\r' || value == '\r\n';
+
   void _compare(String written) {
     if (_lastWritten == written) return;
     _lastWritten = written;
@@ -74,7 +77,12 @@ class TranscriptionComparison {
     while (input < typed.length && source < _source.length) {
       final character = typed[input];
       final end = offset + character.length;
-      if (character != _source[source]) {
+      if (_isLineBreak(character) && !_isLineBreak(_source[source])) {
+        input++;
+        offset = end;
+        continue;
+      }
+      if (character != _source[source] && !_isLineBreak(character)) {
         final substitution = matchingRun(input + 1, source + 1);
         final insertion = matchingRun(input + 1, source);
         final omission = matchingRun(input, source + 1);
@@ -103,8 +111,11 @@ class TranscriptionComparison {
       offset = end;
     }
     while (input < typed.length) {
-      final end = offset + typed[input].length;
-      differences.add((start: offset, end: end, expected: ''));
+      final character = typed[input];
+      final end = offset + character.length;
+      if (!_isLineBreak(character)) {
+        differences.add((start: offset, end: end, expected: ''));
+      }
       input++;
       offset = end;
     }

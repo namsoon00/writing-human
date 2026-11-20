@@ -345,6 +345,75 @@ void main() {
       c.dispose();
     },
   );
+  testWidgets(
+    'Enter before an existing line break keeps the attached original and old writing',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 650);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetViewInsets);
+      const prefix = '먼저 쓴 글';
+      const suffix = '\n이미 쓴 문장';
+      final initial = fixture(text: '$prefix$suffix');
+      final page = initial.activePage!.edited(
+        text: initial.activePage!.text,
+        base: prefix.length,
+        extent: prefix.length,
+        scroll: 0,
+      );
+      final data = initial.copy(pages: [page]);
+      final store = TestStore(data);
+      final library = LibraryController(store, data);
+      expect(library.attachOriginal('p', first), isTrue);
+      await library.settled;
+      library.dispose();
+
+      await tester.pumpWidget(WritingHumanApp(store: store));
+      await tester.pumpAndSettle();
+      final field = find.byKey(const ValueKey('page-text'));
+      final reference = find.byType(TranscriptionReference);
+      final controller = tester.widget<TextField>(field).controller!;
+      tester.view.viewInsets = const FakeViewPadding(bottom: 290);
+      await tester.showKeyboard(field);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TranscriptionReference>(reference).original.id,
+        first.id,
+      );
+
+      const lineBreaks = ['\n', '\n\n'];
+      for (final inserted in lineBreaks) {
+        final caret = prefix.length + inserted.length;
+        final value = TextEditingValue(
+          text: '$prefix$inserted$suffix',
+          selection: TextSelection.collapsed(offset: caret),
+        );
+        tester.testTextInput.updateEditingValue(value);
+        await tester.pumpAndSettle();
+        expect(controller.value, value);
+        final saved = store.data.activePage!;
+        expect(saved.text, value.text);
+        expect(saved.passages.last.start, caret);
+        expect(saved.text.substring(caret), suffix);
+        final visible = tester.widget<TranscriptionReference>(reference);
+        expect(visible.original.id, first.id);
+        expect(visible.comparison!.remainderFor(inserted), first.text);
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  test('Extra line breaks leave the next original characters available', () {
+    final comparison = TranscriptionComparison(
+      const RegisteredOriginal('a', '가나\r\n다'),
+    );
+    expect(comparison.remainderFor('가\n'), '나\r\n다');
+    expect(comparison.differencesFor('가\n'), isEmpty);
+    expect(comparison.remainderFor('가\n나\n'), '다');
+    expect(comparison.differencesFor('가\n나\n다\n'), isEmpty);
+  });
+
   test(
     'Deleting a catalog original clears only its linked segments and retains the writing',
     () async {

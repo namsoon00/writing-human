@@ -586,14 +586,25 @@ class PagePassage {
   static List<PagePassage> afterEdit(
     String before,
     String after,
-    List<PagePassage> passages,
-  ) {
+    List<PagePassage> passages, {
+    int? insertionEnd,
+  }) {
     if (passages.isEmpty || before == after) return passages;
     var prefix = 0;
     while (prefix < before.length &&
         prefix < after.length &&
         before.codeUnitAt(prefix) == after.codeUnitAt(prefix)) {
       prefix++;
+    }
+    // A repeated character (often a newline) can make the common prefix
+    // extend past the place where the user actually inserted text.
+    if (insertionEnd != null && after.length > before.length) {
+      final start = insertionEnd - (after.length - before.length);
+      if (start >= 0 &&
+          start < prefix &&
+          after.startsWith(before.substring(start), insertionEnd)) {
+        prefix = start;
+      }
     }
     var oldEnd = before.length;
     var newEnd = after.length;
@@ -705,7 +716,12 @@ class WritingPage {
     scroll: scroll,
     writtenOn: writtenOn,
     pencilMarks: PencilMark.afterEdit(this.text, text, pencilMarks),
-    passages: PagePassage.afterEdit(this.text, text, passages),
+    passages: PagePassage.afterEdit(
+      this.text,
+      text,
+      passages,
+      insertionEnd: base == extent ? extent : null,
+    ),
     guidedOriginalId: guidedOriginalId,
     referenceOnly: referenceOnly,
     originalCitations: originalCitations,

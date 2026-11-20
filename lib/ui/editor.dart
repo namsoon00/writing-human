@@ -80,6 +80,9 @@ class _PageEditorState extends State<PageEditor> {
     widget.page.text,
     text.text,
     pageOriginals(widget.page, widget.originals),
+    insertionEnd: text.selection.isCollapsed
+        ? text.selection.extentOffset
+        : null,
   );
   PagePassage? get _activePassage {
     final value = text.value;

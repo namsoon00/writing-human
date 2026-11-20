@@ -921,6 +921,13 @@ class LibraryController extends ChangeNotifier {
   }
 
   WritingPage attachedPage(WritingPage page, RegisteredOriginal original) {
+    // Previously stored multi-source pages remain intact; new work uses a new page.
+    if (pageOriginals(
+      page,
+      _originalsForPage(page),
+    ).any((p) => passageOriginal(p) != null)) {
+      return page;
+    }
     final snapshot = originalSnapshot(original);
     return page
         .rememberOriginalCitation(original.citation)
@@ -948,6 +955,12 @@ class LibraryController extends ChangeNotifier {
     if (_disposed || composing || saveError != null) return false;
     final page = library.pages.where((p) => p.id == pageId).firstOrNull;
     if (page == null) return false;
+    final originals = _originalsForPage(page);
+    final linked = pageOriginals(
+      page,
+      originals,
+    ).any((p) => passageOriginal(p) != null);
+    if (linked) return pageUsesOriginal(page, originals, original);
     _publish(
       library.copy(
         pages: [

@@ -16,7 +16,7 @@ class OriginalSlipTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IconButton(
-    tooltip: '끼운 원문 쪽지 펼쳐 보기',
+    tooltip: '필사 원문 펼쳐 보기',
     onPressed: onPressed,
     style: IconButton.styleFrom(foregroundColor: brandInk),
     icon: Container(
@@ -59,7 +59,7 @@ Future<bool?> showOriginalSlip(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
           child: Column(
             children: [
-              const PaperPanelHeader('끼운 원문 쪽지'),
+              const PaperPanelHeader('필사 원문'),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.symmetric(vertical: 12),

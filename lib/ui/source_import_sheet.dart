@@ -1886,7 +1886,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
             key: const ValueKey('source-save-and-write'),
             style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
             onPressed: canWrite ? () => _submit(startWriting: true) : null,
-            child: const Text('담고 필사하기', textAlign: TextAlign.center),
+            child: const Text('필사하기', textAlign: TextAlign.center),
           ),
         ),
       ],
@@ -1923,7 +1923,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     } else if (_offerExtraction) {
       confirmLabel = '사진에서 글자 읽기';
     } else if (photoWriting) {
-      confirmLabel = '이 구절로 필사하기';
+      confirmLabel = '필사하기';
     } else if (selection != null) {
       confirmLabel = '선택한 글 담기';
     } else {

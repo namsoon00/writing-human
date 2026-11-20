@@ -229,7 +229,12 @@ void main() {
           text: '책의 원문',
           citation: '12쪽',
         )!;
-        c.guidePage(migrated.pages.single.id, originalOnPage);
+        final oldPage = c.library.pages.single.toJson();
+        expect(
+          c.attachOriginal(migrated.pages.single.id, originalOnPage),
+          isFalse,
+        );
+        expect(c.library.pages.single.toJson(), oldPage);
         c.registerOriginal(
           page: migrated.pages.single,
           text: '기록의 원문',
@@ -260,8 +265,8 @@ void main() {
         expect(restored.encode(), expected);
         expect(restored.books.single.originals.single.text, '책의 원문');
         expect(restored.books.single.originals.single.citation, '12쪽');
-        expect(restored.pages.single.originalCitations, ['12쪽']);
-        expect(restored.pages.single.referenceOnly, isTrue);
+        expect(restored.pages.single.originalCitations, isEmpty);
+        expect(restored.pages.single.referenceOnly, isFalse);
         expect(
           restored.books.single.originals.single.reflection!.toJson(),
           reflection.toJson(),
@@ -278,7 +283,7 @@ void main() {
           restored.pages.single.passages
               .firstWhere((p) => p.id == passage.id)
               .toJson(),
-          passage.copy(attached: true).toJson(),
+          passage.toJson(),
         );
         expect(
           restored.records.single.toJson()..remove('originals'),

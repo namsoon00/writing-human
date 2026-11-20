@@ -112,7 +112,54 @@ class _TranscriptionReferenceState extends State<TranscriptionReference> {
                           region: source.photoRegion,
                           fitWidth: true,
                         ))
-                : _textReference(passage, scaler),
+                : source.photoId == null
+                ? _textReference(passage, scaler)
+                : LayoutBuilder(
+                    builder: (context, box) {
+                      // Keep the complete text line in the smallest keyboard layouts.
+                      if (box.maxHeight < 48) {
+                        return _textReference(passage, scaler);
+                      }
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(
+                            key: const ValueKey('reference-photo'),
+                            width: math.min(88, box.maxWidth * .24),
+                            child: Semantics(
+                              button: true,
+                              label: '원문 사진 크게 보기',
+                              child: InkWell(
+                                onTap: () {
+                                  final value = widget.controller.value;
+                                  if (value.isComposingRangeValid &&
+                                      !value.composing.isCollapsed) {
+                                    return;
+                                  }
+                                  FocusScope.of(context).unfocus();
+                                  showOriginalPhoto(
+                                    context,
+                                    source.photoId!,
+                                    color: originalPanelColor,
+                                    region: source.photoRegion,
+                                  );
+                                },
+                                child: ClipRect(
+                                  child: OriginalPhoto(
+                                    id: source.photoId!,
+                                    region: source.photoRegion,
+                                    compact: true,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(child: _textReference(passage, scaler)),
+                        ],
+                      );
+                    },
+                  ),
           ),
         ),
       ),

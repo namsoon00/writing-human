@@ -114,7 +114,7 @@ void main() {
       await openRegistration(tester);
       await tester.enterText(sourceField, '지금 옮겨 쓰고 싶은 문장');
       await tester.pumpAndSettle();
-      await tester.tap(find.text('담고 필사하기'));
+      await tester.tap(find.text('필사하기'));
       await settleSourceSheets(tester);
       final original = store.data.records.single.originals.single;
       expect(reading, findsNothing);

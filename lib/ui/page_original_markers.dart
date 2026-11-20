@@ -133,7 +133,7 @@ class _OriginalMarkersPainter extends CustomPainter {
           CustomPainterSemantics(
             rect: marker.rect,
             properties: SemanticsProperties(
-              label: '원문 ${marker.number} 끼운 곳',
+              label: '원문 ${marker.number} 필사 위치',
               button: true,
               onTap: () => onSelect(marker.passage),
               textDirection: TextDirection.ltr,

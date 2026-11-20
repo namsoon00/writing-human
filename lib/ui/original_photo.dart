@@ -141,11 +141,12 @@ class OriginalPhoto extends StatefulWidget {
     required this.id,
     this.region,
     this.fitWidth = false,
+    this.compact = false,
   });
 
   final String id;
   final List<double>? region;
-  final bool fitWidth;
+  final bool fitWidth, compact;
 
   @override
   State<OriginalPhoto> createState() => _OriginalPhotoState();
@@ -184,6 +185,15 @@ class _OriginalPhotoState extends State<OriginalPhoto> {
       }
       final bytes = snapshot.data;
       if (bytes == null) {
+        if (widget.compact) {
+          return Tooltip(
+            message: _missingOriginalPhoto,
+            child: const Icon(
+              Icons.broken_image_outlined,
+              semanticLabel: _missingOriginalPhoto,
+            ),
+          );
+        }
         return Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),

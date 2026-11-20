@@ -21,7 +21,6 @@ import 'transcription_reference.dart';
 import 'transcription_guide.dart';
 import 'transcription_marks.dart';
 import 'editable_geometry.dart';
-import 'page_original_markers.dart';
 import 'page_originals_panel.dart';
 import 'paper_panel.dart';
 
@@ -133,6 +132,7 @@ class _PageEditorState extends State<PageEditor> {
         passages: passages,
         textLength: text.text.length,
         style: widget.style,
+        selectedId: _activePassage?.id,
       ),
       color: originalPanelColor,
     );
@@ -547,9 +547,6 @@ class _PageEditorState extends State<PageEditor> {
         final linked = passages
             .where((p) => passageOriginal(p) != null)
             .toList();
-        final number = active == null
-            ? 0
-            : linked.indexWhere((p) => p.id == active.id) + 1;
         final hasChosenGuide = source != null;
         final paperHeight = math.max(0.0, constraints.maxHeight - overlap);
         final scaler = MediaQuery.textScalerOf(context);
@@ -809,17 +806,6 @@ class _PageEditorState extends State<PageEditor> {
                   fieldKey: fieldRenderKey,
                 ),
               ),
-            if (linked.isNotEmpty)
-              Positioned.fill(
-                child: PageOriginalMarkers(
-                  key: const ValueKey('page-original-markers'),
-                  passages: passages,
-                  controller: text,
-                  scroll: scroll,
-                  fieldKey: fieldRenderKey,
-                  onSelect: _selectOriginal,
-                ),
-              ),
             if (widget.originals.any((item) => item.reflection != null))
               Positioned.fill(
                 child: NotebookReflection(
@@ -870,8 +856,12 @@ class _PageEditorState extends State<PageEditor> {
                           Expanded(
                             child: Text(
                               source == null
-                                  ? '이 쪽의 원문 ${linked.length}개'
-                                  : '${linked.length > 1 ? "$number/${linked.length}" : "$number"} · ${displayCitation.isEmpty ? (source.text.trim().isEmpty ? "사진 원문" : source.text.trim().split("\n").first) : displayCitation}',
+                                  ? '필사 원문'
+                                  : displayCitation.isEmpty
+                                  ? (source.text.trim().isEmpty
+                                        ? '사진 원문'
+                                        : source.text.trim().split('\n').first)
+                                  : displayCitation,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(

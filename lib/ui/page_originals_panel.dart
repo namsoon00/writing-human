@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../data/model.dart';
 import '../source/page_originals.dart';
 import 'original_photo.dart';
+import 'original_reading_layout.dart';
 import 'paper.dart';
 import 'paper_panel.dart';
 import 'source_browser.dart';
@@ -12,157 +13,166 @@ enum PageOriginalAction { jump, remove, add, free }
 
 typedef PageOriginalChoice = ({PageOriginalAction action, String? id});
 
-class PageOriginalsPanel extends StatelessWidget {
+class PageOriginalsPanel extends StatefulWidget {
   const PageOriginalsPanel({
     super.key,
     required this.passages,
     required this.textLength,
     required this.style,
+    this.selectedId,
   });
   final List<PagePassage> passages;
   final int textLength;
   final WritingStyle style;
+  final String? selectedId;
+
+  @override
+  State<PageOriginalsPanel> createState() => _PageOriginalsPanelState();
+}
+
+class _PageOriginalsPanelState extends State<PageOriginalsPanel> {
+  late String? selectedId = widget.selectedId;
+
+  Future<void> _history(List<PagePassage> sources) async {
+    final choice = await Navigator.of(context).push<PagePassage>(
+      paperPanelRoute(
+        (context) => PaperPanel(
+          color: originalPanelColor,
+          child: Column(
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(24, 6, 12, 8),
+                child: PaperPanelHeader('이전 원문 기록'),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  children: [
+                    for (final link in sources)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          _title(passageOriginal(link)!),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: link.citation.isEmpty
+                            ? null
+                            : Text(
+                                link.citation,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                        trailing: const Icon(
+                          CupertinoIcons.chevron_right,
+                          size: 16,
+                        ),
+                        onTap: () => Navigator.pop(context, link),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        color: originalPanelColor,
+      ),
+    );
+    if (mounted && choice != null) setState(() => selectedId = choice.id);
+  }
+
+  String _title(RegisteredOriginal source) => source.text.trim().isNotEmpty
+      ? source.text.trim().split('\n').first
+      : source.photoId != null
+      ? '사진 원문'
+      : source.citation;
 
   @override
   Widget build(BuildContext context) {
-    final sources = passages.where((p) => passageOriginal(p) != null).toList();
-    void choose(PageOriginalAction action, [String? id]) =>
-        Navigator.pop(context, (action: action, id: id));
+    final sources = widget.passages
+        .where((p) => passageOriginal(p) != null)
+        .toList();
+    final link =
+        sources.where((p) => p.id == selectedId).firstOrNull ??
+        sources.firstOrNull;
+    final original = link == null ? null : passageOriginal(link);
+    final style = widget.style;
+    final url = original == null
+        ? null
+        : RegisteredOriginal.webLink(original.citation);
     return PaperPanel(
       color: originalPanelColor,
-      child: Column(
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(24, 6, 12, 8),
-            child: PaperPanelHeader('끼운 원문'),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              children: [
-                for (final (index, link) in sources.indexed)
-                  ExpansionTile(
-                    key: ValueKey('attached-original-${link.id}'),
-                    tilePadding: EdgeInsets.zero,
-                    shape: const Border(bottom: BorderSide(color: line)),
-                    collapsedShape: const Border(
-                      bottom: BorderSide(color: line),
-                    ),
-                    leading: Text(
-                      '${index + 1}',
-                      style: const TextStyle(color: brandInk),
-                    ),
-                    title: Text(
-                      passageOriginal(link)!.text.trim().isEmpty
-                          ? (passageOriginal(link)!.photoId == null
-                                ? passageOriginal(link)!.citation
-                                : '사진 원문')
-                          : passageOriginal(
-                              link,
-                            )!.text.trim().split('\n').first,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: link.citation.trim().isEmpty
-                        ? null
-                        : Text(
-                            link.citation,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                    children: [
-                      if (passageOriginal(link)!.photoId case final photo?)
-                        SizedBox(
-                          height: 200,
-                          child: OriginalPhoto(
-                            id: photo,
-                            region: passageOriginal(link)!.photoRegion,
-                            fitWidth: true,
-                          ),
-                        ),
-                      if (passageOriginal(link)!.text.trim().isNotEmpty)
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            passageOriginal(link)!.text,
-                            style: writingTextStyle(
-                              style.fontIndex,
-                              size: style.fontSize,
-                              useDevelopmentTypeface:
-                                  style.useDevelopmentTypeface,
-                            ),
-                          ),
-                        ),
-                      if (RegisteredOriginal.webLink(link.citation)
-                          case final url?)
-                        TextButton(
-                          onPressed: () => openSourceBrowser(
-                            context,
-                            url: url,
-                            title: '원문 출처',
-                            launchLabel: '링크 열기',
-                            hasCitation: true,
-                          ),
-                          child: const Text('출처 열기'),
-                        ),
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          if (passageEnd(passages, link, textLength) >
-                                  link.start ||
-                              identical(link, passages.last))
-                            TextButton(
-                              onPressed: () =>
-                                  choose(PageOriginalAction.jump, link.id),
-                              child: const Text('끼운 곳으로 이동'),
-                            ),
-                          TextButton(
-                            onPressed: () async {
-                              final remove = await showDialog<bool>(
-                                context: context,
-                                builder: (dialog) => AlertDialog(
-                                  title: const Text('이 쪽에서 원문을 뺄까요?'),
-                                  content: const Text('쓴 글은 그대로 남아요.'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(dialog, false),
-                                      child: const Text('취소'),
-                                    ),
-                                    FilledButton(
-                                      onPressed: () =>
-                                          Navigator.pop(dialog, true),
-                                      child: const Text('빼기'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                              if (remove == true && context.mounted) {
-                                choose(PageOriginalAction.remove, link.id);
-                              }
-                            },
-                            child: const Text('이 쪽에서 빼기'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                    ],
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 6, 24, 12),
+        child: Column(
+          children: [
+            const PaperPanelHeader('필사 원문'),
+            if (original != null && original.citation.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    original.citation,
+                    style: const TextStyle(color: muted),
                   ),
-                const SizedBox(height: 16),
-                TextButton.icon(
-                  onPressed: () => choose(PageOriginalAction.add),
-                  icon: const Icon(CupertinoIcons.add, size: 18),
-                  label: const Text('다른 원문 끼우기'),
                 ),
-                TextButton(
-                  onPressed: () => choose(PageOriginalAction.free),
-                  child: const Text('원문 없이 쓰기'),
-                ),
-                const SizedBox(height: 24),
-              ],
+              ),
+            Expanded(
+              child: original == null
+                  ? const Center(child: Text('연결된 원문이 없어요.'))
+                  : OriginalReadingLayout(
+                      original: original,
+                      onOpenPhoto: original.photoId == null
+                          ? null
+                          : () => showOriginalPhoto(
+                              context,
+                              original.photoId!,
+                              color: originalPanelColor,
+                              region: original.photoRegion,
+                            ),
+                      child: SingleChildScrollView(
+                        child: Text(
+                          original.text,
+                          key: const ValueKey('page-original-reading-text'),
+                          style: writingTextStyle(
+                            style.fontIndex,
+                            size: style.fontSize,
+                            color: penColors[style.penIndex],
+                            useDevelopmentTypeface:
+                                style.useDevelopmentTypeface,
+                          ).copyWith(height: 1.65),
+                        ),
+                      ),
+                    ),
             ),
-          ),
-        ],
+            if (url != null)
+              TextButton(
+                onPressed: () => openSourceBrowser(
+                  context,
+                  url: url,
+                  title: '원문 출처',
+                  launchLabel: '링크 열기',
+                  hasCitation: true,
+                ),
+                child: const Text('출처 열기'),
+              ),
+            if (sources.length > 1)
+              TextButton(
+                onPressed: () => _history(sources),
+                child: const Text('이전 원문 기록'),
+              ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: () => Navigator.pop(context, (
+                action: PageOriginalAction.add,
+                id: null,
+              )),
+              icon: const Icon(CupertinoIcons.pencil, size: 18),
+              label: const Text('다른 원문으로 필사하기'),
+            ),
+          ],
+        ),
       ),
     );
   }

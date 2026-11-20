@@ -15,6 +15,7 @@ import 'paper_panel.dart';
 import 'original_edit.dart';
 import 'original_list_item.dart';
 import 'original_photo.dart';
+import 'original_reading_layout.dart';
 import 'source_browser.dart';
 import 'paper_search_field.dart';
 import 'original_range_sheet.dart';
@@ -675,29 +676,22 @@ class _SourceReadingState extends State<SourceReading> {
                 ),
               Expanded(
                 child: original != null
-                    ? original.text.trim().isEmpty && original.photoId != null
-                          ? Semantics(
-                              button: true,
-                              label: '원본 사진 크게 보기',
-                              child: InkWell(
-                                onTap: saving
-                                    ? null
-                                    : () => _showPhoto(original),
-                                child: OriginalPhoto(
-                                  id: original.photoId!,
-                                  region: original.photoRegion,
-                                ),
-                              ),
-                            )
-                          : _OriginalText(
-                              key: ValueKey(original.id),
-                              original: original,
-                              style: style,
-                              match: match,
-                              mark: mark,
-                              note: note,
-                              editing: editing,
-                            )
+                    ? OriginalReadingLayout(
+                        original: original,
+                        onOpenPhoto:
+                            original.photoId == null || saving || editing
+                            ? null
+                            : () => _showPhoto(original),
+                        child: _OriginalText(
+                          key: ValueKey(original.id),
+                          original: original,
+                          style: style,
+                          match: match,
+                          mark: mark,
+                          note: note,
+                          editing: editing,
+                        ),
+                      )
                     : visibleOriginals.isEmpty
                     ? Center(
                         child: Text(

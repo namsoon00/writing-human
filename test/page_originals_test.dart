@@ -14,7 +14,6 @@ import 'package:writing_human/source/transcription_comparison.dart';
 import 'package:writing_human/sync/merge.dart';
 import 'package:writing_human/ui/paper.dart';
 import 'package:writing_human/ui/paper_panel.dart';
-import 'package:writing_human/ui/transcription_guide.dart';
 import 'package:writing_human/ui/transcription_reference.dart';
 
 const first = RegisteredOriginal('a', '첫 원문을 씁니다.', citation: '첫 책');
@@ -53,18 +52,77 @@ class TestStore implements LibraryStore {
   Future<void> close() async {}
 }
 
+// Construct an archived multi-source record explicitly; normal attachment now
+// rejects an additional source. These regressions keep old records readable.
+void attachArchivedSource(
+  LibraryController c,
+  String pageId,
+  RegisteredOriginal original,
+) {
+  final page = c.library.pages.firstWhere((p) => p.id == pageId);
+  final links = pageOriginals(
+    page,
+    originalsFor(c.library, recordId: page.recordId),
+  );
+  final snapshot = originalSnapshot(original);
+  final start = page.extent.clamp(0, page.text.length);
+  final archived =
+      [
+        ...links,
+        PagePassage(
+          id: 'archived-${original.id}',
+          start: start,
+          source: snapshot.text,
+          citation: snapshot.citation,
+          original: snapshot,
+          attached: true,
+        ),
+        if (start < page.text.length)
+          resumeAfterInsertion(
+            page,
+            links,
+            'archived-following-${original.id}',
+          ),
+      ]..sort((a, b) {
+        final order = a.start.compareTo(b.start);
+        return order != 0
+            ? order
+            : a.following == b.following
+            ? 0
+            : a.following
+            ? 1
+            : -1;
+      });
+  c.library = c.library.copy(
+    pages: [
+      for (final p in c.library.pages)
+        if (p.id == pageId)
+          p
+              .rememberOriginalCitation(original.citation)
+              .withDetails(
+                passages: archived,
+                guidedOriginalId: original.id,
+                referenceOnly: p.text.isNotEmpty,
+              )
+        else
+          p,
+    ],
+  );
+  c.retrySave();
+}
+
 void main() {
   sqfliteFfiInit();
   test(
     'Multiple sources retain boundaries, selected copies and unlinked writing',
     () async {
       final c = LibraryController(TestStore(fixture()), fixture());
-      c.attachOriginal('p', first);
+      attachArchivedSource(c, 'p', first);
       final a = c.library.activePage!.passages.single;
       expect(a.start, '내 생각\n'.length);
       final text = '내 생각\n첫 원문을 씁니다.\n';
       c.editPage('p', text, text.length, text.length, 0);
-      c.attachOriginal('p', second);
+      attachArchivedSource(c, 'p', second);
       final b = c.library.activePage!.passages.last;
       c.editPage('p', '$text다음 원문', text.length + 5, text.length + 5, 0);
       final before = c.library.activePage!;
@@ -95,7 +153,7 @@ void main() {
     () async {
       final data = fixture();
       final c = LibraryController(TestStore(data), data);
-      c.attachOriginal('p', first);
+      attachArchivedSource(c, 'p', first);
       const text = '내 생각\n첫 원문';
       c.editPage('p', text, text.length, text.length, 0);
       c.addPage();
@@ -125,7 +183,7 @@ void main() {
       ],
     );
     final c = LibraryController(TestStore(initial), initial);
-    c.attachOriginal('p', const RegisteredOriginal('c', '세 번째'));
+    attachArchivedSource(c, 'p', const RegisteredOriginal('c', '세 번째'));
     final links = pageOriginals(c.library.activePage!, const [first, second]);
     expect(
       links.map((p) => passageOriginal(p)?.text),
@@ -146,9 +204,9 @@ void main() {
       );
       final initial = fixture();
       final c = LibraryController(store, initial);
-      c.attachOriginal('p', first);
+      attachArchivedSource(c, 'p', first);
       c.editPage('p', '${initial.activePage!.text}${first.text}', 7, 7, 0);
-      c.attachOriginal('p', second);
+      attachArchivedSource(c, 'p', second);
       await c.settled;
       final expected = c.library;
       c.dispose();
@@ -207,106 +265,76 @@ void main() {
     },
   );
   testWidgets(
-    'Writing two sources follows the active segment without rewriting Korean input',
+    'Each original starts its own page and resuming keeps the same input',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      final data = fixture().copy(style: const WritingStyle(paperIndex: 3));
-      final store = TestStore(data);
+      final store = TestStore(fixture(text: ''));
       await tester.pumpWidget(WritingHumanApp(store: store));
       await tester.pumpAndSettle();
       final field = find.byKey(const ValueKey('page-text'));
-      final controller = tester.widget<TextField>(field).controller!;
-      Future<void> attach(String id) async {
-        await tester.tap(find.text('원문').last);
+      Future<void> transcribe(String id) async {
+        await tester.tap(find.byKey(const ValueKey('writing-originals')));
         await tester.pumpAndSettle();
         final list = find.byTooltip('원문 목록');
         if (list.evaluate().isNotEmpty) {
           await tester.tap(list);
           await tester.pumpAndSettle();
         }
-        await tester.tap(find.byKey(ValueKey(id)));
+        await tester.tap(
+          find.widgetWithText(ListTile, id == 'a' ? first.text : second.text),
+        );
         await tester.pumpAndSettle();
-        await tester.tap(find.text('이 쪽에 끼우기'));
+        await tester.tap(find.text('필사하기'));
         await tester.pumpAndSettle();
       }
 
-      final initial = controller.value;
-      await attach('a');
-      expect(controller.value, initial);
-      final guide =
-          tester
-                  .widget<CustomPaint>(
-                    find.byKey(const ValueKey('transcription-guide')),
-                  )
-                  .painter!
-              as TranscriptionGuidePainter;
-      expect(guide.remainderFor(controller.value), first.text);
-      await tester.showKeyboard(field);
-      final written = '${data.activePage!.text}${first.text}\n';
-      tester.testTextInput.updateEditingValue(
-        TextEditingValue(
-          text: written,
-          selection: TextSelection.collapsed(offset: written.length),
-        ),
-      );
+      await transcribe('a');
+      final aPage = store.data.activePageId;
+      final aInput = tester.widget<TextField>(field).controller!;
+      await tester.enterText(field, '첫 원문');
       await tester.pumpAndSettle();
-      await attach('b');
-      expect(tester.widget<TextField>(field).controller, same(controller));
-      final bGuide =
-          tester
-                  .widget<CustomPaint>(
-                    find.byKey(const ValueKey('transcription-guide')),
-                  )
-                  .painter!
-              as TranscriptionGuidePainter;
-      expect(bGuide.remainderFor(controller.value), second.text);
-      expect(store.data.activePage!.passages, hasLength(2));
-      controller.selection = TextSelection.collapsed(
-        offset: data.activePage!.text.length + 2,
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('1/2 · 첫 책'), findsOneWidget);
+      final value = aInput.value;
+      await transcribe('a');
+      expect(store.data.activePageId, aPage);
+      expect(tester.widget<TextField>(field).controller, same(aInput));
+      expect(aInput.value, value);
+      await transcribe('b');
+      expect(store.data.activePageId, isNot(aPage));
+      expect(store.data.pages.first.text, '첫 원문');
+      expect(store.data.pages.first.passages.single.original!.id, 'a');
+      expect(store.data.activePage!.passages.single.original!.id, 'b');
+      expect(store.data.activePage!.text, isEmpty);
+      expect(find.byKey(const ValueKey('page-original-markers')), findsNothing);
+      expect(find.textContaining('1/2'), findsNothing);
       await tester.tap(find.byKey(const ValueKey('page-originals-button')));
       await tester.pumpAndSettle();
-      expect(find.text('끼운 원문'), findsOneWidget);
+      expect(find.text('필사 원문'), findsOneWidget);
+      expect(find.text(second.text), findsOneWidget);
+      expect(find.text('이전 원문 기록'), findsNothing);
+      expect(find.text('다른 원문으로 필사하기'), findsOneWidget);
       expect(
         tester.widget<PaperPanel>(find.byType(PaperPanel)).color,
         originalPanelColor,
       );
-      await tester.tap(find.byTooltip('닫기'));
-      await tester.pumpAndSettle();
-      await tester.showKeyboard(field);
-      tester.view.viewInsets = const FakeViewPadding(bottom: 290);
-      addTearDown(tester.view.resetViewInsets);
-      await tester.pumpAndSettle();
-      final ref = tester.widget<TranscriptionReference>(
-        find.byKey(const ValueKey('transcription-reference')),
-      );
-      expect(ref.original.id, 'a');
-      expect(ref.startOffset, data.activePage!.text.length);
-      await tester.showKeyboard(field);
-      final composing = TextEditingValue(
-        text: written,
-        selection: TextSelection.collapsed(offset: written.length),
-        composing: TextRange(start: written.length - 1, end: written.length),
-      );
-      tester.testTextInput.updateEditingValue(composing);
-      await tester.pumpAndSettle();
-      expect(controller.value, composing);
-      expect(
-        tester
-            .widget<TextButton>(
-              find.byKey(const ValueKey('page-originals-button')),
-            )
-            .onPressed,
-        isNull,
-      );
-      expect(tester.takeException(), isNull);
     },
   );
+
+  test('Attaching a second source cannot overwrite an existing page', () async {
+    final data = fixture(text: '');
+    final c = LibraryController(TestStore(data), data);
+    expect(c.attachOriginal('p', first), isTrue);
+    c.editPage('p', '첫 원문', 3, 3, 0);
+    final before = c.library.activePage!.toJson();
+    expect(c.attachOriginal('p', second), isFalse);
+    expect(c.library.activePage!.toJson(), before);
+    expect(c.attachOriginal('p', first), isTrue);
+    expect(c.library.activePage!.toJson(), before);
+    await c.settled;
+    c.dispose();
+  });
   test(
     'Inserting an original before existing writing keeps the old text outside its range',
     () async {
@@ -321,7 +349,7 @@ void main() {
         TestStore(initial),
         initial.copy(pages: [page]),
       );
-      c.attachOriginal('p', first);
+      attachArchivedSource(c, 'p', first);
       final old = c.library.activePage!;
       expect(old.passages, hasLength(2));
       expect(passageAt(old.passages, 3)?.original?.id, 'a');
@@ -365,7 +393,7 @@ void main() {
       final data = initial.copy(pages: [page]);
       final store = TestStore(data);
       final library = LibraryController(store, data);
-      expect(library.attachOriginal('p', first), isTrue);
+      attachArchivedSource(library, 'p', first);
       await library.settled;
       library.dispose();
 
@@ -419,10 +447,10 @@ void main() {
     () async {
       final initial = fixture();
       final c = LibraryController(TestStore(initial), initial);
-      c.attachOriginal('p', first);
+      attachArchivedSource(c, 'p', first);
       const text = '내 생각\n첫 원문을 씁니다.\n';
       c.editPage('p', text, text.length, text.length, 0);
-      c.attachOriginal('p', second);
+      attachArchivedSource(c, 'p', second);
       final edited = await c.saveOriginalEdit(
         bookId: null,
         recordId: 'r',
@@ -474,7 +502,7 @@ void main() {
     final initial = fixture();
     final store = TestStore(initial)..fail = true;
     final c = LibraryController(store, initial);
-    c.attachOriginal('p', first);
+    attachArchivedSource(c, 'p', first);
     await c.settled;
     expect(c.saveError, isNotNull);
     expect(c.library.activePage!.passages.single.original?.id, 'a');

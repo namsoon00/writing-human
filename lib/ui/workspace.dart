@@ -1002,12 +1002,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   ) async {
     if (page.id != origin.id) return;
     if (saved.startWriting) {
-      await _startTranscription(
-        saved.original,
-        saved.bookId,
-        origin,
-        newPageIfWritten: true,
-      );
+      await _startTranscription(saved.original, saved.bookId, origin);
       return;
     }
     final destination = c.library.books
@@ -1020,14 +1015,13 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     );
   }
 
-  String _transcribeLabel(String? bookId, WritingPage page) => '이 쪽에 끼우기';
+  String _transcribeLabel(String? bookId, WritingPage page) => '필사하기';
 
   Future<void> _startTranscription(
     RegisteredOriginal original,
     String? bookId,
-    WritingPage origin, {
-    bool newPageIfWritten = false,
-  }) async {
+    WritingPage origin,
+  ) async {
     if (page.id != origin.id) return;
     String? target;
     final owner = c;
@@ -1068,7 +1062,13 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             bookId: bookId,
             keepBlank: true,
           );
-        } else if (newPageIfWritten && page.text.isNotEmpty) {
+        } else if (pageUsesOriginal(page, originals, source)) {
+          // Resume without replacing the selected copy, cursor or continuation.
+        } else if (page.text.isNotEmpty ||
+            pageOriginals(
+              page,
+              originals,
+            ).any((p) => passageOriginal(p) != null)) {
           c.addPage(
             recordId: page.recordId,
             guidedOriginalId: source.id,

@@ -16,6 +16,34 @@ RegisteredOriginal originalSnapshot(RegisteredOriginal original) =>
       photoRegion: originalPhotoPreviewRegion(original),
     );
 
+/// A page can resume its source only when the selected copy still matches.
+bool sameOriginalCopy(RegisteredOriginal a, RegisteredOriginal b) =>
+    a.id == b.id &&
+    a.text == b.text &&
+    a.citation == b.citation &&
+    a.photoId == b.photoId &&
+    _sameRegion(a.photoRegion, b.photoRegion);
+
+bool _sameRegion(List<double>? a, List<double>? b) =>
+    identical(a, b) ||
+    (a != null &&
+        b != null &&
+        a.length == b.length &&
+        Iterable<int>.generate(a.length).every((i) => a[i] == b[i]));
+
+bool pageUsesOriginal(
+  WritingPage page,
+  List<RegisteredOriginal> originals,
+  RegisteredOriginal original,
+) {
+  final sources = pageOriginals(
+    page,
+    originals,
+  ).map(passageOriginal).nonNulls.toList();
+  return sources.length == 1 &&
+      sameOriginalCopy(sources.single, originalSnapshot(original));
+}
+
 RegisteredOriginal? passageOriginal(PagePassage passage) =>
     passage.original ??
     (passage.source.trim().isEmpty && passage.citation.trim().isEmpty

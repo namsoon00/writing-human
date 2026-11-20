@@ -68,11 +68,7 @@ class PhotoOriginalCorrection extends StatelessWidget {
           maxLines: null,
           keyboardType: TextInputType.multiline,
           textInputAction: TextInputAction.newline,
-          decoration: const InputDecoration(
-            isCollapsed: true,
-            filled: false,
-            border: InputBorder.none,
-          ),
+          decoration: null,
           contextMenuBuilder: _selectionMenu,
         ),
       ),

@@ -34,6 +34,7 @@ class SourceReading extends StatefulWidget {
     this.onReadOriginal,
     this.style = const WritingStyle(),
     this.onRegister,
+    this.onFind,
     this.writingLocations = const {},
     this.onTranscribe,
     this.onExtractPhoto,
@@ -54,6 +55,7 @@ class SourceReading extends StatefulWidget {
   final ValueChanged<String>? onReadOriginal;
   final WritingStyle style;
   final Future<RegisteredOriginal?> Function()? onRegister;
+  final Future<RegisteredOriginal?> Function()? onFind;
   final Map<String, ({Passage passage, bool marked})> writingLocations;
   final ValueChanged<RegisteredOriginal>? onTranscribe;
   final Future<RegisteredOriginal?> Function(RegisteredOriginal)?
@@ -161,9 +163,9 @@ class _SourceReadingState extends State<SourceReading> {
     }
   }
 
-  Future<void> _register() async {
+  Future<void> _register({bool find = false}) async {
     searchFocus.unfocus();
-    final registered = await widget.onRegister!();
+    final registered = await (find ? widget.onFind! : widget.onRegister!)();
     if (!mounted || registered == null) return;
     markedOnly = false;
     _open(
@@ -531,6 +533,16 @@ class _SourceReadingState extends State<SourceReading> {
                 ],
               ),
               const Divider(),
+              if (original == null && widget.onFind != null)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: const ValueKey('originals-find-new'),
+                    onPressed: saving ? null : () => _register(find: true),
+                    icon: const Icon(CupertinoIcons.search, size: 17),
+                    label: const Text('새 원문 찾기'),
+                  ),
+                ),
               if (original == null && widget.originals.isNotEmpty)
                 Align(
                   alignment: Alignment.centerLeft,

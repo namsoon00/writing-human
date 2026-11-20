@@ -4,7 +4,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 
 import '../data/model.dart';
 import '../data/original_photo_store.dart';
@@ -54,6 +53,8 @@ class SourceImportSheet extends StatefulWidget {
     this.initialPhoto,
     this.existingPhotoId,
     this.onSaveExtraction,
+    this.onSaveOriginal,
+    this.initialSearch = false,
     this.initialPhotoRegion,
     this.initialCitation = '',
     this.shared = false,
@@ -71,6 +72,8 @@ class SourceImportSheet extends StatefulWidget {
   final SourcePhoto? initialPhoto;
   final String? existingPhotoId;
   final Future<bool> Function(SourceImportResult)? onSaveExtraction;
+  final Future<bool> Function(SourceImportResult)? onSaveOriginal;
+  final bool initialSearch;
   final List<double>? initialPhotoRegion;
   final bool shared, registration, allowUnbound;
   final Map<String, String> books;
@@ -127,6 +130,45 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   String? _reread;
   String? _error;
   bool _busy = false, _readingPhoto = false;
+  bool _allowClose = false, _askingToClose = false;
+
+  bool get _hasDraft =>
+      _confirmedText != widget.initialText ||
+      _citation.text != widget.initialCitation ||
+      _originalPhoto != widget.initialPhoto ||
+      _bookId != widget.bookId ||
+      _scan != null;
+
+  Future<void> _close() async {
+    if (_savingPhoto || _askingToClose) return;
+    if (_hasDraft) {
+      _askingToClose = true;
+      final discard = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('담지 않은 원문을 닫을까요?'),
+          content: const Text('입력하거나 고친 내용이 사라져요.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('계속 편집'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('닫기'),
+            ),
+          ],
+        ),
+      );
+      _askingToClose = false;
+      if (!mounted || discard != true) return;
+    }
+    if (!mounted) return;
+    setState(() => _allowClose = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.pop(context);
+    });
+  }
 
   bool get _reviewing => _wholeEditor != null || _editors.isNotEmpty;
   bool get _selecting => _scan != null && !_reviewing;
@@ -153,6 +195,11 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialSearch) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _searchSources(closeOnCancel: true);
+      });
+    }
     if (widget.initialPhoto != null && widget.initialText.trim().isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _extractPhoto();
@@ -202,22 +249,43 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     }
   }
 
-  Future<void> _searchSources() async {
+  Future<void> _searchSources({
+    WikisourcePoem? initialPoem,
+    bool closeOnCancel = false,
+  }) async {
     if (!_editable) return;
     FocusScope.of(context).unfocus();
-    final choice = await showSourceSearch(context, widget.style);
-    if (!mounted || choice == null || !_editable) return;
-    final (:text, :citation, :poem) = choice;
-    if (poem != null) {
-      await _pickPoem(poem);
+    final choice = await showSourceSearch(
+      context,
+      widget.style,
+      initialPoem: initialPoem,
+    );
+    if (!mounted || !_editable) return;
+    if (choice == null) {
+      if (closeOnCancel) await _close();
       return;
     }
-    if (!await _confirmSourceReplacement(text: text, citation: citation) ||
+    final (:text, :citation) = choice;
+    if (!await _confirmSourceReplacement(
+          text: text,
+          citation: citation,
+          replacePhoto: text != null && _originalPhoto != null,
+        ) ||
         !mounted ||
         !_editable) {
       return;
     }
-    if (text != null) _text.text = text;
+    if (text != null) {
+      if (_originalPhoto != null) {
+        setState(() {
+          _originalPhoto = null;
+          _photoRegion = null;
+          _range = null;
+          _savedReviews.clear();
+        });
+      }
+      _text.text = text;
+    }
     if (citation != null) _citation.text = citation;
   }
 
@@ -238,7 +306,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         builder: (context) => AlertDialog(
           title: Text(
             replacePhoto
-                ? '담을 사진을 이 시로 바꿀까요?'
+                ? '담을 사진을 이 원문으로 바꿀까요?'
                 : replacesText
                 ? '입력한 원문을 바꿀까요?'
                 : '입력한 출처를 바꿀까요?',
@@ -260,39 +328,8 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     return true;
   }
 
-  Future<void> _pickPoem(WikisourcePoem poem) async {
-    if (!_editable) return;
-    FocusScope.of(context).unfocus();
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    final client = http.Client();
-    String? text;
-    try {
-      text = (await poem.load(client)).join('\n\n');
-    } on Exception {
-      if (mounted) {
-        setState(() => _error = '작품을 불러오지 못했어요. 작품을 다시 눌러 주세요.');
-        if (_bodyScroll.hasClients) _bodyScroll.jumpTo(0);
-      }
-    } finally {
-      client.close();
-      if (mounted) setState(() => _busy = false);
-    }
-    if (!mounted || text == null || !_editable) return;
-    final citation = poem.citation;
-    if (!await _confirmSourceReplacement(
-          text: text,
-          citation: citation,
-          replacePhoto: _originalPhoto != null,
-        ) ||
-        !mounted ||
-        !_editable) {
-      return;
-    }
-    await _submit(poemText: (text: text, citation: citation));
-  }
+  Future<void> _pickPoem(WikisourcePoem poem) =>
+      _searchSources(initialPoem: poem);
 
   Future<void> _shareHelp() => showDialog<void>(
     context: context,
@@ -886,21 +923,19 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   }
 
   Future<void> _submit({
-    ({String text, String citation})? poemText,
+    bool startWriting = false,
     bool photoOnly = false,
     bool selectedOnly = false,
   }) async {
     if (photoOnly && (_extractionOnly || _originalPhoto == null)) return;
     final selection = selectedOnly ? _selectedOriginal : null;
     if (selectedOnly && selection == null) return;
-    final text =
-        poemText?.text ??
-        (photoOnly
-            ? ''
-            : selection == null
-            ? _confirmedText
-            : normalizeSource(selection.selection.textInside(selection.text)));
-    final citation = poemText?.citation ?? _citation.text.trim();
+    final text = (photoOnly
+        ? ''
+        : selection == null
+        ? _confirmedText
+        : normalizeSource(selection.selection.textInside(selection.text)));
+    final citation = _citation.text.trim();
     if (!_editable ||
         (!photoOnly && !_hasContent(text)) ||
         text.length > sourceLengthLimit ||
@@ -912,7 +947,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       setState(() => _error = '원문이 바뀌었어요. 옮겨 쓸 구절을 다시 골라 주세요.');
       return;
     }
-    final photo = poemText == null ? _originalPhoto : null;
+    final photo = _originalPhoto;
     final bookId = _bookId;
     final passage = _reviewing && _mode == _ScanMode.paragraph
         ? _passage
@@ -964,9 +999,9 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       photoLines: photoLines,
       photoId: photoId,
       photoRegion: photo == null ? null : photoRegion,
-      startWriting: poemText != null,
+      startWriting: startWriting,
     );
-    if (widget.onSaveExtraction case final save?) {
+    if ((widget.onSaveExtraction ?? widget.onSaveOriginal) case final save?) {
       FocusScope.of(context).unfocus();
       setState(() {
         _busy = true;
@@ -983,7 +1018,11 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
           setState(() {
             _busy = false;
             _savingPhoto = false;
-            if (!saved) _error = '원문 글을 저장하지 못했어요. 다시 저장해 주세요.';
+            if (!saved) {
+              _error = _extractionOnly
+                  ? '원문 글을 저장하지 못했어요. 다시 저장해 주세요.'
+                  : '원문을 저장하지 못했어요. 이 화면에서 다시 담아 주세요.';
+            }
           });
         }
       }
@@ -991,7 +1030,10 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         return;
       }
     }
-    Navigator.pop<SourceImportResult>(context, result);
+    setState(() => _allowClose = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.pop<SourceImportResult>(context, result);
+    });
   }
 
   Future<void> _joinLines(TextEditingController field) async {
@@ -1047,6 +1089,13 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     crossAxisAlignment: WrapCrossAlignment.center,
     spacing: 8,
     children: [
+      if (!widget.shared && !_extractionOnly)
+        TextButton.icon(
+          key: const ValueKey('source-search-direct'),
+          onPressed: _editable ? _searchSources : null,
+          icon: const Icon(CupertinoIcons.search, size: 18),
+          label: const Text('새 원문 찾기'),
+        ),
       if (!widget.shared && !_extractionOnly) ...[
         if (widget.intake.canUseCamera)
           TextButton.icon(
@@ -1085,10 +1134,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       const Divider(height: 24, color: line),
       Semantics(
         header: true,
-        child: Text(
-          '바로 담을 수 있는 시',
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
+        child: Text('천천히 읽을 시', style: Theme.of(context).textTheme.titleSmall),
       ),
       const SizedBox(height: 8),
       for (final (index, id) in const [1508, 1515, 3044].indexed)
@@ -1110,6 +1156,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   Widget _details() {
     final citation = _citation.text.trim();
     final book = widget.books[_bookId];
+    final stacked = MediaQuery.textScalerOf(context).scale(12) > 16;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1145,14 +1192,22 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 12, color: muted),
                         ),
+                      if (stacked) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          _showDetails ? '접기' : '담을 책·원문 출처',
+                          style: const TextStyle(fontSize: 12, color: muted),
+                        ),
+                      ],
                     ],
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  _showDetails ? '접기' : '담을 책·원문 출처',
-                  style: const TextStyle(fontSize: 12, color: muted),
-                ),
+                if (!stacked)
+                  Text(
+                    _showDetails ? '접기' : '담을 책·원문 출처',
+                    style: const TextStyle(fontSize: 12, color: muted),
+                  ),
                 const SizedBox(width: 4),
                 Icon(
                   _showDetails
@@ -1834,6 +1889,34 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     );
   }
 
+  Widget _completionActions(
+    Widget confirm, {
+    required bool showWriting,
+    required bool canWrite,
+  }) {
+    if (!showWriting) return confirm;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(child: confirm),
+        const SizedBox(width: 8),
+        Expanded(
+          child: TextButton(
+            key: const ValueKey('source-save-and-write'),
+            style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
+            onPressed: canWrite
+                ? () => _submit(
+                    startWriting: true,
+                    selectedOnly: _selectedOriginal != null,
+                  )
+                : null,
+            child: const Text('담고 필사하기', textAlign: TextAlign.center),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = _fields
@@ -1872,7 +1955,10 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       ),
     );
     return PopScope(
-      canPop: !_savingPhoto,
+      canPop: _allowClose || (!_savingPhoto && !_hasDraft),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _close();
+      },
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: originalPanelColor,
@@ -1899,7 +1985,12 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                               : widget.shared
                               ? '공유한 원문'
                               : '원문 담기',
-                          fontSize: 22,
+                          fontSize:
+                              constraints.maxWidth < 360 &&
+                                  MediaQuery.textScalerOf(context).scale(22) >
+                                      30
+                              ? 18
+                              : 22,
                         ),
                       ),
                       if (_wholeEditor != null) ...[
@@ -1922,9 +2013,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                         _otherImports(),
                       IconButton(
                         tooltip: '닫기',
-                        onPressed: _savingPhoto
-                            ? null
-                            : () => Navigator.pop(context),
+                        onPressed: _savingPhoto ? null : _close,
                         icon: const Icon(CupertinoIcons.xmark, size: 19),
                       ),
                     ],
@@ -2084,7 +2173,23 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                               ],
                             )
                           else
-                            confirm,
+                            _completionActions(
+                              confirm,
+                              showWriting:
+                                  !_selecting &&
+                                  !_offerExtraction &&
+                                  !_extractionOnly,
+                              canWrite: canSubmit && text.trim().isNotEmpty,
+                            ),
+                          if (_wholeEditor != null &&
+                              _selectedOriginal == null &&
+                              !_extractionOnly)
+                            TextButton(
+                              onPressed: canSubmit
+                                  ? () => _submit(startWriting: true)
+                                  : null,
+                              child: const Text('담고 필사하기'),
+                            ),
                           if (_offerExtraction &&
                               !_readingPhoto &&
                               !_extractionOnly)

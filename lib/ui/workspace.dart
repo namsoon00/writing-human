@@ -85,7 +85,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   int _revealRequest = 0;
   ({String pageId, int request})? _firstPageView;
   int _firstPageRequest = 0;
-  ({String pageId, String? bookId, RegisteredOriginal original})? _savedSource;
   final _originalByPage = <String, String>{};
   final _originalByVolume = <({String? bookId, String? recordId}), String>{};
 
@@ -410,13 +409,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       if (_accountLocked || _firstPageView?.pageId != page.id) {
         _firstPageView = null;
       }
-      if (_accountLocked ||
-          _savedSource?.pageId != page.id ||
-          c.library.originalRemovals.any(
-            (item) => item.originalId == _savedSource?.original.id,
-          )) {
-        _savedSource = null;
-      }
     });
     if ((widget.sync?.accountMismatch ?? false) ||
         (widget.sync?.signInRequired ?? false)) {
@@ -730,6 +722,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     SourcePhoto? initialPhoto,
     RegisteredOriginal? extractFrom,
     Future<bool> Function(SourceImportResult)? onSaveExtraction,
+    Future<bool> Function(SourceImportResult)? onSaveOriginal,
+    bool initialSearch = false,
     String? bookId,
     bool allowUnbound = true,
   }) async {
@@ -759,6 +753,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               initialPhoto: photo,
               existingPhotoId: extractFrom?.photoId,
               onSaveExtraction: onSaveExtraction,
+              onSaveOriginal: onSaveOriginal,
+              initialSearch: initialSearch,
               initialPhotoRegion: extractFrom?.photoRegion,
               style: style,
               shared: shared != null,
@@ -780,6 +776,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     String? bookId,
     WritingPage? selectedPage,
     SourcePhoto? initialPhoto,
+    bool initialSearch = false,
   }) async {
     if (_sourceBusy || _accountLocked || !_canLeaveInput()) return null;
     final owner = c;
@@ -789,50 +786,54 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       if (!mounted || c != owner || _accountLocked || owner.saveError != null) {
         return null;
       }
+      RegisteredOriginal? registered;
+      final originalId = const Uuid().v4();
+      final registeredAt = DateTime.now().millisecondsSinceEpoch;
       final result = await _reviewOriginal(
         initialPhoto: initialPhoto,
+        initialSearch: initialSearch,
         bookId: bookId,
         allowUnbound: selectedPage != null,
+        onSaveOriginal: (result) async {
+          if (!mounted ||
+              c != owner ||
+              _accountLocked ||
+              owner.composing ||
+              (selectedPage != null && page.id != selectedPage.id)) {
+            return false;
+          }
+          registered = await owner.saveNewOriginal(
+            bookId: result.bookId,
+            page: selectedPage,
+            original: RegisteredOriginal(
+              originalId,
+              result.text,
+              citation: result.citation,
+              registeredAt: registeredAt,
+              photoId: result.photoId,
+              photoRegion: result.photoRegion,
+              isFullPage: result.isFullPage,
+              writingRange: result.writingRange,
+              photoLines: result.photoLines,
+            ),
+          );
+          return registered != null;
+        },
       );
       if (result == null ||
+          registered == null ||
           !mounted ||
           c != owner ||
-          _accountLocked ||
-          owner.saveError != null ||
-          owner.composing ||
-          (selectedPage != null && page.id != selectedPage.id) ||
-          (result.bookId != null &&
-              !owner.library.books.any((book) => book.id == result.bookId))) {
+          _accountLocked) {
         return null;
       }
       if (result.bookId == null && selectedPage != null && fresh) {
         fresh = false;
         userFresh = false;
       }
-      final registered = owner.registerOriginal(
-        bookId: result.bookId,
-        page: selectedPage,
-        text: result.text,
-        citation: result.citation,
-        photoId: result.photoId,
-        photoRegion: result.photoRegion,
-        isFullPage: result.isFullPage,
-        writingRange: result.writingRange,
-        photoLines: result.photoLines,
-      );
-      if (registered == null) {
-        _sourceNotice('원문을 저장하지 못했어요. 다시 시도해 주세요.');
-        return null;
-      }
-      await owner.settled;
-      if (!mounted || c != owner || _accountLocked) return null;
-      if (owner.saveError != null) {
-        _sourceNotice('원문을 저장하지 못했어요. 다시 저장해 주세요.');
-        return null;
-      }
       return (
         bookId: result.bookId,
-        original: registered,
+        original: registered!,
         startWriting: result.startWriting,
       );
     } finally {
@@ -879,57 +880,63 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         return;
       }
       final SourceImportResult? result;
+      RegisteredOriginal? registered;
       try {
-        result = await _reviewOriginal(shared: shared, bookId: book?.id);
+        result = await _reviewOriginal(
+          shared: shared,
+          bookId: book?.id,
+          onSaveOriginal: (result) async {
+            if (!mounted ||
+                c != owner ||
+                _accountLocked ||
+                owner.composing ||
+                page.id != selectedPage.id ||
+                _isShareRegistered(shared)) {
+              return false;
+            }
+            registered = await owner.saveNewOriginal(
+              bookId: result.bookId,
+              page: result.bookId == null
+                  ? WritingPage(id: '$id-page', recordId: id, number: 1)
+                  : selectedPage,
+              original: RegisteredOriginal(
+                id,
+                result.text,
+                citation: result.citation,
+                registeredAt: DateTime.now().millisecondsSinceEpoch,
+                photoId: result.photoId,
+                photoRegion: result.photoRegion,
+                isFullPage: result.isFullPage,
+                writingRange: result.writingRange,
+                photoLines: result.photoLines,
+              ),
+            );
+            return registered != null;
+          },
+        );
       } on SourceIntakeException catch (error) {
         if (mounted) _sourceNotice(error.message);
         return;
       }
       if (result == null ||
+          registered == null ||
           !mounted ||
           c != owner ||
-          _accountLocked ||
-          owner.saveError != null ||
-          page.id != selectedPage.id ||
-          owner.composing) {
+          _accountLocked) {
         return;
       }
-      if (_isShareRegistered(shared)) {
-        await _pollSources();
-        return;
-      }
-      if (result.bookId case final destination?) {
-        if (!owner.library.books.any((book) => book.id == destination)) return;
-        owner.registerOriginals(
-          bookId: destination,
-          passages: [result.text],
-          citation: result.citation,
-          deliveryId: id,
-          photoId: result.photoId,
-          photoRegion: result.photoRegion,
-          isFullPage: result.isFullPage,
-          writingRange: result.writingRange,
-          photoLines: result.photoLines,
-        );
-      } else {
+      if (result.bookId == null) {
         fresh = false;
         userFresh = false;
-        owner.registerOriginals(
-          page: WritingPage(id: '$id-page', recordId: id, number: 1),
-          passages: [result.text],
-          citation: result.citation,
-          deliveryId: id,
-          photoId: result.photoId,
-          photoRegion: result.photoRegion,
-          isFullPage: result.isFullPage,
-          writingRange: result.writingRange,
-          photoLines: result.photoLines,
-        );
       }
-      await owner.settled;
-      if (mounted && c == owner && !_accountLocked && owner.saveError == null) {
-        unawaited(_pollSources(openAutomatically: false));
-      }
+      await _pollSources(openAutomatically: false);
+      if (!mounted || c != owner || _accountLocked) return;
+      _sourceBusy = false;
+      await _afterOriginalSave(page, (
+        bookId: result.bookId,
+        original: registered!,
+        startWriting: result.startWriting,
+      ));
     } finally {
       _sourceBusy = false;
     }
@@ -996,7 +1003,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   ) async {
     if (page.id != origin.id) return;
     if (saved.startWriting) {
-      setState(() => _savedSource = null);
       await _startTranscription(
         saved.original,
         saved.bookId,
@@ -1005,12 +1011,13 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       );
       return;
     }
-    setState(
-      () => _savedSource = (
-        pageId: origin.id,
-        bookId: saved.bookId,
-        original: saved.original,
-      ),
+    final destination = c.library.books
+        .where((item) => item.id == saved.bookId)
+        .firstOrNull;
+    await _showOriginals(
+      originalBook: destination,
+      openOriginalId: saved.original.id,
+      unbound: saved.bookId == null,
     );
   }
 
@@ -1102,13 +1109,14 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     Book? bookDetails,
     Book? originalBook,
     String? openOriginalId,
+    bool unbound = false,
   }) async {
     if (_readingSource || _sourceBusy || _accountLocked || !_canLeaveInput()) {
       return;
     }
     final owner = c;
     final selectedPage = page;
-    final selectedBook = bookDetails ?? originalBook ?? book;
+    final selectedBook = unbound ? null : bookDetails ?? originalBook ?? book;
     final bookId = selectedBook?.id;
     // Web accessibility can move focus to the button before its handler.
     final wasEditing =
@@ -1121,208 +1129,213 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       bookId: bookId,
       recordId: selectedPage.recordId,
     );
-    Future<_SavedOriginal?> register() => _registerOriginal(
+    Future<_SavedOriginal?> register({bool find = false}) => _registerOriginal(
+      initialSearch: find,
       bookId: bookId,
       selectedPage: bookDetails == null ? selectedPage : null,
     );
 
     try {
       final available = originals();
-      if (bookDetails == null &&
-          available.isEmpty &&
-          selectedPage.originalCitations.isEmpty) {
-        final saved = await register();
-        if (saved != null) {
-          await _afterOriginalSave(selectedPage, saved);
-        }
-      } else {
-        final match = bookDetails == null
-            ? matchOriginal(available, selectedPage.text, selectedPage.extent)
-            : null;
-        final scope = (
-          bookId: bookId,
-          recordId: bookId == null ? selectedPage.recordId : null,
-        );
-        String? availableId(String? id) =>
-            available.any((item) => item.id == id) ? id : null;
-        final pageChoice = bookDetails == null
-            ? _originalByPage[selectedPage.id]
-            : null;
-        final activeLink = bookDetails == null
-            ? passageAt(
-                pageOriginals(selectedPage, available),
-                selectedPage.extent,
-              )
-            : null;
-        final guided =
-            activeLink?.original?.id ??
-            (bookDetails == null ? selectedPage.guidedOriginalId : null);
-        final initialId =
-            availableId(openOriginalId) ??
-            availableId(guided) ??
-            availableId(pageChoice) ??
-            match?.original.id ??
-            availableId(_originalByVolume[scope]);
-        if (initialId != null) _originalByVolume[scope] = initialId;
-        _SavedOriginal? savedAfterPanel;
-        bool openedWriting = false;
-        late final MaterialPageRoute<RegisteredOriginal> route;
-        route = paperPanelRoute<RegisteredOriginal>(
-          (_) => ListenableBuilder(
-            listenable: owner,
-            builder: (context, _) => SourceReading(
-              originals: originals(),
-              transcribeLabel: _transcribeLabel(bookId, selectedPage),
-              previousCitations: bookDetails == null
-                  ? selectedPage.originalCitations
-                  : const [],
-              initialOriginalId: initialId,
-              match: match,
-              onReadOriginal: (id) {
-                if (!mounted || c != owner || _accountLocked) return;
-                _originalByVolume[scope] = id;
-                if (bookDetails == null) {
-                  _originalByPage[selectedPage.id] = id;
-                }
-              },
-              style: _paperStyle(selectedBook),
-              onRegister: owner.saveError != null
-                  ? null
-                  : () async {
-                      final saved = await register();
-                      if (saved == null) return null;
-                      if (saved.bookId != bookId || saved.startWriting) {
-                        if (context.mounted &&
-                            ModalRoute.of(context)?.isCurrent == true) {
-                          savedAfterPanel = saved;
-                          Navigator.of(context).pop();
-                        }
-                        return null;
+      final match = bookDetails == null
+          ? matchOriginal(available, selectedPage.text, selectedPage.extent)
+          : null;
+      final scope = (
+        bookId: bookId,
+        recordId: bookId == null ? selectedPage.recordId : null,
+      );
+      String? availableId(String? id) =>
+          available.any((item) => item.id == id) ? id : null;
+      final pageChoice = bookDetails == null
+          ? _originalByPage[selectedPage.id]
+          : null;
+      final activeLink = bookDetails == null
+          ? passageAt(
+              pageOriginals(selectedPage, available),
+              selectedPage.extent,
+            )
+          : null;
+      final guided =
+          activeLink?.original?.id ??
+          (bookDetails == null ? selectedPage.guidedOriginalId : null);
+      final initialId =
+          availableId(openOriginalId) ??
+          availableId(guided) ??
+          availableId(pageChoice) ??
+          match?.original.id ??
+          availableId(_originalByVolume[scope]);
+      if (initialId != null) _originalByVolume[scope] = initialId;
+      _SavedOriginal? savedAfterPanel;
+      bool openedWriting = false;
+      late final MaterialPageRoute<RegisteredOriginal> route;
+      route = paperPanelRoute<RegisteredOriginal>(
+        (_) => ListenableBuilder(
+          listenable: owner,
+          builder: (context, _) => SourceReading(
+            originals: originals(),
+            transcribeLabel: _transcribeLabel(bookId, selectedPage),
+            previousCitations: bookDetails == null
+                ? selectedPage.originalCitations
+                : const [],
+            initialOriginalId: initialId,
+            match: match,
+            onReadOriginal: (id) {
+              if (!mounted || c != owner || _accountLocked) return;
+              _originalByVolume[scope] = id;
+              if (bookDetails == null) {
+                _originalByPage[selectedPage.id] = id;
+              }
+            },
+            style: _paperStyle(selectedBook),
+            onFind: owner.saveError != null
+                ? null
+                : () async {
+                    final saved = await register(find: true);
+                    if (saved == null) return null;
+                    if (saved.bookId != bookId || saved.startWriting) {
+                      if (context.mounted &&
+                          ModalRoute.of(context)?.isCurrent == true) {
+                        savedAfterPanel = saved;
+                        Navigator.of(context).pop();
                       }
-                      return saved.original;
-                    },
-              writingLocations: originalWritingLocations(
-                originals(),
-                owner.library.volumePages(
-                  bookId: bookId,
-                  recordId: selectedPage.recordId,
-                ),
-              ),
-              onExtractPhoto: owner.saveError == null
-                  ? (original) => _extractArchivedPhoto(
-                      owner,
-                      bookId,
-                      selectedPage.recordId,
-                      original,
-                    )
-                  : null,
-              onSavePhotoRegion: (original, region) async {
-                if (!mounted ||
-                    c != owner ||
-                    _accountLocked ||
-                    owner.composing ||
-                    owner.saveError != null) {
-                  return false;
-                }
-                final latest = originals()
-                    .where(
-                      (item) =>
-                          item.id == original.id &&
-                          item.photoId == original.photoId,
-                    )
-                    .firstOrNull;
-                if (latest == null) return false;
-                return owner.saveOriginalPhotoRegion(
-                  bookId: bookId,
-                  recordId: selectedPage.recordId,
-                  original: latest,
-                  region: region,
-                );
-              },
-              onTranscribe: owner.saveError == null
-                  ? (original) => Navigator.of(context).pop(original)
-                  : null,
-              onOpenWriting: (passage) =>
-                  _openPageFromPanel(route, owner, () async {
-                    await _openPassage(passage, paperTurn: false);
-                    openedWriting = true;
-                  }),
-              onRetry: owner.saveError == null ? null : _retrySave,
-              onSaveRange: (original, range) async {
-                if (!mounted ||
-                    c != owner ||
-                    _accountLocked ||
-                    owner.composing) {
-                  return false;
-                }
-                final latest = originals()
-                    .where((item) => item.id == original.id)
-                    .firstOrNull;
-                if (latest == null || latest.text != original.text) {
-                  return false;
-                }
-                return owner.saveOriginalRange(
-                  bookId: bookId,
-                  recordId: selectedPage.recordId,
-                  original: latest,
-                  range: range,
-                );
-              },
-              onEdit: (original, text, citation) async {
-                if (!mounted || c != owner || _accountLocked) return null;
-                return owner.saveOriginalEdit(
-                  bookId: bookId,
-                  recordId: selectedPage.recordId,
-                  original: original,
-                  text: text,
-                  citation: citation,
-                );
-              },
-              onDelete: (original) async {
-                if (!mounted || c != owner || _accountLocked) return false;
-                return owner.deleteOriginal(
-                  bookId: bookId,
-                  recordId: selectedPage.recordId,
-                  original: original,
-                );
-              },
-              onSaveReflection: (original, reflection) => _saveReflection(
-                owner,
-                bookId,
-                selectedPage.recordId,
-                original,
-                reflection,
+                      return null;
+                    }
+                    return saved.original;
+                  },
+            onRegister: owner.saveError != null
+                ? null
+                : () async {
+                    final saved = await register();
+                    if (saved == null) return null;
+                    if (saved.bookId != bookId || saved.startWriting) {
+                      if (context.mounted &&
+                          ModalRoute.of(context)?.isCurrent == true) {
+                        savedAfterPanel = saved;
+                        Navigator.of(context).pop();
+                      }
+                      return null;
+                    }
+                    return saved.original;
+                  },
+            writingLocations: originalWritingLocations(
+              originals(),
+              owner.library.volumePages(
+                bookId: bookId,
+                recordId: selectedPage.recordId,
               ),
             ),
+            onExtractPhoto: owner.saveError == null
+                ? (original) => _extractArchivedPhoto(
+                    owner,
+                    bookId,
+                    selectedPage.recordId,
+                    original,
+                  )
+                : null,
+            onSavePhotoRegion: (original, region) async {
+              if (!mounted ||
+                  c != owner ||
+                  _accountLocked ||
+                  owner.composing ||
+                  owner.saveError != null) {
+                return false;
+              }
+              final latest = originals()
+                  .where(
+                    (item) =>
+                        item.id == original.id &&
+                        item.photoId == original.photoId,
+                  )
+                  .firstOrNull;
+              if (latest == null) return false;
+              return owner.saveOriginalPhotoRegion(
+                bookId: bookId,
+                recordId: selectedPage.recordId,
+                original: latest,
+                region: region,
+              );
+            },
+            onTranscribe: owner.saveError == null
+                ? (original) => Navigator.of(context).pop(original)
+                : null,
+            onOpenWriting: (passage) =>
+                _openPageFromPanel(route, owner, () async {
+                  await _openPassage(passage, paperTurn: false);
+                  openedWriting = true;
+                }),
+            onRetry: owner.saveError == null ? null : _retrySave,
+            onSaveRange: (original, range) async {
+              if (!mounted || c != owner || _accountLocked || owner.composing) {
+                return false;
+              }
+              final latest = originals()
+                  .where((item) => item.id == original.id)
+                  .firstOrNull;
+              if (latest == null || latest.text != original.text) {
+                return false;
+              }
+              return owner.saveOriginalRange(
+                bookId: bookId,
+                recordId: selectedPage.recordId,
+                original: latest,
+                range: range,
+              );
+            },
+            onEdit: (original, text, citation) async {
+              if (!mounted || c != owner || _accountLocked) return null;
+              return owner.saveOriginalEdit(
+                bookId: bookId,
+                recordId: selectedPage.recordId,
+                original: original,
+                text: text,
+                citation: citation,
+              );
+            },
+            onDelete: (original) async {
+              if (!mounted || c != owner || _accountLocked) return false;
+              return owner.deleteOriginal(
+                bookId: bookId,
+                recordId: selectedPage.recordId,
+                original: original,
+              );
+            },
+            onSaveReflection: (original, reflection) => _saveReflection(
+              owner,
+              bookId,
+              selectedPage.recordId,
+              original,
+              reflection,
+            ),
           ),
-          color: originalPanelColor,
-        );
-        final action = await Navigator.of(context).push(route);
-        await route.completed;
-        if (savedAfterPanel case final saved?) {
-          if (mounted && c == owner && !_accountLocked) {
-            if (bookDetails != null && saved.startWriting) {
-              await _afterSheet(() => _afterOriginalSave(selectedPage, saved));
-            } else {
-              await _afterOriginalSave(selectedPage, saved);
-            }
-          }
-          return;
-        }
-        if (openedWriting && mounted && c == owner && !_accountLocked) {
-          if (bookDetails != null) await _afterSheet(() async {});
-          return;
-        }
-        if (action != null && mounted && c == owner && !_accountLocked) {
-          if (bookDetails != null) {
-            await _afterSheet(
-              () => _startTranscription(action, bookId, selectedPage),
-            );
+        ),
+        color: originalPanelColor,
+      );
+      final action = await Navigator.of(context).push(route);
+      await route.completed;
+      if (savedAfterPanel case final saved?) {
+        _readingSource = false;
+        if (mounted && c == owner && !_accountLocked) {
+          if (bookDetails != null && saved.startWriting) {
+            await _afterSheet(() => _afterOriginalSave(selectedPage, saved));
           } else {
-            await _startTranscription(action, bookId, selectedPage);
+            await _afterOriginalSave(selectedPage, saved);
           }
-          return;
         }
+        return;
+      }
+      if (openedWriting && mounted && c == owner && !_accountLocked) {
+        if (bookDetails != null) await _afterSheet(() async {});
+        return;
+      }
+      if (action != null && mounted && c == owner && !_accountLocked) {
+        if (bookDetails != null) {
+          await _afterSheet(
+            () => _startTranscription(action, bookId, selectedPage),
+          );
+        } else {
+          await _startTranscription(action, bookId, selectedPage);
+        }
+        return;
       }
       if (wasEditing &&
           mounted &&
@@ -1858,57 +1871,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         : '이 기기의 이전 글 가져오기',
                     style: const TextStyle(fontSize: 12),
                   ),
-                ),
-              if ((preview ? null : _savedSource) case final saved?)
-                Row(
-                  children: [
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton(
-                          onPressed: navigationEnabled && c.saveError == null
-                              ? () {
-                                  if (!_canLeaveInput()) return;
-                                  setState(() => _savedSource = null);
-                                  if (saved.original.canTranscribe) {
-                                    unawaited(
-                                      _startTranscription(
-                                        saved.original,
-                                        saved.bookId,
-                                        currentPage,
-                                      ),
-                                    );
-                                  } else {
-                                    final destination = c.library.books
-                                        .where(
-                                          (item) => item.id == saved.bookId,
-                                        )
-                                        .firstOrNull;
-                                    unawaited(
-                                      _showOriginals(
-                                        originalBook: destination,
-                                        openOriginalId: saved.original.id,
-                                      ),
-                                    );
-                                  }
-                                }
-                              : null,
-                          child: Text(
-                            saved.original.canTranscribe
-                                ? _transcribeLabel(saved.bookId, currentPage)
-                                : saved.original.photoId != null
-                                ? '담은 사진 열기'
-                                : '담은 원문 열기',
-                          ),
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: '원문 안내 닫기',
-                      onPressed: () => setState(() => _savedSource = null),
-                      icon: const Icon(CupertinoIcons.xmark, size: 16),
-                    ),
-                  ],
                 ),
               if (c.saveError != null)
                 Container(

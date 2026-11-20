@@ -95,7 +95,6 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('source-confirm')));
-    await tester.pumpAndSettle();
     await saved();
     expect(
       controller.library.books.single.originals.single.text,

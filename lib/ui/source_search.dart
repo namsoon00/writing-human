@@ -194,11 +194,7 @@ String _words(String value) => value
     .replaceAll(RegExp(r'[^가-힣ㄱ-ㅎㅏ-ㅣ一-龯a-z0-9]+'), ' ')
     .trim();
 
-typedef SourceSearchChoice = ({
-  String? citation,
-  String? text,
-  WikisourcePoem? poem,
-});
+typedef SourceSearchChoice = ({String? citation, String? text});
 
 class _SourceHit {
   const _SourceHit(this.collection, this.title, this.id);
@@ -226,10 +222,11 @@ class _SourceHit {
 
 Future<SourceSearchChoice?> showSourceSearch(
   BuildContext context,
-  WritingStyle style,
-) async {
+  WritingStyle style, {
+  WikisourcePoem? initialPoem,
+}) async {
   final route = paperPanelRoute<SourceSearchChoice>(
-    (_) => _SourceSearch(style: style),
+    (_) => _SourceSearch(style: style, initialPoem: initialPoem),
     color: originalPanelColor,
   );
   final result = await Navigator.of(context).push(route);
@@ -238,9 +235,10 @@ Future<SourceSearchChoice?> showSourceSearch(
 }
 
 class _SourceSearch extends StatefulWidget {
-  const _SourceSearch({required this.style});
+  const _SourceSearch({required this.style, this.initialPoem});
 
   final WritingStyle style;
+  final WikisourcePoem? initialPoem;
 
   @override
   State<_SourceSearch> createState() => _SourceSearchState();
@@ -267,6 +265,10 @@ class _SourceSearchState extends State<_SourceSearch> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialPoem case final poem?) {
+      _selected = _SourceHit(_Collection.works, poem.title, poem.pageId);
+      _preview = poem.load(_client);
+    }
     _query.addListener(_queueCompletions);
     _focus.addListener(_queueCompletions);
   }
@@ -375,7 +377,7 @@ class _SourceSearchState extends State<_SourceSearch> {
       launchLabel: kIsWeb ? '새 탭에서 열기' : '웹페이지 열기',
     );
     if (mounted && excerpt != null) {
-      Navigator.pop(context, (citation: citation, text: excerpt, poem: null));
+      Navigator.pop(context, (citation: citation, text: excerpt));
     }
   }
 
@@ -389,7 +391,7 @@ class _SourceSearchState extends State<_SourceSearch> {
     try {
       final text = await readSourceExcerpt();
       if (!mounted) return;
-      Navigator.pop(context, (citation: hit.citation, text: text, poem: null));
+      Navigator.pop(context, (citation: hit.citation, text: text));
     } on FormatException catch (exception) {
       error = exception.message;
     } on Exception {
@@ -439,7 +441,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                 ),
                 Text('${poem.author} · 위키문헌'),
                 const SizedBox(height: 8),
-                const Text('필사할 연을 골라 주세요.'),
+                const Text('담을 구절을 골라 주세요.'),
                 for (var index = 0; index < stanzas.length; index++)
                   CheckboxListTile(
                     dense: true,
@@ -481,9 +483,8 @@ class _SourceSearchState extends State<_SourceSearch> {
                   onPressed: () => Navigator.pop(context, (
                     citation: poem.citation,
                     text: stanzas.join('\n\n'),
-                    poem: null,
                   )),
-                  child: const Text('전체 담기'),
+                  child: const Text('전체 선택'),
                 ),
                 FilledButton(
                   onPressed: _stanzas.isEmpty
@@ -492,13 +493,12 @@ class _SourceSearchState extends State<_SourceSearch> {
                           final selected = _stanzas.toList()..sort();
                           Navigator.pop(context, (
                             citation: poem.citation,
-                            poem: null,
                             text: selected
                                 .map((index) => stanzas[index])
                                 .join('\n\n'),
                           ));
                         },
-                  child: const Text('선택한 구절 담기'),
+                  child: const Text('이 구절 선택'),
                 ),
               ],
             ),
@@ -522,7 +522,7 @@ class _SourceSearchState extends State<_SourceSearch> {
       ],
       if (_mode != _SearchMode.author) ...[
         const SizedBox(height: 12),
-        const Text('원문에서 구절을 복사한 뒤 ‘복사한 구절과 출처 담기’를 누르세요.'),
+        const Text('원문에서 구절을 복사한 뒤 ‘복사한 구절 선택’을 누르세요.'),
       ],
       const SizedBox(height: 12),
       OutlinedButton.icon(
@@ -540,7 +540,7 @@ class _SourceSearchState extends State<_SourceSearch> {
         const SizedBox(height: 8),
         FilledButton(
           onPressed: _pasting ? null : () => _collect(hit),
-          child: const Text('복사한 구절과 출처 넣기'),
+          child: const Text('복사한 구절 선택'),
         ),
         TextButton(
           onPressed: _pasting
@@ -548,7 +548,6 @@ class _SourceSearchState extends State<_SourceSearch> {
               : () => Navigator.pop(context, (
                   citation: hit.citation,
                   text: null,
-                  poem: null,
                 )),
           child: const Text('출처만 넣기'),
         ),
@@ -598,15 +597,13 @@ class _SourceSearchState extends State<_SourceSearch> {
                       icon: const Icon(CupertinoIcons.chevron_back, size: 18),
                     ),
                   Expanded(
-                    child: Text(
+                    child: PaperPanelTitle(
                       selected == null
                           ? '새 원문 찾기'
                           : preview != null
                           ? '원문 미리보기'
                           : '자료 가져오기',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleLarge,
+                      fontSize: 22,
                     ),
                   ),
                   IconButton(
@@ -630,7 +627,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                 children: [
                   for (final web in [false, true])
                     ChoiceChip(
-                      label: Text(web ? '웹 검색' : '바로 담기'),
+                      label: Text(web ? '웹 검색' : '시 둘러보기'),
                       selected: _webSearch == web,
                       onSelected: (_) {
                         _focus.unfocus();
@@ -770,7 +767,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                         ),
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Text('네이버에서 구절을 복사한 뒤 ‘복사한 구절 담기’를 누르세요.'),
+                          child: Text('네이버에서 구절을 복사한 뒤 ‘복사한 구절 선택’을 누르세요.'),
                         ),
                       ],
                     ],
@@ -783,7 +780,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                     children: [
                       const Padding(
                         padding: EdgeInsets.all(8),
-                        child: Text('바로 담을 수 있는 시'),
+                        child: Text('천천히 읽을 시'),
                       ),
                       for (final (index, poem)
                           in WikisourcePoem.reviewed.values.indexed)
@@ -792,9 +789,12 @@ class _SourceSearchState extends State<_SourceSearch> {
                           title: poem.title,
                           subtitle: poem.author,
                           showDivider: index > 0,
-                          onTap: () => Navigator.pop<SourceSearchChoice>(
-                            context,
-                            (citation: null, text: null, poem: poem),
+                          onTap: () => _showHit(
+                            _SourceHit(
+                              _Collection.works,
+                              poem.title,
+                              poem.pageId,
+                            ),
                           ),
                         ),
                     ],

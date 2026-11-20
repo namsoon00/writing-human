@@ -297,6 +297,83 @@ class LibraryController extends ChangeNotifier {
     return true;
   }
 
+  static const _originalRegistrationError = '원문을 저장하지 못했어요. 다시 담아 주세요.';
+
+  /// Keep the registration form and its draft until the snapshot is on disk.
+  Future<RegisteredOriginal?> saveNewOriginal({
+    required String? bookId,
+    required WritingPage? page,
+    required RegisteredOriginal original,
+  }) async {
+    await settled;
+    if (_disposed ||
+        editorFocused ||
+        composing ||
+        (saveError != null && saveError != _originalRegistrationError) ||
+        !RegisteredOriginal.validList([original])) {
+      return null;
+    }
+    final Library next;
+    var activeChanged = false;
+    if (bookId != null) {
+      final book = library.books.where((b) => b.id == bookId).firstOrNull;
+      if (book == null || book.originals.any((o) => o.id == original.id)) {
+        return null;
+      }
+      next = library.copy(
+        books: [
+          for (final item in library.books)
+            if (item.id == bookId)
+              item.copy(originals: [...item.originals, original])
+            else
+              item,
+        ],
+      );
+    } else {
+      if (page == null) return null;
+      final record = library.records
+          .where((r) => r.id == page.recordId)
+          .firstOrNull;
+      if (record == null) {
+        activeChanged = true;
+        next = library.copy(
+          records: [
+            ...library.records,
+            WritingRecord(
+              id: page.recordId,
+              title: '필사 ${library.records.length + 1}',
+              originals: [original],
+            ),
+          ],
+          pages: [
+            ...library.pages,
+            page.withDetails(writtenOn: page.writtenOn ?? _today()),
+          ],
+          activePageId: page.id,
+          writing: true,
+        );
+      } else {
+        if (record.originals.any((o) => o.id == original.id)) return null;
+        next = library.copy(
+          records: [
+            for (final item in library.records)
+              if (item.id == record.id)
+                item.copy(originals: [...item.originals, original])
+              else
+                item,
+          ],
+        );
+      }
+    }
+    return await _saveBeforePublishing(
+          next,
+          error: _originalRegistrationError,
+          activeChanged: activeChanged,
+        )
+        ? original
+        : null;
+  }
+
   static const _originalDeleteError = '원문 삭제를 저장하지 못했어요. 다시 시도해 주세요.';
 
   Future<bool> deleteOriginal({

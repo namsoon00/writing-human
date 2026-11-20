@@ -161,7 +161,7 @@ class _SourceBrowserState extends State<_SourceBrowser> {
             FilledButton.icon(
               onPressed: _readingClipboard ? null : _collect,
               icon: const Icon(CupertinoIcons.doc_on_clipboard, size: 17),
-              label: Text(widget.hasCitation ? '복사한 구절과 출처 담기' : '복사한 구절 담기'),
+              label: Text(widget.hasCitation ? '복사한 구절과 출처 선택' : '복사한 구절 선택'),
             ),
           ],
         ),

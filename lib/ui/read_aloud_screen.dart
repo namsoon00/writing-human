@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../audio/brand_read_aloud.dart';
+import '../audio/narration_model_assets.dart';
 import '../audio/read_aloud.dart';
 import '../audio/read_aloud_native.dart'
     if (dart.library.js_interop) '../audio/read_aloud_web.dart';
@@ -385,10 +386,10 @@ class _ReadAloudScreenState extends State<ReadAloudScreen>
                     ),
                     if (_voice != NarrationVoice.device) ...[
                       const SizedBox(height: 8),
-                      const Text(
-                        '기기에서 AI 음성을 만들어요. 처음 재생할 때 음성 모델 약 400MB를 받아요.',
+                      Text(
+                        '첫 재생 때 AI 음성 모델 약 ${narrationDownloadMegabytes}MB를 받아요.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: muted),
+                        style: const TextStyle(color: muted),
                       ),
                       Center(
                         child: TextButton(

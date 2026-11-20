@@ -196,10 +196,12 @@ void main() {
     final device = _Speech();
     final female = _Speech();
     final male = _Speech();
+    late ValueChanged<double?> reportProgress;
     await _open(
       tester,
       device,
-      brandSpeech: (voice, _) {
+      brandSpeech: (voice, progress) {
+        reportProgress = progress;
         return voice == NarrationVoice.f3 ? female : male;
       },
     );
@@ -210,13 +212,16 @@ void main() {
           .selected,
       isTrue,
     );
-    expect(find.textContaining('약 400MB'), findsOneWidget);
+    expect(find.textContaining('약 106MB'), findsOneWidget);
     expect(female.spoken, isEmpty);
     await tester.tap(find.text('재생'));
     await tester.pump();
     expect(female.spoken, ['셋째 쪽입니다.\n다음 문장입니다.']);
     expect(female.following, [null]);
     expect(device.spoken, isEmpty);
+    reportProgress(.43);
+    await tester.pump();
+    expect(find.text('음성 모델 준비 중 · 43%'), findsOneWidget);
 
     await tester.tap(find.text('정지'));
     await tester.pumpAndSettle();

@@ -18,23 +18,38 @@ class NarrationAssetLoader {
 
   final Future<void> stopped;
 
-  Future<String> readText(ModelAsset asset) async =>
-      (await _file(asset)).readAsString();
+  Future<String> readText(
+    ModelAsset asset,
+    void Function(int) progress,
+  ) async => (await _file(asset, progress)).readAsString();
 
-  Future<OrtSession> openSession(ModelAsset asset) async =>
-      OnnxRuntime().createSession(
-        (await _file(asset)).path,
-        options: OrtSessionOptions(
-          intraOpNumThreads: 3,
-          interOpNumThreads: 1,
-          useArena: false,
-        ),
-      );
+  Future<OrtSession> openSession(
+    ModelAsset asset,
+    void Function(int) progress,
+  ) async => OnnxRuntime().createSession(
+    (await _file(asset, progress)).path,
+    options: OrtSessionOptions(
+      intraOpNumThreads: 3,
+      interOpNumThreads: 1,
+      useArena: false,
+    ),
+  );
 
-  Future<File> _file(ModelAsset asset) async {
+  Future<File> _file(ModelAsset asset, void Function(int) progress) async {
     final directory = await getApplicationCacheDirectory();
-    final file = File('${directory.path}/supertonic3-aafc6e3/${asset.path}');
+    final original = File(
+      '${directory.path}/supertonic3-aafc6e3/${asset.path}',
+    );
+    final originalSize = narrationOriginalSizes[asset.path];
+    final file = originalSize == null
+        ? original
+        : File('${directory.path}/supertonic3-int8-95618f5/${asset.path}');
     if (await file.exists() && await file.length() == asset.size) return file;
+    if (originalSize != null &&
+        await original.exists() &&
+        await original.length() == originalSize) {
+      return original;
+    }
     await file.parent.create(recursive: true);
     final download = await file.parent.createTemp('.narration-');
     final pending = File('${download.path}/model.part');
@@ -53,8 +68,17 @@ class NarrationAssetLoader {
         await response.stream.listen((_) {}).cancel();
         throw const HttpException('Model download failed');
       }
+      var received = 0;
       await response.stream
           .timeout(const Duration(seconds: 45))
+          .map((chunk) {
+            received += chunk.length;
+            if (received > asset.size) {
+              throw const FormatException('Invalid model file');
+            }
+            progress(received);
+            return chunk;
+          })
           .pipe(pending.openWrite());
       if (await pending.length() != asset.size ||
           (await sha256.bind(pending.openRead()).first).toString() !=

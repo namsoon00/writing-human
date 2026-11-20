@@ -1,9 +1,27 @@
 typedef ModelAsset = ({String path, int size, String sha256});
 
-Uri narrationModelUri(ModelAsset asset) => Uri.parse(
-  'https://huggingface.co/supertone-oss-archive/supertonic-3/resolve/'
-  'aafc6e32416a594460b32413efc49d7fe4ce6d46/${asset.path}?download=true',
-);
+// These three ONNX files have compatible, weight-only int8 replacements.
+// Keep recognizing the original files already saved by earlier versions.
+const narrationOriginalSizes = {
+  'onnx/text_encoder.onnx': 36416150,
+  'onnx/vector_estimator.onnx': 256534781,
+  'onnx/vocoder.onnx': 101424195,
+};
+
+Uri narrationModelUri(ModelAsset asset, {bool original = false}) {
+  final revision = !original && narrationOriginalSizes.containsKey(asset.path)
+      ? 'askurios8/supertonic-3-int8/resolve/'
+            '95618f5d61cef4923c3b802a332fd603723718f7'
+      : 'supertone-oss-archive/supertonic-3/resolve/'
+            'aafc6e32416a594460b32413efc49d7fe4ce6d46';
+  return Uri.parse(
+    'https://huggingface.co/$revision/${asset.path}?download=true',
+  );
+}
+
+final narrationDownloadMegabytes =
+    (narrationAssets.fold(0, (sum, asset) => sum + asset.size) / 1000000)
+        .round();
 
 const narrationAssets = <ModelAsset>[
   (
@@ -33,17 +51,17 @@ const narrationAssets = <ModelAsset>[
   ),
   (
     path: 'onnx/text_encoder.onnx',
-    size: 36416150,
-    sha256: 'c7befd5ea8c3119769e8a6c1486c4edc6a3bc8365c67621c881bbb774b9902ff',
+    size: 9734378,
+    sha256: '67b0975e50689f599a7834255d53a7cfd72a9f028b0f56e0040ba7dc5007d9cf',
   ),
   (
     path: 'onnx/vector_estimator.onnx',
-    size: 256534781,
-    sha256: '883ac868ea0275ef0e991524dc64f16b3c0376efd7c320af6b53f5b780d7c61c',
+    size: 65769855,
+    sha256: 'f903a5ed046bb92cf1e557393623d7e709b527d338b042cc0bf9bce417185e5a',
   ),
   (
     path: 'onnx/vocoder.onnx',
-    size: 101424195,
-    sha256: '085de76dd8e8d5836d6ca66826601f615939218f90e519f70ee8a36ed2a4c4ba',
+    size: 25820373,
+    sha256: 'ab337d1a10ed54c24cb42e0ea9be3733603149517fa0a8f54d07ef816cb766df',
   ),
 ];

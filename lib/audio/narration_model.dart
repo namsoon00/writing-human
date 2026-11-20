@@ -29,19 +29,28 @@ class NarrationModel {
     final sessions = <OrtSession>[];
     final total = narrationAssets.fold(0, (sum, asset) => sum + asset.size);
     var loaded = 0;
+    var lastPercent = 0;
+    void report(int bytes) {
+      final percent = math.min(99, (loaded + bytes) * 100 ~/ total);
+      if (percent == lastPercent) return;
+      lastPercent = percent;
+      progress(percent / 100);
+    }
+
     final json = <String, dynamic>{};
     try {
       for (final asset in narrationAssets) {
         check();
         if (asset.path.endsWith('.onnx')) {
-          sessions.add(await loader.openSession(asset));
+          sessions.add(await loader.openSession(asset, report));
         } else {
-          json[asset.path] = jsonDecode(await loader.readText(asset));
+          json[asset.path] = jsonDecode(await loader.readText(asset, report));
         }
+        report(asset.size);
         loaded += asset.size;
-        progress(loaded / total);
       }
       check();
+      progress(1);
       return NarrationModel._(
         sessions,
         json['onnx/unicode_indexer.json'] as List<dynamic>,

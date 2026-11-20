@@ -39,6 +39,8 @@ enum _ScanMode { page, paragraph }
 
 enum _ImportAction { search, share }
 
+enum _PhotoAction { select, range, crop, adjust, join, photoOnly, replace }
+
 class SourceImportSheet extends StatefulWidget {
   const SourceImportSheet({
     super.key,
@@ -88,6 +90,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     ..addListener(_changed);
   late String? _bookId = widget.bookId;
   final _editors = <TextEditingController>[];
+  TextEditingController? _wholeEditor;
   List<List<ScanLine>> _reviewLines = const [];
   List<(_ScanMode, int, String)> _reviewKeys = const [];
   final _savedReviews = <(_ScanMode, int, String), String>{};
@@ -126,9 +129,16 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   String? _error;
   bool _busy = false, _readingPhoto = false;
 
-  bool get _reviewing => _editors.isNotEmpty;
+  bool get _reviewing => _wholeEditor != null || _editors.isNotEmpty;
   bool get _selecting => _scan != null && !_reviewing;
-  List<TextEditingController> get _fields => _reviewing ? _editors : [_text];
+  List<TextEditingController> get _fields => [
+    if (_wholeEditor case final editor?)
+      editor
+    else if (_editors.isNotEmpty)
+      ..._editors
+    else
+      _text,
+  ];
   bool get _composing => [
     ..._fields,
     _citation,
@@ -142,9 +152,19 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   void _changed() => setState(() {});
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.initialPhoto != null && widget.initialText.trim().isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _extractPhoto();
+      });
+    }
+  }
+
+  @override
   void dispose() {
     if (_readingPhoto) widget.intake.cancelRecognition();
-    for (final controller in [_text, _citation, ..._editors]) {
+    for (final controller in [_text, _citation, ..._editors, ?_wholeEditor]) {
       controller.removeListener(_changed);
       controller.dispose();
     }
@@ -247,6 +267,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   Future<void> _choosePhoto({required bool camera}) async {
     if (!_editable) return;
     FocusScope.of(context).unfocus();
+    final replacing = _wholeEditor != null;
     setState(() {
       _busy = true;
       _error = null;
@@ -254,7 +275,13 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     try {
       final photo = await widget.intake.pickPhoto(camera: camera);
       if (!mounted || photo == null) return;
+      SourceScan? replacement;
+      if (replacing) {
+        replacement = await _recognize(photo);
+        if (!mounted || replacement == null) return;
+      }
       setState(() {
+        _clearWholeEditor();
         _originalPhoto = photo;
         _photoRegion = null;
         _scan = null;
@@ -263,15 +290,23 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         _beforeAdjustment = null;
         _photoBeforeAdjustment = null;
       });
+      if (replacement != null) {
+        _useScan(replacement, _ScanMode.page);
+        _reviewWholePage();
+        return;
+      }
     } on SourceIntakeException catch (error) {
       if (mounted) setState(() => _error = error.message);
+      return;
     } catch (_) {
       if (mounted) {
         setState(() => _error = '사진을 가져오지 못했어요. 권한을 확인하거나 다른 사진을 골라 주세요.');
       }
+      return;
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+    if (mounted && _text.text.trim().isEmpty) await _extractPhoto();
   }
 
   Future<SourceScan?> _recognize(
@@ -322,8 +357,8 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       final replace = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('사진에서 원문 글을 새로 뽑을까요?'),
-          content: const Text('추출한 글을 확인하고 담으면 지금 입력한 글을 대신합니다.'),
+          title: const Text('사진에서 글자를 읽을까요?'),
+          content: const Text('읽은 글을 담으면 지금 입력한 글이 바뀌어요.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -344,7 +379,52 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     if (scan == null || !mounted) return;
     _scanRegion = region;
     _useScan(scan, _ScanMode.page);
-    _reviewSelection();
+    _reviewWholePage();
+  }
+
+  Iterable<ScanParagraph> get _wholeParagraphs =>
+      _order.map((index) => _scan!.paragraphs[index]);
+
+  String get _wholeText => _wholeParagraphs
+      .map((paragraph) => normalizeSource(paragraph.text))
+      .where((text) => text.isNotEmpty)
+      .join('\n\n');
+
+  void _reviewWholePage() => setState(() {
+    _wholeEditor = TextEditingController(text: _wholeText)
+      ..addListener(_changed);
+  });
+
+  void _clearWholeEditor() {
+    final editor = _wholeEditor;
+    if (editor == null) return;
+    _wholeEditor = null;
+    editor.removeListener(_changed);
+    WidgetsBinding.instance.addPostFrameCallback((_) => editor.dispose());
+  }
+
+  Future<bool> _confirmWholeReplacement(String title) async {
+    final editor = _wholeEditor;
+    if (!_editable) return false;
+    if (editor == null || editor.text == _wholeText) return true;
+    final replace = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: const Text('지금 고친 글이 사진에서 읽은 글로 바뀔 수 있어요.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('계속 편집'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('계속하기'),
+          ),
+        ],
+      ),
+    );
+    return mounted && replace == true && _editable;
   }
 
   Rect? get _cropRegion {
@@ -394,7 +474,8 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   Future<void> _readAdjusted() async {
     final photo = _originalPhoto;
     if (photo == null || !_editable || _beforeAdjustment != null) return;
-    final wasReviewing = _reviewing;
+    final wasWhole = _wholeEditor != null;
+    final wasReviewing = _reviewing && !wasWhole;
     if (wasReviewing) _backToSelection();
     final baseline = (
       scan: _scan,
@@ -436,16 +517,26 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       setState(() => _error = message);
       return;
     }
+    if (wasWhole) _clearWholeEditor();
     _beforeAdjustment = baseline;
     _photoBeforeAdjustment = originalView;
     _useScan(adjusted, _mode, cameraPage: projection, adjusted: true);
-    if (_mode == _ScanMode.page) _reviewSelection();
+    if (wasWhole) {
+      _reviewWholePage();
+    } else if (_mode == _ScanMode.page) {
+      _reviewSelection();
+    }
   }
 
   void _restoreUnadjusted() {
     final before = _beforeAdjustment;
     if (before == null || !_editable) return;
-    if (_reviewing) _backToSelection();
+    final wasWhole = _wholeEditor != null;
+    if (wasWhole) {
+      _clearWholeEditor();
+    } else if (_reviewing) {
+      _backToSelection();
+    }
     setState(() {
       _scan = before.scan;
       _cameraPage = before.page;
@@ -461,7 +552,11 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       _beforeAdjustment = null;
       _photoBeforeAdjustment = null;
     });
-    if (_mode == _ScanMode.page) _reviewSelection();
+    if (wasWhole) {
+      _reviewWholePage();
+    } else if (_mode == _ScanMode.page) {
+      _reviewSelection();
+    }
   }
 
   Widget _adjustButton() => TextButton(
@@ -628,11 +723,32 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       .where((text) => text.isNotEmpty)
       .join('\n\n');
 
-  List<OriginalPhotoLine> _photoLines({bool original = false}) =>
-      mapPhotoLines([
-        for (final (index, editor) in _editors.indexed)
-          (normalizeSource(editor.text), _reviewLines[index]),
-      ], transformBounds: original ? _onOriginalPhoto : null);
+  List<OriginalPhotoLine> _photoLines({bool original = false}) {
+    final transform = original ? _onOriginalPhoto : null;
+    if (_wholeEditor != null) {
+      final text = _confirmedText;
+      if (text == _wholeText) {
+        return mapPhotoLines([
+          for (final paragraph in _wholeParagraphs)
+            (normalizeSource(paragraph.text), paragraph.lines),
+        ], transformBounds: transform);
+      }
+      return mapPhotoLines(
+        [
+          (
+            text,
+            [for (final paragraph in _wholeParagraphs) ...paragraph.lines],
+          ),
+        ],
+        transformBounds: transform,
+        matchByPosition: false,
+      );
+    }
+    return mapPhotoLines([
+      for (final (index, editor) in _editors.indexed)
+        (normalizeSource(editor.text), _reviewLines[index]),
+    ], transformBounds: transform);
+  }
 
   bool get _isPageReview => _reviewing && _mode == _ScanMode.page;
 
@@ -657,15 +773,19 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     }
   }
 
-  Future<void> _submit({bool startWriting = false}) async {
-    final text = _confirmedText;
+  Future<void> _submit({
+    bool startWriting = false,
+    bool photoOnly = false,
+  }) async {
+    if (photoOnly && (_extractionOnly || _originalPhoto == null)) return;
+    final text = photoOnly ? '' : _confirmedText;
     if (!_editable ||
-        !_hasContent(text) ||
+        (!photoOnly && !_hasContent(text)) ||
         text.length > sourceLengthLimit ||
         _citation.text.trim().length > 500) {
       return;
     }
-    final isFullPage = _isPageReview;
+    final isFullPage = !photoOnly && _isPageReview;
     if (isFullPage && _range != null && _range!.text != text) {
       setState(() => _error = '원문이 바뀌었어요. 옮겨 쓸 구절을 다시 골라 주세요.');
       return;
@@ -1252,8 +1372,8 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         scrollController: scroll,
         showCursor: false,
         readOnly: _busy,
-        minLines: _reviewing ? 2 : 4,
-        maxLines: 8,
+        minLines: _wholeEditor != null ? 8 : (_reviewing ? 2 : 4),
+        maxLines: _wholeEditor != null ? null : 8,
         keyboardType: TextInputType.multiline,
         decoration: const InputDecoration(
           hintText: '옮겨 쓸 구절을 적어 주세요.',
@@ -1303,6 +1423,104 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     );
   }
 
+  Future<void> _photoAction(_PhotoAction action) async {
+    final editor = _wholeEditor;
+    if (editor == null || !_editable) return;
+    switch (action) {
+      case _PhotoAction.select:
+        if (!await _confirmWholeReplacement('구절을 다시 고를까요?') || !mounted) return;
+        FocusScope.of(context).unfocus();
+        setState(() => _clearWholeEditor());
+      case _PhotoAction.range:
+        await _pickWritingRange();
+      case _PhotoAction.crop:
+        if (!await _confirmWholeReplacement('사진에서 읽을 부분을 다시 고를까요?') ||
+            !mounted) {
+          return;
+        }
+        final photo = _originalPhoto!;
+        final chosen = await chooseOriginalPhotoRegion(
+          context,
+          photo.bytes,
+          color: widget.paperColor,
+          current: _photoRegion,
+        );
+        if (!mounted || chosen == null || _wholeEditor != editor) return;
+        final region = chosen.isEmpty ? null : chosen;
+        final box = region == null
+            ? null
+            : Rect.fromLTRB(region[0], region[1], region[2], region[3]);
+        final scan = await _recognize(photo, region: box);
+        if (scan == null || !mounted) return;
+        _clearWholeEditor();
+        _photoRegion = region;
+        _scanRegion = box;
+        _savedReviews.clear();
+        _useScan(scan, _ScanMode.page);
+        _reviewWholePage();
+      case _PhotoAction.adjust:
+        if (!await _confirmWholeReplacement('사진을 다시 읽을까요?')) return;
+        if (_beforeAdjustment == null) {
+          await _readAdjusted();
+        } else {
+          _restoreUnadjusted();
+        }
+      case _PhotoAction.join:
+        await _joinLines(editor);
+      case _PhotoAction.photoOnly:
+        if (!await _confirmWholeReplacement('사진만 담을까요?')) return;
+        await _submit(photoOnly: true);
+      case _PhotoAction.replace:
+        if (!await _confirmWholeReplacement('다른 사진을 고를까요?')) return;
+        await _choosePhoto(camera: false);
+    }
+  }
+
+  Widget _photoEditingMenu() => PopupMenuButton<_PhotoAction>(
+    tooltip: '사진 편집 더 보기',
+    enabled: _editable,
+    onSelected: _photoAction,
+    icon: const Icon(CupertinoIcons.ellipsis, size: 21),
+    color: panelPaperColor(widget.paperColor),
+    surfaceTintColor: Colors.transparent,
+    itemBuilder: (_) => [
+      const PopupMenuItem(value: _PhotoAction.select, child: Text('구절 고르기')),
+      const PopupMenuItem(value: _PhotoAction.range, child: Text('옮겨 쓸 구절')),
+      const PopupMenuItem(value: _PhotoAction.crop, child: Text('글자 영역 고르기')),
+      PopupMenuItem(
+        value: _PhotoAction.adjust,
+        child: Text(_beforeAdjustment == null ? '보정해 다시 읽기' : '보정 전 결과 보기'),
+      ),
+      const PopupMenuItem(value: _PhotoAction.join, child: Text('줄바꿈 정리')),
+      if (!widget.shared && !_extractionOnly)
+        const PopupMenuItem(value: _PhotoAction.replace, child: Text('사진 바꾸기')),
+      if (!_extractionOnly)
+        const PopupMenuItem(
+          value: _PhotoAction.photoOnly,
+          child: Text('사진만 담기'),
+        ),
+    ],
+  );
+
+  Widget _writingRangeButton() => Align(
+    alignment: Alignment.centerLeft,
+    child: OriginalRangeButton(
+      text: _confirmedText,
+      range: _range?.range,
+      needsReselection: _range != null && _range!.text != _confirmedText,
+      onPressed: _editable && _confirmedText.isNotEmpty
+          ? _pickWritingRange
+          : null,
+      icon: const Icon(CupertinoIcons.scope, size: 16),
+    ),
+  );
+
+  List<Widget> _wholeReviewPanel(TextEditingController editor) => [
+    _field(editor, 0),
+    OriginalTextCleanup(controller: editor, enabled: _editable),
+    if (_range != null) _writingRangeButton(),
+  ];
+
   List<Widget> _reviewPanel() => [
     Wrap(
       spacing: 8,
@@ -1315,20 +1533,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         if (_isPageReview) _adjustButton(),
       ],
     ),
-    if (_isPageReview) ...[
-      Align(
-        alignment: Alignment.centerLeft,
-        child: OriginalRangeButton(
-          text: _confirmedText,
-          range: _range?.range,
-          needsReselection: _range != null && _range!.text != _confirmedText,
-          onPressed: _editable && _confirmedText.isNotEmpty
-              ? _pickWritingRange
-              : null,
-          icon: const Icon(CupertinoIcons.scope, size: 16),
-        ),
-      ),
-    ],
+    if (_isPageReview) _writingRangeButton(),
     if (!_extractionOnly) const Text('글을 담으면 원본 사진도 이 기기에 보관돼요.'),
     for (final (index, controller) in _editors.indexed) ...[
       if (_editors.length > 1)
@@ -1449,6 +1654,19 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                           style: const TextStyle(fontSize: 22),
                         ),
                       ),
+                      if (_wholeEditor != null) ...[
+                        IconButton(
+                          tooltip: '사진 크게 보기',
+                          onPressed: _editable
+                              ? () => _showScanPhoto(
+                                  _photoBeforeAdjustment ?? _scan!,
+                                  const [],
+                                )
+                              : null,
+                          icon: const Icon(CupertinoIcons.photo, size: 20),
+                        ),
+                        _photoEditingMenu(),
+                      ],
                       if (!_selecting &&
                           !_reviewing &&
                           !widget.shared &&
@@ -1499,9 +1717,11 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                         ..._selectionPanel(
                           (constraints.maxHeight * .46).clamp(180.0, 520.0),
                         )
+                      else if (_wholeEditor case final editor?)
+                        ..._wholeReviewPanel(editor)
                       else if (_reviewing)
                         ..._reviewPanel()
-                      else ...[
+                      else if (!_readingPhoto) ...[
                         if (!_extractionOnly) _importTools(),
                         const SizedBox(height: 8),
                         if (_originalPhoto case final photo?) ...[
@@ -1642,7 +1862,9 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                             onPressed: canSubmit ? _submit : null,
                             child: const Text('담기'),
                           ),
-                        if (_offerExtraction && !_extractionOnly)
+                        if (_offerExtraction &&
+                            !_readingPhoto &&
+                            !_extractionOnly)
                           TextButton(
                             onPressed: canSubmit ? _submit : null,
                             child: const Text('사진만 담기'),

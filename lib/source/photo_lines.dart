@@ -39,13 +39,14 @@ List<double>? photoExcerptRegion(Iterable<Rect> lines) {
 List<OriginalPhotoLine> mapPhotoLines(
   Iterable<(String, List<ScanLine>)> paragraphs, {
   Rect Function(Rect)? transformBounds,
+  bool matchByPosition = true,
 }) {
   final result = <OriginalPhotoLine>[];
   var offset = 0;
   for (final (text, scanned) in paragraphs) {
     if (text.isEmpty) continue;
     final lines = text.split('\n');
-    final keepPositions = lines.length == scanned.length;
+    final keepPositions = matchByPosition && lines.length == scanned.length;
     var lineOffset = offset;
     for (final (index, content) in lines.indexed) {
       final startOfLine = lineOffset;

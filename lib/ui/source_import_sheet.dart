@@ -818,11 +818,23 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   void _deleteSelectedOriginal() {
     final value = _selectedOriginal;
     if (!_editable || value == null) return;
-    final selection = value.selection;
-    _wholeEditor!.value = TextEditingValue(
-      text: value.text.replaceRange(selection.start, selection.end, ''),
-      selection: TextSelection.collapsed(offset: selection.start),
-    );
+    final editorContext = _focus.context;
+    final delete = editorContext == null
+        ? null
+        : Actions.handler(
+            editorContext,
+            const DeleteCharacterIntent(forward: false),
+          );
+    if (delete != null) {
+      delete();
+    } else {
+      final selection = value.selection;
+      _wholeEditor!.value = TextEditingValue(
+        text: value.text.replaceRange(selection.start, selection.end, ''),
+        selection: TextSelection.collapsed(offset: selection.start),
+      );
+    }
+    _focus.requestFocus();
     if (_error != null) setState(() => _error = null);
   }
 
@@ -1733,26 +1745,24 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         selected.isNotEmpty &&
         selected.length <= sourceLengthLimit &&
         _citation.text.trim().length <= 500;
-    return TextFieldTapRegion(
-      child: Row(
-        children: [
-          Expanded(
-            child: TextButton(
-              style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
-              onPressed: _editable ? _deleteSelectedOriginal : null,
-              child: const Text('선택한 글 지우기', textAlign: TextAlign.center),
-            ),
+    return Row(
+      children: [
+        Expanded(
+          child: TextButton(
+            style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
+            onPressed: _editable ? _deleteSelectedOriginal : null,
+            child: const Text('선택한 글 지우기', textAlign: TextAlign.center),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: FilledButton(
-              style: _confirmStyle,
-              onPressed: canSave ? () => _submit(selectedOnly: true) : null,
-              child: const Text('선택한 글 담기', textAlign: TextAlign.center),
-            ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: FilledButton(
+            style: _confirmStyle,
+            onPressed: canSave ? () => _submit(selectedOnly: true) : null,
+            child: const Text('선택한 글 담기', textAlign: TextAlign.center),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -1966,46 +1976,49 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (_selectedOriginal case final selection?)
-                          _selectionActions(selection)
-                        else
-                          FilledButton(
-                            key: const ValueKey('source-confirm'),
-                            style: _confirmStyle,
-                            onPressed: _selecting
-                                ? selectionReady && !_busy
-                                      ? _reviewSelection
-                                      : null
-                                : _offerExtraction
-                                ? (_editable ? _extractPhoto : null)
-                                : canSubmit
-                                ? _submit
-                                : null,
-                            child: Text(
-                              _offerExtraction
-                                  ? '사진에서 글자 읽기'
-                                  : !_selecting
-                                  ? (_extractionOnly ? '원문에 글 추가' : '담기')
-                                  : _mode == _ScanMode.page
-                                  ? '페이지 확인'
-                                  : '선택한 구절 확인',
-                              textAlign: TextAlign.center,
+                  child: TextFieldTapRegion(
+                    enabled: _wholeEditor != null,
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (_selectedOriginal case final selection?)
+                            _selectionActions(selection)
+                          else
+                            FilledButton(
+                              key: const ValueKey('source-confirm'),
+                              style: _confirmStyle,
+                              onPressed: _selecting
+                                  ? selectionReady && !_busy
+                                        ? _reviewSelection
+                                        : null
+                                  : _offerExtraction
+                                  ? (_editable ? _extractPhoto : null)
+                                  : canSubmit
+                                  ? _submit
+                                  : null,
+                              child: Text(
+                                _offerExtraction
+                                    ? '사진에서 글자 읽기'
+                                    : !_selecting
+                                    ? (_extractionOnly ? '원문에 글 추가' : '담기')
+                                    : _mode == _ScanMode.page
+                                    ? '페이지 확인'
+                                    : '선택한 구절 확인',
+                                textAlign: TextAlign.center,
+                              ),
                             ),
-                          ),
-                        if (_offerExtraction &&
-                            !_readingPhoto &&
-                            !_extractionOnly)
-                          TextButton(
-                            onPressed: canSubmit ? _submit : null,
-                            child: const Text('사진만 담기'),
-                          ),
-                      ],
+                          if (_offerExtraction &&
+                              !_readingPhoto &&
+                              !_extractionOnly)
+                            TextButton(
+                              onPressed: canSubmit ? _submit : null,
+                              child: const Text('사진만 담기'),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

@@ -466,6 +466,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(controller.text, '$first\n$second\n\n$footer');
       expect(controller.selection, const TextSelection.collapsed(offset: 0));
+      expect(tester.widget<TextField>(sourceField).focusNode!.hasFocus, isTrue);
       expect(save, findsNothing);
       expect(store.data.records, isEmpty);
 

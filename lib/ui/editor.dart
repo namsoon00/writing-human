@@ -286,15 +286,7 @@ class _PageEditorState extends State<PageEditor> {
       if (!mounted || !scroll.hasClients) return;
       final anchor = scroll.writingCenter;
       final position = scroll.position;
-      if (anchor == null || !focus.hasFocus) {
-        _centeredLine = null;
-        final bounded = scroll.offset.clamp(
-          position.minScrollExtent,
-          position.maxScrollExtent,
-        );
-        if (bounded != scroll.offset) scroll.jumpTo(bounded);
-        return;
-      }
+      if (anchor == null || !focus.hasFocus) return;
       final selection = text.selection;
       if (_composing || !selection.isValid || !selection.isCollapsed) return;
       final editable = findEditable(
@@ -564,8 +556,10 @@ class _PageEditorState extends State<PageEditor> {
         final visiblePadding = padding.copyWith(
           bottom: overlap > 0 ? 12 : padding.bottom,
         );
+        final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
         final canCenter =
             hasChosenGuide &&
+            keyboardVisible &&
             focus.hasFocus &&
             paperHeight / 2 >=
                 referenceHeight + lineHeight + visiblePadding.bottom;
@@ -575,9 +569,7 @@ class _PageEditorState extends State<PageEditor> {
         if (scroll.writingCenter != writingCenter) {
           scroll.writingCenter = writingCenter;
           _centeredLine = null;
-          _followWritingLine();
         }
-        final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
         final showInlineGuide =
             _comparison != null &&
             !keyboardVisible &&
@@ -918,7 +910,11 @@ class _WritingScrollPosition extends ScrollPositionWithSingleContext {
     // Resolve the requested position before RenderEditable paints the page.
     final restore = controller.layoutOffset;
     controller.layoutOffset = null;
-    if (restore != null || !hasContentDimensions) {
+    final outsideReducedRange =
+        hasContentDimensions &&
+        ((pixels < min && min > this.minScrollExtent) ||
+            (pixels > max && max < this.maxScrollExtent));
+    if (restore != null || !hasContentDimensions || outsideReducedRange) {
       final target = (restore?.call(pixels) ?? pixels).clamp(min, max);
       if (target != pixels) correctPixels(target);
     }

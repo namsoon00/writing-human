@@ -2629,7 +2629,7 @@ void main() {
               .center,
         )
         .dy;
-    expect(caretY(), closeTo(middle, 5));
+    expect(caretY(), lessThan(middle));
     await tester.enterText(bodyField, '$first\n');
     await tester.pumpAndSettle();
     expect(caretY(), closeTo(middle, 5));
@@ -2741,6 +2741,89 @@ void main() {
       expect(store.data.activePage!.text, '첫 줄윽');
       expect(store.data.activePage!.guidedOriginalId, 'o');
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Repeated keyboard transitions keep the written text and paper position',
+    (tester) async {
+      final lines = List.generate(30, (i) => '${i + 1}번째 줄을 옮겨 적는다.');
+      final written = lines.take(16).join('\n');
+      final caret = lines.take(5).join('\n').length;
+      const paperOffset = 90.0;
+      final store = MemoryStore()
+        ..data = Library(
+          records: [
+            WritingRecord(
+              id: 'r',
+              title: '필사',
+              originals: [RegisteredOriginal('o', lines.join('\n'))],
+            ),
+          ],
+          pages: [
+            WritingPage(
+              id: 'p',
+              recordId: 'r',
+              number: 1,
+              text: written,
+              base: caret,
+              extent: caret,
+              scroll: paperOffset,
+              guidedOriginalId: 'o',
+            ),
+          ],
+          activePageId: 'p',
+          writing: true,
+        );
+      await open(tester, store, FakeIntake());
+      final field = tester.widget<TextField>(bodyField);
+      final controller = field.controller!;
+      final value = controller.value;
+      final paper = field.scrollController!;
+      final dismiss = find.widgetWithIcon(
+        IconButton,
+        CupertinoIcons.keyboard_chevron_compact_down,
+      );
+
+      expect(paper.offset, paperOffset);
+      for (final dismissWithButton in [false, true]) {
+        await tester.showKeyboard(bodyField);
+        tester.view.viewInsets = const FakeViewPadding(bottom: 290);
+        await tester.pumpAndSettle();
+        expect(transcriptionReference, findsOneWidget);
+        expect(controller.value, value);
+        expect(paper.offset, paperOffset);
+
+        if (dismissWithButton) await tester.tap(dismiss);
+        tester.view.resetViewInsets();
+        await tester.pumpAndSettle();
+        expect(field.focusNode!.hasFocus, !dismissWithButton);
+        expect(transcriptionGuide, findsOneWidget);
+        expect(
+          tester.widget<TextField>(bodyField).controller,
+          same(controller),
+        );
+        expect(controller.value, value);
+        expect(store.data.activePage!.text, written);
+        expect(paper.offset, paperOffset);
+        expect(store.data.activePage!.scroll, paperOffset);
+      }
+
+      // Reading ahead on the paper can scroll past the end of the draft.
+      final guideEnd = paper.position.maxScrollExtent;
+      paper.jumpTo(guideEnd);
+      await tester.pumpAndSettle();
+      await tester.showKeyboard(bodyField);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 290);
+      await tester.pumpAndSettle();
+      expect(paper.position.maxScrollExtent, lessThan(guideEnd));
+      expect(paper.offset, lessThanOrEqualTo(paper.position.maxScrollExtent));
+      expect(controller.value, value);
+
+      final continued = value.replaced(value.selection, '한');
+      tester.testTextInput.updateEditingValue(continued);
+      await tester.pumpAndSettle();
+      expect(store.data.activePage!.text, continued.text);
     },
   );
 

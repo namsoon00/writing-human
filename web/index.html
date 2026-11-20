@@ -79,8 +79,17 @@
     if (matchMedia('(any-pointer: coarse)').matches ||
         CSS.supports('-webkit-touch-callout', 'none')) {
       document.documentElement.classList.add('paper-touch-input');
-      const fieldSelector = '[flt-semantics-identifier="writing-page-body"], ' +
-          '[flt-semantics-identifier="paper-search-input"]';
+      const bodySelector = '[flt-semantics-identifier="writing-page-body"]';
+      const fieldSelector = bodySelector + ', [flt-semantics-identifier="paper-search-input"]';
+      document.addEventListener('selectionchange', (event) => {
+        const editor = document.activeElement;
+        // A selection notification from an empty semantic textarea during
+        // keyboard reconnection carries no selection. Forward actual edits
+        // through the input event, including a deliberate deletion.
+        if (editor?.matches(bodySelector + ' textarea') && editor.value === '') {
+          event.stopImmediatePropagation();
+        }
+      }, true);
       // Match Flutter's default touch slop and long-press timeout.
       const touchSlop = 18;
       const longPressMs = 500;

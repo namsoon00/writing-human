@@ -130,6 +130,32 @@ test('short taps request the keyboard even when the input kept its focus', () =>
   }
 });
 
+test('empty body selection notifications cannot masquerade as deletions', () => {
+  const handlers = new Map();
+  const document = {
+    documentElement: {classList: {add() {}}},
+    addEventListener: (name, callback) => handlers.set(name, callback),
+  };
+  vm.runInNewContext(bridge, {
+    matchMedia: () => ({matches: true}),
+    CSS: {supports: () => false},
+    document,
+  });
+
+  const selectionChange = handlers.get('selectionchange');
+  for (const [body, value, blocked] of [
+    [true, '', true],
+    [true, '필사한 글', false],
+    [false, '', false],
+  ]) {
+    document.activeElement = {matches: () => body, value};
+    let stopped = false;
+    selectionChange({stopImmediatePropagation() { stopped = true; }});
+    assert.equal(stopped, blocked);
+  }
+  assert.equal(handlers.has('input'), false);
+});
+
 test('an open keyboard, an intentional blur and disabled fields keep their behavior', () => {
   assert.deepEqual(
     simulate({search: true, alreadyFocused: true, keyboardVisible: true}),

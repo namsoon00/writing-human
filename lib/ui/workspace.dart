@@ -33,6 +33,8 @@ import 'book_front_cover.dart';
 import 'book_details.dart';
 import 'page_read_preview.dart';
 import 'archive_sheet.dart';
+import '../cafe/cafe_visit.dart';
+import 'cafe_screen.dart';
 
 typedef _SavedOriginal = ({
   String? bookId,
@@ -79,6 +81,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   int _directPageChange = 0;
   bool _openingFromPanel = false;
   bool _editorComposing = false;
+  CafeSeat? _cafeSeat;
+  bool _openingCafe = false;
   PaperTool _paperTool = PaperTool.writing;
   String? _editingPageId;
   ({String pageId, int offset, int request})? _reveal;
@@ -384,6 +388,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       editorFocus.unfocus();
       _editingPageId = null;
       _paperTool = PaperTool.writing;
+      _cafeSeat = null;
       _originalByPage.clear();
       _originalByVolume.clear();
       _bookLeaf = null;
@@ -401,6 +406,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     setState(() {
       if (fresh && !userFresh && c.library.activePage != null) fresh = false;
       if (_accountLocked) {
+        _cafeSeat = null;
         _originalByPage.clear();
         _originalByVolume.clear();
       }
@@ -547,8 +553,95 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         onArchiveBook: (book) =>
             _afterSheet(() => _archive(selectedBook: book)),
         onSettings: _settings,
+        onCafe: () => _afterSheet(_cafe),
       ),
     );
+  }
+
+  Future<void> _cafe() async {
+    if (_openingCafe || _pageNavigationBusy || _accountLocked) return;
+    if (_editorComposing || c.composing) {
+      _sourceNotice('입력을 마친 뒤 카페를 열어 주세요.');
+      return;
+    }
+    final owner = c;
+    _openingCafe = true;
+    try {
+      await owner.settled;
+      if (!mounted || c != owner || _accountLocked) return;
+      if (_editorComposing || c.composing) {
+        _sourceNotice('입력을 마친 뒤 카페를 열어 주세요.');
+        return;
+      }
+      if (owner.saveError != null) {
+        _sourceNotice('글을 저장하지 못했어요. ‘다시 저장’을 눌러 주세요.');
+        return;
+      }
+      _blur();
+      final route = paperPanelRoute<void>(
+        (context) => AnimatedBuilder(
+          animation: owner,
+          builder: (context, _) => CafeScreen(
+            books: owner.library.books,
+            currentWritingLabel: book?.title == null
+                ? (page.text.isEmpty ? '지금 펼친 빈 쪽' : '지금 쓰던 글')
+                : '${book!.title} · 지금 펼친 쪽',
+            initialSeat: _cafeSeat,
+            saveFailed: owner.saveError != null,
+            onRetry: _retrySave,
+            onLeave: () {
+              if (c != owner || _accountLocked) return;
+              setState(() => _cafeSeat = null);
+              Navigator.pop(context);
+            },
+            onWrite: (seat, bookId) async {
+              final route = ModalRoute.of(context);
+              if (route?.isCurrent != true ||
+                  c != owner ||
+                  _accountLocked ||
+                  _pageNavigationBusy ||
+                  _editorComposing ||
+                  c.composing) {
+                return false;
+              }
+              await owner.settled;
+              if (!mounted ||
+                  c != owner ||
+                  _accountLocked ||
+                  route?.isCurrent != true ||
+                  owner.saveError != null) {
+                return false;
+              }
+              if (bookId == null) {
+                await _navigatePage(() async {
+                  setState(() => _bookLeaf = null);
+                }, paperTurn: false);
+              } else {
+                final target = owner.library.books
+                    .where((book) => book.id == bookId)
+                    .firstOrNull;
+                if (target == null) return false;
+                await _resumeBook(target, paperTurn: false);
+              }
+              await owner.settled;
+              if (!mounted ||
+                  c != owner ||
+                  _accountLocked ||
+                  route?.isCurrent != true ||
+                  owner.saveError != null) {
+                return false;
+              }
+              setState(() => _cafeSeat = seat);
+              if (route!.isCurrent) route.navigator!.pop();
+              return true;
+            },
+          ),
+        ),
+      );
+      await Navigator.of(context).push(route);
+    } finally {
+      _openingCafe = false;
+    }
   }
 
   void _settings() {
@@ -1836,6 +1929,34 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                     ? () => _newWriting()
                     : () => _appendPage(addAfterDraft: false),
               ),
+              if (!preview && _cafeSeat != null)
+                Padding(
+                  key: const ValueKey('cafe-writing-session'),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.local_cafe_outlined,
+                        size: 16,
+                        color: muted,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _cafeSeat!.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 13, color: muted),
+                        ),
+                      ),
+                      TextButton(
+                        key: const ValueKey('return-to-cafe'),
+                        onPressed: _cafe,
+                        child: const Text('카페로'),
+                      ),
+                    ],
+                  ),
+                ),
               if (widget.sync != null &&
                   (widget.sync!.hasLegacy || widget.sync!.legacyError))
                 TextButton(

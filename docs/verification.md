@@ -2437,3 +2437,19 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   (SHA-256: `f6bbf0d1dc1accaaf3d992c1ca01c65c6276ca5c1b8ffcacfc108f042b8cc2e8`). 본문 아래 출처·사진과 전체 너비 필사 버튼의 식별 키,
   갱신된 버전 쿼리를 확인했다. 실제 Safari·Chrome 조작과 iOS·Android 실기기는
   미검증이며 기존 Sites 프로젝트·비공개 접근 범위·사용자 기록은 변경하지 않았다.
+
+
+## 2026-11-22 · 1인칭 카페 GitHub Pages 배포 전 검증
+
+- 기존 공개 배포 소스 `64eac7f`에서 별도 체크아웃을 만들어 카페와 연결부만 적용했다.
+  최근 게시된 원문 읽기·책 꾸미기 변경을 유지하고 사용자 기록·자격 증명·임시 산출물은
+  게시 소스에 포함하지 않았다.
+- 배포 체크아웃에서 Dart 포맷 검사, `flutter analyze --no-pub`, 전체
+  `flutter test --no-pub --reporter expanded` 238개를 통과했다.
+- `node tool/build_github_pages.mjs /writing-human/`의 release 빌드가 통과했다.
+  앱의 로컬 저장 구조와 기존 Sites 프로젝트·접근 범위·서버는 변경하지 않았다.
+- 카페·카메라 테스트는 1인칭 회전·자리 선택·충돌·동작 줄이기, 한글 조합·본문·선택
+  보존과 저장 실패 재시도를 검사한다. 별도의 카페 SQLite 검사는 실제 호스트 임시 파일을
+  닫고 다시 열어 본문과 활성 쪽을 복원한다. 메모리 테스트와 실제 파일 검사를 구분한다.
+- 로컬 미리보기와 공개 게시 상태를 구분해 주소와 완료 근거를 안내하도록 마케터
+  페르소나를 보완했다. 공개 게시 결과는 배포가 끝난 뒤 별도로 기록한다.

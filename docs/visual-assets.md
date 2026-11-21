@@ -91,3 +91,28 @@ Use case: product-mockup. Asset type: front-cover material for the actual '쓰�
 ### 펜
 
 Use case: product-mockup. Asset type: small decorative fountain pen cutout for a working typing app UI. Single elegant black lacquer fountain pen with polished antique-gold nib and gold rings, seen directly from above, uncapped, full pen visible. Long slim body runs diagonally from bottom-left nib tip to top-right rounded black barrel end at a 45-degree angle, echo the pen entering the third mobile screen in the reference. Realistic fine materials, soft warm studio highlights. Transparent alpha background, isolated pen only, no cap, no hand, no paper, no lettering, no watermark. Do not render an app, page, or phone.
+
+
+## 1인칭 카페의 재질과 창밖 풍경 · 2026-11-22
+
+내장 `image_gen`으로 두 비트맵을 생성하고 아래 경로에 원본을 복사했다. CLI나
+별도 이미지 API는 사용하지 않았다. 목재는 실제 3D 면에 반복 매핑하는 색상 재질,
+정원은 창문 뒤의 평면에 원근 투영하는 장식용 외부 풍경이다. 전체 카페 화면을
+이미지 한 장으로 대체하지 않는다. 코덱에서 표시용 크기로 읽으며 원본 파일은 유지한다.
+
+- `assets/images/cafe-oak-albedo.png`: 생성 원본
+  `exec-7575882c-85dc-4101-9a6f-6d92039043ee.png`.
+- `assets/images/cafe-garden-view.png`: 생성 원본
+  `exec-65d6ac65-8446-4af1-8f6e-e76eac502705.png`.
+- 벽의 ‘쓰는 인간 / 오늘도, 한 문장’ 표지판은 번들 쓰는 인간체와 Flutter
+  TextPainter로 그린다. 가구·책·잔·펜·실내 식물은 Dart의 3D 기하다.
+- `assets/audio/cafe-rain.wav`는 `python3 tool/generate_cafe_rain.py`로 만드는
+  8초·22,050Hz·16비트·모노 합성 잡음 기반 빗소리다. 외부 녹음은 사용하지 않았다.
+
+### 목재 · 최종 프롬프트 · 내장 imagegen
+
+Use case: photorealistic-natural. Asset type: seamless PBR base-color texture for real-time 3D cafe wooden tables and oak floor, NOT a scene render. Generate a perfectly top-down orthographic square photograph of one continuous light warm smoked oak wood surface. Fine realistic straight wood grain running vertically, subtle natural long grain lines and understated knots, rich honey tan and warm medium brown, matte oiled natural wood. Completely flat even diffuse illumination, no highlights, no cast shadows, no perspective, no objects, no furniture, no text, no border. Seamless tileable edges in both directions. This is a raw albedo map that will be mapped onto actual 3D geometry.
+
+### 창밖 정원 · 최종 프롬프트 · 내장 imagegen
+
+Use case: photorealistic-natural. Asset type: exterior garden color texture seen beyond a real-time 3D cafe window. Wide landscape photograph of a quiet leafy courtyard on a softly rainy overcast day, eye level, weathered low stone garden wall, layered lush green broad-leaved shrubs and Japanese maple trees, pale mist and delicate raindrops. Natural photographic detail, muted sage and blue-green tones, soft diffuse daylight. No cafe interior, no furniture, no people, no window frames, no lettering, no watermark. Compose foliage and the courtyard at human eye level with pale sky in top quarter, suitable as an outdoor view through tall cafe windows.

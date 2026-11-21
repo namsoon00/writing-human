@@ -29,6 +29,7 @@ class CollectionSheet extends StatefulWidget {
     this.onArchiveBook,
     this.onBookOriginals,
     this.onSettings,
+    this.onCafe,
   });
   final LibraryController controller;
   final String? initialBookId;
@@ -37,6 +38,7 @@ class CollectionSheet extends StatefulWidget {
   final ValueChanged<String?> onNewWriting;
   final VoidCallback onNewBook;
   final VoidCallback? onSettings;
+  final VoidCallback? onCafe;
   final ValueChanged<Passage>? onPassage;
   final ValueChanged<WritingPage>? onContentsPage;
   final ValueChanged<Book>? onArchiveBook, onBookOriginals;
@@ -558,8 +560,10 @@ class _CollectionSheetState extends State<CollectionSheet> {
           if (topLevel && !showSearch)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                spacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   TextButton(
                     onPressed: _switchView,
@@ -575,6 +579,13 @@ class _CollectionSheetState extends State<CollectionSheet> {
                       ],
                     ),
                   ),
+                  if (widget.onCafe != null)
+                    TextButton.icon(
+                      key: const ValueKey('open-cafe'),
+                      onPressed: widget.onCafe,
+                      icon: const Icon(Icons.local_cafe_outlined, size: 17),
+                      label: const Text('필사 카페'),
+                    ),
                   TextButton.icon(
                     onPressed: shelf
                         ? widget.onNewBook

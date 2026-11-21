@@ -1145,20 +1145,13 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             bookId: bookId,
             keepBlank: true,
           );
-        } else if (pageUsesOriginal(page, originals, source)) {
-          // Resume without replacing the selected copy, cursor or continuation.
-        } else if (page.text.isNotEmpty ||
-            pageOriginals(
-              page,
-              originals,
-            ).any((p) => passageOriginal(p) != null)) {
+        } else {
+          // Starting a transcription is distinct from opening an existing one.
           c.addPage(
             recordId: page.recordId,
             guidedOriginalId: source.id,
             originalCitation: source.citation,
           );
-        } else {
-          c.guidePage(page.id, source);
         }
       } else {
         _bookLeaf = null;
@@ -1315,7 +1308,15 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                   )
                 : null,
             onTranscribe: owner.saveError == null
-                ? (original) => Navigator.of(context).pop(original)
+                ? (original) {
+                    if (!context.mounted ||
+                        c != owner ||
+                        _accountLocked ||
+                        ModalRoute.of(context)?.isCurrent != true) {
+                      return;
+                    }
+                    Navigator.of(context).pop(original);
+                  }
                 : null,
             onOpenWriting: (passage) =>
                 _openPageFromPanel(route, owner, () async {

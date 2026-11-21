@@ -311,7 +311,7 @@ void main() {
     },
   );
   testWidgets(
-    'Each original starts its own page and resuming keeps the same input',
+    'Transcription starts a new page while opening prior writing preserves its input',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
@@ -321,7 +321,7 @@ void main() {
       await tester.pumpWidget(WritingHumanApp(store: store));
       await tester.pumpAndSettle();
       final field = find.byKey(const ValueKey('page-text'));
-      Future<void> transcribe(String id) async {
+      Future<void> readOriginal(String id) async {
         await tester.tap(find.byKey(const ValueKey('writing-originals')));
         await tester.pumpAndSettle();
         final list = find.byTooltip('원문 목록');
@@ -333,24 +333,61 @@ void main() {
           find.widgetWithText(ListTile, id == 'a' ? first.text : second.text),
         );
         await tester.pumpAndSettle();
-        await tester.tap(find.text('필사하기'));
+      }
+
+      Future<void> transcribe(String id, {bool doubleTap = false}) async {
+        await readOriginal(id);
+        final button = find.byKey(const ValueKey('source-start-transcription'));
+        await tester.tap(button);
+        if (doubleTap) await tester.tap(button, warnIfMissed: false);
         await tester.pumpAndSettle();
       }
 
+      final blankBefore = store.data.activePage!.toJson();
       await transcribe('a');
+      expect(store.data.activePageId, isNot('p'));
+      expect(store.data.pages.first.toJson(), blankBefore);
+      expect(store.data.pages, hasLength(2));
       final aPage = store.data.activePageId;
       final aInput = tester.widget<TextField>(field).controller!;
       await tester.enterText(field, '첫 원문');
       await tester.pumpAndSettle();
       final value = aInput.value;
-      await transcribe('a');
+      await readOriginal('a');
+      final openWriting = find.byKey(const ValueKey('source-open-writing'));
+      await tester.ensureVisible(openWriting);
+      await tester.tap(openWriting);
+      await tester.pumpAndSettle();
       expect(store.data.activePageId, aPage);
       expect(tester.widget<TextField>(field).controller, same(aInput));
       expect(aInput.value, value);
+      final writtenBefore = store.data.activePage!.toJson();
+      await transcribe('a', doubleTap: true);
+      final repeatPage = store.data.activePage!;
+      expect(repeatPage.id, isNot(aPage));
+      expect(repeatPage.text, isEmpty);
+      expect(repeatPage.passages.single.original!.id, 'a');
+      expect(repeatPage.passages.single.source, first.text);
+      expect(repeatPage.passages.single.sourceOffset, 0);
+      expect(repeatPage.passages.single.continued, isFalse);
+      expect(store.data.pages, hasLength(3));
+      expect(
+        store.data.pages.firstWhere((p) => p.id == aPage).toJson(),
+        writtenBefore,
+      );
       await transcribe('b');
       expect(store.data.activePageId, isNot(aPage));
-      expect(store.data.pages.first.text, '첫 원문');
-      expect(store.data.pages.first.passages.single.original!.id, 'a');
+      expect(store.data.pages.firstWhere((p) => p.id == aPage).text, '첫 원문');
+      expect(
+        store.data.pages
+            .firstWhere((p) => p.id == aPage)
+            .passages
+            .single
+            .original!
+            .id,
+        'a',
+      );
+      expect(store.data.pages, hasLength(4));
       expect(store.data.activePage!.passages.single.original!.id, 'b');
       expect(store.data.activePage!.text, isEmpty);
       expect(find.byKey(const ValueKey('page-original-markers')), findsNothing);

@@ -2468,3 +2468,24 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   로더를 확인했다. 사용자 기록 저장 구조와 기존 Sites 프로젝트·비공개 접근 범위는 유지했다.
 - 이 완료 확인은 공개 파일·배포 상태 검증이다. 실제 공개 브라우저 조작과
   iOS·Android 실기기 성능·빗소리 재생은 이번 배포에서 검증하지 않았다.
+
+
+## 2026-11-22 · 필사하기는 새 쪽에서 시작
+
+- 원문 화면의 ‘필사하기’는 같은 원문을 쓰던 쪽과 저장된 빈 쪽도 그대로 보존하고,
+  같은 글 끝에 새 쪽을 만든다. 원문 전체를 처음부터 표시한다. 미저장 첫 빈 초안만
+  그 자체를 새 필사 쪽으로 저장해 불필요한 빈 쪽을 추가하지 않는다.
+- ‘필사한 쪽 열기’로 돌아오면 기존 편집기와 본문·선택 위치를 유지한다.
+  위젯 테스트에서 기존 쪽 JSON 보존, 같은 원문 재필사의 빈 본문·sourceOffset 0,
+  닫히는 화면의 연속 탭으로 쪽을 중복 생성하지 않는 동작을 확인했다.
+  새 UI 저장 검사는 메모리 저장소를 사용하며 실제 기기 저장 검사로 보고하지 않는다.
+- 최근 카페 변경을 보존한 별도 배포 체크아웃에서 Dart 포맷 검사,
+  `flutter analyze --no-pub`, 전체 `flutter test --no-pub --reporter expanded` 238개,
+  `node tool/build_github_pages.mjs /writing-human/`의 release 웹 빌드를 통과했다.
+  이후 합친 원격 변경은 기존 카페 배포 결과의 문서 기록만 포함했다.
+- `flutter test tool/capture_single_source_test.dart --no-pub --reporter expanded`를
+  통과하고 휴대폰·큰 글씨의 ‘새 쪽에서 시작해요.’ 안내와 하단 버튼을 렌더로 확인했다.
+  이미지는 `output/source-reading-20261122/`에 보관했다. Flutter 테스트 렌더이며,
+  실제 Safari·Chrome 조작과 iOS·Android 실기기는 이번 변경에서 검증하지 않았다.
+- 네 역할의 페르소나를 검토하고, 기획자의 새 필사/기존 쪽 복귀 구분과 개발자의
+  경로 종료 중 연속 탭 검증 기준을 보완했다. 공개 배포 결과는 후속 기록으로 남긴다.

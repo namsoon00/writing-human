@@ -2488,17 +2488,21 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(confirm);
       await settleSourceSheets(tester);
+      final previousPage = store.data.activePage!.toJson();
       await tester.tap(find.text('필사하기'));
       await settleSourceSheets(tester);
+      expect(store.data.activePageId, isNot(previousPage['id']));
+      expect(store.data.pages, hasLength(2));
+      expect(store.data.pages.first.toJson(), previousPage);
       final field = tester.widget<TextField>(bodyField);
       expect(field.controller!.text, isEmpty);
       expect(field.focusNode!.hasFocus, isTrue);
       expect(remainingInline(tester), original);
-      expect(store.data.pages.single.text, isEmpty);
+      expect(store.data.activePage!.text, isEmpty);
       await tester.enterText(bodyField, '한 문쟝을');
       await tester.pumpAndSettle();
       expect(remainingInline(tester), '장을 옮겨 쓴다.\n$second');
-      expect(store.data.pages.single.text, '한 문쟝을');
+      expect(store.data.activePage!.text, '한 문쟝을');
       const composing = TextEditingValue(
         text: '한 문쟝을 ㅇ',
         selection: TextSelection.collapsed(offset: 7),
@@ -2511,15 +2515,15 @@ void main() {
       await tester.enterText(bodyField, '한 문장을');
       await tester.pumpAndSettle();
       expect(find.text('느낀 점'), findsNothing);
-      expect(store.data.pages.single.text, '한 문장을');
+      expect(store.data.activePage!.text, '한 문장을');
       await tester.enterText(bodyField, '$first\n');
       await tester.pumpAndSettle();
       expect(remainingInline(tester), second);
-      expect(store.data.pages.single.text, '$first\n');
+      expect(store.data.activePage!.text, '$first\n');
       const mistyped = '한 문쟝을 옮겨 쓴다.\n';
       await tester.enterText(bodyField, mistyped);
       await tester.pumpAndSettle();
-      expect(store.data.pages.single.text, mistyped);
+      expect(store.data.activePage!.text, mistyped);
       final saved = store.data;
       expect(
         saved.activePage!.guidedOriginalId,
@@ -3232,8 +3236,13 @@ void main() {
       expect(saved.citation, '책 72쪽');
       expect(saved.text, '사진에서 확인한 첫 문단.\n\n둘째 문단입나다.');
       expect(store.data.activePage!.guidedOriginalId, isNull);
+      final previousPage = store.data.activePage!.toJson();
       await loadPhotoAfter(find.text('필사하기'));
-      expect(store.data.activePageId, 'p');
+      expect(store.data.activePageId, isNot('p'));
+      expect(
+        store.data.pages.firstWhere((p) => p.id == 'p').toJson(),
+        previousPage,
+      );
       expect(store.data.activePage!.text, isEmpty);
       expect(store.data.activePage!.guidedOriginalId, original.id);
       expect(store.data.activePage!.originalCitations, ['책 72쪽']);

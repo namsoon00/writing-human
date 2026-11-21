@@ -471,7 +471,19 @@ class _SourceReadingState extends State<SourceReading> {
     if (actions.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [const Divider(height: 24), ...actions],
+      children: [
+        const Divider(height: 24),
+        if (original.canTranscribe && transcribe != null)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text(
+              '새 쪽에서 시작해요.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, height: 1.5, color: muted),
+            ),
+          ),
+        ...actions,
+      ],
     );
   }
 

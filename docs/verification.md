@@ -2453,3 +2453,18 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   닫고 다시 열어 본문과 활성 쪽을 복원한다. 메모리 테스트와 실제 파일 검사를 구분한다.
 - 로컬 미리보기와 공개 게시 상태를 구분해 주소와 완료 근거를 안내하도록 마케터
   페르소나를 보완했다. 공개 게시 결과는 배포가 끝난 뒤 별도로 기록한다.
+
+
+## 2026-11-22 · 1인칭 3D 카페 공개 웹 배포 완료
+
+- [GitHub Pages 배포 44963007065](https://github.com/namsoon00/writing-human/actions/runs/44963007065)가
+  소스 `79bed25c5b1ae84713c8e69644c906c6c7f7ed72`의 검사·전체 테스트·빌드·게시를 완료했다.
+  배포용 체크아웃과 GitHub Actions의 포맷·정적 분석·전체 Flutter 테스트 238개가 통과했다.
+- [공개 웹](https://namsoon00.github.io/writing-human/)의 `책장 → 필사 카페` 진입 코드와
+  1인칭 공간·일어나기·책 선택·필사 시작 식별 키를 공개 main.dart.js에서 확인했다.
+  실행 파일 SHA-256은 `8ba08e7acb81e75d6bf1d2644474f038778fca4cd4134e4351a376df10a2477a`로 검증한 로컬 release와 바이트 단위로 일치했다.
+- 목재·정원 이미지, 합성 빗소리와 쓰는 인간체가 HTTP 200이고 로컬 배포 파일과
+  바이트 단위로 일치했다. `/writing-human/` 기준 경로와 버전이 붙은 bootstrap·main
+  로더를 확인했다. 사용자 기록 저장 구조와 기존 Sites 프로젝트·비공개 접근 범위는 유지했다.
+- 이 완료 확인은 공개 파일·배포 상태 검증이다. 실제 공개 브라우저 조작과
+  iOS·Android 실기기 성능·빗소리 재생은 이번 배포에서 검증하지 않았다.

@@ -2340,3 +2340,11 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - 실제 브라우저 조작과 iOS·Android 실기기는 이번 변경에서 검증하지 않았다.
   이 대화에서는 브라우저 접근 도구를 사용할 수 없었다. 배포 완료와 제공 파일 확인은
   후속 검증 기록으로 구분한다.
+
+- [GitHub Pages 배포 44878861329](https://github.com/namsoon00/writing-human/actions/runs/44878861329)가
+  소스 `ad1fb27980df9f1605402e91b663a654950deb5a`에서 검사·빌드·게시를 모두 완료했다.
+  [공개 웹](https://namsoon00.github.io/writing-human/)의 새 실행 파일이 검증한 로컬
+  release와 바이트 단위로 일치했다(SHA-256:
+  `d01b190cb58fa77970d7f9eb50cf587612b05fa55698bfdf504f6618225b7915`).
+  새 종이 견본·밑칠 농도 키와 버전 쿼리를 확인했고 쓰는 인간체·종이 이미지의
+  HTTP 200 응답을 확인했다. 브라우저 조작·실기기 미검증 범위는 위와 같다.

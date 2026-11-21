@@ -100,6 +100,41 @@ void main() {
         expect(restored.books.last.detailOverrides, isEmpty);
         expect(Library.decode(restored.encode()).encode(), expected);
         expect(restored.activePage!.writtenOn, '2026-11-10');
+
+        final reopened = LibraryController(store, restored);
+        try {
+          expect(
+            await reopened.saveBookAppearance(
+              restoredBook.id,
+              useDefaultPaper: false,
+              changes: {BookDetailKind.ribbon: null},
+            ),
+            isTrue,
+          );
+          await store.close();
+          store = await SqliteLibraryStore.open(
+            path,
+            factory: databaseFactoryFfi,
+          );
+          final reset = await store.load();
+          final resetBook = reset.books.first;
+          expect(
+            resetBook.detailOverrides,
+            isNot(contains(BookDetailKind.ribbon)),
+          );
+          expect(
+            resetBook.detailOverrides.length,
+            restoredBook.detailOverrides.length - 1,
+          );
+          expect(
+            resetBook.detailOverrides[BookDetailKind.bookplate]?.toJson(),
+            restoredBook.detailOverrides[BookDetailKind.bookplate]?.toJson(),
+          );
+          expect(resetBook.paperIndex, 3);
+          expect(reset.activePage!.toJson(), restored.activePage!.toJson());
+        } finally {
+          reopened.dispose();
+        }
       } finally {
         c.dispose();
         await store.close();
@@ -136,6 +171,41 @@ void main() {
       inherited.copy(variant: 1, tone: 3).toJson(),
     );
     expect(merged.style.bookDetails.ribbon.toJson(), inherited.toJson());
+    final savedBook = merged.books.single;
+    const otherChoice = BookDetailChoice(tone: 2);
+    final inheritsAgain = merged.copy(
+      books: [savedBook.copy(detailOverrides: const {})],
+    );
+    final otherEdit = merged.copy(
+      books: [
+        savedBook.copy(
+          detailOverrides: {
+            ...savedBook.detailOverrides,
+            BookDetailKind.bookplate: otherChoice,
+          },
+        ),
+      ],
+      style: merged.style.copy(
+        bookDetails: merged.style.bookDetails.withChoice(
+          BookDetailKind.ribbon,
+          inherited.copy(tone: 2),
+        ),
+      ),
+    );
+    for (final (left, right) in [
+      (inheritsAgain, otherEdit),
+      (otherEdit, inheritsAgain),
+    ]) {
+      final result = mergeLibraries(merged, left, right).library;
+      expect(result.books.single.detailOverrides.keys, [
+        BookDetailKind.bookplate,
+      ]);
+      expect(
+        result.books.single.detailOverrides[BookDetailKind.bookplate]?.toJson(),
+        otherChoice.toJson(),
+      );
+      expect(result.style.bookDetails.ribbon.tone, 2);
+    }
   });
 
   test(

@@ -5,7 +5,6 @@ import 'package:writing_human/data/model.dart';
 import 'package:writing_human/entry_location.dart';
 import 'package:writing_human/main.dart';
 import 'package:writing_human/ui/book_appearance.dart';
-import 'package:writing_human/ui/book_detail_tools.dart';
 import 'package:writing_human/ui/book_details.dart';
 import 'package:writing_human/ui/paper.dart';
 import 'book_details_test.dart' show specimen;
@@ -154,6 +153,10 @@ void main() {
       );
       await tester.tap(find.byTooltip('뒤로'));
       await tester.pumpAndSettle();
+      expect(find.byType(BookAppearance), findsOneWidget);
+      expect(ribbon, findsOneWidget);
+      await tester.tap(find.byTooltip('뒤로'));
+      await tester.pumpAndSettle();
       expect(find.byType(BookAppearance), findsNothing);
       await tester.tap(find.text('책 꾸미기'));
       await tester.pumpAndSettle();
@@ -161,6 +164,15 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.widget<RibbonBookmark>(preview).choice.variant, 1);
       expect(store.data.style.bookDetails.ribbon.variant, 0);
+      await tester.tap(ribbon);
+      await tester.pumpAndSettle();
+      final defaultSetting = find.text('서재 기본값 사용');
+      await tester.ensureVisible(defaultSetting);
+      await tester.tap(defaultSetting);
+      await tester.pumpAndSettle();
+      expect(find.text('서재 기본값 사용 중'), findsOneWidget);
+      expect(store.data.books.single.detailOverrides, isEmpty);
+      expect(tester.widget<RibbonBookmark>(preview).choice.variant, 0);
       expect(store.data.activePage!.text, specimen().activePage!.text);
       expect(find.textContaining('예시'), findsNothing);
     },
@@ -172,18 +184,13 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       final fixture = specimen();
       final store = MemoryStore()..data = fixture;
       final controller = LibraryController(store, fixture);
       addTearDown(controller.dispose);
       await tester.pumpWidget(
         MaterialApp(
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: TextScaler.linear(2)),
-            child: child!,
-          ),
           home: BookAppearance(
             controller: controller,
             book: fixture.books.single,
@@ -248,9 +255,11 @@ void main() {
       expect(row(BookDetailKind.ribbon), findsNothing);
       await expectRows(pageDecorations);
       final dateStamp = row(BookDetailKind.dateStamp);
+      final dateOffset = tester.getTopLeft(dateStamp);
       await tester.tap(dateStamp);
       await tester.pumpAndSettle();
       expect(options(BookDetailKind.dateStamp), findsOneWidget);
+      expect(dateStamp, findsNothing);
       expect(tester.getRect(preview), previewRect);
       await tester.tap(find.text('책 장식'));
       await tester.pumpAndSettle();
@@ -258,6 +267,9 @@ void main() {
       await tester.tap(find.text('쪽 장식'));
       await tester.pumpAndSettle();
       expect(options(BookDetailKind.dateStamp), findsOneWidget);
+      await tester.tap(find.text('목록'));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(dateStamp), dateOffset);
       await tester.tap(find.text('책 장식'));
       await tester.pumpAndSettle();
       await tester.drag(find.byType(ListView), const Offset(0, 1300));
@@ -271,14 +283,13 @@ void main() {
       expect(options(BookDetailKind.bookplate), findsOneWidget);
       expect(find.text('책의 주인 이름을 담는 작은 인쇄물'), findsOneWidget);
       expect(
-        find.descendant(
-          of: options(BookDetailKind.bookplate),
-          matching: find.byType(BookDetailPreview),
-        ),
+        find.descendant(of: preview, matching: find.byType(Bookplate)),
         findsOneWidget,
       );
       expect(find.byType(BookCover), findsNothing);
 
+      await tester.tap(find.text('목록'));
+      await tester.pumpAndSettle();
       final flower = row(BookDetailKind.pressedFlower);
       await tester.scrollUntilVisible(flower, 100);
       await Scrollable.ensureVisible(tester.element(flower), alignment: .5);
@@ -287,10 +298,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(options(BookDetailKind.bookplate), findsNothing);
       expect(options(BookDetailKind.pressedFlower), findsOneWidget);
-      expect(
-        tester.getRect(find.byType(BookCover)).bottom,
-        lessThan(tester.getTopLeft(flower).dy),
-      );
+      expect(tester.getRect(preview), previewRect);
+      expect(find.byType(BookCover), findsOneWidget);
 
       final shade = find.byKey(const ValueKey('detail-pressedFlower-tone-1'));
       await Scrollable.ensureVisible(tester.element(shade), alignment: .5);
@@ -313,6 +322,26 @@ void main() {
             .detailOverrides[BookDetailKind.pressedFlower]
             ?.tone,
         1,
+      );
+      tester.view.physicalSize = const Size(320, 500);
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      await tester.pumpAndSettle();
+      final placement = find.byKey(
+        const ValueKey('detail-pressedFlower-placement-2'),
+      );
+      await tester.scrollUntilVisible(placement, 130);
+      await tester.pumpAndSettle();
+      expect(placement.hitTestable(), findsOneWidget);
+      await tester.tap(placement);
+      await tester.pumpAndSettle();
+      expect(
+        store
+            .data
+            .books
+            .single
+            .detailOverrides[BookDetailKind.pressedFlower]
+            ?.placement,
+        2,
       );
       expect(tester.takeException(), isNull);
     },

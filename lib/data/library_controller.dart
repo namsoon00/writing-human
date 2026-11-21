@@ -567,15 +567,24 @@ class LibraryController extends ChangeNotifier {
     int? coverIndex,
     int? paperIndex,
     required bool useDefaultPaper,
-    required Map<BookDetailKind, BookDetailChoice> changes,
+    required Map<BookDetailKind, BookDetailChoice?> changes,
   }) async {
     final book = library.books.where((entry) => entry.id == id).firstOrNull;
     if (book == null) return false;
+    final overrides = {...book.detailOverrides};
+    for (final entry in changes.entries) {
+      final choice = entry.value;
+      if (choice == null) {
+        overrides.remove(entry.key);
+      } else {
+        overrides[entry.key] = choice;
+      }
+    }
     final updated = book.copy(
       coverIndex: coverIndex,
       paperIndex: paperIndex,
       useDefaultPaper: useDefaultPaper,
-      detailOverrides: Map.unmodifiable({...book.detailOverrides, ...changes}),
+      detailOverrides: Map.unmodifiable(overrides),
     );
     _publish(
       library.copy(

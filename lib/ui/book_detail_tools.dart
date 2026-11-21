@@ -162,78 +162,11 @@ class _DefaultDecorationEditor extends StatelessWidget {
                     ),
                   ),
                 ),
-                SwitchListTile(
-                  key: ValueKey('detail-${kind.name}-enabled'),
-                  contentPadding: EdgeInsets.zero,
-                  title: Text('$target 표시'),
-                  value: choice.enabled,
-                  activeTrackColor: panelSwitchTrack,
-                  activeThumbColor: panelSwitchThumb,
-                  onChanged: (value) =>
-                      _change((current) => current.copy(enabled: value)),
+                BookDetailOptions(
+                  kind: kind,
+                  choice: choice,
+                  onChanged: _change,
                 ),
-                const Divider(height: 1),
-                const SizedBox(height: 12),
-                _DetailChoices(
-                  title: kind == BookDetailKind.pencil ? '농도' : '모양',
-                  control: 'detail-${kind.name}-variant',
-                  labels: design.variants,
-                  selected: choice.variant,
-                  onSelected: choice.enabled
-                      ? (index) =>
-                            _change((current) => current.copy(variant: index))
-                      : null,
-                  specimen: (index) {
-                    final option = choice.copy(enabled: true, variant: index);
-                    return ribbon
-                        ? RibbonBookmark(choice: option, width: 18, height: 28)
-                        : BookDetailSample(
-                            kind: kind,
-                            choice: option,
-                            size: const Size(52, 32),
-                          );
-                  },
-                ),
-                const SizedBox(height: 10),
-                _DetailChoices(
-                  title: '색',
-                  control: 'detail-${kind.name}-tone',
-                  labels: design.tones,
-                  selected: choice.tone,
-                  onSelected: choice.enabled
-                      ? (index) =>
-                            _change((current) => current.copy(tone: index))
-                      : null,
-                  specimen: (index) => ribbon
-                      ? RibbonBookmark(
-                          choice: BookDetailChoice(tone: index),
-                          width: 23,
-                          height: 17,
-                        )
-                      : Container(
-                          width: 23,
-                          height: 17,
-                          decoration: BoxDecoration(
-                            color: design.colors[index],
-                            borderRadius: BorderRadius.circular(2),
-                            border: Border.all(color: line),
-                          ),
-                        ),
-                ),
-                if (kind == BookDetailKind.pressedFlower) ...[
-                  const SizedBox(height: 10),
-                  _DetailChoices(
-                    title: '위치',
-                    control: 'detail-pressedFlower-placement',
-                    labels: const ['오른쪽 아래', '왼쪽 아래', '아래 가운데'],
-                    selected: choice.placement,
-                    onSelected: choice.enabled
-                        ? (index) => _change(
-                            (current) => current.copy(placement: index),
-                          )
-                        : null,
-                  ),
-                ],
                 const SizedBox(height: 4),
                 Align(
                   alignment: Alignment.centerRight,
@@ -473,179 +406,89 @@ class BookDetailOptions extends StatelessWidget {
     required this.kind,
     required this.choice,
     required this.onChanged,
-    this.showSpecimen = true,
   });
 
   final BookDetailKind kind;
   final BookDetailChoice choice;
-  final ValueChanged<BookDetailChoice> onChanged;
-  final bool showSpecimen;
+  final ValueChanged<BookDetailChoice Function(BookDetailChoice)> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final design = BookDetailDesign.of(kind);
+    final ribbon = kind == BookDetailKind.ribbon;
+    final target = ribbon ? '책갈피' : design.title;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (showSpecimen) ...[
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              design.description,
-              style: const TextStyle(color: muted, fontSize: 12, height: 1.6),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Semantics(
-            label: '${design.title} 모양 미리보기',
-            child: ExcludeSemantics(
-              child: ExcludeFocus(
-                child: IgnorePointer(
-                  child: BookDetailPreview(kind: kind, choice: choice),
-                ),
-              ),
-            ),
-          ),
-        ],
-        SwitchListTile.adaptive(
+        SwitchListTile(
           key: ValueKey('detail-${kind.name}-enabled'),
           contentPadding: EdgeInsets.zero,
-          title: const Text('꾸밈 표시', style: TextStyle(fontSize: 13)),
+          title: Text('$target 표시'),
           value: choice.enabled,
-          onChanged: (value) => onChanged(choice.copy(enabled: value)),
+          activeTrackColor: panelSwitchTrack,
+          activeThumbColor: panelSwitchThumb,
+          onChanged: (value) =>
+              onChanged((current) => current.copy(enabled: value)),
         ),
-        if (!showSpecimen && kind == BookDetailKind.ribbon) ...[
-          const SizedBox(height: 8),
-          const Text('리본 색'),
-          Wrap(
-            spacing: 10,
-            children: [
-              for (var i = 0; i < design.colors.length; i++)
-                Semantics(
-                  label: design.tones[i],
-                  selected: choice.tone == i,
-                  child: IconButton(
-                    key: ValueKey('detail-ribbon-tone-$i'),
-                    tooltip: design.tones[i],
-                    onPressed: choice.enabled
-                        ? () => onChanged(choice.copy(tone: i))
-                        : null,
-                    icon: Container(
-                      width: 30,
-                      height: 30,
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: choice.tone == i
-                              ? design.colors[i]
-                              : Colors.transparent,
-                        ),
-                      ),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: design.colors[i].withValues(
-                            alpha: choice.enabled ? 1 : .35,
-                          ),
-                        ),
-                      ),
-                    ),
+        const Divider(height: 1),
+        const SizedBox(height: 12),
+        _DetailChoices(
+          title: kind == BookDetailKind.pencil ? '농도' : '모양',
+          control: 'detail-${kind.name}-variant',
+          labels: design.variants,
+          selected: choice.variant,
+          onSelected: choice.enabled
+              ? (index) => onChanged((current) => current.copy(variant: index))
+              : null,
+          specimen: (index) {
+            final option = choice.copy(enabled: true, variant: index);
+            return ribbon
+                ? RibbonBookmark(choice: option, width: 18, height: 28)
+                : BookDetailSample(
+                    kind: kind,
+                    choice: option,
+                    size: const Size(52, 32),
+                  );
+          },
+        ),
+        const SizedBox(height: 10),
+        _DetailChoices(
+          title: '색',
+          control: 'detail-${kind.name}-tone',
+          labels: design.tones,
+          selected: choice.tone,
+          onSelected: choice.enabled
+              ? (index) => onChanged((current) => current.copy(tone: index))
+              : null,
+          specimen: (index) => ribbon
+              ? RibbonBookmark(
+                  choice: BookDetailChoice(tone: index),
+                  width: 23,
+                  height: 17,
+                )
+              : Container(
+                  width: 23,
+                  height: 17,
+                  decoration: BoxDecoration(
+                    color: design.colors[index],
+                    borderRadius: BorderRadius.circular(2),
+                    border: Border.all(color: line),
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text('리본 모양'),
-        ],
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (var i = 0; i < design.variants.length; i++)
-                ChoiceChip(
-                  key: ValueKey('detail-${kind.name}-variant-$i'),
-                  label: Text(
-                    design.variants[i],
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  selected: choice.variant == i,
-                  onSelected: choice.enabled
-                      ? (_) => onChanged(choice.copy(variant: i))
-                      : null,
-                ),
-            ],
-          ),
         ),
-        if (showSpecimen || kind != BookDetailKind.ribbon) ...[
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (var i = 0; i < design.tones.length; i++)
-                  ChoiceChip(
-                    key: ValueKey('detail-${kind.name}-tone-$i'),
-                    avatar: ExcludeSemantics(
-                      child: Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: design.colors[i],
-                          shape: BoxShape.circle,
-                          border: Border.all(color: line),
-                        ),
-                      ),
-                    ),
-                    label: Text(
-                      design.tones[i],
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    selected: choice.tone == i,
-                    onSelected: choice.enabled
-                        ? (_) => onChanged(choice.copy(tone: i))
-                        : null,
-                  ),
-              ],
-            ),
-          ),
-        ],
         if (kind == BookDetailKind.pressedFlower) ...[
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (var i = 0; i < 3; i++)
-                  ChoiceChip(
-                    key: ValueKey('detail-pressedFlower-placement-$i'),
-                    label: Text(
-                      ['오른쪽 아래', '왼쪽 아래', '아래 가운데'][i],
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    selected: choice.placement == i,
-                    onSelected: choice.enabled
-                        ? (_) => onChanged(choice.copy(placement: i))
-                        : null,
-                  ),
-              ],
-            ),
+          const SizedBox(height: 10),
+          _DetailChoices(
+            title: '위치',
+            control: 'detail-pressedFlower-placement',
+            labels: const ['오른쪽 아래', '왼쪽 아래', '아래 가운데'],
+            selected: choice.placement,
+            onSelected: choice.enabled
+                ? (index) =>
+                      onChanged((current) => current.copy(placement: index))
+                : null,
           ),
         ],
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton(
-            key: ValueKey('detail-${kind.name}-reset'),
-            onPressed: () => onChanged(const BookDetailChoice()),
-            child: const Text('이 요소만 기본으로', style: TextStyle(fontSize: 12)),
-          ),
-        ),
       ],
     );
   }

@@ -68,6 +68,9 @@ class _BookAppearanceState extends State<BookAppearance> {
   bool showCover = true;
   LibraryController get controller => widget.controller;
 
+  void _showDetail(BookDetailKind? kind) =>
+      setState(() => _detailsBySection[section] = kind);
+
   Book get current =>
       controller.library.books
           .where((b) => b.id == widget.book.id)
@@ -78,7 +81,7 @@ class _BookAppearanceState extends State<BookAppearance> {
     int? coverIndex,
     int? paperIndex,
     bool useDefaultPaper = false,
-    Map<BookDetailKind, BookDetailChoice> changes = const {},
+    Map<BookDetailKind, BookDetailChoice?> changes = const {},
   }) {
     controller.saveBookAppearance(
       widget.book.id,
@@ -107,11 +110,13 @@ class _BookAppearanceState extends State<BookAppearance> {
                 .firstOrNull;
       final excerpt = sample?.text.trim() ?? '';
       final writingStyle = controller.styleFor(book);
+      final opened = detail;
       final closed = section == _Section.materials
           ? showCover
-          : detail == BookDetailKind.pressedFlower;
+          : opened == BookDetailKind.pressedFlower;
       final height = MediaQuery.sizeOf(context).height;
-      final pinPreview = height >= 520;
+      final pinPreview =
+          height >= 520 && MediaQuery.textScalerOf(context).scale(16) <= 24;
       final previewWidth = pinPreview ? math.min(450.0, height * .55) : 450.0;
       final header = Column(
         children: [
@@ -139,7 +144,7 @@ class _BookAppearanceState extends State<BookAppearance> {
                         cover: cover,
                         stock: stock,
                         details: details,
-                        detail: detail,
+                        detail: opened,
                         excerpt: excerpt,
                         writingStyle: writingStyle,
                         pageCount: pages.length,
@@ -191,114 +196,122 @@ class _BookAppearanceState extends State<BookAppearance> {
           const Divider(height: 1, color: line),
         ],
       );
-      return Scaffold(
-        backgroundColor: paper,
-        appBar: AppBar(
-          title: const Text('책 꾸미기'),
-          centerTitle: true,
+      return PopScope(
+        canPop: opened == null,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop && detail != null) _showDetail(null);
+        },
+        child: Scaffold(
           backgroundColor: paper,
-          surfaceTintColor: Colors.transparent,
-          leading: IconButton(
-            tooltip: '뒤로',
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(CupertinoIcons.chevron_left, size: 20),
+          appBar: AppBar(
+            title: const Text('책 꾸미기'),
+            centerTitle: true,
+            backgroundColor: paper,
+            surfaceTintColor: Colors.transparent,
+            leading: IconButton(
+              tooltip: '뒤로',
+              onPressed: () => Navigator.maybePop(context),
+              icon: const Icon(CupertinoIcons.chevron_left, size: 20),
+            ),
           ),
-        ),
-        body: SafeArea(
-          top: false,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: Column(
-                children: [
-                  if (pinPreview)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                      child: header,
-                    ),
-                  Expanded(
-                    child: ListView(
-                      key: PageStorageKey(section),
-                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-                      children: [
-                        if (!pinPreview) header,
-                        const SizedBox(height: 10),
-                        if (section == _Section.materials) ...[
-                          Semantics(
-                            header: true,
-                            child: const Text(
-                              '표지',
-                              style: TextStyle(color: muted),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Wrap(
-                            spacing: 8,
-                            children: [
-                              for (final (i, name) in coverNames.indexed)
-                                ChoiceChip(
-                                  label: Text(name),
-                                  selected: cover == i,
-                                  onSelected: (selected) {
-                                    setState(() => showCover = true);
-                                    if (selected) _save(coverIndex: i);
-                                  },
-                                ),
-                            ],
-                          ),
-                          const Divider(height: 24, color: line),
-                          Semantics(
-                            header: true,
-                            child: const Text(
-                              '내지',
-                              style: TextStyle(color: muted),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Wrap(
-                            spacing: 8,
-                            children: [
-                              ChoiceChip(
-                                label: const Text('기본 종이 사용'),
-                                selected: selectedPaper == null,
-                                onSelected: (selected) {
-                                  setState(() => showCover = false);
-                                  if (selected) _save(useDefaultPaper: true);
-                                },
+          body: SafeArea(
+            top: false,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: Column(
+                  children: [
+                    if (pinPreview)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                        child: header,
+                      ),
+                    Expanded(
+                      child: ListView(
+                        key: PageStorageKey((section, opened)),
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                        children: [
+                          if (!pinPreview) header,
+                          const SizedBox(height: 10),
+                          if (section == _Section.materials) ...[
+                            Semantics(
+                              header: true,
+                              child: const Text(
+                                '표지',
+                                style: TextStyle(color: muted),
                               ),
-                              for (var i = 0; i < paperNames.length; i++)
-                                PaperChoice(
-                                  index: i,
-                                  selected: selectedPaper == i,
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 8,
+                              children: [
+                                for (final (i, name) in coverNames.indexed)
+                                  ChoiceChip(
+                                    label: Text(name),
+                                    selected: cover == i,
+                                    onSelected: (selected) {
+                                      setState(() => showCover = true);
+                                      if (selected) _save(coverIndex: i);
+                                    },
+                                  ),
+                              ],
+                            ),
+                            const Divider(height: 24, color: line),
+                            Semantics(
+                              header: true,
+                              child: const Text(
+                                '내지',
+                                style: TextStyle(color: muted),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 8,
+                              children: [
+                                ChoiceChip(
+                                  label: const Text('기본 종이 사용'),
+                                  selected: selectedPaper == null,
                                   onSelected: (selected) {
                                     setState(() => showCover = false);
-                                    if (selected) _save(paperIndex: i);
+                                    if (selected) _save(useDefaultPaper: true);
                                   },
                                 ),
-                            ],
-                          ),
-                        ] else
-                          for (final kind in section.kinds)
-                            _detailRow(kind, details.choice(kind)),
-                      ],
-                    ),
-                  ),
-                  if (controller.saveError != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: TextButton(
-                        onPressed: controller.saving
-                            ? null
-                            : controller.retrySave,
-                        child: const Text('책 꾸밈을 저장하지 못했어요. 다시 저장'),
+                                for (var i = 0; i < paperNames.length; i++)
+                                  PaperChoice(
+                                    index: i,
+                                    selected: selectedPaper == i,
+                                    onSelected: (selected) {
+                                      setState(() => showCover = false);
+                                      if (selected) _save(paperIndex: i);
+                                    },
+                                  ),
+                              ],
+                            ),
+                          ] else if (opened != null)
+                            _detailEditor(opened, details.choice(opened), book)
+                          else
+                            for (final kind in section.kinds)
+                              _detailRow(kind, details.choice(kind), book),
+                        ],
                       ),
-                    )
-                  else if (controller.saving)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 8),
-                      child: Text('저장 중', style: TextStyle(color: muted)),
                     ),
-                ],
+                    if (controller.saveError != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: TextButton(
+                          onPressed: controller.saving
+                              ? null
+                              : controller.retrySave,
+                          child: const Text('책 꾸밈을 저장하지 못했어요. 다시 저장'),
+                        ),
+                      )
+                    else if (controller.saving)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 8),
+                        child: Text('저장 중', style: TextStyle(color: muted)),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -307,68 +320,95 @@ class _BookAppearanceState extends State<BookAppearance> {
     },
   );
 
-  Widget _options(BookDetailKind kind, BookDetailChoice choice) =>
-      BookDetailOptions(
-        key: ValueKey('book-options-${kind.name}'),
-        kind: kind,
-        choice: choice,
-        showSpecimen: kind != BookDetailKind.ribbon,
-        onChanged: (value) => _save(changes: {kind: value}),
-      );
-
-  Widget _detailRow(BookDetailKind kind, BookDetailChoice choice) {
+  Widget _detailEditor(
+    BookDetailKind kind,
+    BookDetailChoice choice,
+    Book book,
+  ) {
     final design = BookDetailDesign.of(kind);
-    final expanded = detail == kind;
+    final inherited = !book.detailOverrides.containsKey(kind);
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Builder(
-          builder: (rowContext) => Semantics(
-            expanded: expanded,
-            child: ListTile(
-              key: ValueKey('book-detail-${kind.name}'),
-              selected: expanded,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-              minTileHeight: 64,
-              horizontalTitleGap: 12,
-              leading: BookDetailSample(kind: kind, choice: choice),
-              title: Text(design.title),
-              subtitle: Text(
-                choice.enabled
-                    ? '${design.variants[choice.variant]} · ${design.tones[choice.tone]}'
-                    : '숨김',
-                style: const TextStyle(color: muted),
+        Row(
+          children: [
+            TextButton.icon(
+              onPressed: () => _showDetail(null),
+              icon: const Icon(CupertinoIcons.chevron_left, size: 14),
+              label: const Text('목록'),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Semantics(
+                header: true,
+                child: Text(design.title, style: const TextStyle(fontSize: 18)),
               ),
-              trailing: Icon(
-                expanded
-                    ? CupertinoIcons.chevron_up
-                    : CupertinoIcons.chevron_down,
-                color: muted,
-                size: 14,
-              ),
-              onTap: () {
-                setState(
-                  () => _detailsBySection[section] = expanded ? null : kind,
-                );
-                if (!expanded) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (rowContext.mounted && detail == kind) {
-                      Scrollable.ensureVisible(
-                        rowContext,
-                        alignmentPolicy:
-                            ScrollPositionAlignmentPolicy.keepVisibleAtStart,
-                      );
-                    }
-                  });
-                }
-              },
+            ),
+          ],
+        ),
+        if (kind != BookDetailKind.ribbon)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              design.description,
+              style: const TextStyle(fontSize: 14, color: detailMetadataInk),
             ),
           ),
+        BookDetailOptions(
+          key: ValueKey('book-options-${kind.name}'),
+          kind: kind,
+          choice: choice,
+          onChanged: (update) {
+            final latest = controller.detailsFor(current).choice(kind);
+            _save(changes: {kind: update(latest)});
+          },
         ),
-        if (expanded)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 2, 8, 12),
-            child: _options(kind, choice),
+        Align(
+          alignment: Alignment.centerRight,
+          child: inherited
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Text(
+                    '서재 기본값 사용 중',
+                    style: TextStyle(fontSize: 14, color: detailMetadataInk),
+                  ),
+                )
+              : TextButton(
+                  onPressed: () => _save(changes: {kind: null}),
+                  child: const Text('서재 기본값 사용'),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _detailRow(BookDetailKind kind, BookDetailChoice choice, Book book) {
+    final design = BookDetailDesign.of(kind);
+    final setting = choice.enabled
+        ? '${design.variants[choice.variant]} · ${design.tones[choice.tone]}'
+        : '표시 안 함';
+    return Column(
+      children: [
+        ListTile(
+          key: ValueKey('book-detail-${kind.name}'),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+          minTileHeight: 64,
+          horizontalTitleGap: 12,
+          leading: BookDetailSample(kind: kind, choice: choice),
+          title: Text(design.title),
+          subtitle: Text(
+            book.detailOverrides.containsKey(kind)
+                ? setting
+                : '서재 기본값 · $setting',
+            style: const TextStyle(color: detailMetadataInk),
           ),
+          trailing: const Icon(
+            CupertinoIcons.chevron_right,
+            color: brandInk,
+            size: 14,
+          ),
+          onTap: () => _showDetail(kind),
+        ),
         const Divider(height: 1, color: line),
       ],
     );

@@ -2322,3 +2322,21 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   선택 손잡이를 끌어 범위를 늘린 뒤 수정하고 저장하는 것도 확인했다.
 - [GitHub Pages 배포 44840451942](https://github.com/namsoon00/writing-human/actions/runs/44840451942)
   가 성공했다. iOS·Android 실기기와 모바일 Safari는 검증하지 않았다.
+
+## 2026-11-21 · 종이 견본 중심의 쓰기 도구 배포 검증
+
+- 배포 중인 `42ea0ad`에서 별도 체크아웃을 만들고 쓰기 도구 관련 변경만 적용했다.
+  `dart format --output=none --set-exit-if-changed lib test tool/capture_preview_test.dart`,
+  `flutter analyze --no-pub`, `flutter test --no-pub` 전체 217개를 통과했다.
+- `node tool/build_github_pages.mjs`로 기존 `/writing-human/` 경로의 release 빌드를 완료했다.
+  GitHub Pages 워크플로와 Sites의 project_id·접근 범위·서버 설정은 변경하지 않았다.
+- 종이 견본은 실제 본문과 같은 글꼴·잉크·밑칠 표시 함수를 사용한다. 펜·형광펜 선택은
+  도구 화면을 유지하고, 닫으면 같은 본문·커서로 돌아온다. 밑칠 지우기는 형광펜의
+  보조 동작이며 색·농도는 현재 책에만, 책 밖에서는 기본 설정에 적용된다.
+- iOS·Android 플랫폼 위젯 테스트에서 한글 조합 보호와 밑칠·범위 지우기를 확인했다.
+  도구 전환만으로 저장하지 않는 것, 책별 설정 분리, 본문·커서·스크롤·밑칠 보존,
+  설정 저장 실패와 재시도, 꺼 둔 밑칠 복원을 확인했다. 새 UI 저장 테스트는 메모리
+  저장소를 사용했으며 실제 디스크나 실기기 검증으로 보고하지 않는다.
+- 실제 브라우저 조작과 iOS·Android 실기기는 이번 변경에서 검증하지 않았다.
+  이 대화에서는 브라우저 접근 도구를 사용할 수 없었다. 배포 완료와 제공 파일 확인은
+  후속 검증 기록으로 구분한다.

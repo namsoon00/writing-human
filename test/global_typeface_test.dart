@@ -347,6 +347,7 @@ void main() {
             .selected,
         isTrue,
       );
+      await tester.ensureVisible(find.text('나눔고딕'));
       await tester.tap(find.text('나눔고딕'));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('닫기'));

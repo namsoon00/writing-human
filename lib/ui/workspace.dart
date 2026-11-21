@@ -589,7 +589,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         onToolSelected: (tool) {
           if (_activePanel?.isCurrent != true || _accountLocked) return;
           setState(() => _paperTool = tool);
-          Navigator.of(context).pop();
         },
       ),
     );

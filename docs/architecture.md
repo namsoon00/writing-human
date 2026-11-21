@@ -6,8 +6,18 @@
 섞은 미색과 종이 결을 쓰고 안전 영역을 포함한 바탕을 그린다. PaperPanelTitle은
 잉크 표식과 쓰는 인간체 제목을 공유하며 PaperPanelHeader는 닫기와 가는 인쇄선을
 배치한다. control_theme.dart는 버튼·목록·선택 상태와 가는 슬라이더를 같은 먹갈색으로
-맞춘다. ToolsScreen의 StationeryTool은 문구를 그리는 정적 벡터 그림이며 실제 동작과
-접근성 이름은 바깥의 버튼이 담당한다. 글꼴·크기 견본은 현재 종이와 잉크를 읽는다.
+맞춘다. ToolsScreen은 책 꾸미기처럼 작은 가운데 제목과 종이 견본을 먼저 두고,
+StationeryTool의 가로 문구 그림으로 펜·형광펜을 고른다. 정적 벡터 그림의 실제 동작과
+접근성 이름은 바깥의 버튼이 담당한다. 견본은 styleFor(book)의 내지·글꼴·크기·잉크를
+읽으며 실제 본문과 같은 pencilTextSpan/passageWashStyle로 합성 구절을 밑칠한다.
+견본을 만들거나 도구만 고르는 것으로 페이지·주석을 저장하지 않는다.
+
+ToolsScreen이 현재 도구를 화면 상태로 보관하고 Workspace의 PaperTool을 함께 갱신한다.
+선택 시 route를 닫지 않으며 닫기·뒤로 가기로 기존 편집기로 돌아온다. 펜에는 기존
+글씨 설정을, 형광펜과 지우개에는 밑칠 색·농도와 보조 지우기 동작을 표시한다.
+색·농도는 기존 BookDetailChoice의 tone/variant를 사용한다. 책 안에서는
+saveBookAppearance로 pencil 항목만 변경하고 기존 내지·다른 override를 유지한다.
+책 밖에서는 전역 WritingStyle의 pencil만 변경한다. 저장 실패와 재시도는 스크롤 밖에 둔다.
 재질과 장식은 입력값·선택·composing 및 저장 구조에 관여하지 않는다.
 
 ## 제품 용어와 저장 구조

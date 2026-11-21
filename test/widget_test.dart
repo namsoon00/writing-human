@@ -105,7 +105,12 @@ void main() {
           activeTool.evaluate().isEmpty ? find.text('쓰기 도구') : activeTool,
         );
         await tester.pumpAndSettle();
-        await tester.tap(find.text(label).hitTestable());
+        final choice = find.text(label);
+        await tester.ensureVisible(choice);
+        await tester.tap(choice);
+        await tester.pumpAndSettle();
+        expect(find.byType(ToolsScreen), findsOneWidget);
+        await tester.tap(find.byTooltip('닫기'));
         await tester.pumpAndSettle();
         expect(find.byType(ToolsScreen), findsNothing);
       }
@@ -175,7 +180,7 @@ void main() {
       expect(ranges(), [(1, 6)]);
       expect(store.writes, writes + 1);
 
-      await choose('지우개');
+      await choose('밑칠 지우기');
       expect(find.text('지우개').hitTestable(), findsOneWidget);
       final erase = await tester.startGesture(glyph(2));
       await erase.moveTo(glyph(4));
@@ -629,11 +634,13 @@ void main() {
       expect(find.text('책과 기록'), findsNothing);
       expect(find.text('기록 관리'), findsNothing);
       expect(find.text('쓰는 인간체'), findsOneWidget);
+      await tester.ensureVisible(find.text('나눔고딕'));
       await tester.tap(find.text('나눔고딕'));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('글씨 설정'));
       await tester.tap(find.text('글씨 설정'));
       await tester.pumpAndSettle();
-      expect(find.text('잉크'), findsNothing);
+      expect(find.text('글꼴'), findsNothing);
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
@@ -795,7 +802,10 @@ void main() {
 
     await tester.tap(menu);
     await tester.pumpAndSettle();
-    expect(find.text('글씨 설정').hitTestable(), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('tool-paper-specimen')).hitTestable(),
+      findsOneWidget,
+    );
     expect(find.text('쪽 목록'), findsNothing);
     expect(find.text('기기 동기화'), findsNothing);
     expect(find.text('책에 넣기'), findsNothing);

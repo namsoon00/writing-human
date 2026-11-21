@@ -8,8 +8,10 @@ class FontSizeControl extends StatefulWidget {
     super.key,
     required this.style,
     required this.onChanged,
+    this.showSpecimen = true,
   });
   final WritingStyle style;
+  final bool showSpecimen;
   final ValueChanged<double> onChanged;
 
   @override
@@ -68,40 +70,41 @@ class _FontSizeControlState extends State<FontSizeControl> {
             widget.onChanged(value);
           },
         ),
-        Container(
-          key: const ValueKey('font-paper-specimen'),
-          constraints: const BoxConstraints(minHeight: 86),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
-          decoration: BoxDecoration(
-            color: paperColors[widget.style.paperIndex],
-            image: paperGrain(paperColors[widget.style.paperIndex], .20),
-            border: Border.all(color: line, width: .7),
-            boxShadow: [
-              BoxShadow(
-                color: ink.withValues(alpha: .05),
-                blurRadius: 3,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: AnimatedSwitcher(
-            duration: MediaQuery.disableAnimationsOf(context)
-                ? Duration.zero
-                : const Duration(milliseconds: 150),
-            child: Text(
-              '마음에 남은 문장',
-              key: ValueKey(size),
-              maxLines: 2,
-              textAlign: TextAlign.center,
-              style: writingTextStyle(
-                widget.style.fontIndex,
-                size: size,
-                color: penColors[widget.style.penIndex],
-                useDevelopmentTypeface: widget.style.useDevelopmentTypeface,
+        if (widget.showSpecimen)
+          Container(
+            key: const ValueKey('font-paper-specimen'),
+            constraints: const BoxConstraints(minHeight: 86),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+            decoration: BoxDecoration(
+              color: paperColors[widget.style.paperIndex],
+              image: paperGrain(paperColors[widget.style.paperIndex], .20),
+              border: Border.all(color: line, width: .7),
+              boxShadow: [
+                BoxShadow(
+                  color: ink.withValues(alpha: .05),
+                  blurRadius: 3,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: AnimatedSwitcher(
+              duration: MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : const Duration(milliseconds: 150),
+              child: Text(
+                '마음에 남은 문장',
+                key: ValueKey(size),
+                maxLines: 2,
+                textAlign: TextAlign.center,
+                style: writingTextStyle(
+                  widget.style.fontIndex,
+                  size: size,
+                  color: penColors[widget.style.penIndex],
+                  useDevelopmentTypeface: widget.style.useDevelopmentTypeface,
+                ),
               ),
             ),
           ),
-        ),
       ],
     );
   }

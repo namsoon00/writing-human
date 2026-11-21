@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import 'paper_palette.dart';
 import 'paper_tool.dart';
 
-/// Small stationery drawings for choosing a tool on the writing paper.
+/// Static stationery specimens. Interaction and names belong to the buttons.
 class StationeryTool extends StatelessWidget {
   const StationeryTool({
     super.key,
     required this.tool,
     required this.color,
-    this.width = 72,
-    this.height = 66,
+    this.width = 136,
+    this.height = 42,
   });
 
   final PaperTool tool;
@@ -31,112 +31,101 @@ class _StationeryPainter extends CustomPainter {
   final PaperTool tool;
   final Color color;
 
+  void _body(Canvas canvas, Rect rect, Color tint, double radius) {
+    final shape = RRect.fromRectAndRadius(rect, Radius.circular(radius));
+    canvas.drawRRect(
+      shape.shift(const Offset(0, 3)),
+      Paint()
+        ..color = brandInk.withValues(alpha: .14)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+    canvas.drawRRect(
+      shape,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color.lerp(tint, Colors.white, .18)!,
+            tint,
+            Color.lerp(tint, Colors.black, .28)!,
+          ],
+          stops: const [0, .35, 1],
+        ).createShader(rect),
+    );
+    canvas.drawRRect(
+      shape,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = .6
+        ..color = brandInk.withValues(alpha: .3),
+    );
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     canvas.save();
-    canvas.scale(size.width / 72, size.height / 66);
-    canvas.translate(36, 30);
-    canvas.rotate(-.38);
+    // A single uniform scale keeps the nib and barrel in proportion.
+    final scale = (size.width / 140).clamp(0.0, size.height / 42);
+    canvas.translate(
+      (size.width - 140 * scale) / 2,
+      (size.height - 42 * scale) / 2,
+    );
+    canvas.scale(scale);
+    final brass = Paint()..color = const Color(0xffb39a69);
     final edge = Paint()
-      ..color = brandInk.withValues(alpha: .65)
+      ..color = const Color(0xff685135)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = .8;
+      ..strokeWidth = .65;
     switch (tool) {
       case PaperTool.writing:
-        final barrel = RRect.fromRectAndRadius(
-          const Rect.fromLTWH(-7, -27, 14, 35),
-          const Radius.circular(3),
-        );
-        canvas.drawRRect(
-          barrel,
-          Paint()
-            ..shader = LinearGradient(
-              colors: [
-                Color.lerp(color, Colors.black, .2)!,
-                color,
-                Color.lerp(color, paper, .35)!,
-                color,
-              ],
-            ).createShader(barrel.outerRect),
-        );
-        canvas.drawRRect(barrel, edge);
-        canvas.drawRect(
-          const Rect.fromLTWH(-7, 3, 14, 3),
-          Paint()..color = const Color(0xffbd9c62),
-        );
+        _body(canvas, const Rect.fromLTWH(37, 13, 99, 16), color, 5);
+        _body(canvas, const Rect.fromLTWH(23, 15, 16, 12), ink, 2);
+        canvas.drawRect(const Rect.fromLTWH(37, 13, 2, 16), brass);
+        canvas.drawRect(const Rect.fromLTWH(104, 13, 1.8, 16), brass);
+        canvas.drawRect(const Rect.fromLTWH(108, 13, .7, 16), brass);
         final nib = Path()
-          ..moveTo(-6, 8)
-          ..lineTo(-5, 17)
-          ..quadraticBezierTo(-2, 21, 0, 30)
-          ..quadraticBezierTo(2, 21, 5, 17)
-          ..lineTo(6, 8)
+          ..moveTo(3, 21)
+          ..lineTo(16, 15)
+          ..lineTo(24, 17)
+          ..lineTo(24, 25)
+          ..lineTo(16, 27)
           ..close();
-        canvas.drawPath(nib, Paint()..color = const Color(0xffc3a671));
+        canvas.drawPath(nib, brass);
         canvas.drawPath(nib, edge);
-        canvas.drawLine(const Offset(0, 15), const Offset(0, 29), edge);
-        canvas.drawCircle(const Offset(0, 14), 1.2, Paint()..color = color);
+        canvas.drawLine(const Offset(3, 21), const Offset(19, 21), edge);
+        canvas.drawCircle(const Offset(19, 21), 1, Paint()..color = ink);
       case PaperTool.highlighter:
-        final body = RRect.fromRectAndRadius(
-          const Rect.fromLTWH(-10, -25, 20, 39),
-          const Radius.circular(3),
-        );
-        canvas.drawRRect(body, Paint()..color = const Color(0xffd4bf78));
-        canvas.drawRRect(body, edge);
-        canvas.drawRect(
-          const Rect.fromLTWH(-10, -4, 20, 10),
-          Paint()..color = const Color(0xfff4edd6),
-        );
-        canvas.drawLine(const Offset(-6, 1), const Offset(6, 1), edge);
-        canvas.drawRect(
-          const Rect.fromLTWH(-8, 14, 16, 4),
-          Paint()..color = const Color(0xff6d644d),
-        );
+        final plastic = Color.lerp(color, paper, .58)!;
+        _body(canvas, const Rect.fromLTWH(40, 9, 95, 24), plastic, 4);
+        _body(canvas, const Rect.fromLTWH(21, 13, 24, 16), plastic, 3);
+        _body(canvas, const Rect.fromLTWH(128, 11, 7, 20), plastic, 2);
         final tip = Path()
-          ..moveTo(-7, 18)
-          ..lineTo(7, 18)
-          ..lineTo(7, 24)
-          ..lineTo(-7, 28)
+          ..moveTo(5, 18)
+          ..lineTo(20, 15)
+          ..lineTo(21, 26)
+          ..lineTo(8, 26)
           ..close();
-        canvas.drawPath(tip, Paint()..color = const Color(0xffbca14b));
+        canvas.drawPath(tip, Paint()..color = color);
         canvas.drawPath(tip, edge);
+        canvas.drawLine(
+          const Offset(45, 13),
+          const Offset(45, 29),
+          Paint()
+            ..color = brandInk.withValues(alpha: .2)
+            ..strokeWidth = .6,
+        );
       case PaperTool.eraser:
-        final block = RRect.fromRectAndRadius(
-          const Rect.fromLTWH(-14, -22, 28, 48),
-          const Radius.circular(4),
+        _body(
+          canvas,
+          const Rect.fromLTWH(42, 10, 56, 23),
+          const Color(0xffcfae99),
+          3,
         );
-        canvas.drawRRect(block, Paint()..color = const Color(0xffd3b3a0));
-        canvas.drawRRect(block, edge);
         canvas.drawRect(
-          const Rect.fromLTWH(-14, -14, 28, 25),
-          Paint()..color = const Color(0xffeee5d5),
+          const Rect.fromLTWH(61, 10, 27, 23),
+          Paint()..color = paper,
         );
-        canvas.drawLine(const Offset(-14, -14), const Offset(14, -14), edge);
-        canvas.drawLine(const Offset(-14, 11), const Offset(14, 11), edge);
-        canvas.drawLine(const Offset(-7, -3), const Offset(7, -3), edge);
-        canvas.drawLine(const Offset(-7, 1), const Offset(2, 1), edge);
-    }
-    canvas.rotate(.38);
-    canvas.translate(-36, -30);
-    final stroke = Paint()
-      ..color = tool == PaperTool.highlighter
-          ? const Color(0xffc6ae62).withValues(alpha: .65)
-          : color.withValues(alpha: .8)
-      ..strokeWidth = tool == PaperTool.highlighter ? 5 : 1
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    if (tool != PaperTool.eraser) {
-      canvas.drawPath(
-        Path()
-          ..moveTo(13, 61)
-          ..quadraticBezierTo(32, 56, 59, 60),
-        stroke,
-      );
-    } else {
-      canvas.drawLine(
-        const Offset(14, 61),
-        const Offset(59, 61),
-        stroke..color = muted.withValues(alpha: .35),
-      );
     }
     canvas.restore();
   }

@@ -2364,3 +2364,11 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - `flutter test tool/capture_tools_test.dart --no-pub`에서 펜·형광펜·밑칠 지우기와
   320×640·시스템 글자 2배 상태의 Flutter 렌더를 확인했다. 이 결과는 브라우저나
   iOS·Android 실기기 검수가 아니다. 공개 웹 배포 결과는 후속 기록으로 구분한다.
+
+- [GitHub Pages 배포 44880009175](https://github.com/namsoon00/writing-human/actions/runs/44880009175)가
+  소스 `ce524f4ca63dc4c8f276e839ac699bed8a254872`의 검사·테스트·빌드·게시를 완료했다.
+  [공개 웹](https://namsoon00.github.io/writing-human/)의 실행 파일이 검증한 로컬
+  release와 바이트 단위로 일치했다(SHA-256:
+  `e7d17dfdc8a284005c7498ebd4046540da91881f415bba410dc125cf891ebcf5`).
+  위쪽 도구 선택과 설정/전체 스크롤 분기의 식별 키 및 갱신된 버전 쿼리를 확인했다.
+  실제 공개 브라우저 조작과 iOS·Android 실기기는 미검증이다. 기존 Sites 설정은 유지했다.

@@ -44,6 +44,7 @@ void main() {
         'photo',
         '사진과 함께 읽는 원문입니다.\n구절을 천천히 옮겨 씁니다.',
         photoId: photoId,
+        photoRegion: const [.1, .25, .8, .9],
       );
       RegisteredOriginal? transcribed;
       Passage? opened;
@@ -88,8 +89,23 @@ void main() {
 
       await tester.tap(showPhoto);
       await finishPhotoLoad(tester);
-      expect(find.byType(OriginalPhoto), findsOneWidget);
+      final viewer = find.byType(InteractiveViewer);
+      final photo = find.descendant(
+        of: viewer,
+        matching: find.byType(OriginalPhoto),
+      );
+      expect(tester.widget<OriginalPhoto>(photo).region, isNull);
+      final image = tester.widget<Image>(
+        find.byKey(const ValueKey('saved-original-photo')),
+      );
+      expect(
+        (image.image as MemoryImage).bytes,
+        orderedEquals(intake.photo.bytes),
+      );
       expect(find.text('원본 사진'), findsOneWidget);
+      expect(find.text('볼 부분 고르기'), findsNothing);
+      expect(find.text('사진 전체 보기'), findsNothing);
+      expect(find.text('글자 부분 보기'), findsNothing);
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       expect(body, findsOneWidget);

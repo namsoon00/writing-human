@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 
 import '../data/original_photo_store.dart';
 import '../source/source_scan.dart';
-import 'original_photo_crop.dart';
 import 'paper_panel.dart';
 
 const _missingOriginalPhoto = '이 기기에 원본 사진이 없어요.\n사진을 담은 기기에서 열어 주세요.';
@@ -14,126 +13,25 @@ Future<void> showOriginalPhoto(
   BuildContext context,
   String id, {
   required Color color,
-  List<double>? region,
-  Future<bool> Function(List<double>?)? onSaveRegion,
 }) => Navigator.of(context).push<void>(
   paperPanelRoute(
-    (_) => _OriginalPhotoPanel(
-      id: id,
+    (_) => PaperPanel(
       color: color,
-      region: region,
-      onSaveRegion: onSaveRegion,
+      child: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 8, 12, 0),
+            child: PaperPanelHeader('원본 사진'),
+          ),
+          Expanded(
+            child: InteractiveViewer(maxScale: 6, child: OriginalPhoto(id: id)),
+          ),
+        ],
+      ),
     ),
     color: color,
   ),
 );
-
-class _OriginalPhotoPanel extends StatefulWidget {
-  const _OriginalPhotoPanel({
-    required this.id,
-    required this.color,
-    required this.region,
-    required this.onSaveRegion,
-  });
-
-  final String id;
-  final Color color;
-  final List<double>? region;
-  final Future<bool> Function(List<double>?)? onSaveRegion;
-
-  @override
-  State<_OriginalPhotoPanel> createState() => _OriginalPhotoPanelState();
-}
-
-class _OriginalPhotoPanelState extends State<_OriginalPhotoPanel> {
-  late List<double>? _region = widget.region;
-  bool _whole = false;
-  bool _working = false;
-  String? _error;
-
-  Future<void> _chooseRegion() async {
-    setState(() {
-      _working = true;
-      _error = null;
-    });
-    try {
-      final bytes = await const OriginalPhotoStore().load(widget.id);
-      if (!mounted) return;
-      if (bytes == null) {
-        setState(() => _error = _missingOriginalPhoto);
-        return;
-      }
-      final chosen = await chooseOriginalPhotoRegion(
-        context,
-        bytes,
-        color: widget.color,
-        current: _region,
-      );
-      if (!mounted || chosen == null) return;
-      final region = chosen.isEmpty ? null : chosen;
-      final saved = await widget.onSaveRegion!(region);
-      if (!mounted) return;
-      setState(() {
-        _region = region;
-        _whole = false;
-        if (!saved) _error = '사진 범위를 저장하지 못했어요.';
-      });
-    } catch (_) {
-      if (mounted) setState(() => _error = '사진 범위를 변경하지 못했어요.');
-    } finally {
-      if (mounted) setState(() => _working = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => PaperPanel(
-    color: widget.color,
-    child: Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 12, 0),
-          child: PaperPanelHeader('원본 사진', canClose: !_working),
-        ),
-        if (_region != null || widget.onSaveRegion != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Wrap(
-              alignment: WrapAlignment.center,
-              children: [
-                if (_region != null)
-                  TextButton(
-                    onPressed: _working
-                        ? null
-                        : () => setState(() => _whole = !_whole),
-                    child: Text(_whole ? '글자 부분 보기' : '사진 전체 보기'),
-                  ),
-                if (widget.onSaveRegion != null)
-                  TextButton(
-                    onPressed: _working ? null : _chooseRegion,
-                    child: const Text('볼 부분 고르기'),
-                  ),
-              ],
-            ),
-          ),
-        if (_error case final error?)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(error, textAlign: TextAlign.center),
-          ),
-        Expanded(
-          child: InteractiveViewer(
-            key: ValueKey(_whole),
-            maxScale: 6,
-            child: OriginalPhoto(
-              id: widget.id,
-              region: _whole ? null : _region,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
 
 class OriginalPhoto extends StatefulWidget {
   const OriginalPhoto({

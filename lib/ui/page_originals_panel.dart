@@ -129,7 +129,6 @@ class _PageOriginalsPanelState extends State<PageOriginalsPanel> {
                               context,
                               original.photoId!,
                               color: originalPanelColor,
-                              region: original.photoRegion,
                             ),
                       child: SingleChildScrollView(
                         child: Text(

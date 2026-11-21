@@ -87,7 +87,6 @@ Future<bool?> showOriginalSlip(
                                   context,
                                   photoId,
                                   color: panel,
-                                  region: original.photoRegion,
                                 ),
                                 child: const Text('원본 사진 크게 보기'),
                               ),

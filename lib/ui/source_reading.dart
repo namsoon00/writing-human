@@ -7,7 +7,6 @@ import 'package:flutter/rendering.dart';
 import '../data/model.dart';
 import '../data/library_search.dart';
 import '../source/originals.dart';
-import '../source/photo_lines.dart';
 import 'paper.dart';
 import 'paper_panel.dart';
 import 'original_edit.dart';
@@ -36,7 +35,6 @@ class SourceReading extends StatefulWidget {
     this.writingLocations = const {},
     this.onTranscribe,
     this.onExtractPhoto,
-    this.onSavePhotoRegion,
     this.onOpenWriting,
     this.onRetry,
     this.onSaveReflection,
@@ -57,8 +55,6 @@ class SourceReading extends StatefulWidget {
   final ValueChanged<RegisteredOriginal>? onTranscribe;
   final Future<RegisteredOriginal?> Function(RegisteredOriginal)?
   onExtractPhoto;
-  final Future<bool> Function(RegisteredOriginal, List<double>?)?
-  onSavePhotoRegion;
   final ValueChanged<Passage>? onOpenWriting;
   final VoidCallback? onRetry;
   final Future<bool> Function(RegisteredOriginal)? onDelete;
@@ -349,15 +345,8 @@ class _SourceReadingState extends State<SourceReading> {
     }
   }
 
-  Future<void> _showPhoto(RegisteredOriginal original) => showOriginalPhoto(
-    context,
-    original.photoId!,
-    color: originalPanelColor,
-    region: originalPhotoPreviewRegion(original, useWritingRange: false),
-    onSaveRegion: widget.onSavePhotoRegion == null
-        ? null
-        : (region) => widget.onSavePhotoRegion!(original, region),
-  );
+  Future<void> _showPhoto(RegisteredOriginal original) =>
+      showOriginalPhoto(context, original.photoId!, color: originalPanelColor);
 
   Future<void> _showCitations() => showDialog<void>(
     context: context,

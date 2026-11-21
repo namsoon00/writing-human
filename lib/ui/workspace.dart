@@ -1221,29 +1221,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                     original,
                   )
                 : null,
-            onSavePhotoRegion: (original, region) async {
-              if (!mounted ||
-                  c != owner ||
-                  _accountLocked ||
-                  owner.composing ||
-                  owner.saveError != null) {
-                return false;
-              }
-              final latest = originals()
-                  .where(
-                    (item) =>
-                        item.id == original.id &&
-                        item.photoId == original.photoId,
-                  )
-                  .firstOrNull;
-              if (latest == null) return false;
-              return owner.saveOriginalPhotoRegion(
-                bookId: bookId,
-                recordId: selectedPage.recordId,
-                original: latest,
-                region: region,
-              );
-            },
             onTranscribe: owner.saveError == null
                 ? (original) => Navigator.of(context).pop(original)
                 : null,

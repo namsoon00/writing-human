@@ -32,10 +32,14 @@ class ToolsScreen extends StatefulWidget {
 
 class _ToolsScreenState extends State<ToolsScreen> {
   late PaperTool _tool = widget.paperTool;
+  double? _previewFontSize;
   LibraryController get controller => widget.controller;
 
   void _select(PaperTool tool) {
-    setState(() => _tool = tool);
+    setState(() {
+      _tool = tool;
+      _previewFontSize = null;
+    });
     widget.onToolSelected(tool);
   }
 
@@ -72,12 +76,158 @@ class _ToolsScreenState extends State<ToolsScreen> {
       final tool = wash.enabled ? _tool : PaperTool.writing;
       final marking = tool != PaperTool.writing;
       final panel = panelPaperColor(paperColors[effectiveStyle.paperIndex]);
+      final preview = Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _tools(tool, penColors[style.penIndex], wash),
+            const SizedBox(height: 8),
+            _ToolSpecimen(
+              style: effectiveStyle.copy(fontSize: _previewFontSize),
+              tool: tool,
+            ),
+          ],
+        ),
+      );
+      final settings = Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (!wash.enabled)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  key: const ValueKey('enable-paper-highlighter'),
+                  onPressed: () {
+                    _changeWash(book, wash.copy(enabled: true));
+                    _select(PaperTool.highlighter);
+                  },
+                  icon: const Icon(Icons.border_color_outlined),
+                  label: const Text('밑칠 켜기'),
+                ),
+              ),
+            if (marking)
+              _washSettings(book, wash, tool)
+            else ...[
+              _row(
+                '잉크',
+                Wrap(
+                  children: [
+                    for (var i = 0; i < penColors.length; i++)
+                      _inkSwatch(
+                        label: ['먹빛', '브라운', '블루'][i],
+                        color: penColors[i],
+                        selected: style.penIndex == i,
+                        onTap: () =>
+                            controller.setStyle(style.copy(penIndex: i)),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              _settingsGroup('글씨 설정', [
+                LayoutBuilder(
+                  builder: (context, box) {
+                    final columns =
+                        box.maxWidth >= 310 &&
+                            MediaQuery.textScalerOf(context).scale(14) <= 20
+                        ? 2
+                        : 1;
+                    final width = (box.maxWidth - (columns - 1) * 8) / columns;
+                    Widget option(
+                      String name,
+                      String family,
+                      bool selected,
+                      VoidCallback choose, {
+                      FontWeight weight = FontWeight.w400,
+                    }) => SizedBox(
+                      width: width,
+                      child: ChoiceChip(
+                        label: SizedBox(
+                          width: double.infinity,
+                          child: Text(
+                            name,
+                            style: TextStyle(
+                              fontFamily: family,
+                              fontFamilyFallback: appFontFallback,
+                              fontWeight: weight,
+                              fontSize: 16,
+                              height: 1.6,
+                            ),
+                          ),
+                        ),
+                        labelPadding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        selected: selected,
+                        onSelected: (_) => choose(),
+                        selectedColor: panelSelectedColor(panel),
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.zero,
+                          side: BorderSide(color: line),
+                        ),
+                      ),
+                    );
+                    return Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        option(
+                          developmentFontLabel,
+                          developmentSerif,
+                          style.useDevelopmentTypeface,
+                          () => controller.setStyle(
+                            style.copy(useDevelopmentTypeface: true),
+                          ),
+                        ),
+                        for (var i = 0; i < 3; i++)
+                          option(
+                            fontNames[i],
+                            i == 2 ? 'NanumGothic' : serif,
+                            !style.useDevelopmentTypeface &&
+                                style.fontIndex == i,
+                            () => controller.setStyle(
+                              style.copy(
+                                fontIndex: i,
+                                useDevelopmentTypeface: false,
+                              ),
+                            ),
+                            weight: i == 1 ? FontWeight.w700 : FontWeight.w400,
+                          ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                FontSizeControl(
+                  style: effectiveStyle,
+                  showSpecimen: false,
+                  onPreviewChanged: (value) =>
+                      setState(() => _previewFontSize = value),
+                  onChanged: (value) =>
+                      controller.setStyle(style.copy(fontSize: value)),
+                ),
+                const SizedBox(height: 8),
+                _toggle(
+                  panel,
+                  '줄 가이드',
+                  style.guides,
+                  (value) => controller.setStyle(style.copy(guides: value)),
+                ),
+              ], initiallyExpanded: true),
+            ],
+          ],
+        ),
+      );
       return PaperPanel(
         color: panel,
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+              padding: const EdgeInsets.fromLTRB(12, 3, 12, 3),
               child: Row(
                 children: [
                   const SizedBox(width: 48),
@@ -100,152 +250,31 @@ class _ToolsScreenState extends State<ToolsScreen> {
               ),
             ),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _ToolSpecimen(style: effectiveStyle, tool: tool),
-                    const SizedBox(height: 24),
-                    _tools(tool, penColors[style.penIndex], wash),
-                    const Divider(height: 32),
-                    if (!wash.enabled)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          key: const ValueKey('enable-paper-highlighter'),
-                          onPressed: () {
-                            _changeWash(book, wash.copy(enabled: true));
-                            _select(PaperTool.highlighter);
-                          },
-                          icon: const Icon(Icons.border_color_outlined),
-                          label: const Text('밑칠 켜기'),
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  // Keep the result in view while the controls scroll. Large
+                  // accessibility text and short screens use one full scroll.
+                  final pinPreview =
+                      box.maxHeight >= 560 &&
+                      MediaQuery.textScalerOf(context).scale(16) <= 22;
+                  if (pinPreview) {
+                    return Column(
+                      children: [
+                        preview,
+                        Expanded(
+                          child: SingleChildScrollView(
+                            key: const ValueKey('tool-settings-scroll'),
+                            child: settings,
+                          ),
                         ),
-                      ),
-                    if (marking)
-                      _washSettings(book, wash, tool)
-                    else ...[
-                      _row(
-                        '잉크',
-                        Wrap(
-                          children: [
-                            for (var i = 0; i < penColors.length; i++)
-                              _inkSwatch(
-                                label: ['먹빛', '브라운', '블루'][i],
-                                color: penColors[i],
-                                selected: style.penIndex == i,
-                                onTap: () => controller.setStyle(
-                                  style.copy(penIndex: i),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _settingsGroup('글씨 설정', [
-                        const Text(
-                          '글꼴',
-                          style: TextStyle(fontSize: 13, color: muted),
-                        ),
-                        const SizedBox(height: 12),
-                        LayoutBuilder(
-                          builder: (context, box) {
-                            final columns =
-                                box.maxWidth >= 310 &&
-                                    MediaQuery.textScalerOf(
-                                          context,
-                                        ).scale(14) <=
-                                        20
-                                ? 2
-                                : 1;
-                            final width =
-                                (box.maxWidth - (columns - 1) * 8) / columns;
-                            Widget option(
-                              String name,
-                              String family,
-                              bool selected,
-                              VoidCallback choose, {
-                              FontWeight weight = FontWeight.w400,
-                            }) => SizedBox(
-                              width: width,
-                              child: ChoiceChip(
-                                label: SizedBox(
-                                  width: double.infinity,
-                                  child: Text(
-                                    name,
-                                    style: TextStyle(
-                                      fontFamily: family,
-                                      fontFamilyFallback: appFontFallback,
-                                      fontWeight: weight,
-                                      fontSize: 16,
-                                      height: 1.6,
-                                    ),
-                                  ),
-                                ),
-                                labelPadding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                selected: selected,
-                                onSelected: (_) => choose(),
-                                selectedColor: panelSelectedColor(panel),
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.zero,
-                                  side: BorderSide(color: line),
-                                ),
-                              ),
-                            );
-                            return Wrap(
-                              spacing: 8,
-                              runSpacing: 6,
-                              children: [
-                                option(
-                                  developmentFontLabel,
-                                  developmentSerif,
-                                  style.useDevelopmentTypeface,
-                                  () => controller.setStyle(
-                                    style.copy(useDevelopmentTypeface: true),
-                                  ),
-                                ),
-                                for (var i = 0; i < 3; i++)
-                                  option(
-                                    fontNames[i],
-                                    i == 2 ? 'NanumGothic' : serif,
-                                    !style.useDevelopmentTypeface &&
-                                        style.fontIndex == i,
-                                    () => controller.setStyle(
-                                      style.copy(
-                                        fontIndex: i,
-                                        useDevelopmentTypeface: false,
-                                      ),
-                                    ),
-                                    weight: i == 1
-                                        ? FontWeight.w700
-                                        : FontWeight.w400,
-                                  ),
-                              ],
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        FontSizeControl(
-                          style: effectiveStyle,
-                          showSpecimen: false,
-                          onChanged: (value) =>
-                              controller.setStyle(style.copy(fontSize: value)),
-                        ),
-                        const SizedBox(height: 8),
-                        _toggle(
-                          panel,
-                          '줄 가이드',
-                          style.guides,
-                          (value) =>
-                              controller.setStyle(style.copy(guides: value)),
-                        ),
-                      ], initiallyExpanded: true),
-                    ],
-                  ],
-                ),
+                      ],
+                    );
+                  }
+                  return SingleChildScrollView(
+                    key: const ValueKey('tool-full-scroll'),
+                    child: Column(children: [preview, settings]),
+                  );
+                },
               ),
             ),
             if (controller.saveError != null)
@@ -272,6 +301,7 @@ class _ToolsScreenState extends State<ToolsScreen> {
           box.maxWidth < MediaQuery.textScalerOf(context).scale(120) * 2;
       final width = narrow ? box.maxWidth : (box.maxWidth - 16) / 2;
       return Wrap(
+        key: const ValueKey('tool-picker'),
         spacing: 16,
         runSpacing: 12,
         children: [
@@ -300,7 +330,7 @@ class _ToolsScreenState extends State<ToolsScreen> {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
-                            vertical: 12,
+                            vertical: 8,
                           ),
                           child: Opacity(
                             opacity: enabled ? 1 : .4,
@@ -314,10 +344,10 @@ class _ToolsScreenState extends State<ToolsScreen> {
                                           BookDetailKind.pencil,
                                           wash,
                                         ),
-                                  width: 136,
-                                  height: 42,
+                                  width: 128,
+                                  height: 32,
                                 ),
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 4),
                                 Wrap(
                                   alignment: WrapAlignment.center,
                                   crossAxisAlignment: WrapCrossAlignment.center,
@@ -462,7 +492,7 @@ class _ToolSpecimen extends StatelessWidget {
       color: penColors[style.penIndex],
       useDevelopmentTypeface: style.useDevelopmentTypeface,
     );
-    const lines = ['마음에 남은 문장을', '천천히 옮겨 쓰면', '나의 시간이 됩니다.'];
+    const lines = ['마음에 남은 문장을', '천천히 옮겨 씁니다.'];
     return Semantics(
       label: switch (tool) {
         PaperTool.writing => '펜 글씨 견본',
@@ -471,8 +501,7 @@ class _ToolSpecimen extends StatelessWidget {
       },
       child: Container(
         key: const ValueKey('tool-paper-specimen'),
-        constraints: const BoxConstraints(minHeight: 240),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: color,
           image: paperGrain(color, .22),
@@ -508,15 +537,6 @@ class _ToolSpecimen extends StatelessWidget {
                 key: const ValueKey('tool-specimen-text'),
               ),
             ),
-            if (tool == PaperTool.writing) ...[
-              const SizedBox(height: 14),
-              SizedBox(
-                height: 18,
-                child: CustomPaint(
-                  painter: _InkStroke(penColors[style.penIndex]),
-                ),
-              ),
-            ],
           ],
         ),
       ),
@@ -540,34 +560,6 @@ class _SpecimenGuides extends CustomPainter {
   @override
   bool shouldRepaint(_SpecimenGuides oldDelegate) =>
       height != oldDelegate.height;
-}
-
-class _InkStroke extends CustomPainter {
-  const _InkStroke(this.color);
-  final Color color;
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawPath(
-      Path()
-        ..moveTo(0, 11)
-        ..cubicTo(
-          size.width * .25,
-          -1,
-          size.width * .55,
-          16,
-          size.width * .86,
-          5,
-        ),
-      Paint()
-        ..color = color.withValues(alpha: .85)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.6
-        ..strokeCap = StrokeCap.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_InkStroke oldDelegate) => color != oldDelegate.color;
 }
 
 class LibrarySettings extends StatelessWidget {

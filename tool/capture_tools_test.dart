@@ -69,7 +69,7 @@ void main() {
                     as RenderRepaintBoundary)
                 .toImage(pixelRatio: 2);
         final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-        final target = File('output/tools-specimen-20261121/$name.png');
+        final target = File('output/tools-layout-20261121/$name.png');
         await target.parent.create(recursive: true);
         await target.writeAsBytes(bytes!.buffer.asUint8List());
         image.dispose();

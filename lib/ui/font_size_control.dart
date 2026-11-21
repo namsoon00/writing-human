@@ -9,10 +9,12 @@ class FontSizeControl extends StatefulWidget {
     required this.style,
     required this.onChanged,
     this.showSpecimen = true,
+    this.onPreviewChanged,
   });
   final WritingStyle style;
   final bool showSpecimen;
   final ValueChanged<double> onChanged;
+  final ValueChanged<double?>? onPreviewChanged;
 
   @override
   State<FontSizeControl> createState() => _FontSizeControlState();
@@ -64,10 +66,14 @@ class _FontSizeControlState extends State<FontSizeControl> {
               .round(),
           value: size,
           label: size.toStringAsFixed(0),
-          onChanged: (value) => setState(() => _draft = value),
+          onChanged: (value) {
+            setState(() => _draft = value);
+            widget.onPreviewChanged?.call(value);
+          },
           onChangeEnd: (value) {
             setState(() => _draft = null);
             widget.onChanged(value);
+            widget.onPreviewChanged?.call(null);
           },
         ),
         if (widget.showSpecimen)

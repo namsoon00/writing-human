@@ -69,6 +69,65 @@ void main() {
   }
 
   testWidgets(
+    'Tool choices precede a compact sample and all default pen settings fit safe areas',
+    (tester) async {
+      tester.view.padding = const FakeViewPadding(top: 44, bottom: 34);
+      addTearDown(tester.view.resetPadding);
+      final controller = LibraryController(MemoryStore(), const Library());
+      addTearDown(controller.dispose);
+      await open(tester, controller, bookId: null);
+      final picker = find.byKey(const ValueKey('tool-picker'));
+      final specimen = find.byKey(const ValueKey('tool-paper-specimen'));
+      expect(
+        tester.getRect(picker).bottom,
+        lessThan(tester.getRect(specimen).top),
+      );
+      expect(tester.getSize(specimen).height, lessThanOrEqualTo(110));
+      final guides = find.widgetWithText(SwitchListTile, '줄 가이드');
+      expect(guides.hitTestable(), findsOneWidget);
+      expect(tester.getRect(guides).bottom, lessThanOrEqualTo(844 - 34));
+      for (final name in ['쓰는 인간체', '나눔명조', '나눔명조 Bold', '나눔고딕']) {
+        expect(find.text(name).hitTestable(), findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Compact sample stays visible while settings scroll and font size previews without saving',
+    (tester) async {
+      final store = MemoryStore()..data = _library;
+      final controller = LibraryController(store, _library);
+      addTearDown(controller.dispose);
+      await open(tester, controller);
+      tester.view.physicalSize = const Size(320, 640);
+      await tester.pumpAndSettle();
+      final specimen = find.byKey(const ValueKey('tool-paper-specimen'));
+      final before = tester.getRect(specimen);
+      final sliderFinder = find.byKey(const ValueKey('font-size-slider'));
+      await tester.ensureVisible(sliderFinder);
+      await tester.pumpAndSettle();
+      expect(tester.getRect(specimen), before);
+      expect(specimen.hitTestable(), findsOneWidget);
+      final slider = tester.widget<Slider>(sliderFinder);
+      slider.onChanged!(27);
+      await tester.pumpAndSettle();
+      final preview = tester.widget<Text>(
+        find.byKey(const ValueKey('tool-specimen-text')),
+      );
+      expect(preview.textSpan!.style!.fontSize, 27);
+      expect(controller.library.style.fontSize, 20);
+      expect(store.writes, 0);
+      slider.onChangeEnd!(27);
+      await tester.pumpAndSettle();
+      expect(store.data.style.fontSize, 27);
+      expect(store.data.pages.single.toJson(), _library.pages.single.toJson());
+      expect(tester.getRect(specimen).top, before.top);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'Tools stay open for contextual settings; erasing is secondary and reversible',
     (tester) async {
       final store = MemoryStore()..data = _library;

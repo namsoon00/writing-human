@@ -493,9 +493,10 @@ class _CollectionSheetState extends State<CollectionSheet> {
                 if (topLevel) ...[
                   Expanded(child: PaperPanelTitle(shelf ? '책장' : '내 글')),
                   if (shelf && !showSearch && widget.onSettings != null)
-                    TextButton(
+                    TextButton.icon(
                       onPressed: widget.onSettings,
-                      child: const Text('설정'),
+                      icon: const Icon(CupertinoIcons.gear, size: 17),
+                      label: const Text('설정'),
                     ),
                 ] else if (book != null) ...[
                   if (showingPractice)

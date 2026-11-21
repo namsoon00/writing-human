@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../data/library_controller.dart';
 import '../data/model.dart';
 import 'paper.dart';
-import 'paper_choice.dart';
 import 'paper_panel.dart';
 import 'paper_tool.dart';
 import 'font_size_control.dart';
@@ -579,96 +578,37 @@ class LibrarySettings extends StatelessWidget {
     animation: controller,
     builder: (context, _) {
       final style = controller.library.style;
+      final sync = onSync;
       return PaperPanel(
         child: Column(
           children: [
             const Padding(
               padding: EdgeInsets.fromLTRB(24, 6, 12, 8),
-              child: PaperPanelHeader('설정'),
+              child: PaperPanelHeader('책장 설정'),
             ),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                key: const ValueKey('library-settings-list'),
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
                 children: [
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(CupertinoIcons.archivebox, size: 20),
-                    title: const Text('기록 관리'),
-                    trailing: const Icon(
-                      CupertinoIcons.chevron_right,
-                      size: 16,
-                    ),
-                    onTap: onArchive,
-                  ),
-                  if (onSync != null)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(CupertinoIcons.cloud, size: 20),
-                      title: const Text('기기 동기화'),
-                      trailing: const Icon(
-                        CupertinoIcons.chevron_right,
-                        size: 16,
-                      ),
-                      onTap: onSync,
-                    ),
-                  _settingsGroup('소리와 효과', [
-                    _toggle(
-                      paper,
-                      '글씨 쓰는 소리',
-                      style.writingSound,
-                      (value) =>
-                          controller.setStyle(style.copy(writingSound: value)),
-                    ),
-                    _toggle(
-                      paper,
-                      '잉크 반응',
-                      style.penMotion,
-                      (value) =>
-                          controller.setStyle(style.copy(penMotion: value)),
-                    ),
-                    _toggle(
-                      paper,
-                      '종이 넘김 효과',
-                      style.pageMotion,
-                      (value) =>
-                          controller.setStyle(style.copy(pageMotion: value)),
-                    ),
-                    _toggle(
-                      paper,
-                      '종이 넘김 소리',
-                      style.pageSound,
-                      (value) =>
-                          controller.setStyle(style.copy(pageSound: value)),
-                    ),
-                  ]),
-                  const Divider(color: line),
+                  _settingsHeading('서재 기본값'),
+                  const SizedBox(height: 8),
+                  const Text('기본 종이', style: TextStyle(fontSize: 17)),
+                  const SizedBox(height: 3),
                   const Text(
-                    '기본 종이',
-                    style: TextStyle(fontSize: 13, color: muted),
+                    '책 없이 쓴 글과 내지를 따로 고르지 않은 책에 써요.',
+                    style: _settingsNoteStyle,
                   ),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      for (var i = 0; i < paperNames.length; i++)
-                        PaperChoice(
-                          index: i,
-                          selected: style.paperIndex == i,
-                          onSelected: (selected) {
-                            if (selected) {
-                              controller.setStyle(style.copy(paperIndex: i));
-                            }
-                          },
-                        ),
-                    ],
+                  const SizedBox(height: 12),
+                  _PaperStocks(
+                    selected: style.paperIndex,
+                    onSelected: (index) =>
+                        controller.setStyle(style.copy(paperIndex: index)),
                   ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('책의 디테일'),
-                    trailing: const Icon(
-                      CupertinoIcons.chevron_right,
-                      size: 16,
-                    ),
-                    onTap: () => Navigator.of(context).push(
+                  _settingsLink(
+                    '기본 장식',
+                    '책갈피·장서표·밑칠',
+                    () => Navigator.of(context).push(
                       paperPanelRoute<void>(
                         (_) => PaperPanel(
                           child: BookDetailTools(controller: controller),
@@ -676,14 +616,161 @@ class LibrarySettings extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (controller.saveError != null)
-                    TextButton(
-                      onPressed: controller.retrySave,
-                      child: const Text('설정 저장 실패 · 다시 시도'),
+                  const Divider(height: 1),
+                  _settingsGroup(
+                    '소리와 효과',
+                    [
+                      _toggle(
+                        paper,
+                        '글씨 쓰는 소리',
+                        style.writingSound,
+                        (value) => controller.setStyle(
+                          style.copy(writingSound: value),
+                        ),
+                      ),
+                      _toggle(
+                        paper,
+                        '잉크 반응',
+                        style.penMotion,
+                        (value) =>
+                            controller.setStyle(style.copy(penMotion: value)),
+                      ),
+                      _toggle(
+                        paper,
+                        '종이 넘김 효과',
+                        style.pageMotion,
+                        (value) =>
+                            controller.setStyle(style.copy(pageMotion: value)),
+                      ),
+                      _toggle(
+                        paper,
+                        '종이 넘김 소리',
+                        style.pageSound,
+                        (value) =>
+                            controller.setStyle(style.copy(pageSound: value)),
+                      ),
+                    ],
+                    subtitle: const Text(
+                      '글씨 쓰는 소리, 잉크 반응, 종이 넘김',
+                      style: _settingsNoteStyle,
                     ),
+                  ),
+                  const Divider(height: 1),
+                  const SizedBox(height: 16),
+                  _settingsHeading(sync == null ? '기록' : '기록과 기기'),
+                  const SizedBox(height: 4),
+                  _settingsLink('기록 관리', '백업·내보내기·휴지통', onArchive),
+                  if (sync != null) ...[
+                    const Divider(height: 1),
+                    _settingsLink('기기 동기화', '다른 기기에서 이어 쓰기', sync),
+                  ],
                 ],
               ),
             ),
+            if (controller.saveError != null)
+              PaperSettingsSaveNotice(onRetry: controller.retrySave),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+const _settingsNoteStyle = TextStyle(fontSize: 14, color: muted, height: 1.4);
+
+Widget _settingsHeading(String label) => Semantics(
+  header: true,
+  child: Text(label, style: const TextStyle(fontSize: 15, color: brandInk)),
+);
+
+Widget _settingsLink(String title, String subtitle, VoidCallback onTap) =>
+    ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(title, style: const TextStyle(fontSize: 17)),
+      subtitle: Text(subtitle, style: _settingsNoteStyle),
+      trailing: const Icon(CupertinoIcons.chevron_right, size: 15),
+      onTap: onTap,
+    );
+
+class _PaperStocks extends StatelessWidget {
+  const _PaperStocks({required this.selected, required this.onSelected});
+
+  final int selected;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      const gap = 6.0;
+      const labelSize = 14.0;
+      final minWidth =
+          MediaQuery.textScalerOf(context).scale(labelSize) * 3 + 12;
+      final columns = constraints.maxWidth >= 4 * minWidth + 3 * gap ? 4 : 2;
+      final width = (constraints.maxWidth - (columns - 1) * gap) / columns;
+      final corners = BorderRadius.circular(3);
+      return Material(
+        type: MaterialType.transparency,
+        child: Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (var index = 0; index < paperNames.length; index++)
+              Semantics(
+                button: true,
+                selected: selected == index,
+                child: InkWell(
+                  borderRadius: corners,
+                  onTap: () {
+                    if (selected != index) onSelected(index);
+                  },
+                  child: Ink(
+                    width: width,
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: selected == index
+                          ? panelSelectedColor(paper)
+                          : null,
+                      borderRadius: corners,
+                      border: Border.all(
+                        color: selected == index
+                            ? brandInk
+                            : Colors.transparent,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          height: 43,
+                          width: double.infinity,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: paperColors[index],
+                            image: paperGrain(
+                              paperColors[index],
+                              paperGrainOpacity[index],
+                            ),
+                            borderRadius: BorderRadius.circular(2),
+                            border: Border.all(color: line),
+                          ),
+                          child: selected == index
+                              ? const Icon(
+                                  CupertinoIcons.checkmark,
+                                  size: 17,
+                                  color: brandInk,
+                                )
+                              : null,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          paperNames[index],
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: labelSize),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       );
@@ -695,8 +782,10 @@ Widget _settingsGroup(
   String title,
   List<Widget> children, {
   bool initiallyExpanded = false,
+  Widget? subtitle,
 }) => ExpansionTile(
   title: Text(title),
+  subtitle: subtitle,
   initiallyExpanded: initiallyExpanded,
   textColor: brandInk,
   iconColor: muted,

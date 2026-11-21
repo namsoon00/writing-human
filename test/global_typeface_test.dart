@@ -254,6 +254,21 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('설정'));
       await tester.pumpAndSettle();
+      expect(find.text('책장 설정'), findsOneWidget);
+      final stocks = [for (final name in paperNames) find.text(name)];
+      expect(tester.getTopLeft(stocks[0]).dy, tester.getTopLeft(stocks[1]).dy);
+      expect(
+        tester.getTopLeft(stocks[2]).dy,
+        greaterThan(tester.getTopLeft(stocks[0]).dy),
+      );
+      await tester.scrollUntilVisible(
+        find.text('기록 관리'),
+        120,
+        scrollable: find.descendant(
+          of: find.byKey(const ValueKey('library-settings-list')),
+          matching: find.byType(Scrollable),
+        ),
+      );
       expect(find.text('기록 관리').hitTestable(), findsOneWidget);
       expect(tester.takeException(), isNull);
     },

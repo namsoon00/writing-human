@@ -129,6 +129,7 @@ SQLite v10은 `books.detail_overrides`에 빈 JSON 객체를 기본값으로 추
 보관함 안에서 책장과 기본 글 목록의 스크롤은 `PageStorage`에 각각 보관한다.
 책장의 설정과 기록 관리는 책장 위에 별도 페이지로 올리고, 닫으면 기존 목록으로
 돌아온다. 쓰기 도구의 글씨 설정과 책장 설정은 기존 `WritingStyle`을 갱신한다.
+책장 설정은 종이 견본과 ‘기본 장식’에서 서재의 공통값을 갱신하며, 책별 선택은 `Book`에 저장한다.
 쪽 낭독은 활성 쪽을, 책 상세의 낭독은 해당 책을 넘겨 같은 낭독 화면을 연다.
 
 표지에서 본문을 열 때는 기존 페이지 이동과 저장 큐를 사용한다. 앱을 열었을 때
@@ -404,7 +405,7 @@ DemoStore는 명시적으로 주입하는 개발 검증용 fixture로만 남으�
 
 아홉 가지 독립 설정은 `data/book_detail_style.dart`의 BookDetailsStyle에 보관한다. 기존 ribbon/bookplate/sourceSlip/pencil/ornament/binding/dateStamp에 recordDivider/pressedFlower가 추가됐다. BookDetailChoice의 enabled·variant·tone과 압화에 사용하는 optional placement를 기존 SQLite settings JSON과 웹 라이브러리에 저장한다. 이전 데이터에 새 키가 없으면 기본값을 읽는다. 동기화는 요소별 필드를 따로 병합한다.
 
-`ui/book_detail_design.dart`는 요소별 이름·세 모양·네 색을 정의하고, `ui/book_detail_tools.dart`는 개별 미리보기·표시 스위치·모양/색 칩·해당 요소만 초기화를 제공한다. 설정 진입은 기존 쓰기 취향의 ‘책의 디테일’이다. 장식 숨김은 메타데이터를 지우지 않으며 평문 책 정보·원문·날짜를 유지한다. `paper_palette.dart`와 `ink_mark.dart`를 분리하여 종이 면과 장식이 서로를 가져오는 의존 순환을 제거했다. 자세한 조형·상태·경계는 [독립 설계](book-details-design.md)를 따른다.
+`ui/book_detail_design.dart`는 요소별 이름·세 모양·네 색을 정의하고, `ui/book_detail_tools.dart`는 개별 미리보기·표시 스위치·모양/색 칩·해당 요소만 초기화를 제공한다. 책장의 ‘설정 → 기본 장식’에서 연다. 장식 숨김은 메타데이터를 지우지 않으며 평문 책 정보·원문·날짜를 유지한다. `paper_palette.dart`와 `ink_mark.dart`를 분리하여 종이 면과 장식이 서로를 가져오는 의존 순환을 제거했다. 자세한 조형·상태·경계는 [독립 설계](book-details-design.md)를 따른다.
 
 `ui/book_details.dart`의 천 책갈피·직조 헤드밴드는 정적인 CustomPainter다. 종이쪽지·장서표·날짜인·판면 장식은 실제 Flutter 위젯으로 표시한다. 장식 그림은 IgnorePointer/ExcludeSemantics로 입력과 분리하고, 날짜·이름·조작부는 텍스트와 접근성 이름을 유지한다. 장서표는 보관함의 책 안쪽 스크롤 목록에 배치해 작은 화면에서도 넘쳐나지 않는다.
 

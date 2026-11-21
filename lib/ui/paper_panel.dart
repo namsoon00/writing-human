@@ -112,3 +112,35 @@ class PaperPanelTitle extends StatelessWidget {
     ),
   );
 }
+
+class PaperSettingsSaveNotice extends StatelessWidget {
+  const PaperSettingsSaveNotice({super.key, required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Divider(height: 1),
+        const SizedBox(height: 8),
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Semantics(
+              liveRegion: true,
+              child: const Text(
+                '설정을 저장하지 못했어요.',
+                style: TextStyle(color: burgundy),
+              ),
+            ),
+            TextButton(onPressed: onRetry, child: const Text('다시 저장')),
+          ],
+        ),
+      ],
+    ),
+  );
+}

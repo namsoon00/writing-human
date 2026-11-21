@@ -645,10 +645,22 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('설정'));
+      final settings = find.widgetWithText(TextButton, '설정');
+      expect(
+        find.descendant(
+          of: settings,
+          matching: find.byIcon(CupertinoIcons.gear),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.getSize(settings).height, greaterThanOrEqualTo(48));
+      await tester.tap(settings);
       await tester.pumpAndSettle();
+      expect(find.text('책장 설정'), findsOneWidget);
+      expect(find.text('서재 기본값'), findsOneWidget);
+      expect(find.byIcon(CupertinoIcons.gear), findsNothing);
       for (final index in [3, 2]) {
-        await tester.tap(find.widgetWithText(ChoiceChip, paperNames[index]));
+        await tester.tap(find.text(paperNames[index]));
         await tester.pumpAndSettle();
         expect(store.data.style.paperIndex, index);
       }

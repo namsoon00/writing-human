@@ -509,9 +509,9 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(c.library.style.bookDetails.pressedFlower.placement, 2);
-      expect(find.text('설정 저장 실패 · 다시 시도'), findsOneWidget);
+      expect(find.text('설정을 저장하지 못했어요.'), findsOneWidget);
       store.fail = false;
-      await tester.tap(find.text('설정 저장 실패 · 다시 시도'));
+      await tester.tap(find.text('다시 저장'));
       await tester.pumpAndSettle();
       expect(c.saveError, isNull);
       await tester.ensureVisible(

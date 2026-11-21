@@ -1,9 +1,9 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../data/library_controller.dart';
 import '../data/model.dart';
 import 'book_detail_design.dart';
 import 'book_details.dart';
+import 'paper_panel.dart';
 import 'paper_palette.dart';
 import 'pencil_marks.dart';
 import 'reading_details.dart';
@@ -23,51 +23,27 @@ class BookDetailTools extends StatelessWidget {
     animation: controller,
     builder: (context, _) => Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 4, 12, 8),
-          child: Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  '책의 디테일',
-                  style: TextStyle(
-                    fontFamily: appFontFamily,
-                    fontFamilyFallback: appFontFallback,
-                    fontSize: 21,
-                  ),
-                ),
-              ),
-              IconButton(
-                tooltip: '디테일 닫기',
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(CupertinoIcons.xmark, size: 18),
-              ),
-            ],
-          ),
-        ),
         const Padding(
-          padding: EdgeInsets.fromLTRB(24, 0, 24, 16),
-          child: Text(
-            '모양과 색을 고르면 바로 적용돼요.\n꾸밈을 꺼도 글과 기록은 그대로 남아요.',
-            style: TextStyle(color: muted, fontSize: 12, height: 1.7),
-          ),
+          padding: EdgeInsets.fromLTRB(24, 6, 12, 8),
+          child: PaperPanelHeader('기본 장식'),
         ),
         Expanded(
           child: ListView(
             children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(24, 4, 24, 12),
+                child: Text(
+                  '책에서 따로 고르지 않은 장식과 책 없이 쓴 글에 적용돼요.',
+                  style: TextStyle(color: muted, fontSize: 14, height: 1.4),
+                ),
+              ),
               for (final kind in BookDetailKind.values)
                 if (kind != BookDetailKind.binding) _item(context, kind),
             ],
           ),
         ),
         if (controller.saveError != null)
-          TextButton(
-            onPressed: controller.retrySave,
-            child: const Text(
-              '설정 저장 실패 · 다시 시도',
-              style: TextStyle(color: burgundy),
-            ),
-          ),
+          PaperSettingsSaveNotice(onRetry: controller.retrySave),
       ],
     ),
   );

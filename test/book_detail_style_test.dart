@@ -292,6 +292,14 @@ void main() {
         const BookDetailChoice(variant: 1, tone: 2),
       );
       c.setStyle(c.library.style.copy(bookDetails: original));
+      final inherited = c.addBook('기본값을 쓰는 책', '');
+      const fixedRibbon = BookDetailChoice(variant: 2, tone: 1);
+      await c.saveBookAppearance(
+        'b',
+        paperIndex: 3,
+        useDefaultPaper: false,
+        changes: {BookDetailKind.ribbon: fixedRibbon},
+      );
       await c.settled;
       await tester.pumpWidget(MaterialApp(home: Workspace(controller: c)));
       await tester.pumpAndSettle();
@@ -299,14 +307,25 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('설정'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('책의 디테일'));
+      await tester.tap(find.text('회백지'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('책의 디테일'));
+      expect(c.styleFor(inherited).paperIndex, 2);
+      expect(c.styleFor(null).paperIndex, 2);
+      expect(c.styleFor(c.library.books.first).paperIndex, 3);
+      await tester.ensureVisible(find.text('기본 장식'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('기본 장식'));
+      await tester.pumpAndSettle();
+      expect(find.text('책에서 따로 고르지 않은 장식과 책 없이 쓴 글에 적용돼요.'), findsOneWidget);
       expect(find.byKey(const ValueKey('detail-binding')), findsNothing);
       await tester.tap(find.byKey(const ValueKey('detail-ribbon-variant-1')));
       await tester.pumpAndSettle();
       expect(c.library.style.bookDetails.ribbon.variant, 1);
+      expect(c.detailsFor(inherited).ribbon.variant, 1);
+      expect(
+        c.detailsFor(c.library.books.first).ribbon.toJson(),
+        fixedRibbon.toJson(),
+      );
       store.fail = true;
       await tester.ensureVisible(
         find.byKey(const ValueKey('detail-ribbon-tone-2')),
@@ -316,8 +335,9 @@ void main() {
       await tester.pumpAndSettle();
       final retry = find.descendant(
         of: find.byType(BookDetailTools),
-        matching: find.text('설정 저장 실패 · 다시 시도'),
+        matching: find.text('다시 저장'),
       );
+      expect(find.text('설정을 저장하지 못했어요.'), findsOneWidget);
       expect(retry, findsOneWidget);
       store.fail = false;
       await tester.tap(retry);

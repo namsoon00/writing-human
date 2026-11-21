@@ -2489,3 +2489,11 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   실제 Safari·Chrome 조작과 iOS·Android 실기기는 이번 변경에서 검증하지 않았다.
 - 네 역할의 페르소나를 검토하고, 기획자의 새 필사/기존 쪽 복귀 구분과 개발자의
   경로 종료 중 연속 탭 검증 기준을 보완했다. 공개 배포 결과는 후속 기록으로 남긴다.
+
+- [GitHub Pages 배포 44963456582](https://github.com/namsoon00/writing-human/actions/runs/44963456582)가
+  소스 `4e2f9bf8876658a7583a4cee4c55873d92aba609`의 분석·테스트·빌드·게시를 완료했다.
+  [공개 웹](https://namsoon00.github.io/writing-human/)의 실행 파일이 검증한 release와
+  바이트 단위로 일치했다(SHA-256:
+  `0f9a5b24c129873b6ced20525e0e9a436e71a1adb62a76871ff49cb3b6f87db0`).
+  갱신된 로더·실행 파일 버전도 확인했다. 실제 Safari·Chrome 조작과 iOS·Android
+  실기기는 미검증이며 기존 Sites 프로젝트·비공개 접근 범위·사용자 기록은 변경하지 않았다.

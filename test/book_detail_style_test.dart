@@ -316,8 +316,15 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('기본 장식'));
       await tester.pumpAndSettle();
-      expect(find.text('책에서 따로 고르지 않은 장식과 책 없이 쓴 글에 적용돼요.'), findsOneWidget);
+      expect(find.textContaining('책에서 따로 고르지 않은 장식에 적용돼요.'), findsOneWidget);
       expect(find.byKey(const ValueKey('detail-binding')), findsNothing);
+      expect(find.byType(BookDetailSample), findsWidgets);
+      expect(find.text('모양'), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('detail-ribbon')));
+      await tester.pumpAndSettle();
+      expect(find.text('책갈피 표시'), findsOneWidget);
+      expect(find.text('모양'), findsOneWidget);
+      expect(find.text('색'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('detail-ribbon-variant-1')));
       await tester.pumpAndSettle();
       expect(c.library.style.bookDetails.ribbon.variant, 1);
@@ -333,10 +340,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('detail-ribbon-tone-2')));
       await tester.pumpAndSettle();
-      final retry = find.descendant(
-        of: find.byType(BookDetailTools),
-        matching: find.text('다시 저장'),
-      );
+      final retry = find.text('다시 저장').hitTestable();
       expect(find.text('설정을 저장하지 못했어요.'), findsOneWidget);
       expect(retry, findsOneWidget);
       store.fail = false;
@@ -352,6 +356,14 @@ void main() {
       expect(c.library.style.bookDetails.ribbon.enabled, isFalse);
       expect(c.library.style.bookDetails.ribbon.variant, 1);
       expect(c.library.style.bookDetails.ribbon.tone, 2);
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.byKey(const ValueKey('detail-ribbon-tone-2')),
+            )
+            .onPressed,
+        isNull,
+      );
       await tester.ensureVisible(
         find.byKey(const ValueKey('detail-ribbon-reset')),
       );
@@ -367,6 +379,10 @@ void main() {
         original.dateStamp.toJson(),
       );
       expect(c.library.activePage!.text, specimen().activePage!.text);
+      await tester.tap(find.byTooltip('뒤로'));
+      await tester.pumpAndSettle();
+      expect(find.text('기본 장식'), findsOneWidget);
+      expect(find.text('사선 끝 · 포도'), findsOneWidget);
     },
   );
 

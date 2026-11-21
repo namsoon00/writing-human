@@ -474,12 +474,14 @@ void main() {
   );
 
   testWidgets(
-    'New element controls preserve other settings and retry failed saves',
+    'Decoration editor returns to the scrolled list and retries saves with large text',
     (tester) async {
-      tester.view.physicalSize = const Size(390, 844);
+      tester.view.physicalSize = const Size(320, 640);
       tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       final store = MemoryStore();
       final c = LibraryController(store, specimen());
       addTearDown(c.dispose);
@@ -491,16 +493,15 @@ void main() {
       );
       await tester.pumpAndSettle();
       final list = find.byType(Scrollable).first;
+      final flower = find.byKey(const ValueKey('detail-pressedFlower'));
+      await tester.scrollUntilVisible(flower, 200, scrollable: list);
+      await tester.pumpAndSettle();
+      final beforeEdit = tester.getTopLeft(flower);
+      await tester.tap(flower);
+      await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
-        find.byKey(const ValueKey('detail-pressedFlower')),
-        200,
-        scrollable: list,
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('detail-pressedFlower')));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(
         find.byKey(const ValueKey('detail-pressedFlower-placement-2')),
+        150,
       );
       await tester.pumpAndSettle();
       store.fail = true;
@@ -523,6 +524,9 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(c.library.encode(), before);
+      await tester.tap(find.byTooltip('뒤로'));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(flower), beforeEdit);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();

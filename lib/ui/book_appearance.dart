@@ -10,7 +10,6 @@ import 'book_detail_tools.dart';
 import 'book_details.dart';
 import 'paper.dart';
 import 'paper_choice.dart';
-import 'reading_details.dart';
 
 Future<void> showBookAppearance(
   BuildContext context,
@@ -331,7 +330,7 @@ class _BookAppearanceState extends State<BookAppearance> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 4),
               minTileHeight: 64,
               horizontalTitleGap: 12,
-              leading: _DetailSample(kind: kind, choice: choice),
+              leading: BookDetailSample(kind: kind, choice: choice),
               title: Text(design.title),
               subtitle: Text(
                 choice.enabled
@@ -374,65 +373,6 @@ class _BookAppearanceState extends State<BookAppearance> {
       ],
     );
   }
-}
-
-class _DetailSample extends StatelessWidget {
-  const _DetailSample({required this.kind, required this.choice});
-
-  final BookDetailKind kind;
-  final BookDetailChoice choice;
-
-  @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-    child: IgnorePointer(
-      child: ExcludeFocus(
-        child: SizedBox(
-          width: 62,
-          height: 38,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(5),
-              border: Border.all(color: line),
-              color: const Color(0xfff3eadb),
-            ),
-            child: Opacity(
-              opacity: choice.enabled ? 1 : .42,
-              child: MediaQuery.withNoTextScaling(
-                child: Padding(
-                  padding: const EdgeInsets.all(5),
-                  child: switch (kind) {
-                    BookDetailKind.ribbon => Center(
-                      child: RibbonBookmark(
-                        choice: choice.copy(enabled: true),
-                        width: 10,
-                        height: 25,
-                      ),
-                    ),
-                    BookDetailKind.pressedFlower => Center(
-                      child: PressedFlower(
-                        choice: choice.copy(enabled: true),
-                        size: 26,
-                      ),
-                    ),
-                    _ => FittedBox(
-                      fit: BoxFit.contain,
-                      child: SizedBox(
-                        width: 155,
-                        child: BookDetailPreview(
-                          kind: kind,
-                          choice: choice.copy(enabled: true),
-                        ),
-                      ),
-                    ),
-                  },
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
 }
 
 class _OpenBook extends StatelessWidget {

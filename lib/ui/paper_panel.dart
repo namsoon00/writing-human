@@ -7,8 +7,9 @@ import 'paper.dart';
 MaterialPageRoute<T> paperPanelRoute<T>(
   WidgetBuilder builder, {
   Color color = paper,
+  bool fullscreenDialog = true,
 }) => MaterialPageRoute<T>(
-  fullscreenDialog: true,
+  fullscreenDialog: fullscreenDialog,
   builder: (context) => Scaffold(
     key: const ValueKey('paper-panel-page'),
     backgroundColor: color,
@@ -46,9 +47,15 @@ class PaperPanel extends StatelessWidget {
 }
 
 class PaperPanelHeader extends StatelessWidget {
-  const PaperPanelHeader(this.title, {super.key, this.canClose = true});
+  const PaperPanelHeader(
+    this.title, {
+    super.key,
+    this.canClose = true,
+    this.showBackButton = false,
+  });
   final String title;
   final bool canClose;
+  final bool showBackButton;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -56,12 +63,19 @@ class PaperPanelHeader extends StatelessWidget {
     children: [
       Row(
         children: [
-          Expanded(child: PaperPanelTitle(title)),
-          IconButton(
-            tooltip: '닫기',
-            onPressed: canClose ? () => Navigator.maybePop(context) : null,
-            icon: const Icon(CupertinoIcons.xmark, size: 18),
-          ),
+          if (showBackButton)
+            IconButton(
+              tooltip: '뒤로',
+              onPressed: canClose ? () => Navigator.maybePop(context) : null,
+              icon: const Icon(CupertinoIcons.chevron_left, size: 18),
+            ),
+          Expanded(child: PaperPanelTitle(title, showInkMark: !showBackButton)),
+          if (!showBackButton)
+            IconButton(
+              tooltip: '닫기',
+              onPressed: canClose ? () => Navigator.maybePop(context) : null,
+              icon: const Icon(CupertinoIcons.xmark, size: 18),
+            ),
         ],
       ),
       const SizedBox(height: 12),
@@ -84,17 +98,25 @@ class PaperPanelHeader extends StatelessWidget {
 }
 
 class PaperPanelTitle extends StatelessWidget {
-  const PaperPanelTitle(this.title, {super.key, this.fontSize = 25});
+  const PaperPanelTitle(
+    this.title, {
+    super.key,
+    this.fontSize = 25,
+    this.showInkMark = true,
+  });
   final String title;
   final double fontSize;
+  final bool showInkMark;
 
   @override
   Widget build(BuildContext context) => Semantics(
     header: true,
     child: Row(
       children: [
-        const InkMark(size: 13),
-        const SizedBox(width: 10),
+        if (showInkMark) ...[
+          const InkMark(size: 13),
+          const SizedBox(width: 10),
+        ],
         Flexible(
           child: Text(
             title,

@@ -2402,3 +2402,9 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - 새 검사는 메모리 저장소와 Flutter 테스트 렌더를 사용했다. 이미지는
   `output/tools-eraser-top-20261121/`에 보관했으며 실제 브라우저·실기기 캡처가 아니다.
   실제 공개 웹 조작과 iOS·Android 실기기는 이번 변경에서 검증하지 않았다.
+
+- [GitHub Pages 배포 44896183228](https://github.com/namsoon00/writing-human/actions/runs/44896183228)가
+  소스 `24ee5e060e71e9672654615a17671aa97a9c1180`의 검사·테스트·빌드·게시를 완료했다.
+  [공개 웹](https://namsoon00.github.io/writing-human/)의 실행 파일이 검증한 release와 바이트 단위로 일치했다
+  (SHA-256: `5b0509b9a6d6e52074849b6c7414c0d4fc74c4f6aa0fd3d5de5e97614dd5cbad`). 갱신된 로더·실행 파일의 버전 쿼리도 확인했다.
+  실제 공개 브라우저 조작과 iOS·Android 실기기는 미검증이며 기존 Sites 설정은 유지했다.

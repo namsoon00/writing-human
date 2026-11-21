@@ -2430,3 +2430,10 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 
 - 배포 준비 중 들어온 `b9e29ff`의 책 꾸미기 변경을 보존한 버전에 합친 뒤,
   포맷 검사·정적 분석·전체 Flutter 테스트 220개와 release 웹 빌드를 다시 통과했다.
+
+- [GitHub Pages 배포 44961337913](https://github.com/namsoon00/writing-human/actions/runs/44961337913)가
+  소스 `3ebd4c40d8823c3f2c77ae53d8e6c9069ff4b41b`의 검사·테스트·빌드·게시를 완료했다.
+  [공개 웹](https://namsoon00.github.io/writing-human/)의 실행 파일이 검증한 release와 바이트 단위로 일치했다
+  (SHA-256: `f6bbf0d1dc1accaaf3d992c1ca01c65c6276ca5c1b8ffcacfc108f042b8cc2e8`). 본문 아래 출처·사진과 전체 너비 필사 버튼의 식별 키,
+  갱신된 버전 쿼리를 확인했다. 실제 Safari·Chrome 조작과 iOS·Android 실기기는
+  미검증이며 기존 Sites 프로젝트·비공개 접근 범위·사용자 기록은 변경하지 않았다.

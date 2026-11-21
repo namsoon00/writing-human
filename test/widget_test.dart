@@ -180,7 +180,7 @@ void main() {
       expect(ranges(), [(1, 6)]);
       expect(store.writes, writes + 1);
 
-      await choose('밑칠 지우기');
+      await choose('지우개');
       expect(find.text('지우개').hitTestable(), findsOneWidget);
       final erase = await tester.startGesture(glyph(2));
       await erase.moveTo(glyph(4));

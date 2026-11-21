@@ -69,7 +69,7 @@ void main() {
                     as RenderRepaintBoundary)
                 .toImage(pixelRatio: 2);
         final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-        final target = File('output/tools-layout-20261121/$name.png');
+        final target = File('output/tools-eraser-top-20261121/$name.png');
         await target.parent.create(recursive: true);
         await target.writeAsBytes(bytes!.buffer.asUint8List());
         image.dispose();
@@ -87,7 +87,9 @@ void main() {
     await tester.tap(erase);
     await tester.pumpAndSettle();
     await capture('eraser-390');
-    await tester.tap(erase);
+    await tester.tap(
+      find.byKey(const ValueKey('choose-paper-tool-highlighter')),
+    );
     await tester.pumpAndSettle();
     tester.view.physicalSize = const Size(320, 640);
     await tester.pumpAndSettle();

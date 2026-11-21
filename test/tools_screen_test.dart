@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/data/library_controller.dart';
@@ -76,6 +78,21 @@ void main() {
       final controller = LibraryController(MemoryStore(), const Library());
       addTearDown(controller.dispose);
       await open(tester, controller, bookId: null);
+      for (final size in [const Size(320, 640), const Size(390, 844)]) {
+        tester.view.physicalSize = size;
+        await tester.pumpAndSettle();
+        final buttons = [
+          for (final tool in PaperTool.values)
+            find.byKey(ValueKey('choose-paper-tool-${tool.name}')),
+        ];
+        final top = tester.getRect(buttons.first).top;
+        for (final button in buttons) {
+          expect(button.hitTestable(), findsOneWidget);
+          expect(tester.getRect(button).top, top);
+          expect(tester.getSize(button).width, greaterThanOrEqualTo(48));
+          expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
+        }
+      }
       final picker = find.byKey(const ValueKey('tool-picker'));
       final specimen = find.byKey(const ValueKey('tool-paper-specimen'));
       expect(
@@ -128,53 +145,90 @@ void main() {
   );
 
   testWidgets(
-    'Tools stay open for contextual settings; erasing is secondary and reversible',
+    'All three tools are visible above the specimen and selection never writes user data',
     (tester) async {
       final store = MemoryStore()..data = _library;
       final controller = LibraryController(store, _library);
       addTearDown(controller.dispose);
       final before = controller.library.encode();
       final selected = <PaperTool>[];
-      await open(tester, controller, onSelected: selected.add);
-      expect(
-        find.byKey(const ValueKey('tool-paper-specimen')).hitTestable(),
-        findsOneWidget,
-      );
-      expect(find.text('밑칠 지우기'), findsNothing);
-      await tester.tap(
-        find.byKey(const ValueKey('choose-paper-tool-highlighter')),
-      );
-      await tester.pumpAndSettle();
-      expect(selected, [PaperTool.highlighter]);
-      expect(find.byType(ToolsScreen), findsOneWidget);
-      expect(find.text('잉크'), findsNothing);
-      final text = tester.widget<Text>(
-        find.byKey(const ValueKey('tool-specimen-text')),
-      );
-      final spans = (text.textSpan! as TextSpan).children!.cast<TextSpan>();
-      expect(
-        spans.where((s) => s.style?.backgroundColor != null).single.text,
-        '천천히 옮겨',
-      );
-      final erase = find.byKey(const ValueKey('choose-paper-tool-eraser'));
-      await tester.ensureVisible(erase);
-      await tester.tap(erase);
-      await tester.pumpAndSettle();
-      expect(selected.last, PaperTool.eraser);
-      final erased = tester.widget<Text>(
-        find.byKey(const ValueKey('tool-specimen-text')),
-      );
-      expect(
-        (erased.textSpan! as TextSpan).children!.cast<TextSpan>().any(
-          (s) => s.style?.backgroundColor != null,
-        ),
-        isFalse,
-      );
-      await tester.tap(erase);
-      await tester.pumpAndSettle();
-      expect(selected.last, PaperTool.highlighter);
-      expect(store.writes, 0);
-      expect(controller.library.encode(), before);
+      final semantics = tester.ensureSemantics();
+      try {
+        await open(tester, controller, onSelected: selected.add);
+        void expectSelected(PaperTool selectedTool) {
+          for (final tool in PaperTool.values) {
+            final label = tool == PaperTool.writing ? '펜' : tool.label;
+            final node = tester
+                .getSemantics(
+                  find.byWidgetPredicate(
+                    (widget) =>
+                        widget is Semantics && widget.properties.label == label,
+                  ),
+                )
+                .getSemanticsData();
+            expect(
+              node.flagsCollection.isSelected,
+              tool == selectedTool ? ui.Tristate.isTrue : ui.Tristate.isFalse,
+            );
+            expect(node.hasAction(ui.SemanticsAction.tap), isTrue);
+          }
+        }
+
+        expectSelected(PaperTool.writing);
+        expect(
+          find.byKey(const ValueKey('tool-paper-specimen')).hitTestable(),
+          findsOneWidget,
+        );
+        expect(find.text('지우개').hitTestable(), findsOneWidget);
+        expect(find.text('밑칠 지우기'), findsNothing);
+        await tester.tap(
+          find.byKey(const ValueKey('choose-paper-tool-eraser')),
+        );
+        await tester.pumpAndSettle();
+        expect(selected.last, PaperTool.eraser);
+        expectSelected(PaperTool.eraser);
+        expect(find.byKey(const ValueKey('tool-wash-density')), findsNothing);
+        await tester.tap(
+          find.byKey(const ValueKey('choose-paper-tool-highlighter')),
+        );
+        await tester.pumpAndSettle();
+        expect(selected, [PaperTool.eraser, PaperTool.highlighter]);
+        expectSelected(PaperTool.highlighter);
+        expect(find.byType(ToolsScreen), findsOneWidget);
+        expect(find.text('잉크'), findsNothing);
+        final text = tester.widget<Text>(
+          find.byKey(const ValueKey('tool-specimen-text')),
+        );
+        final spans = (text.textSpan! as TextSpan).children!.cast<TextSpan>();
+        expect(
+          spans.where((s) => s.style?.backgroundColor != null).single.text,
+          '천천히 옮겨',
+        );
+        final erase = find.byKey(const ValueKey('choose-paper-tool-eraser'));
+        await tester.ensureVisible(erase);
+        await tester.tap(erase);
+        await tester.pumpAndSettle();
+        expect(selected.last, PaperTool.eraser);
+        final erased = tester.widget<Text>(
+          find.byKey(const ValueKey('tool-specimen-text')),
+        );
+        expect(
+          (erased.textSpan! as TextSpan).children!.cast<TextSpan>().any(
+            (s) => s.style?.backgroundColor != null,
+          ),
+          isFalse,
+        );
+        expect(find.byKey(const ValueKey('tool-wash-density')), findsNothing);
+        await tester.tap(
+          find.byKey(const ValueKey('choose-paper-tool-highlighter')),
+        );
+        await tester.pumpAndSettle();
+        expect(selected.last, PaperTool.highlighter);
+        expect(store.writes, 0);
+        expect(controller.library.encode(), before);
+      } finally {
+        semantics.dispose();
+      }
     },
   );
 
@@ -294,7 +348,7 @@ void main() {
       await tester.ensureVisible(erase);
       await tester.tap(erase);
       await tester.pumpAndSettle();
-      expect(find.text('밑칠한 곳을 문지르면 지워져요.'), findsOneWidget);
+      expect(find.text('밑칠한 곳을 문지르면 지워져요.\n글씨는 그대로 남아요.'), findsOneWidget);
       expect(store.data.pages, isEmpty);
       expect(tester.takeException(), isNull);
     },

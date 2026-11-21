@@ -118,14 +118,18 @@ class _StationeryPainter extends CustomPainter {
       case PaperTool.eraser:
         _body(
           canvas,
-          const Rect.fromLTWH(42, 10, 56, 23),
+          const Rect.fromLTWH(37, 9, 66, 25),
           const Color(0xffcfae99),
-          3,
+          4,
         );
-        canvas.drawRect(
-          const Rect.fromLTWH(61, 10, 27, 23),
-          Paint()..color = paper,
-        );
+        _body(canvas, const Rect.fromLTWH(58, 9, 32, 25), paper, 1);
+        canvas.drawLine(const Offset(61, 10), const Offset(61, 33), edge);
+        canvas.drawLine(const Offset(87, 10), const Offset(87, 33), edge);
+        final sleeveInk = Paint()
+          ..color = brandInk.withValues(alpha: .38)
+          ..strokeWidth = .7;
+        canvas.drawLine(const Offset(67, 19), const Offset(82, 19), sleeveInk);
+        canvas.drawLine(const Offset(67, 23), const Offset(78, 23), sleeveInk);
     }
     canvas.restore();
   }

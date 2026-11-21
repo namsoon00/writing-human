@@ -7,7 +7,7 @@
 잉크 표식과 쓰는 인간체 제목을 공유하며 PaperPanelHeader는 닫기와 가는 인쇄선을
 배치한다. control_theme.dart는 버튼·목록·선택 상태와 가는 슬라이더를 같은 먹갈색으로
 맞춘다. ToolsScreen은 작은 가운데 제목 아래 StationeryTool의 가로 문구 그림으로
-펜·형광펜을 고르고, 바로 아래에 두 줄 종이 견본을 둔다. 정적 벡터 그림의 실제 동작과
+펜·형광펜·지우개를 고르고, 바로 아래에 두 줄 종이 견본을 둔다. 정적 벡터 그림의 실제 동작과
 접근성 이름은 바깥의 버튼이 담당한다. 견본은 styleFor(book)의 내지·글꼴·크기·잉크를
 읽으며 실제 본문과 같은 pencilTextSpan/passageWashStyle로 합성 구절을 밑칠한다.
 견본을 만들거나 도구만 고르는 것으로 페이지·주석을 저장하지 않는다.
@@ -18,7 +18,9 @@ FontSizeControl의 onPreviewChanged는 임시 크기만 전달한다. 드래그 
 
 ToolsScreen이 현재 도구를 화면 상태로 보관하고 Workspace의 PaperTool을 함께 갱신한다.
 선택 시 route를 닫지 않으며 닫기·뒤로 가기로 기존 편집기로 돌아온다. 펜에는 기존
-글씨 설정을, 형광펜과 지우개에는 밑칠 색·농도와 보조 지우기 동작을 표시한다.
+글씨 설정을, 형광펜에는 밑칠 색·농도를, 지우개에는 밑칠만 지운다는 안내를 표시한다.
+상단 세 도구 중 현재 PaperTool 하나만 선택 표시하며 지우개를 다시 누르는 것으로
+형광펜에 전환하지 않는다. 다른 도구는 상단에서 직접 고른다.
 색·농도는 기존 BookDetailChoice의 tone/variant를 사용한다. 책 안에서는
 saveBookAppearance로 pencil 항목만 변경하고 기존 내지·다른 override를 유지한다.
 책 밖에서는 전역 WritingStyle의 pencil만 변경한다. 저장 실패와 재시도는 스크롤 밖에 둔다.

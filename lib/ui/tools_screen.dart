@@ -73,7 +73,6 @@ class _ToolsScreenState extends State<ToolsScreen> {
       final effectiveStyle = controller.styleFor(book);
       final wash = effectiveStyle.bookDetails.pencil;
       final tool = wash.enabled ? _tool : PaperTool.writing;
-      final marking = tool != PaperTool.writing;
       final panel = panelPaperColor(paperColors[effectiveStyle.paperIndex]);
       final preview = Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
@@ -107,8 +106,14 @@ class _ToolsScreenState extends State<ToolsScreen> {
                   label: const Text('밑칠 켜기'),
                 ),
               ),
-            if (marking)
-              _washSettings(book, wash, tool)
+            if (tool == PaperTool.highlighter)
+              _washSettings(book, wash)
+            else if (tool == PaperTool.eraser)
+              const Text(
+                '밑칠한 곳을 문지르면 지워져요.\n글씨는 그대로 남아요.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, height: 1.6, color: muted),
+              )
             else ...[
               _row(
                 '잉크',
@@ -296,22 +301,23 @@ class _ToolsScreenState extends State<ToolsScreen> {
     BookDetailChoice wash,
   ) => LayoutBuilder(
     builder: (context, box) {
-      final narrow =
-          box.maxWidth < MediaQuery.textScalerOf(context).scale(120) * 2;
-      final width = narrow ? box.maxWidth : (box.maxWidth - 16) / 2;
+      const spacing = 8.0;
+      final minimumWidth = MediaQuery.textScalerOf(context).scale(16) * 3 + 32;
+      final columns = ((box.maxWidth + spacing) / (minimumWidth + spacing))
+          .floor()
+          .clamp(1, PaperTool.values.length);
+      final width = (box.maxWidth - (columns - 1) * spacing) / columns;
       return Wrap(
         key: const ValueKey('tool-picker'),
-        spacing: 16,
-        runSpacing: 12,
+        spacing: spacing,
+        runSpacing: 8,
         children: [
-          for (final tool in [PaperTool.writing, PaperTool.highlighter])
+          for (final tool in PaperTool.values)
             SizedBox(
               width: width,
               child: Builder(
                 builder: (context) {
-                  final active = tool == PaperTool.writing
-                      ? selected == tool
-                      : selected != PaperTool.writing;
+                  final active = selected == tool;
                   final enabled = wash.enabled || tool == PaperTool.writing;
                   final label = tool == PaperTool.writing ? '펜' : tool.label;
                   return Semantics(
@@ -319,6 +325,7 @@ class _ToolsScreenState extends State<ToolsScreen> {
                     selected: active,
                     enabled: enabled,
                     label: label,
+                    onTap: enabled ? () => _select(tool) : null,
                     excludeSemantics: true,
                     child: Material(
                       color: Colors.transparent,
@@ -328,7 +335,7 @@ class _ToolsScreenState extends State<ToolsScreen> {
                         borderRadius: BorderRadius.circular(3),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
+                            horizontal: 4,
                             vertical: 8,
                           ),
                           child: Opacity(
@@ -382,7 +389,7 @@ class _ToolsScreenState extends State<ToolsScreen> {
     },
   );
 
-  Widget _washSettings(Book? book, BookDetailChoice wash, PaperTool tool) {
+  Widget _washSettings(Book? book, BookDetailChoice wash) {
     final design = BookDetailDesign.of(BookDetailKind.pencil);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -440,33 +447,9 @@ class _ToolsScreenState extends State<ToolsScreen> {
             }
           },
         ),
-        const Divider(height: 28),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Semantics(
-            selected: tool == PaperTool.eraser,
-            child: TextButton.icon(
-              key: const ValueKey('choose-paper-tool-eraser'),
-              onPressed: () => _select(
-                tool == PaperTool.eraser
-                    ? PaperTool.highlighter
-                    : PaperTool.eraser,
-              ),
-              icon: Icon(
-                tool == PaperTool.eraser
-                    ? Icons.check
-                    : Icons.backspace_outlined,
-                size: 19,
-              ),
-              label: const Text('밑칠 지우기'),
-            ),
-          ),
-        ),
         const SizedBox(height: 12),
         Text(
-          tool == PaperTool.eraser
-              ? '밑칠한 곳을 문지르면 지워져요.'
-              : '종이에서 글자를 따라 그으면 밑칠돼요.',
+          '종이에서 글자를 따라 그으면 밑칠돼요.',
           textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 14, height: 1.6, color: muted),
         ),

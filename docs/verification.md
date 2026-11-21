@@ -2308,3 +2308,17 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   검색어가 검색 요청에 사용되는 것을 로컬 웹과 공개 웹에서 확인했다.
 - [GitHub Pages 배포 44835885544](https://github.com/namsoon00/writing-human/actions/runs/44835885544)
   를 완료했다. iOS·Android 실기기와 모바일 Safari의 시스템 키보드는 검증하지 않았다.
+
+## 2026-11-21 · 사진 원문에서 글 선택과 사진 범위 바로 고르기
+
+- Dart 포맷 검사와 Flutter 정적 분석, 전체 Flutter 테스트 213개를 통과했다.
+- iOS 플랫폼 위젯 테스트에서 글 고치기 중 두 번 눌러 단어 선택, 선택 메뉴 표시,
+  선택한 글 수정, 한글 조합 보존, 사진과 원문 전체 저장을 확인했다.
+- 원문 확인에서 ‘글자 영역 고르기’를 열어 선택한 범위만 다시 읽고 저장할 때
+  원본 사진과 영역 정보가 보존되는 것을 위젯 테스트에서 확인했다.
+- 로컬과 [공개 웹](https://namsoon00.github.io/writing-human/)의 Chrome 320×640,
+  390×844에 터치 이벤트를 보내 사진 OCR, ‘글자 영역 고르기’ 열기와 취소, 두 번
+  눌러 단어를 고쳐 사진과 원문 전체를 저장하는 흐름을 확인했다. 320×640에서
+  선택 손잡이를 끌어 범위를 늘린 뒤 수정하고 저장하는 것도 확인했다.
+- [GitHub Pages 배포 44840451942](https://github.com/namsoon00/writing-human/actions/runs/44840451942)
+  가 성공했다. iOS·Android 실기기와 모바일 Safari는 검증하지 않았다.

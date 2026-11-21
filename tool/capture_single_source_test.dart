@@ -72,8 +72,10 @@ void main() {
       ))!.buffer.asUint8List();
       image.dispose();
       picture.dispose();
-      await Directory('artifacts/single-source').create(recursive: true);
-      await File('artifacts/single-source/fixture.png').writeAsBytes(bytes);
+      await Directory('output/source-reading-20261122').create(recursive: true);
+      await File(
+        'output/source-reading-20261122/fixture.png',
+      ).writeAsBytes(bytes);
     });
     final id = await tester.runAsync(
       () => const OriginalPhotoStore().save(bytes),
@@ -111,7 +113,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final output = Directory('artifacts/single-source');
+    final output = Directory('output/source-reading-20261122');
     Future<void> capture(String name) async {
       expect(tester.takeException(), isNull);
       await tester.runAsync(() async {

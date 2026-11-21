@@ -79,7 +79,11 @@ class _OriginalPhotoState extends State<OriginalPhoto> {
     future: _bytes,
     builder: (context, snapshot) {
       if (snapshot.connectionState != ConnectionState.done) {
-        return const Center(child: CircularProgressIndicator());
+        return Center(
+          child: widget.compact
+              ? const Icon(Icons.photo_outlined, semanticLabel: '원본 사진 불러오는 중')
+              : const CircularProgressIndicator(),
+        );
       }
       final bytes = snapshot.data;
       if (bytes == null) {

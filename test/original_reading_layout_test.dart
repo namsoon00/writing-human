@@ -27,33 +27,141 @@ void main() {
     const Size(900, 700),
     const Size(320, 640),
   ]) {
-    testWidgets('A readable original opens its photo on demand at $size', (
-      tester,
-    ) async {
-      tester.view.physicalSize = size;
+    testWidgets(
+      'A readable original keeps a small photo with attribution at $size',
+      (tester) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await preparePhotoStorage(tester);
+        final intake = FakeIntake();
+        addTearDown(intake.dispose);
+        final photoId = await tester.runAsync(
+          () => const OriginalPhotoStore().save(intake.photo.bytes),
+        );
+        final original = RegisteredOriginal(
+          'photo',
+          '사진과 함께 읽는 원문입니다.\n구절을 천천히 옮겨 씁니다.',
+          photoId: photoId,
+          photoRegion: const [.1, .25, .8, .9],
+        );
+        RegisteredOriginal? transcribed;
+        Passage? opened;
+        var openedRegistration = false;
+        var savedReflection = false;
+        const savedWriting = Passage(
+          WritingPage(id: 'page', recordId: 'record', number: 1),
+          '필사',
+          '옮겨 쓴 구절',
+        );
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SourceReading(
+                originals: [original],
+                initialOriginalId: original.id,
+                transcribeLabel: '필사하기',
+                onRegister: () async {
+                  openedRegistration = true;
+                  return null;
+                },
+                onTranscribe: (source) => transcribed = source,
+                onSaveReflection: (_, _) async {
+                  savedReflection = true;
+                  return true;
+                },
+                onOpenWriting: (passage) => opened = passage,
+                writingLocations: const {
+                  'photo': (passage: savedWriting, marked: false),
+                },
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final body = find.byKey(const ValueKey('source-reading-text'));
+        final showPhoto = find.text('원본 사진 보기');
+        final transcribe = find.widgetWithText(FilledButton, '필사하기');
+        final openWriting = find.widgetWithText(TextButton, '필사한 쪽 열기');
+        expect(find.byType(OriginalPhoto), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.byKey(const ValueKey('source-details'))).dy,
+          greaterThan(tester.getTopLeft(body).dy),
+        );
+        expect(body, findsOneWidget);
+        expect(tester.getTopLeft(body).dy, lessThan(150));
+        expect(showPhoto, findsOneWidget);
+        expect(transcribe.hitTestable(), findsOneWidget);
+        expect(openWriting.hitTestable(), findsOneWidget);
+        expect(find.text('원문 담기'), findsNothing);
+        expect(find.text('느낀 점 남기기'), findsNothing);
+        expect(savedReflection, isFalse);
+        expect(
+          tester.getSize(transcribe).width,
+          greaterThan(size.width < 600 ? size.width - 60 : 500),
+        );
+        expect(
+          tester.getRect(find.byKey(const ValueKey('source-open-writing'))).top,
+          lessThan(tester.getRect(transcribe).top),
+        );
+
+        await tester.tap(showPhoto);
+        await finishPhotoLoad(tester);
+        final viewer = find.byType(InteractiveViewer);
+        final photo = find.descendant(
+          of: viewer,
+          matching: find.byType(OriginalPhoto),
+        );
+        expect(tester.widget<OriginalPhoto>(photo).region, isNull);
+        final image = tester.widget<Image>(
+          find.byKey(const ValueKey('saved-original-photo')),
+        );
+        expect(
+          (image.image as MemoryImage).bytes,
+          orderedEquals(intake.photo.bytes),
+        );
+        expect(find.text('원본 사진'), findsOneWidget);
+        expect(find.text('볼 부분 고르기'), findsNothing);
+        expect(find.text('사진 전체 보기'), findsNothing);
+        expect(find.text('글자 부분 보기'), findsNothing);
+        await tester.tap(find.byTooltip('닫기'));
+        await tester.pumpAndSettle();
+        expect(body, findsOneWidget);
+        expect(find.byType(OriginalPhoto), findsOneWidget);
+
+        await tester.tap(find.byTooltip('원문 더 보기'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('원문 담기'));
+        await tester.pumpAndSettle();
+        expect(openedRegistration, isTrue);
+
+        await tester.tap(transcribe);
+        expect(transcribed, same(original));
+        await tester.ensureVisible(openWriting);
+        await tester.tap(openWriting);
+        expect(opened, same(savedWriting));
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'Long originals keep one primary action visible without asking for a reflection',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
       tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      await preparePhotoStorage(tester);
-      final intake = FakeIntake();
-      addTearDown(intake.dispose);
-      final photoId = await tester.runAsync(
-        () => const OriginalPhotoStore().save(intake.photo.bytes),
-      );
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       final original = RegisteredOriginal(
-        'photo',
-        '사진과 함께 읽는 원문입니다.\n구절을 천천히 옮겨 씁니다.',
-        photoId: photoId,
-        photoRegion: const [.1, .25, .8, .9],
+        'long',
+        List.generate(30, (i) => '읽고 남길 검수 문장 ${i + 1}').join('\n'),
+        citation: '출처가 길어도 전체를 읽을 수 있는 직접 쓴 검수 원문',
       );
-      RegisteredOriginal? transcribed;
-      Passage? opened;
-      var openedRegistration = false;
-      const savedWriting = Passage(
-        WritingPage(id: 'page', recordId: 'record', number: 1),
-        '필사',
-        '옮겨 쓴 구절',
-      );
+      RegisteredOriginal? started;
+      var reflections = 0;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -61,69 +169,32 @@ void main() {
               originals: [original],
               initialOriginalId: original.id,
               transcribeLabel: '필사하기',
-              onRegister: () async {
-                openedRegistration = true;
-                return null;
-              },
-              onTranscribe: (source) => transcribed = source,
-              onOpenWriting: (passage) => opened = passage,
-              writingLocations: const {
-                'photo': (passage: savedWriting, marked: false),
+              onTranscribe: (value) => started = value,
+              onSaveReflection: (_, _) async {
+                reflections++;
+                return true;
               },
             ),
           ),
         ),
       );
       await tester.pumpAndSettle();
-      final body = find.byKey(const ValueKey('source-reading-text'));
-      final showPhoto = find.text('원본 사진 보기');
-      final transcribe = find.widgetWithText(FilledButton, '필사하기');
-      final openWriting = find.widgetWithText(TextButton, '필사한 쪽 열기');
-      expect(find.byType(OriginalPhoto), findsNothing);
-      expect(body, findsOneWidget);
-      expect(tester.getTopLeft(body).dy, lessThan(150));
-      expect(showPhoto, findsOneWidget);
-      expect(transcribe.hitTestable(), findsOneWidget);
-      expect(openWriting.hitTestable(), findsOneWidget);
-      expect(find.text('원문 담기'), findsNothing);
-
-      await tester.tap(showPhoto);
-      await finishPhotoLoad(tester);
-      final viewer = find.byType(InteractiveViewer);
-      final photo = find.descendant(
-        of: viewer,
-        matching: find.byType(OriginalPhoto),
+      final action = find.byKey(const ValueKey('source-start-transcription'));
+      final rect = tester.getRect(action);
+      expect(action.hitTestable(), findsOneWidget);
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('source-attribution')),
       );
-      expect(tester.widget<OriginalPhoto>(photo).region, isNull);
-      final image = tester.widget<Image>(
-        find.byKey(const ValueKey('saved-original-photo')),
-      );
-      expect(
-        (image.image as MemoryImage).bytes,
-        orderedEquals(intake.photo.bytes),
-      );
-      expect(find.text('원본 사진'), findsOneWidget);
-      expect(find.text('볼 부분 고르기'), findsNothing);
-      expect(find.text('사진 전체 보기'), findsNothing);
-      expect(find.text('글자 부분 보기'), findsNothing);
-      await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
-      expect(body, findsOneWidget);
-      expect(find.byType(OriginalPhoto), findsNothing);
-
-      await tester.tap(find.byTooltip('원문 더 보기'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('원문 담기'));
-      await tester.pumpAndSettle();
-      expect(openedRegistration, isTrue);
-
-      await tester.tap(transcribe);
-      expect(transcribed, same(original));
-      await tester.tap(openWriting);
-      expect(opened, same(savedWriting));
+      expect(tester.getRect(action), rect);
+      expect(find.text('느낀 점 남기기'), findsNothing);
+      expect(reflections, 0);
+      await tester.tap(action);
+      expect(started, same(original));
+      expect(original.reflection, isNull);
       expect(tester.takeException(), isNull);
-    });
-  }
+    },
+  );
 
   for (final withText in [true, false]) {
     testWidgets('Writing only shows original text (with text: $withText)', (

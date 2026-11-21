@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart';
 import '../data/model.dart';
 import '../data/library_search.dart';
 import '../source/originals.dart';
+import '../source/photo_lines.dart';
 import 'paper.dart';
 import 'paper_panel.dart';
 import 'original_edit.dart';
@@ -426,9 +427,8 @@ class _SourceReadingState extends State<SourceReading> {
     ),
   );
 
-  Widget _readingActions(RegisteredOriginal original, Passage? writing) {
+  Widget _readingActions(RegisteredOriginal original) {
     final transcribe = widget.onTranscribe;
-    final openWriting = widget.onOpenWriting;
     final link = original.canTranscribe
         ? null
         : RegisteredOriginal.webLink(original.citation);
@@ -448,32 +448,30 @@ class _SourceReadingState extends State<SourceReading> {
         ),
       if (transcribe != null)
         original.canTranscribe
-            ? FilledButton(
-                onPressed: saving ? null : startTranscription,
-                child: Text(widget.transcribeLabel),
+            ? SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  key: const ValueKey('source-start-transcription'),
+                  onPressed: saving ? null : startTranscription,
+                  icon: const Icon(CupertinoIcons.pencil, size: 18),
+                  label: Text(
+                    widget.transcribeLabel,
+                    textAlign: TextAlign.center,
+                  ),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(48, 56),
+                  ),
+                ),
               )
             : TextButton(
                 onPressed: saving ? null : startTranscription,
                 child: Text(widget.transcribeLabel),
               ),
-      if (writing != null && openWriting != null)
-        TextButton(
-          onPressed: saving ? null : () => openWriting(writing),
-          child: const Text('필사한 쪽 열기'),
-        ),
     ];
     if (actions.isEmpty) return const SizedBox.shrink();
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Divider(height: 12),
-        Wrap(
-          spacing: 12,
-          runSpacing: 4,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: actions,
-        ),
-      ],
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [const Divider(height: 24), ...actions],
     );
   }
 
@@ -513,7 +511,10 @@ class _SourceReadingState extends State<SourceReading> {
           });
     final writing = widget.writingLocations[original?.id]?.passage;
     final mark = editing ? draftMark : reflection?.mark;
-    final note = original == null || original.text.trim().isEmpty
+    final note =
+        original == null ||
+            original.text.trim().isEmpty ||
+            (!editing && reflection == null)
         ? null
         : _ReflectionNote(
             controller: editing ? reflectionField : null,
@@ -524,6 +525,7 @@ class _SourceReadingState extends State<SourceReading> {
                 : () => _editReflection(original, match),
           );
     final style = widget.style;
+    final inlineNote = editing || reflection != null;
     final originalText = original == null
         ? null
         : _OriginalText(
@@ -532,7 +534,35 @@ class _SourceReadingState extends State<SourceReading> {
             style: style,
             match: match,
             mark: mark,
-            note: note,
+            note: inlineNote ? note : null,
+            footer: !original.canTranscribe || editing
+                ? null
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _SourceAttribution(
+                        original: original,
+                        onOpenPhoto: original.photoId == null || saving
+                            ? null
+                            : () => _showPhoto(original),
+                        onAddCitation: widget.onEdit == null || saving
+                            ? null
+                            : () => _editOriginal(original, originalPanelColor),
+                      ),
+                      if (writing != null && widget.onOpenWriting != null)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            key: const ValueKey('source-open-writing'),
+                            onPressed: saving
+                                ? null
+                                : () => widget.onOpenWriting!(writing),
+                            icon: const Icon(CupertinoIcons.book, size: 16),
+                            label: const Text('필사한 쪽 열기'),
+                          ),
+                        ),
+                    ],
+                  ),
             editing: editing,
           );
     const panel = originalPanelColor;
@@ -560,8 +590,10 @@ class _SourceReadingState extends State<SourceReading> {
                     ),
                   Expanded(
                     child: PaperPanelTitle(
-                      original?.citation.trim().isNotEmpty == true
-                          ? original!.citation
+                      original != null &&
+                              !original.canTranscribe &&
+                              original.citation.trim().isNotEmpty
+                          ? original.citation
                           : '원문',
                       fontSize: 22,
                     ),
@@ -662,21 +694,6 @@ class _SourceReadingState extends State<SourceReading> {
                 ),
               if (original == null && widget.originals.isNotEmpty)
                 const SizedBox(height: 4),
-              if (original != null &&
-                  original.canTranscribe &&
-                  original.photoId != null &&
-                  !editing)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: saving ? null : () => _showPhoto(original),
-                    icon: const Icon(CupertinoIcons.photo, size: 16),
-                    label: const Text('원본 사진 보기'),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                    ),
-                  ),
-                ),
               if (widget.onRetry != null && !editing)
                 _saveNotice('원문을 저장하지 못했어요.', widget.onRetry),
               if (original == null && widget.previousCitations.isNotEmpty)
@@ -690,7 +707,7 @@ class _SourceReadingState extends State<SourceReading> {
               Expanded(
                 child: original != null
                     ? Padding(
-                        padding: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.only(top: 20),
                         child: original.canTranscribe
                             ? originalText!
                             : OriginalReadingLayout(
@@ -755,8 +772,7 @@ class _SourceReadingState extends State<SourceReading> {
                     ),
                   ),
                 ),
-              if (original != null && !editing)
-                _readingActions(original, writing),
+              if (original != null && !editing) _readingActions(original),
               if (failed && editing)
                 _saveNotice('느낀 점을 저장하지 못했어요.', _composing ? null : _flush),
             ],
@@ -777,6 +793,7 @@ class _OriginalText extends StatefulWidget {
     this.match,
     this.mark,
     this.note,
+    this.footer,
     required this.editing,
   });
 
@@ -784,7 +801,7 @@ class _OriginalText extends StatefulWidget {
   final WritingStyle style;
   final OriginalMatch? match;
   final PencilMark? mark;
-  final Widget? note;
+  final Widget? note, footer;
   final bool editing;
 
   @override
@@ -861,7 +878,7 @@ class _OriginalTextState extends State<_OriginalText> {
         size: style.fontSize,
         color: penColors[style.penIndex],
         useDevelopmentTypeface: style.useDevelopmentTypeface,
-      ).copyWith(height: 1.65, letterSpacing: 0),
+      ).copyWith(height: 1.8, letterSpacing: 0),
       children: [
         for (var i = 0; i + 1 < boundaries.length; i++)
           TextSpan(
@@ -936,7 +953,7 @@ class _OriginalTextState extends State<_OriginalText> {
         }
         return SingleChildScrollView(
           controller: scroll,
-          padding: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -955,12 +972,155 @@ class _OriginalTextState extends State<_OriginalText> {
                   padding: const EdgeInsets.only(top: 10),
                   child: Text.rich(after),
                 ),
+              if (widget.footer case final footer?)
+                Padding(padding: const EdgeInsets.only(top: 24), child: footer),
             ],
           ),
         );
       },
     );
   }
+}
+
+/// Attribution stays with the passage; the small photograph opens its full original.
+class _SourceAttribution extends StatelessWidget {
+  const _SourceAttribution({
+    required this.original,
+    this.onOpenPhoto,
+    this.onAddCitation,
+  });
+  final RegisteredOriginal original;
+  final VoidCallback? onOpenPhoto, onAddCitation;
+
+  Widget _photograph({required bool compact}) => Semantics(
+    button: true,
+    label: '원본 사진 보기',
+    child: InkWell(
+      key: const ValueKey('source-photo-preview'),
+      onTap: onOpenPhoto,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: compact
+            ? Row(
+                children: [
+                  SizedBox(width: 64, height: 72, child: _photo),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      '원본 사진 보기',
+                      style: TextStyle(fontSize: 14, color: brandInk),
+                    ),
+                  ),
+                  const Icon(
+                    CupertinoIcons.arrow_up_left_arrow_down_right,
+                    size: 14,
+                    color: muted,
+                  ),
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(height: 80, child: _photo),
+                  const SizedBox(height: 6),
+                  const Text(
+                    '원본 사진 보기',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.5,
+                      color: brandInk,
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    ),
+  );
+
+  Widget get _photo => DecoratedBox(
+    decoration: BoxDecoration(
+      color: paper,
+      border: Border.all(color: line),
+      boxShadow: [
+        BoxShadow(
+          color: brandInk.withValues(alpha: .10),
+          blurRadius: 4,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(5),
+      child: OriginalPhoto(
+        id: original.photoId!,
+        region: originalPhotoPreviewRegion(original),
+        compact: true,
+      ),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final citation = original.citation.trim();
+      final credit = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('출처', style: TextStyle(fontSize: 13, color: muted)),
+          const SizedBox(height: 6),
+          if (citation.isNotEmpty)
+            Text(
+              citation,
+              key: const ValueKey('source-attribution'),
+              style: const TextStyle(
+                fontSize: 15,
+                height: 1.7,
+                color: brandInk,
+              ),
+            )
+          else if (onAddCitation != null)
+            TextButton(onPressed: onAddCitation, child: const Text('출처 남기기'))
+          else
+            const Text(
+              '아직 남긴 출처가 없어요.',
+              style: TextStyle(fontSize: 14, height: 1.6, color: muted),
+            ),
+        ],
+      );
+      final photo = original.photoId != null;
+      final sideBySide =
+          box.maxWidth >= 300 &&
+          MediaQuery.textScalerOf(context).scale(14) <= 18;
+      return Padding(
+        key: const ValueKey('source-details'),
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Divider(height: 1),
+            const SizedBox(height: 16),
+            if (photo && sideBySide)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: credit),
+                  const SizedBox(width: 16),
+                  SizedBox(width: 112, child: _photograph(compact: false)),
+                ],
+              )
+            else ...[
+              credit,
+              if (photo) ...[
+                const SizedBox(height: 12),
+                _photograph(compact: true),
+              ],
+            ],
+          ],
+        ),
+      );
+    },
+  );
 }
 
 class _ReflectionNote extends StatelessWidget {
@@ -979,12 +1139,7 @@ class _ReflectionNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final field = controller;
-    if (field == null && text == null) {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: TextButton(onPressed: onEdit, child: const Text('느낀 점 남기기')),
-      );
-    }
+    if (field == null && text == null) return const SizedBox.shrink();
     final lineHeight = MediaQuery.textScalerOf(context).scale(27) * 1.24;
     return Padding(
       padding: const EdgeInsets.fromLTRB(6, 10, 4, 6),

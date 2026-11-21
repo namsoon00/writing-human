@@ -1759,7 +1759,7 @@ void main() {
   });
 
   testWidgets(
-    'Reflections autosave under the original without editing the writing paper',
+    'Existing reflections remain editable without changing the writing paper',
     (tester) async {
       const source = '햇빛이 책장에 천천히 내려앉았다.';
       final store = MemoryStore()
@@ -1769,7 +1769,12 @@ void main() {
               id: 'b',
               title: '책',
               originals: [
-                RegisteredOriginal('o', source, citation: '첫 원문'),
+                RegisteredOriginal(
+                  'o',
+                  source,
+                  citation: '첫 원문',
+                  reflection: OriginalReflection('이전에 남긴 생각'),
+                ),
                 RegisteredOriginal('second', '다른 날의 문장', citation: '둘째 원문'),
               ],
             ),
@@ -1792,7 +1797,7 @@ void main() {
       await tester.tap(place);
       await tester.pumpAndSettle();
       expect(find.text('첫 원문'), findsOneWidget);
-      await tester.tap(find.text('느낀 점 남기기'));
+      await tester.tap(find.text('이전에 남긴 생각'));
       await tester.pumpAndSettle();
       tester.testTextInput.updateEditingValue(
         const TextEditingValue(
@@ -1802,7 +1807,10 @@ void main() {
         ),
       );
       await tester.pump(const Duration(milliseconds: 450));
-      expect(store.data.books.single.originals.first.reflection, isNull);
+      expect(
+        store.data.books.single.originals.first.reflection!.text,
+        '이전에 남긴 생각',
+      );
 
       store.fail = true;
       await tester.enterText(field, note);
@@ -2036,18 +2044,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('줄에 붙인 원문'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('느낀 점 남기기'));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byKey(const ValueKey('original-reflection-input')),
-      '다시 볼 구절.',
-    );
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(milliseconds: 450));
-    await tester.pumpAndSettle();
-    final promoted = store.data.records.single.originals.single;
-    expect(promoted.reflection!.text, '다시 볼 구절.');
-    expect(promoted.citation, '책 · 24쪽');
+    expect(find.text('느낀 점 남기기'), findsNothing);
     expect(store.data.activePage!.passages.first.source, '줄에 붙인 원문');
     expect(store.data.activePage!.passages, hasLength(2));
   });

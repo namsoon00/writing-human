@@ -14,6 +14,7 @@ class OriginalListItem extends StatelessWidget {
     required this.title,
     required this.onTap,
     this.subtitle,
+    this.preview,
     this.showDivider = false,
     this.indexCard = false,
     this.photoId,
@@ -21,7 +22,7 @@ class OriginalListItem extends StatelessWidget {
 
   final WritingStyle style;
   final String title;
-  final String? subtitle, photoId;
+  final String? subtitle, photoId, preview;
   final VoidCallback? onTap;
   final bool showDivider, indexCard;
 
@@ -97,6 +98,20 @@ class OriginalListItem extends StatelessWidget {
                   useDevelopmentTypeface: style.useDevelopmentTypeface,
                 ).copyWith(height: 1.57),
               ),
+              if (preview case final line?)
+                Padding(
+                  padding: const EdgeInsets.only(top: 3),
+                  child: Text(
+                    line,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: writingTextStyle(
+                      style.fontIndex,
+                      size: 15,
+                      useDevelopmentTypeface: style.useDevelopmentTypeface,
+                    ),
+                  ),
+                ),
               if (subtitle case final citation?) ...[
                 const Padding(
                   padding: EdgeInsets.only(top: 7, bottom: 6),

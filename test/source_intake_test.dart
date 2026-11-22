@@ -1317,64 +1317,95 @@ void main() {
     );
   }
 
-  testWidgets('The work catalog filters authors and imports prose paragraphs', (
-    tester,
-  ) async {
-    final requests = <Uri>[];
-    final client = MockClient((request) async {
-      requests.add(request.url);
-      return http.Response.bytes(
-        utf8.encode(
-          jsonEncode({
-            'parse': {
-              'pageid': 2370,
-              'revid': 468924,
-              'categories': [
-                {'category': 'PD-old-50'},
-              ],
-              'text':
-                  '<div class="mw-parser-output"><div class="ws-header">'
-                  '<p>작품 머리말</p></div><p>첫 문단<sup>각주</sup></p>'
-                  '<p>둘째 문단</p></div>',
-            },
-          }),
-        ),
-        200,
-      );
-    });
+  testWidgets(
+    'The catalog combines genre and author filters and imports prose',
+    (tester) async {
+      final requests = <Uri>[];
+      final client = MockClient((request) async {
+        requests.add(request.url);
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode({
+              'parse': {
+                'pageid': 2370,
+                'revid': 468924,
+                'categories': [
+                  {'category': 'PD-old-50'},
+                ],
+                'text':
+                    '<div class="mw-parser-output"><div class="ws-header">'
+                    '<p>작품 머리말</p></div><p>첫 문단<sup>각주</sup></p>'
+                    '<p>둘째 문단</p></div>',
+              },
+            }),
+          ),
+          200,
+        );
+      });
 
-    await http.runWithClient(() async {
-      final store = MemoryStore();
-      await open(tester, store, FakeIntake());
-      await openRegistration(tester);
-      await openSourceSearch(tester);
-      await tester.enterText(
-        find.byKey(const ValueKey('source-catalog-query')),
-        '현 진 건',
-      );
-      await tester.pumpAndSettle();
-      expect(requests, isEmpty);
-      expect(find.text('진달래꽃'), findsNothing);
-      await tester.tap(find.widgetWithText(ListTile, '운수 좋은 날'));
-      await tester.pumpAndSettle();
-      expect(requests.single.queryParameters['oldid'], '468924');
-      await tester.tap(find.text('원문 가져오기'));
-      await tester.pumpAndSettle();
-      expect(
-        tester.widget<TextField>(sourceField).controller!.text,
-        '첫 문단\n\n둘째 문단',
-      );
-      await showSourceDetails(tester);
-      expect(
-        tester
-            .widget<TextField>(find.byKey(const ValueKey('original-citation')))
-            .controller!
-            .text,
-        contains('운수 좋은 날 · 현진건 · 위키문헌'),
-      );
-      expect(store.data.records, isEmpty);
-    }, () => client);
-  });
+      await http.runWithClient(() async {
+        final store = MemoryStore();
+        await open(tester, store, FakeIntake());
+        await openRegistration(tester);
+        await openSourceSearch(tester);
+        await tester.enterText(
+          find.byKey(const ValueKey('source-catalog-query')),
+          '현 진 건',
+        );
+        await tester.pumpAndSettle();
+        expect(requests, isEmpty);
+        final novel = find.byKey(const ValueKey('wikisource-work-2370'));
+        final poemFilter = find.widgetWithText(ChoiceChip, '시');
+        final novelFilter = find.widgetWithText(ChoiceChip, '소설');
+        await tester.tap(poemFilter);
+        await tester.pumpAndSettle();
+        expect(novel, findsNothing);
+        expect(find.text('다른 제목이나 작가로 찾거나 갈래를 바꿔 보세요.'), findsOneWidget);
+        await tester.tap(novelFilter);
+        await tester.pumpAndSettle();
+        expect(requests, isEmpty);
+        expect(tester.widget<ChoiceChip>(novelFilter).selected, isTrue);
+        final card = tester.widget<OriginalListItem>(novel);
+        expect(card.indexCard, isTrue);
+        expect(card.subtitle, contains('현진건 · 소설 · 약 '));
+        expect(card.preview, startsWith('새침하게'));
+        await tester.tap(novel);
+        await tester.pumpAndSettle();
+        expect(requests.single.queryParameters['oldid'], '468924');
+        await tester.tap(find.byTooltip('작품 목록으로 돌아가기'));
+        await tester.pumpAndSettle();
+        expect(tester.widget<ChoiceChip>(novelFilter).selected, isTrue);
+        expect(
+          tester
+              .widget<TextField>(
+                find.byKey(const ValueKey('source-catalog-query')),
+              )
+              .controller!
+              .text,
+          '현 진 건',
+        );
+        await tester.tap(novel);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('원문 가져오기'));
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<TextField>(sourceField).controller!.text,
+          '첫 문단\n\n둘째 문단',
+        );
+        await showSourceDetails(tester);
+        expect(
+          tester
+              .widget<TextField>(
+                find.byKey(const ValueKey('original-citation')),
+              )
+              .controller!
+              .text,
+          contains('운수 좋은 날 · 현진건 · 위키문헌'),
+        );
+        expect(store.data.records, isEmpty);
+      }, () => client);
+    },
+  );
 
   testWidgets('Reviewed poem imports all stanzas and keeps line breaks', (
     tester,
@@ -1475,23 +1506,15 @@ void main() {
         expect(find.text('작품 제목이나 작가'), findsOneWidget);
         expect(find.widgetWithText(TextField, '검색어'), findsNothing);
         expect(requests, isEmpty);
-        final poem = find.widgetWithText(ListTile, '산유화');
-        await tester.scrollUntilVisible(
-          poem,
-          230,
-          scrollable: find
-              .descendant(
-                of: find.byKey(const ValueKey('paper-panel-page')),
-                matching: find.byType(Scrollable),
-              )
-              .last,
+        await tester.enterText(
+          find.byKey(const ValueKey('source-catalog-query')),
+          '산 유 화',
         );
+        await tester.pumpAndSettle();
+        final poem = find.byKey(const ValueKey('wikisource-work-1522'));
         await tester.ensureVisible(poem);
         await tester.pumpAndSettle();
-        expect(
-          find.ancestor(of: poem, matching: find.byType(OriginalListItem)),
-          findsOneWidget,
-        );
+        expect(tester.widget<OriginalListItem>(poem).indexCard, isTrue);
         await tester.tap(poem);
         await settleSourceSheets(tester);
         expect(requests.single.queryParameters['oldid'], '430577');
@@ -1569,7 +1592,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.text('작품 제목이나 작가'), findsOneWidget);
           expect(requests, isEmpty);
-          final poem = find.widgetWithText(ListTile, '서시');
+          final poem = find.byKey(const ValueKey('wikisource-work-1515'));
           await tester.ensureVisible(poem);
           await tester.tap(poem);
           await settleSourceSheets(tester);

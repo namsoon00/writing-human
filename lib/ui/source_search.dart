@@ -260,6 +260,7 @@ class _SourceSearchState extends State<_SourceSearch> {
   String? _searched, _linkError;
   bool _loading = false, _importing = false;
   bool _webSearch = false;
+  WikisourceGenre? _catalogGenre;
   _SearchMode _mode = _SearchMode.title;
   _SourceHit? _selected;
   Future<List<String>?>? _preview;
@@ -471,7 +472,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                   work.title,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                Text('${work.author} · 위키문헌'),
+                Text('${_workDetails(work)} · 위키문헌'),
                 const SizedBox(height: 8),
                 Text(stanzas.join('\n\n')),
                 Align(
@@ -580,31 +581,116 @@ class _SourceSearchState extends State<_SourceSearch> {
     ],
   );
 
+  String _workDetails(WikisourceWork work) {
+    final info = work.catalogInfo;
+    if (info == null) return work.author;
+    final unit = info.characters < 1000 ? 10 : 100;
+    final rounded = (info.characters / unit).round() * unit;
+    final count = rounded.toString().replaceAllMapped(
+      RegExp(r'\B(?=(\d{3})+$)'),
+      (_) => ',',
+    );
+    return '${work.author} · ${info.genre.label} · 약 $count자';
+  }
+
+  void _resetCatalogScroll() {
+    if (_catalogScroll.hasClients) _catalogScroll.jumpTo(0);
+  }
+
   Widget _catalog() {
     final query = _compact(_catalogQuery.text);
+    final genre = _catalogGenre;
     final works = WikisourceWork.reviewed.values.where((work) {
-      return _compact(work.title).contains(query) ||
-          _compact(work.author).contains(query);
+      return (genre == null || work.catalogInfo?.genre == genre) &&
+          (_compact(work.title).contains(query) ||
+              _compact(work.author).contains(query));
     }).toList();
-    if (works.isEmpty) {
-      return const ListTile(title: Text('다른 제목이나 작가로 찾아보세요.'));
-    }
-    return ListView.builder(
+
+    return CustomScrollView(
       key: const PageStorageKey('source-catalog-list'),
       controller: _catalogScroll,
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-      itemCount: works.length,
-      itemBuilder: (_, index) {
-        final work = works[index];
-        return OriginalListItem(
-          style: widget.style,
-          title: work.title,
-          subtitle: work.author,
-          showDivider: index > 0,
-          onTap: () =>
-              _showHit(_SourceHit(_Collection.works, work.title, work.pageId)),
-        );
-      },
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                PaperSearchField(
+                  fieldKey: const ValueKey('source-catalog-query'),
+                  controller: _catalogQuery,
+                  focusNode: _catalogFocus,
+                  hint: '작품 제목이나 작가',
+                  maxLength: 160,
+                  onChanged: (_) {
+                    _resetCatalogScroll();
+                    setState(() {});
+                  },
+                  onSubmitted: (_) => _catalogFocus.unfocus(),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  children: [
+                    for (final filter in [null, ...WikisourceGenre.values])
+                      ChoiceChip(
+                        label: Text(filter?.label ?? '전체'),
+                        selected: genre == filter,
+                        showCheckmark: false,
+                        selectedColor: brandInk,
+                        backgroundColor: Colors.transparent,
+                        labelPadding: const EdgeInsets.symmetric(horizontal: 5),
+                        labelStyle: TextStyle(
+                          color: genre == filter ? Colors.white : brandInk,
+                        ),
+                        materialTapTargetSize: MaterialTapTargetSize.padded,
+                        onSelected: (_) {
+                          _catalogFocus.unfocus();
+                          _resetCatalogScroll();
+                          setState(() => _catalogGenre = filter);
+                        },
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (works.isEmpty)
+          SliverToBoxAdapter(
+            child: ListTile(
+              title: Text(
+                genre == null
+                    ? '다른 제목이나 작가로 찾아보세요.'
+                    : '다른 제목이나 작가로 찾거나 갈래를 바꿔 보세요.',
+              ),
+            ),
+          )
+        else
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            sliver: SliverList.builder(
+              itemCount: works.length,
+              itemBuilder: (_, index) {
+                final work = works[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: OriginalListItem(
+                    key: ValueKey('wikisource-work-${work.pageId}'),
+                    style: widget.style,
+                    title: work.title,
+                    preview: work.catalogInfo?.excerpt,
+                    subtitle: _workDetails(work),
+                    indexCard: true,
+                    onTap: () => _showHit(
+                      _SourceHit(_Collection.works, work.title, work.pageId),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
     );
   }
 
@@ -675,22 +761,38 @@ class _SourceSearchState extends State<_SourceSearch> {
                     : _previewBody(selected, selected.work!, preview),
               )
             else ...[
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 8,
-                children: [
-                  for (final web in [false, true])
-                    ChoiceChip(
-                      label: Text(web ? '웹 검색' : '작품 둘러보기'),
-                      selected: _webSearch == web,
-                      onSelected: (_) {
-                        _focus.unfocus();
-                        _catalogFocus.unfocus();
-                        setState(() => _webSearch = web);
-                        _queueCompletions();
-                      },
-                    ),
-                ],
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final web in [false, true])
+                        ChoiceChip(
+                          label: Text(web ? '웹 검색' : '작품 둘러보기'),
+                          selected: _webSearch == web,
+                          shape: const RoundedRectangleBorder(),
+                          side: BorderSide.none,
+                          backgroundColor: Colors.transparent,
+                          selectedColor: Colors.transparent,
+                          showCheckmark: false,
+                          labelStyle: TextStyle(
+                            color: _webSearch == web ? brandInk : muted,
+                            decoration: _webSearch == web
+                                ? TextDecoration.underline
+                                : null,
+                          ),
+                          onSelected: (_) {
+                            _focus.unfocus();
+                            _catalogFocus.unfocus();
+                            setState(() => _webSearch = web);
+                            _queueCompletions();
+                          },
+                        ),
+                    ],
+                  ),
+                ),
               ),
               if (_webSearch) ...[
                 Wrap(
@@ -795,11 +897,13 @@ class _SourceSearchState extends State<_SourceSearch> {
                                   CupertinoIcons.chevron_right,
                                   size: 15,
                                 ),
-                                subtitle: hit.work != null
-                                    ? const Text('원문 미리보기')
-                                    : _mode == _SearchMode.author
-                                    ? null
-                                    : const Text('웹 원문 · 복사 또는 캡처'),
+                                subtitle: switch (hit.work) {
+                                  final work? => Text(
+                                    '원문 미리보기 · ${_workDetails(work)}',
+                                  ),
+                                  null when _mode == _SearchMode.author => null,
+                                  null => const Text('웹 원문 · 복사 또는 캡처'),
+                                },
                                 onTap: () => _showHit(hit),
                               ),
                         ],
@@ -826,24 +930,8 @@ class _SourceSearchState extends State<_SourceSearch> {
                     ],
                   ),
                 ),
-              ] else ...[
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: PaperSearchField(
-                    fieldKey: const ValueKey('source-catalog-query'),
-                    controller: _catalogQuery,
-                    focusNode: _catalogFocus,
-                    hint: '작품 제목이나 작가',
-                    maxLength: 160,
-                    onChanged: (_) {
-                      if (_catalogScroll.hasClients) _catalogScroll.jumpTo(0);
-                      setState(() {});
-                    },
-                    onSubmitted: (_) => _catalogFocus.unfocus(),
-                  ),
-                ),
+              ] else
                 Expanded(child: _catalog()),
-              ],
             ],
           ],
         ),

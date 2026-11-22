@@ -7,6 +7,26 @@ import 'package:http/http.dart' as http;
 import 'source_intake.dart';
 
 part 'wikisource_catalog.dart';
+part 'wikisource_catalog_info.dart';
+
+enum WikisourceGenre {
+  poem('시'),
+  fiction('소설'),
+  essay('수필'),
+  other('기타');
+
+  const WikisourceGenre(this.label);
+
+  final String label;
+}
+
+class WikisourceWorkInfo {
+  const WikisourceWorkInfo(this.genre, this.characters, this.excerpt);
+
+  final WikisourceGenre genre;
+  final int characters;
+  final String excerpt;
+}
 
 class WikisourceWork {
   const WikisourceWork(
@@ -97,6 +117,8 @@ class WikisourceWork {
   final bool prose;
   final String licenseCategory;
   final WikisourceWork? licensedCollection;
+
+  WikisourceWorkInfo? get catalogInfo => _editionInfo[revisionId];
 
   // Parallel transcriptions are alternatives. Unset means the blocks follow
   // each other, for example when the poem spans several scanned pages.

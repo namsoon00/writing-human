@@ -639,6 +639,9 @@ class _SourceSearchState extends State<_SourceSearch> {
                         showCheckmark: false,
                         selectedColor: brandInk,
                         backgroundColor: Colors.transparent,
+                        side: BorderSide(
+                          color: genre == filter ? brandInk : line,
+                        ),
                         labelPadding: const EdgeInsets.symmetric(horizontal: 5),
                         labelStyle: TextStyle(
                           color: genre == filter ? Colors.white : brandInk,

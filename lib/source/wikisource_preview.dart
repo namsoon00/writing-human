@@ -42,10 +42,6 @@ class WikisourceWork {
 
   // Page and revision IDs identify the specific transcription checked.
   static const reviewed = {
-    1508: WikisourceWork(1508, 430575, '진달래꽃', '김소월', editionIndex: 0),
-    1515: WikisourceWork(1515, 387685, '서시', '윤동주'),
-    1866: WikisourceWork(1866, 387769, '별 헤는 밤', '윤동주'),
-    1879: WikisourceWork(1879, 203679, '초혼', '김소월'),
     1513: WikisourceWork(
       1513,
       430576,
@@ -55,6 +51,14 @@ class WikisourceWork {
       licensedCollection: _hanYongunCollection,
     ),
     1923: WikisourceWork(1923, 465103, "동백꽃", "김유정", prose: true),
+    3715: WikisourceWork(
+      3715,
+      115508,
+      "산사기",
+      "이육사",
+      prose: true,
+      licenseCategory: 'PD-old-50',
+    ),
     2370: WikisourceWork(
       2370,
       468924,
@@ -63,6 +67,10 @@ class WikisourceWork {
       prose: true,
       licenseCategory: 'PD-old-50',
     ),
+    1508: WikisourceWork(1508, 430575, '진달래꽃', '김소월', editionIndex: 0),
+    1515: WikisourceWork(1515, 387685, '서시', '윤동주'),
+    1866: WikisourceWork(1866, 387769, '별 헤는 밤', '윤동주'),
+    1879: WikisourceWork(1879, 203679, '초혼', '김소월'),
     1517: WikisourceWork(
       1517,
       202488,

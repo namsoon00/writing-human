@@ -279,14 +279,6 @@ const _additionalWorks = <int, WikisourceWork>{
   ),
   4236: WikisourceWork(4236, 202472, "반묘", "이육사", licenseCategory: 'PD-old-50'),
   3691: WikisourceWork(3691, 202474, "산", "이육사", licenseCategory: 'PD-old-50'),
-  3715: WikisourceWork(
-    3715,
-    115508,
-    "산사기",
-    "이육사",
-    prose: true,
-    licenseCategory: 'PD-old-50',
-  ),
   3701: WikisourceWork(3701, 202475, "서울", "이육사", licenseCategory: 'PD-old-50'),
   3699: WikisourceWork(3699, 202476, "서풍", "이육사", licenseCategory: 'PD-old-50'),
   3707: WikisourceWork(

@@ -1592,6 +1592,11 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.text('작품 제목이나 작가'), findsOneWidget);
           expect(requests, isEmpty);
+          await tester.enterText(
+            find.byKey(const ValueKey('source-catalog-query')),
+            '서시',
+          );
+          await tester.pumpAndSettle();
           final poem = find.byKey(const ValueKey('wikisource-work-1515'));
           await tester.ensureVisible(poem);
           await tester.tap(poem);
@@ -2063,7 +2068,7 @@ void main() {
       await tester.ensureVisible(catalog);
       await tester.tap(catalog);
       await tester.pumpAndSettle();
-      final title = find.text('서시');
+      final title = find.text('동백꽃');
       await tester.ensureVisible(title);
       final row = find.ancestor(
         of: title,

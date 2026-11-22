@@ -10,6 +10,8 @@ import '../cafe/cafe_renderer.dart';
 import '../cafe/cafe_view_controller.dart';
 import '../cafe/cafe_visit.dart';
 import '../cafe/cafe_world.dart';
+import '../cafe/cafe_walk.dart';
+import '../cafe/cafe_avatar.dart';
 import 'paper.dart';
 
 /// A real, perspective-projected room seen through an eye-height camera.
@@ -35,19 +37,89 @@ class _CafeSceneState extends State<CafeScene>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   final focus = FocusNode(debugLabel: '카페 둘러보기');
   late final AnimationController travel;
+  late final AnimationController perspective;
+  int viewRequest = 0;
+  double lastTravelTime = 0;
+  CafeWalkTiming? timing;
   late final Ticker calm;
+  late final Ticker keyboard;
+  final heldKeys = <LogicalKeyboardKey>{};
+  double keySpeed = 0, keyElapsed = 0;
+  void _perspectiveFrame() => widget.controller.setViewBlend(perspective.value);
+  void _stopKeys() {
+    heldKeys.clear();
+    keyboard.stop();
+    keySpeed = 0;
+    keyElapsed = 0;
+    if (widget.controller.walkSpeed > 0 && !widget.controller.travelling) {
+      widget.controller.stopWalking();
+    }
+  }
+
+  void _focusChanged() {
+    if (!focus.hasFocus) _stopKeys();
+  }
+
+  void _keyFrame(Duration elapsed) {
+    if (!widget.interactive || !appActive || heldKeys.isEmpty) {
+      _stopKeys();
+      return;
+    }
+    final now = elapsed.inMicroseconds / 1000000,
+        dt = (now - keyElapsed).clamp(.001, .04);
+    keyElapsed = now;
+    keySpeed = math.min(1.2, keySpeed + dt * 3);
+    bool held(LogicalKeyboardKey a, [LogicalKeyboardKey? b]) =>
+        heldKeys.contains(a) || (b != null && heldKeys.contains(b));
+    final side =
+        (held(LogicalKeyboardKey.keyD) ? 1.0 : 0.0) -
+        (held(LogicalKeyboardKey.keyA) ? 1.0 : 0.0);
+    final ahead =
+        (held(LogicalKeyboardKey.keyW, LogicalKeyboardKey.arrowUp)
+            ? 1.0
+            : 0.0) -
+        (held(LogicalKeyboardKey.keyS, LogicalKeyboardKey.arrowDown)
+            ? 1.0
+            : 0.0);
+    final length = math.sqrt(side * side + ahead * ahead);
+    if (length > 0) {
+      widget.controller.freeStep(
+        side / length * keySpeed * dt,
+        ahead / length * keySpeed * dt,
+        dt,
+        animate: !MediaQuery.disableAnimationsOf(context),
+      );
+    } else {
+      widget.controller.stopWalking();
+    }
+  }
+
   double sceneTime = 0, heldTime = 0;
   bool appActive = true;
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _syncCalm();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      perspective.stop();
+      perspective.removeListener(_perspectiveFrame);
+      perspective.value = widget.controller.thirdPerson ? 1 : 0;
+      perspective.addListener(_perspectiveFrame);
+      widget.controller.setViewBlend(perspective.value, notify: false);
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     appActive = state == AppLifecycleState.resumed;
     _syncCalm();
+    if (!appActive) {
+      _stopKeys();
+      travel.stop();
+      perspective.stop();
+      perspective.value = widget.controller.thirdPerson ? 1 : 0;
+      widget.controller.look(0, 0);
+    }
   }
 
   void _syncCalm() {
@@ -76,6 +148,8 @@ class _CafeSceneState extends State<CafeScene>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    focus.addListener(_focusChanged);
+    keyboard = createTicker(_keyFrame);
     calm = createTicker((elapsed) {
       final next = heldTime + elapsed.inMicroseconds / 1000000;
       // A quiet 10Hz scene, only while the courtyard is visible.
@@ -84,6 +158,12 @@ class _CafeSceneState extends State<CafeScene>
         widget.controller.effectTime = sceneTime;
       }
     });
+    perspective = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+      value: widget.controller.viewBlend,
+    )..addListener(_perspectiveFrame);
+    viewRequest = widget.controller.viewRequest;
     travel = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 850),
@@ -228,10 +308,19 @@ class _CafeSceneState extends State<CafeScene>
 
   void _changed() {
     final c = widget.controller;
+    if (viewRequest != c.viewRequest) {
+      viewRequest = c.viewRequest;
+      if (MediaQuery.disableAnimationsOf(context)) {
+        perspective.value = c.thirdPerson ? 1 : 0;
+      } else {
+        perspective.animateTo(c.thirdPerson ? 1 : 0, curve: Curves.easeInOut);
+      }
+    }
     if (request != c.request) {
       request = c.request;
       travel.stop();
-      route = [c.camera, ...c.journey];
+      route = cafeWalkRoute([c.camera, ...c.journey], c.world);
+      lastTravelTime = 0;
       if (c.destination != null) {
         if (MediaQuery.disableAnimationsOf(context)) {
           c.updateCamera(c.destination!);
@@ -240,15 +329,14 @@ class _CafeSceneState extends State<CafeScene>
           lengths = [];
           total = 0;
           for (var i = 1; i < route.length; i++) {
-            final length = math.max(
-              .18,
-              (route[i].position - route[i - 1].position).length,
-            );
+            final physical = (route[i].position - route[i - 1].position).length;
+            final length = physical > 1e-5 ? physical : .12;
             lengths.add(length);
             total += length;
           }
+          timing = CafeWalkTiming(total);
           travel.duration = Duration(
-            milliseconds: (total / 1.85 * 1000).round().clamp(450, 6500),
+            milliseconds: (timing!.seconds * 1000).round(),
           );
           travel.forward(from: 0);
         }
@@ -262,18 +350,25 @@ class _CafeSceneState extends State<CafeScene>
 
   void _travelFrame() {
     if (route.length < 2 || lengths.isEmpty) return;
-    var distance = Curves.easeInOut.transform(travel.value) * total;
+    final seconds = travel.value * (travel.duration!.inMicroseconds / 1000000);
+    final dt = (seconds - lastTravelTime).clamp(.001, .2);
+    lastTravelTime = seconds;
+    var distance = timing!.at(travel.value);
     var segment = 0;
     while (segment < lengths.length - 1 && distance > lengths[segment]) {
       distance -= lengths[segment];
       segment++;
     }
-    widget.controller.updateCamera(
+    widget.controller.advanceCamera(
       CafeCamera.interpolate(
         route[segment],
         route[segment + 1],
         (distance / lengths[segment]).clamp(0, 1),
       ),
+      dt: dt,
+      walking:
+          (route[segment].position.y - 1.62).abs() < .01 &&
+          (route[segment + 1].position.y - 1.62).abs() < .01,
     );
     if (travel.isCompleted) {
       route = [];
@@ -298,8 +393,11 @@ class _CafeSceneState extends State<CafeScene>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     calm.dispose();
+    keyboard.dispose();
+    focus.removeListener(_focusChanged);
     widget.controller.removeListener(_changed);
     travel.dispose();
+    perspective.dispose();
     focus.dispose();
     wood?.dispose();
     garden?.dispose();
@@ -315,18 +413,33 @@ class _CafeSceneState extends State<CafeScene>
     focusNode: focus,
     onKeyEvent: widget.interactive
         ? (event) {
-            if (event is! KeyDownEvent && event is! KeyRepeatEvent) return;
             final key = event.logicalKey, c = widget.controller;
-            if (key == LogicalKeyboardKey.keyW ||
-                key == LogicalKeyboardKey.arrowUp) {
-              c.step(0, .24);
+            final walkingKeys = {
+              LogicalKeyboardKey.keyW,
+              LogicalKeyboardKey.keyS,
+              LogicalKeyboardKey.keyA,
+              LogicalKeyboardKey.keyD,
+              LogicalKeyboardKey.arrowUp,
+              LogicalKeyboardKey.arrowDown,
+            };
+            if (walkingKeys.contains(key)) {
+              if (event is KeyUpEvent) {
+                heldKeys.remove(key);
+                if (heldKeys.isEmpty) _stopKeys();
+              } else if (event is KeyDownEvent &&
+                  c.seat == null &&
+                  !c.resting) {
+                if (heldKeys.isEmpty) {
+                  c.look(0, 0);
+                  keyElapsed = 0;
+                  keySpeed = 0;
+                }
+                heldKeys.add(key);
+                if (!keyboard.isActive) keyboard.start();
+              }
+              return;
             }
-            if (key == LogicalKeyboardKey.keyS ||
-                key == LogicalKeyboardKey.arrowDown) {
-              c.step(0, -.24);
-            }
-            if (key == LogicalKeyboardKey.keyA) c.step(-.24, 0);
-            if (key == LogicalKeyboardKey.keyD) c.step(.24, 0);
+            if (event is! KeyDownEvent && event is! KeyRepeatEvent) return;
             if (key == LogicalKeyboardKey.arrowLeft) c.look(.10, 0);
             if (key == LogicalKeyboardKey.arrowRight) c.look(-.10, 0);
             if (key == LogicalKeyboardKey.escape &&
@@ -338,6 +451,8 @@ class _CafeSceneState extends State<CafeScene>
     child: LayoutBuilder(
       builder: (context, constraints) {
         final size = constraints.biggest, c = widget.controller;
+        c.configureViewport(size.width);
+        final camera = c.displayCamera;
         final markers = <Widget>[];
         if (widget.interactive && !c.travelling && !c.resting) {
           for (final target in c.world.targets) {
@@ -347,7 +462,7 @@ class _CafeSceneState extends State<CafeScene>
             final anchor = target.seat == c.seat && c.seat != null
                 ? CafeWorld.desk(c.seat!)
                 : CafeWorld.anchor(target);
-            final point = CafeRenderer.project(anchor, c.camera, size);
+            final point = CafeRenderer.project(anchor, camera, size);
             if (point == null ||
                 point.dx < 35 ||
                 point.dx > size.width - 35 ||
@@ -356,7 +471,7 @@ class _CafeSceneState extends State<CafeScene>
                 (anchor - c.camera.position).length > 6.5) {
               continue;
             }
-            final hit = CafeRenderer.pick(point, c.camera, size, c.world);
+            final hit = CafeRenderer.pick(point, camera, size, c.world);
             if (hit?.target != target) continue;
             final writing = target.seat != null && c.seat == target.seat;
             final label = writing ? '노트 펼치기' : target.label;
@@ -403,7 +518,8 @@ class _CafeSceneState extends State<CafeScene>
           fit: StackFit.expand,
           children: [
             Semantics(
-              label: '1인칭 카페. 끌어 둘러보고, 바닥을 눌러 걷고, 책상과 서가를 눌러 이용해요.',
+              label:
+                  '${c.thirdPerson ? '3인칭' : '1인칭'} 카페. 끌어 둘러보고, 바닥을 눌러 걷고, 책상과 서가를 눌러 이용해요.',
               child: GestureDetector(
                 key: const ValueKey('cafe-first-person-view'),
                 behavior: HitTestBehavior.opaque,
@@ -412,10 +528,10 @@ class _CafeSceneState extends State<CafeScene>
                     : null,
                 onTapUp: widget.interactive
                     ? (details) {
-                        if (c.travelling) return;
+                        _stopKeys();
                         final hit = CafeRenderer.pick(
                           details.localPosition,
-                          c.camera,
+                          camera,
                           size,
                           c.world,
                         );
@@ -436,13 +552,28 @@ class _CafeSceneState extends State<CafeScene>
                   child: CustomPaint(
                     painter: CafeRenderer(
                       world: c.world,
-                      camera: c.camera,
+                      camera: camera,
                       wood: wood,
                       garden: garden,
                       sign: sign,
                       walnut: walnut,
                       limestone: limestone,
                       woven: woven,
+                      avatar: c.showAvatar
+                          ? CafeAvatar(
+                              position: c.camera.position,
+                              yaw: c.bodyYaw,
+                              gait: c.gait,
+                              speed: c.walkSpeed,
+                              seated:
+                                  !c.travelling &&
+                                  (c.seat != null || c.resting),
+                              opacity: ((c.viewBlend - .75) * 4).clamp(
+                                0.0,
+                                1.0,
+                              ),
+                            )
+                          : null,
                       time: sceneTime,
                       teaFilled: c.teaFilled,
                       bellAt: c.bellAt,

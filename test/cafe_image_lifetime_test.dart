@@ -6,6 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/cafe/cafe_camera.dart';
 import 'package:writing_human/cafe/cafe_renderer.dart';
 import 'package:writing_human/cafe/cafe_world.dart';
+import 'package:writing_human/cafe/cafe_avatar.dart';
+import 'package:writing_human/cafe/cafe_view_controller.dart';
+import 'package:writing_human/cafe/cafe_visit.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -33,8 +36,20 @@ void main() {
       final originals = [wood, garden, sign, walnut, limestone, woven];
       final world = CafeWorld();
       final courtyard = CafeWorld(courtyard: true);
+      final follow = CafeViewController();
+      final gardenFollow = CafeViewController(seat: CafeSeat.garden);
       try {
         for (var frame = 0; frame < 24; frame++) {
+          final controller = frame < 12 ? follow : gardenFollow;
+          controller.updateCamera(
+            CafeCamera(
+              position: frame < 12
+                  ? const CafePoint(2.8, 1.62, .3)
+                  : const CafePoint(.4, 1.62, .2),
+              yaw: (frame % 12) * math.pi / 6,
+            ),
+          );
+          controller.setViewBlend(1);
           final recorder = ui.PictureRecorder();
           CafeRenderer(
             world: frame < 12 ? world : courtyard,
@@ -46,13 +61,15 @@ void main() {
             walnut: walnut,
             limestone: limestone,
             woven: woven,
-            camera: CafeCamera(
-              position: frame < 12
-                  ? CafeCamera.entrance.position
-                  : CafeCamera.courtyardEntrance.position,
-              yaw: (frame % 12) * math.pi / 6,
-              pitch: -.18,
-            ),
+            camera: controller.displayCamera,
+            avatar: controller.showAvatar
+                ? CafeAvatar(
+                    position: controller.camera.position,
+                    yaw: controller.bodyYaw,
+                    gait: controller.gait,
+                    speed: .8,
+                  )
+                : null,
           ).paint(ui.Canvas(recorder), const ui.Size(240, 400));
           final picture = recorder.endRecording();
           try {
@@ -92,6 +109,8 @@ void main() {
           }
         }
       } finally {
+        follow.dispose();
+        gardenFollow.dispose();
         for (final original in originals) {
           if (!original.debugDisposed) original.dispose();
         }

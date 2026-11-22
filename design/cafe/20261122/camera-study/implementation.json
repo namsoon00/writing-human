@@ -1,0 +1,26 @@
+{
+  "status": "걷기·3인칭 구현 완료 · 배포 검사 진행 중",
+  "design_target": "approved-rear-follow.jpg",
+  "runtime": "Flutter/Dart articulated mesh, not the photoreal concept image",
+  "implemented": [
+    "상단 1/3인칭 선택",
+    "표시 카메라 기준 렌더·픽킹·이름표",
+    "보간 중 카메라 벽 충돌 회피",
+    "이동 거리 기반 발 디딤과 관절 임시 인물",
+    "충돌을 확인한 모서리 곡선과 가감속",
+    "현재 위치에서 목적지 재지정",
+    "키를 누르는 동안 걷기·초점/앱 이탈 시 중지",
+    "큰 글씨에서 필사 시작 접근 보존"
+  ],
+  "limits": [
+    "사진 같은 인물·외부 모션캡처·옷 시뮬레이션 아님",
+    "정밀한 발목 동작·종/차를 잡는 손동작은 미구현",
+    "iPhone 실제 터치·프레임 속도/발열 미검증",
+    "사진 시안과 Flutter 테스트 렌더를 구분"
+  ],
+  "verification": {
+    "full_native": 271,
+    "targeted_native": 7,
+    "chrome": "24 rear viewpoints in cafe/courtyard with original image/clone lifetime check"
+  }
+}

@@ -125,6 +125,70 @@ class CafeWorld {
     CafeSeat.windowRear => const Rect.fromLTWH(-4.12, -3.18, .72, 1.36),
     CafeSeat.garden => const Rect.fromLTWH(.88, .08, .9, 1.0),
   };
+  late final _cameraSurfaces = [
+    for (final face in faces)
+      if (face.color.a > .99 && !face.doubleSided)
+        (
+          face: face,
+          minX: face.points.map((p) => p.x).reduce(math.min),
+          maxX: face.points.map((p) => p.x).reduce(math.max),
+          minY: face.points.map((p) => p.y).reduce(math.min),
+          maxY: face.points.map((p) => p.y).reduce(math.max),
+          minZ: face.points.map((p) => p.z).reduce(math.min),
+          maxZ: face.points.map((p) => p.z).reduce(math.max),
+        ),
+  ];
+
+  /// Camera collision uses actual surface heights, not the ground walking map.
+  CafePoint clipCamera(CafePoint focus, CafePoint desired) {
+    final delta = desired - focus, length = delta.length;
+    if (length < .001) return focus;
+    final direction = delta * (1 / length);
+    final across = direction.cross(const CafePoint(0, 1, 0)).normalized * .10;
+    final minX = math.min(focus.x, desired.x) - .11,
+        maxX = math.max(focus.x, desired.x) + .11,
+        minY = math.min(focus.y, desired.y) - .11,
+        maxY = math.max(focus.y, desired.y) + .11,
+        minZ = math.min(focus.z, desired.z) - .11,
+        maxZ = math.max(focus.z, desired.z) + .11;
+    final candidates = _cameraSurfaces
+        .where(
+          (s) =>
+              s.minX <= maxX &&
+              s.maxX >= minX &&
+              s.minY <= maxY &&
+              s.maxY >= minY &&
+              s.minZ <= maxZ &&
+              s.maxZ >= minZ,
+        )
+        .toList();
+    var clear = length;
+    for (final offset in [
+      const CafePoint(0, 0, 0),
+      across,
+      across * -1,
+      const CafePoint(0, .10, 0),
+      const CafePoint(0, -.10, 0),
+    ]) {
+      final origin = focus + offset;
+      for (final surface in candidates) {
+        final points = surface.face.points;
+        for (var i = 1; i + 1 < points.length; i++) {
+          final a = points[0], e1 = points[i] - a, e2 = points[i + 1] - a;
+          final h = direction.cross(e2), det = e1.dot(h);
+          if (det.abs() < 1e-9) continue;
+          final d = origin - a, u = d.dot(h) / det;
+          if (u < 0 || u > 1) continue;
+          final q = d.cross(e1), v = direction.dot(q) / det;
+          if (v < 0 || u + v > 1) continue;
+          final hit = e2.dot(q) / det;
+          if (hit > .001 && hit < clear + .14) clear = math.max(0, hit - .14);
+        }
+      }
+    }
+    return focus + direction * clear;
+  }
+
   bool canStand(CafePoint p) =>
       p.isFinite &&
       p.x.abs() < (courtyard ? 2.55 : halfWidth - .25) &&

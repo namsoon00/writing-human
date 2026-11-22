@@ -2149,6 +2149,90 @@ void main() {
     expect(store.data.activePage!.passages, hasLength(2));
   });
 
+  testWidgets('Long drafts scroll lazily and preserve full edits on retry', (
+    tester,
+  ) async {
+    final store = MemoryStore()..data = existing();
+    final text = List.generate(
+      420,
+      (index) =>
+          '${index + 1}번째 문단. 책갈피를 끼워 두고 오늘도 천천히 한 줄을 옮겨 적습니다. '
+          '다음 문장을 읽기 전에 여기까지 쓰고 잠시 쉬어 갑니다.',
+    ).join('\n\n');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async =>
+          call.method == 'Clipboard.getData' ? {'text': text} : null,
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    await open(tester, store, FakeIntake());
+    await openRegistration(tester);
+    await tester.tap(find.byKey(const ValueKey('source-paste')));
+    await tester.pumpAndSettle();
+
+    final preview = find.byKey(const ValueKey('long-source-scroll'));
+    expect(preview, findsOneWidget);
+    expect(sourceField, findsNothing);
+    expect(find.textContaining('420번째 문단'), findsNothing);
+    await tester.drag(preview, const Offset(0, -180));
+    await tester.pumpAndSettle();
+    expect(tester.widget<ListView>(preview).controller!.offset, greaterThan(0));
+
+    final edit = find.text('글 고치기');
+    await tester.ensureVisible(edit);
+    await tester.tap(edit);
+    await tester.pumpAndSettle();
+    final controller = tester.widget<TextField>(sourceField).controller!;
+    expect(controller.text, text);
+    final edited = '가$text';
+    const selection = TextSelection.collapsed(offset: 1);
+    const composing = TextRange(start: 0, end: 1);
+    tester.testTextInput.updateEditingValue(
+      TextEditingValue(
+        text: edited,
+        selection: selection,
+        composing: composing,
+      ),
+    );
+    await tester.pump();
+    expect(controller.selection, selection);
+    expect(controller.value.composing, composing);
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+
+    tester.testTextInput.updateEditingValue(
+      TextEditingValue(text: edited, selection: selection),
+    );
+    await tester.pumpAndSettle();
+    final done = find.text('고치기 마치기');
+    await tester.ensureVisible(done);
+    await tester.tap(done);
+    await tester.pumpAndSettle();
+    expect(preview, findsOneWidget);
+
+    await showSourceDetails(tester);
+    final citation = find.byKey(const ValueKey('original-citation'));
+    await tester.ensureVisible(citation);
+    await tester.enterText(citation, '필사 원전 · 2쪽');
+    await tester.pumpAndSettle();
+    store.fail = true;
+    await tester.tap(confirm);
+    await tester.pumpAndSettle();
+    expect(find.byType(SourceImportSheet), findsOneWidget);
+    expect(find.text('원문을 저장하지 못했어요. 이 화면에서 다시 담아 주세요.'), findsOneWidget);
+
+    store.fail = false;
+    await tester.tap(confirm);
+    await settleSourceSheets(tester);
+    final saved = store.data.activeRecord!.originals.single;
+    expect(saved.text, edited);
+    expect(saved.citation, '필사 원전 · 2쪽');
+  });
+
   testWidgets(
     'Clipboard is read only on Paste; confirm saves a separate original',
     (tester) async {

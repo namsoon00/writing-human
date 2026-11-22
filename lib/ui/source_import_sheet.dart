@@ -16,6 +16,7 @@ import 'photo_original_paper.dart';
 import 'paper_panel.dart';
 import 'original_photo_crop.dart';
 import 'original_text_cleanup.dart';
+import 'long_source_text.dart';
 import 'source_search.dart';
 import 'writing_pen.dart';
 
@@ -76,13 +77,17 @@ class SourceImportSheet extends StatefulWidget {
 class _SourceImportSheetState extends State<SourceImportSheet> {
   late final _text = TextEditingController(text: widget.initialText)
     ..addListener(_changed);
-  final _focus = FocusNode();
+  late final _focus = FocusNode()..addListener(_textFocusChanged);
   final _bodyScroll = ScrollController();
   late final _citation = TextEditingController(text: widget.initialCitation)
     ..addListener(_changed);
   late String? _bookId = widget.bookId;
   TextEditingController? _wholeEditor;
   bool _correctingPhoto = false;
+  bool _editingLongText = false;
+  ({String text, String citation, bool composing})? _lastDraft;
+  String? _normalizedFrom;
+  String _normalizedText = '';
   SourceScan? _scan;
   late SourcePhoto? _originalPhoto = widget.initialPhoto;
   late List<double>? _photoRegion = widget.initialPhotoRegion;
@@ -147,7 +152,36 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   bool get _photoReady => _originalPhoto != null && _scan == null;
   bool get _offerExtraction => _photoReady && _text.text.trim().isEmpty;
 
-  void _changed() => setState(() {});
+  void _changed() {
+    final draft = (
+      text: (_wholeEditor ?? _text).text,
+      citation: _citation.text,
+      composing: _composing,
+    );
+    if (draft == _lastDraft) return;
+    _lastDraft = draft;
+    setState(() {});
+  }
+
+  bool get _longText => _text.text.length >= LongSourceText.threshold;
+  bool get _readingLongText =>
+      _longText && !_editingLongText && !_focus.hasFocus;
+
+  void _textFocusChanged() {
+    if (!_reviewing && _longText && !_editingLongText) setState(() {});
+  }
+
+  void _toggleLongTextEditing() {
+    if (!_editable) return;
+    final edit = _readingLongText;
+    _focus.unfocus();
+    setState(() => _editingLongText = edit);
+    if (edit) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _editingLongText && !_reviewing) _focus.requestFocus();
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -194,9 +228,15 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       } else if (_text.text != beforePaste) {
         setState(() => _error = '입력한 원문을 유지했어요. 다시 붙여넣어 주세요.');
       } else if (!_composing) {
+        if (text.length >= LongSourceText.threshold) {
+          _editingLongText = false;
+          _focus.unfocus();
+        }
         _text.value = TextEditingValue(
           text: text,
-          selection: TextSelection.collapsed(offset: text.length),
+          selection: TextSelection.collapsed(
+            offset: text.length >= LongSourceText.threshold ? 0 : text.length,
+          ),
         );
       }
     } catch (_) {
@@ -237,7 +277,15 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
           _photoRegion = null;
         });
       }
-      _text.text = text;
+      _editingLongText = false;
+      if (text.length >= LongSourceText.threshold) {
+        _text.value = TextEditingValue(
+          text: text,
+          selection: const TextSelection.collapsed(offset: 0),
+        );
+      } else {
+        _text.text = text;
+      }
     }
     if (citation != null) _citation.text = citation;
   }
@@ -547,7 +595,14 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     _reviewScan(before.scan, cameraPage: before.page);
   }
 
-  String get _confirmedText => normalizeSource((_wholeEditor ?? _text).text);
+  String get _confirmedText {
+    final current = (_wholeEditor ?? _text).text;
+    if (_normalizedFrom != current) {
+      _normalizedFrom = current;
+      _normalizedText = normalizeSource(current);
+    }
+    return _normalizedText;
+  }
 
   List<OriginalPhotoLine> _photoLines(String text) {
     if (text == _wholeText) {
@@ -938,32 +993,51 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     ),
   );
 
-  Widget _field() => SourceSlip(
-    choice: widget.style.bookDetails.sourceSlip,
-    showCaption: false,
-    child: WritingCaret(
-      controller: _text,
-      focusNode: _focus,
-      color: widget.penColor,
-      builder: (focus, scroll) => TextField(
-        key: const ValueKey('source-text'),
-        controller: _text,
-        focusNode: focus,
-        scrollController: scroll,
-        showCursor: false,
-        readOnly: _busy,
-        minLines: 4,
-        maxLines: 8,
-        keyboardType: TextInputType.multiline,
-        decoration: const InputDecoration(
-          hintText: '옮겨 쓸 글을 적어 주세요.',
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.zero,
-          filled: false,
-        ),
+  Widget _field() {
+    final longPreview = _readingLongText;
+    return SourceSlip(
+      choice: widget.style.bookDetails.sourceSlip,
+      showCaption: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (longPreview)
+            LongSourceText(text: _confirmedText)
+          else
+            WritingCaret(
+              controller: _text,
+              focusNode: _focus,
+              color: widget.penColor,
+              builder: (focus, scroll) => TextField(
+                key: const ValueKey('source-text'),
+                controller: _text,
+                focusNode: focus,
+                scrollController: scroll,
+                showCursor: false,
+                readOnly: _busy,
+                minLines: _longText ? 8 : 4,
+                maxLines: 8,
+                keyboardType: TextInputType.multiline,
+                decoration: const InputDecoration(
+                  hintText: '옮겨 쓸 글을 적어 주세요.',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                  filled: false,
+                ),
+              ),
+            ),
+          if (_longText || _editingLongText)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton(
+                onPressed: _editable ? _toggleLongTextEditing : null,
+                child: Text(longPreview ? '글 고치기' : '고치기 마치기'),
+              ),
+            ),
+        ],
       ),
-    ),
-  );
+    );
+  }
 
   Future<void> _chooseReviewedPhotoRegion() async {
     final editor = _wholeEditor;
@@ -1095,11 +1169,13 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
               )
             : Padding(
                 padding: const EdgeInsets.symmetric(vertical: 22),
-                child: Text(
-                  editor.text,
-                  key: const ValueKey('photo-original-paper'),
-                  style: style,
-                ),
+                child: editor.text.length >= LongSourceText.threshold
+                    ? LongSourceText(text: editor.text, style: style)
+                    : Text(
+                        editor.text,
+                        key: const ValueKey('photo-original-paper'),
+                        style: style,
+                      ),
               ),
       ),
       OriginalTextCleanup(controller: editor, enabled: _editable),

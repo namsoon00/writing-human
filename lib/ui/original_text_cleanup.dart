@@ -20,6 +20,8 @@ class OriginalTextCleanup extends StatefulWidget {
 
 class _OriginalTextCleanupState extends State<OriginalTextCleanup> {
   ({TextEditingValue before, String after})? _undo;
+  String? _checkedText;
+  bool _canClean = false;
 
   bool get _editable =>
       widget.enabled &&
@@ -61,14 +63,17 @@ class _OriginalTextCleanupState extends State<OriginalTextCleanup> {
     builder: (context, _) {
       final value = widget.controller.value;
       final canUndo = _undo?.after == value.text;
-      final canClean = needsOriginalTextCleanup(value.text);
-      if (!canClean && !canUndo) return const SizedBox.shrink();
+      if (_checkedText != value.text) {
+        _checkedText = value.text;
+        _canClean = needsOriginalTextCleanup(value.text);
+      }
+      if (!_canClean && !canUndo) return const SizedBox.shrink();
       return Wrap(
         crossAxisAlignment: WrapCrossAlignment.center,
         spacing: 4,
         children: [
           TextButton.icon(
-            onPressed: _editable && canClean ? _clean : null,
+            onPressed: _editable && _canClean ? _clean : null,
             icon: const Icon(CupertinoIcons.textformat, size: 16),
             label: const Text('특수문자 정리'),
           ),

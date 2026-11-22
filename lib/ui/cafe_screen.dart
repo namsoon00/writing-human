@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../audio/cafe_ambience.dart';
 
 import '../cafe/cafe_visit.dart';
+import '../cafe/cafe_world.dart';
 import '../cafe/cafe_view_controller.dart';
 import '../data/model.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -21,7 +22,9 @@ class CafeScreen extends StatefulWidget {
     this.initialSeat,
     this.saveFailed = false,
     this.onTools,
+    this.playCalmSound,
   });
+  final Future<void> Function(String name)? playCalmSound;
   final List<Book> books;
   final String currentWritingLabel;
   final CafeSeat? initialSeat;
@@ -35,12 +38,16 @@ class CafeScreen extends StatefulWidget {
 
 class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
   final ambience = CafeAmbience();
+  final calmAudio = CafeCalmAudio();
+  bool lastCourtyard = false;
+  String? calmHint;
   bool sound = false, soundBusy = false;
   int soundGeneration = 0;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    lastCourtyard = view.inCourtyard;
     view.addListener(_viewChanged);
   }
 
@@ -49,6 +56,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     if (state != AppLifecycleState.resumed) {
       soundGeneration++;
       unawaited(ambience.stop());
+      unawaited(calmAudio.stop());
       if (mounted) setState(() => sound = false);
     }
   }
@@ -62,7 +70,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
       if (sound) {
         await ambience.stop();
       } else {
-        await ambience.start();
+        await ambience.start(courtyard: view.inCourtyard);
       }
       if (mounted && generation == soundGeneration) {
         setState(() => sound = desired);
@@ -70,7 +78,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('빗소리를 재생하지 못했어요. 다시 켜 주세요.')),
+          const SnackBar(content: Text('소리를 재생하지 못했어요. 다시 켜 주세요.')),
         );
       }
     } finally {
@@ -86,6 +94,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     unawaited(ambience.dispose());
+    unawaited(calmAudio.dispose());
     view.removeListener(_viewChanged);
     view.dispose();
     super.dispose();
@@ -103,6 +112,14 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
 
   void _viewChanged() {
     if (!mounted) return;
+    if (lastCourtyard != view.inCourtyard) {
+      lastCourtyard = view.inCourtyard;
+      soundGeneration++;
+      unawaited(ambience.stop());
+      unawaited(calmAudio.stop());
+      sound = false;
+      calmHint = null;
+    }
     if (pending != null && pendingRequest != view.request) pending = null;
     setState(() {});
     if (!view.travelling && pending != null) {
@@ -120,6 +137,36 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
 
   void _activate(CafeTarget target) {
     if (opening || widget.saveFailed || dialogOpen || view.travelling) return;
+    if (target == CafeTarget.bell || target == CafeTarget.tea) {
+      final distance = (view.camera.position - CafeWorld.anchor(target)).length;
+      if (distance < 2.0) {
+        final bell = target == CafeTarget.bell;
+        if (bell) {
+          view.ring();
+        } else {
+          view.pourTea();
+        }
+        setState(() => calmHint = bell ? '종소리가 천천히 잦아들어요.' : '따뜻한 차를 놓아 두었어요.');
+        unawaited(
+          (widget.playCalmSound ?? calmAudio.play)(
+            bell ? 'bell' : 'tea',
+          ).catchError((Object _) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('소리를 재생하지 못했어요. 다시 눌러 주세요.')),
+              );
+            }
+          }),
+        );
+      } else {
+        pending = null;
+        if (view.visit(target)) {
+          setState(() => calmHint = '가까이 가면 한 번 더 눌러 주세요.');
+        }
+      }
+      return;
+    }
+    calmHint = null;
     if (target.seat == view.seat && target.seat != null) {
       _write();
       return;
@@ -320,7 +367,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
               style: TextStyle(height: 1.6),
             ),
           ),
-          for (final target in CafeTarget.values)
+          for (final target in view.world.targets)
             SimpleDialogOption(
               key: target.seat == null
                   ? ValueKey('cafe-guide-${target.name}')
@@ -385,14 +432,18 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                   children: [
                     Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            '쓰는 인간 · 필사 카페',
+                            view.inCourtyard
+                                ? '쓰는 인간 · 고요한 뜰'
+                                : '쓰는 인간 · 필사 카페',
                             style: TextStyle(color: brandInk, fontSize: 16),
                           ),
                         ),
                         IconButton(
-                          tooltip: sound ? '빗소리 끄기' : '빗소리 켜기',
+                          tooltip: view.inCourtyard
+                              ? (sound ? '물소리 끄기' : '물소리 켜기')
+                              : (sound ? '빗소리 끄기' : '빗소리 켜기'),
                           onPressed: soundBusy ? null : _toggleSound,
                           icon: Icon(
                             sound
@@ -426,7 +477,11 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                         opening
                             ? '글 여는 중'
                             : view.travelling
-                            ? '자리로 걸어가는 중'
+                            ? '천천히 걸어가는 중'
+                            : calmHint != null
+                            ? calmHint!
+                            : view.resting
+                            ? '잠시 머물러도 좋아요.'
                             : view.seat != null
                             ? '${view.seat!.label} · 노트를 눌러 써요'
                             : '바닥을 눌러 걷고, 끌어 둘러봐요',
@@ -437,7 +492,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                         ),
                       ),
                     ),
-                    if (view.seat != null && !view.travelling)
+                    if ((view.seat != null || view.resting) && !view.travelling)
                       TextButton(
                         key: const ValueKey('cafe-stand'),
                         onPressed: opening

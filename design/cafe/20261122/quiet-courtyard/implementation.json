@@ -1,0 +1,40 @@
+{
+  "status": "구현 완료 · 공개 배포 검사 진행 중",
+  "source": "Flutter/Dart mesh and existing textures",
+  "design_image": "approved-goldfish-concept.jpg",
+  "entry": "카페 안쪽 오른쪽 아치 / 공간 안내 → 고요한 뜰",
+  "implemented": [
+    "꽃과 두 나무",
+    "금붕어 세 마리·연못 잔물결",
+    "벤치 휴식",
+    "직접 누르는 작은 종·차",
+    "직접 켜는 물소리",
+    "뜰의 노트와 기존 쓰기 콜백",
+    "카페로 복귀",
+    "동작 줄이기·백그라운드 중지"
+  ],
+  "limits": [
+    "사진 같은 시안과 단순 3D 실행을 구분",
+    "별도 공간 전환이며 연속 모델 아님",
+    "물리 기반 수면·식물 흔들림 미구현",
+    "iPhone 실제 터치·속도·음향 미검증"
+  ],
+  "tests": {
+    "native_before_concurrent_pencil_merge": 261,
+    "chrome_image_lifetime": "24 paints / cafe + courtyard / six source images"
+  },
+  "audio": {
+    "bell": {
+      "path": "assets/audio/cafe-bell.wav",
+      "sha256": "3e79620dc1f6aa73bbf927991e15ecece8ea68611a0b11ef0760bdfecb6a22b2"
+    },
+    "tea": {
+      "path": "assets/audio/cafe-tea.wav",
+      "sha256": "a5c241b30a12232b77c0c6a4033cf48934398d49d0d139da27ffd45b81cc5e13"
+    },
+    "water": {
+      "path": "assets/audio/cafe-water.wav",
+      "sha256": "9b148e80814d29e49ff850cfd17d6add0f414c34938d4dd258d3c819bdb4cd48"
+    }
+  }
+}

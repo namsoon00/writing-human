@@ -110,9 +110,9 @@ void main() {
   );
 
   test('Every visible fixture can be hit by its own physical surface', () {
-    final world = CafeWorld();
     const size = Size(390, 844);
     for (final target in CafeTarget.values) {
+      final world = CafeWorld(courtyard: target.inCourtyard);
       final origin = CafeWorld.approach(target);
       final delta = CafeWorld.anchor(target) - origin;
       final camera = CafeCamera(
@@ -154,13 +154,16 @@ void main() {
   test(
     'Every object has a walkable reachable approach, including the quiet desk',
     () {
-      final world = CafeWorld();
       for (final target in CafeTarget.values) {
+        final world = CafeWorld(courtyard: target.inCourtyard);
+        final entrance = target.inCourtyard
+            ? CafeCamera.courtyardEntrance
+            : CafeCamera.entrance;
         final approach = CafeWorld.approach(target);
         expect(world.canStand(approach), isTrue, reason: target.name);
-        final path = world.path(CafeCamera.entrance.position, approach);
+        final path = world.path(entrance.position, approach);
         expect(path, isNotEmpty, reason: target.name);
-        var current = CafeCamera.entrance.position;
+        var current = entrance.position;
         for (final point in path) {
           expect(
             world.clearSegment(current, point),

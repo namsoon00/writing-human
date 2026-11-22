@@ -32,11 +32,14 @@ void main() {
           woven = await texture();
       final originals = [wood, garden, sign, walnut, limestone, woven];
       final world = CafeWorld();
+      final courtyard = CafeWorld(courtyard: true);
       try {
         for (var frame = 0; frame < 24; frame++) {
           final recorder = ui.PictureRecorder();
           CafeRenderer(
-            world: world,
+            world: frame < 12 ? world : courtyard,
+            time: frame.toDouble(),
+            teaFilled: true,
             wood: wood,
             garden: garden,
             sign: sign,
@@ -46,7 +49,7 @@ void main() {
             camera: CafeCamera(
               position: frame < 12
                   ? CafeCamera.entrance.position
-                  : const CafePoint(2.85, 1.62, .3),
+                  : CafeCamera.courtyardEntrance.position,
               yaw: (frame % 12) * math.pi / 6,
               pitch: -.18,
             ),

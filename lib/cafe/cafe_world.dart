@@ -4,6 +4,8 @@ import 'dart:ui';
 import 'cafe_camera.dart';
 import 'cafe_visit.dart';
 
+part 'cafe_courtyard.dart';
+
 enum CafeSurface { plain, oak, walnut, limestone, cord, brass }
 
 enum CafeGrain { x, y, z }
@@ -52,9 +54,16 @@ class CafeFace {
 
 /// All geometry is in metres. The viewer stands inside the same room they visit.
 class CafeWorld {
-  CafeWorld() {
-    _build();
+  CafeWorld({this.courtyard = false}) {
+    if (courtyard) {
+      _buildCourtyard();
+    } else {
+      _build();
+    }
   }
+  final bool courtyard;
+  Iterable<CafeTarget> get targets =>
+      CafeTarget.values.where((t) => t.inCourtyard == courtyard);
   final List<CafeFace> faces = [];
   final List<Rect> obstacles = [];
   static const wall = Color(0xffddd2bd),
@@ -71,6 +80,7 @@ class CafeWorld {
     CafeSeat.quiet => const CafePoint(-2.25, .77, -4.02),
     CafeSeat.windowMiddle => const CafePoint(-3.72, .77, -.3),
     CafeSeat.windowRear => const CafePoint(-3.72, .77, -2.5),
+    CafeSeat.garden => const CafePoint(1.48, .77, .58),
   };
   static CafePoint anchor(CafeTarget target) => switch (target) {
     CafeTarget.window => desk(CafeSeat.window),
@@ -82,6 +92,13 @@ class CafeWorld {
     CafeTarget.recommendations => const CafePoint(3.92, 1.30, -2.20),
     CafeTarget.stationery => const CafePoint(3.82, .94, 2.45),
     CafeTarget.exit => const CafePoint(0, 1.25, 4.92),
+    CafeTarget.courtyard => const CafePoint(3.15, 1.6, -4.85),
+    CafeTarget.pond => const CafePoint(-1.25, .08, -.3),
+    CafeTarget.bench => const CafePoint(2.2, .65, -.7),
+    CafeTarget.bell => const CafePoint(-.8, 1.62, 2.8),
+    CafeTarget.tea => const CafePoint(1.42, .84, .93),
+    CafeTarget.gardenDesk => desk(CafeSeat.garden),
+    CafeTarget.cafeReturn => const CafePoint(0, 1.3, 2.97),
   };
   static CafePoint approach(CafeTarget target) => switch (target) {
     CafeTarget.window => const CafePoint(-2.52, 1.62, 1.9),
@@ -93,6 +110,12 @@ class CafeWorld {
     CafeTarget.recommendations => const CafePoint(2.85, 1.62, -2.20),
     CafeTarget.stationery => const CafePoint(2.85, 1.62, 2.45),
     CafeTarget.exit => const CafePoint(0, 1.62, 4.10),
+    CafeTarget.courtyard => const CafePoint(2.95, 1.62, -3.5),
+    CafeTarget.pond => const CafePoint(.3, 1.62, -.3),
+    CafeTarget.bench => const CafePoint(1.15, 1.62, -.7),
+    CafeTarget.bell => const CafePoint(.1, 1.62, 2.15),
+    CafeTarget.tea || CafeTarget.gardenDesk => const CafePoint(.3, 1.62, 1.6),
+    CafeTarget.cafeReturn => const CafePoint(0, 1.62, 2.25),
   };
   static Rect tableBounds(CafeSeat seat) => switch (seat) {
     CafeSeat.window => const Rect.fromLTWH(-4.12, 1.22, .72, 1.36),
@@ -100,11 +123,12 @@ class CafeWorld {
     CafeSeat.quiet => const Rect.fromLTWH(-2.95, -4.42, 1.4, .8),
     CafeSeat.windowMiddle => const Rect.fromLTWH(-4.12, -.98, .72, 1.36),
     CafeSeat.windowRear => const Rect.fromLTWH(-4.12, -3.18, .72, 1.36),
+    CafeSeat.garden => const Rect.fromLTWH(.88, .08, .9, 1.0),
   };
   bool canStand(CafePoint p) =>
       p.isFinite &&
-      p.x.abs() < halfWidth - .25 &&
-      p.z.abs() < halfDepth - .25 &&
+      p.x.abs() < (courtyard ? 2.55 : halfWidth - .25) &&
+      p.z.abs() < (courtyard ? 2.8 : halfDepth - .25) &&
       !obstacles.any((r) => r.inflate(.22).contains(Offset(p.x, p.z)));
 
   bool clearSegment(CafePoint from, CafePoint to) {
@@ -1025,6 +1049,28 @@ class CafeWorld {
         unlit: true,
       ),
     );
+    _target = CafeTarget.courtyard;
+    box(3.15, 1.22, -4.94, 1.05, 2.4, .05, const Color(0xff939b77));
+    for (final x in [2.57, 3.73]) {
+      box(x, 1.0, -4.82, .09, 2.0, .16, dark, wood: true);
+    }
+    _arch(3.15, 1.95, -4.72, .62, .53);
+    faces.add(
+      CafeFace(
+        [
+          const CafePoint(2.68, 1.45, -4.73),
+          const CafePoint(3.62, 1.45, -4.73),
+          const CafePoint(3.62, 1.92, -4.73),
+          const CafePoint(2.68, 1.92, -4.73),
+        ],
+        cream,
+        sign: true,
+        signRow: 4,
+        unlit: true,
+        target: _target,
+      ),
+    );
+    _target = null;
     // Right wall cabinetry: face-out recommendations, private shelf, pen ledge.
     for (final section in [
       (-2.25, CafeTarget.recommendations),

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../cafe/cafe_camera.dart';
 import '../cafe/cafe_renderer.dart';
@@ -31,9 +32,40 @@ class CafeScene extends StatefulWidget {
 }
 
 class _CafeSceneState extends State<CafeScene>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final focus = FocusNode(debugLabel: '카페 둘러보기');
   late final AnimationController travel;
+  late final Ticker calm;
+  double sceneTime = 0, heldTime = 0;
+  bool appActive = true;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncCalm();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    appActive = state == AppLifecycleState.resumed;
+    _syncCalm();
+  }
+
+  void _syncCalm() {
+    final animate =
+        mounted &&
+        appActive &&
+        widget.controller.inCourtyard &&
+        !MediaQuery.disableAnimationsOf(context) &&
+        TickerMode.valuesOf(context).enabled;
+    if (animate && !calm.isActive) {
+      calm.start();
+    }
+    if (!animate && calm.isActive) {
+      calm.stop();
+      heldTime = sceneTime;
+    }
+  }
+
   List<CafeCamera> route = [];
   List<double> lengths = [];
   double total = 0;
@@ -43,6 +75,15 @@ class _CafeSceneState extends State<CafeScene>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    calm = createTicker((elapsed) {
+      final next = heldTime + elapsed.inMicroseconds / 1000000;
+      // A quiet 10Hz scene, only while the courtyard is visible.
+      if (next - sceneTime >= .1 && mounted) {
+        setState(() => sceneTime = next);
+        widget.controller.effectTime = sceneTime;
+      }
+    });
     travel = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 850),
@@ -72,12 +113,13 @@ class _CafeSceneState extends State<CafeScene>
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     canvas.drawColor(const Color(0xffe9dfc9), BlendMode.src);
-    const titles = ['쓰는 인간', '쓰는 인간의 추천', '나의 책장', '펜과 노트'];
+    const titles = ['쓰는 인간', '쓰는 인간의 추천', '나의 책장', '펜과 노트', '고요한 뜰'];
     const captions = [
       '오늘도, 한 문장',
       '마음에 드는 책을 만나 보세요',
       '지금 펼칠 글과 책',
       '내 취향으로 쓰는 도구',
+      '잠시 머물러도 좋아요',
     ];
     for (var row = 0; row < titles.length; row++) {
       final title = TextPainter(
@@ -112,7 +154,7 @@ class _CafeSceneState extends State<CafeScene>
       caption.dispose();
     }
     final picture = recorder.endRecording();
-    final image = await picture.toImage(768, 1344);
+    final image = await picture.toImage(768, 1680);
     picture.dispose();
     return image;
   }
@@ -212,7 +254,10 @@ class _CafeSceneState extends State<CafeScene>
         }
       }
     }
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {});
+      _syncCalm();
+    }
   }
 
   void _travelFrame() {
@@ -238,6 +283,7 @@ class _CafeSceneState extends State<CafeScene>
 
   void _activate(CafeTarget target) {
     final c = widget.controller;
+    c.effectTime = sceneTime;
     if (c.travelling) return;
     if (target.seat != null && c.seat == target.seat) {
       widget.onWrite?.call();
@@ -250,6 +296,8 @@ class _CafeSceneState extends State<CafeScene>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    calm.dispose();
     widget.controller.removeListener(_changed);
     travel.dispose();
     focus.dispose();
@@ -281,16 +329,21 @@ class _CafeSceneState extends State<CafeScene>
             if (key == LogicalKeyboardKey.keyD) c.step(.24, 0);
             if (key == LogicalKeyboardKey.arrowLeft) c.look(.10, 0);
             if (key == LogicalKeyboardKey.arrowRight) c.look(-.10, 0);
-            if (key == LogicalKeyboardKey.escape && c.seat != null) c.stand();
+            if (key == LogicalKeyboardKey.escape &&
+                (c.seat != null || c.resting)) {
+              c.stand();
+            }
           }
         : null,
     child: LayoutBuilder(
       builder: (context, constraints) {
         final size = constraints.biggest, c = widget.controller;
         final markers = <Widget>[];
-        if (widget.interactive && !c.travelling) {
-          for (final target in CafeTarget.values) {
-            if (c.seat != null && target.seat != c.seat) continue;
+        if (widget.interactive && !c.travelling && !c.resting) {
+          for (final target in c.world.targets) {
+            if (c.seat != null && target.seat != c.seat && !c.inCourtyard) {
+              continue;
+            }
             final anchor = target.seat == c.seat && c.seat != null
                 ? CafeWorld.desk(c.seat!)
                 : CafeWorld.anchor(target);
@@ -390,6 +443,10 @@ class _CafeSceneState extends State<CafeScene>
                       walnut: walnut,
                       limestone: limestone,
                       woven: woven,
+                      time: sceneTime,
+                      teaFilled: c.teaFilled,
+                      bellAt: c.bellAt,
+                      teaAt: c.teaAt,
                     ),
                     size: Size.infinite,
                   ),

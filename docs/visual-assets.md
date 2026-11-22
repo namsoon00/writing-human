@@ -135,3 +135,12 @@ Use case: photorealistic-natural. Asset type: exterior garden color texture seen
 카페 전체 이미지를 배경으로 사용하지 않으며 실제 재질·기하·조명 검수 범위는
 [검증 기록](verification.md)을 따른다. 이전 `cafe-oak-albedo.png`는 과거 재질 이력이며
 현재 CafeScene은 새 오크와 월넛을 구분해서 읽는다.
+
+
+## 고요한 뜰의 실제 기하와 합성 소리 · 2026-11-22
+
+정원·연못·금붕어·종·차와 벤치는 Dart 메시로 만든다. 기존 오크·월넛·석재 재질을
+재사용하며 생성 이미지를 배경으로 사용하지 않는다. `tool/generate_cafe_calm.py`는
+고정 시드로 원본 합성 소리를 만든다. 외부 녹음·음원은 사용하지 않았다.
+`assets/audio/cafe-bell.wav`(5초), `cafe-tea.wav`(2.2초), `cafe-water.wav`(8초)는
+22,050Hz·16bit·mono WAV다. 종과 차는 직접 누를 때, 물소리는 직접 켤 때만 재생한다.

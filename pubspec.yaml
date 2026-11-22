@@ -116,6 +116,9 @@ flutter:
     - assets/audio/page-turn.mp3
     - assets/audio/pencil-slow-settle.wav
     - assets/audio/cafe-rain.wav
+    - assets/audio/cafe-bell.wav
+    - assets/audio/cafe-tea.wav
+    - assets/audio/cafe-water.wav
     - assets/audio/supertonic-license.txt
     - assets/audio/supertonic-code-license.txt
     - assets/fonts/WritingHumanDevelopment-info.json

@@ -40,10 +40,17 @@ class CafeRenderer extends CustomPainter {
     this.walnut,
     this.limestone,
     this.woven,
+    this.time = 0,
+    this.teaFilled = false,
+    this.bellAt,
+    this.teaAt,
   });
   final CafeWorld world;
   final CafeCamera camera;
   final ui.Image? wood, garden, sign, walnut, limestone, woven;
+  final double time;
+  final bool teaFilled;
+  final double? bellAt, teaAt;
   static const near = .075;
   static final _daylightDirection = const CafePoint(-.78, .58, .22).normalized;
 
@@ -263,7 +270,15 @@ class CafeRenderer extends CustomPainter {
       );
     }
 
-    for (final face in world.faces) {
+    for (final face in [
+      ...world.faces,
+      ...world.animatedFaces(
+        time,
+        teaFilled: teaFilled,
+        bellAt: bellAt,
+        teaAt: teaAt,
+      ),
+    ]) {
       // Closed solid meshes face outward. Thin leaves and translucent light
       // surfaces remain double-sided, so they work from every standing angle.
       if (face.color.a > .99 &&
@@ -290,7 +305,7 @@ class CafeRenderer extends CustomPainter {
           u = delta.dot(edgeU) / edgeU.dot(edgeU) * (image.width - 1);
           v = (1 - delta.dot(edgeV) / edgeV.dot(edgeV)) * (image.height - 1);
           if (face.sign) {
-            v = (face.signRow + v / (image.height - 1)) * image.height / 4;
+            v = (face.signRow + v / (image.height - 1)) * image.height / 5;
           }
         }
         vertices.add(
@@ -410,6 +425,10 @@ class CafeRenderer extends CustomPainter {
 
   @override
   bool shouldRepaint(CafeRenderer oldDelegate) =>
+      oldDelegate.time != time ||
+      oldDelegate.teaFilled != teaFilled ||
+      oldDelegate.bellAt != bellAt ||
+      oldDelegate.teaAt != teaAt ||
       oldDelegate.camera != camera ||
       oldDelegate.wood != wood ||
       oldDelegate.garden != garden ||

@@ -143,9 +143,9 @@ enum _Collection {
 
     final compact = _compact(query);
     final listed = hits.map((hit) => hit.id).toSet();
-    for (final poem in WikisourcePoem.reviewed.values) {
-      if (!listed.contains(poem.pageId) && _compact(poem.title) == compact) {
-        hits.add(_SourceHit(this, poem.title, poem.pageId));
+    for (final work in WikisourceWork.reviewed.values) {
+      if (!listed.contains(work.pageId) && _compact(work.title) == compact) {
+        hits.add(_SourceHit(this, work.title, work.pageId));
       }
     }
     // Use the individual work title when the page is inside a collection.
@@ -161,8 +161,8 @@ enum _Collection {
     }
     return [
       for (final matches in [exact, prefixes]) ...[
-        ...matches.where((hit) => hit.poem != null),
-        ...matches.where((hit) => hit.poem == null),
+        ...matches.where((hit) => hit.work != null),
+        ...matches.where((hit) => hit.work == null),
       ],
     ].take(12).toList();
   }
@@ -209,8 +209,8 @@ class _SourceHit {
   final String title;
   final int id;
 
-  WikisourcePoem? get poem =>
-      collection == _Collection.works ? WikisourcePoem.reviewed[id] : null;
+  WikisourceWork? get work =>
+      collection == _Collection.works ? WikisourceWork.reviewed[id] : null;
 
   Uri get url => Uri.https(collection.host, '/w/index.php', {'curid': '$id'});
   String get citation {
@@ -254,6 +254,9 @@ class _SourceSearchState extends State<_SourceSearch> {
   final _query = TextEditingController();
   final _client = http.Client();
   final _focus = FocusNode();
+  final _catalogQuery = TextEditingController();
+  final _catalogFocus = FocusNode();
+  final _catalogScroll = ScrollController();
   String? _searched, _linkError;
   bool _loading = false, _importing = false;
   bool _webSearch = false;
@@ -317,11 +320,11 @@ class _SourceSearchState extends State<_SourceSearch> {
 
   Iterable<String> _completions(String query) {
     final terms = switch (_mode) {
-      _SearchMode.title => WikisourcePoem.reviewed.values.map(
-        (poem) => poem.title,
+      _SearchMode.title => WikisourceWork.reviewed.values.map(
+        (work) => work.title,
       ),
-      _SearchMode.author => WikisourcePoem.reviewed.values.map(
-        (poem) => poem.author,
+      _SearchMode.author => WikisourceWork.reviewed.values.map(
+        (work) => work.author,
       ),
       _SearchMode.phrase => const <String>[],
     };
@@ -426,26 +429,27 @@ class _SourceSearchState extends State<_SourceSearch> {
     }
   }
 
-  Future<List<String>?> _loadPreview(WikisourcePoem poem) async {
+  Future<List<String>?> _loadPreview(WikisourceWork work) async {
     try {
-      return await poem.load(_client);
+      return await work.load(_client);
     } on Exception {
       return null;
     }
   }
 
   void _showHit(_SourceHit hit) {
-    final poem = hit.poem;
+    _catalogFocus.unfocus();
+    final work = hit.work;
     setState(() {
       _selected = hit;
       _linkError = null;
-      _preview = poem == null ? null : _loadPreview(poem);
+      _preview = work == null ? null : _loadPreview(work);
     });
   }
 
   Widget _previewBody(
     _SourceHit hit,
-    WikisourcePoem poem,
+    WikisourceWork work,
     Future<List<String>?> preview,
   ) => FutureBuilder<List<String>?>(
     future: preview,
@@ -464,19 +468,19 @@ class _SourceSearchState extends State<_SourceSearch> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
                 Text(
-                  poem.title,
+                  work.title,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                Text('${poem.author} · 위키문헌'),
+                Text('${work.author} · 위키문헌'),
                 const SizedBox(height: 8),
                 Text(stanzas.join('\n\n')),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton(
                     onPressed: () => _open(
-                      poem.url,
-                      title: poem.title,
-                      citation: poem.citation,
+                      work.url,
+                      title: work.title,
+                      citation: work.citation,
                     ),
                     child: const Text('위키문헌에서 원문 보기'),
                   ),
@@ -492,7 +496,7 @@ class _SourceSearchState extends State<_SourceSearch> {
               onPressed: () => Navigator.pop(
                 context,
                 SourceSearchChoice(
-                  citation: poem.citation,
+                  citation: work.citation,
                   text: stanzas.join('\n\n'),
                 ),
               ),
@@ -576,6 +580,34 @@ class _SourceSearchState extends State<_SourceSearch> {
     ],
   );
 
+  Widget _catalog() {
+    final query = _compact(_catalogQuery.text);
+    final works = WikisourceWork.reviewed.values.where((work) {
+      return _compact(work.title).contains(query) ||
+          _compact(work.author).contains(query);
+    }).toList();
+    if (works.isEmpty) {
+      return const ListTile(title: Text('다른 제목이나 작가로 찾아보세요.'));
+    }
+    return ListView.builder(
+      key: const PageStorageKey('source-catalog-list'),
+      controller: _catalogScroll,
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      itemCount: works.length,
+      itemBuilder: (_, index) {
+        final work = works[index];
+        return OriginalListItem(
+          style: widget.style,
+          title: work.title,
+          subtitle: work.author,
+          showDivider: index > 0,
+          onTap: () =>
+              _showHit(_SourceHit(_Collection.works, work.title, work.pageId)),
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _completionDelay?.cancel();
@@ -584,6 +616,9 @@ class _SourceSearchState extends State<_SourceSearch> {
     _client.close();
     _query.dispose();
     _focus.dispose();
+    _catalogQuery.dispose();
+    _catalogFocus.dispose();
+    _catalogScroll.dispose();
     super.dispose();
   }
 
@@ -605,7 +640,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                 children: [
                   if (selected != null)
                     IconButton(
-                      tooltip: '검색 결과로 돌아가기',
+                      tooltip: _webSearch ? '검색 결과로 돌아가기' : '작품 목록으로 돌아가기',
                       onPressed: _importing
                           ? null
                           : () => setState(() {
@@ -637,7 +672,7 @@ class _SourceSearchState extends State<_SourceSearch> {
               Expanded(
                 child: preview == null
                     ? _details(selected)
-                    : _previewBody(selected, selected.poem!, preview),
+                    : _previewBody(selected, selected.work!, preview),
               )
             else ...[
               Wrap(
@@ -646,10 +681,11 @@ class _SourceSearchState extends State<_SourceSearch> {
                 children: [
                   for (final web in [false, true])
                     ChoiceChip(
-                      label: Text(web ? '웹 검색' : '시 둘러보기'),
+                      label: Text(web ? '웹 검색' : '작품 둘러보기'),
                       selected: _webSearch == web,
                       onSelected: (_) {
                         _focus.unfocus();
+                        _catalogFocus.unfocus();
                         setState(() => _webSearch = web);
                         _queueCompletions();
                       },
@@ -759,7 +795,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                                   CupertinoIcons.chevron_right,
                                   size: 15,
                                 ),
-                                subtitle: hit.poem != null
+                                subtitle: hit.work != null
                                     ? const Text('원문 미리보기')
                                     : _mode == _SearchMode.author
                                     ? null
@@ -790,33 +826,24 @@ class _SourceSearchState extends State<_SourceSearch> {
                     ],
                   ),
                 ),
-              ] else
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Text('천천히 읽을 시'),
-                      ),
-                      for (final (index, poem)
-                          in WikisourcePoem.reviewed.values.indexed)
-                        OriginalListItem(
-                          style: widget.style,
-                          title: poem.title,
-                          subtitle: poem.author,
-                          showDivider: index > 0,
-                          onTap: () => _showHit(
-                            _SourceHit(
-                              _Collection.works,
-                              poem.title,
-                              poem.pageId,
-                            ),
-                          ),
-                        ),
-                    ],
+              ] else ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: PaperSearchField(
+                    fieldKey: const ValueKey('source-catalog-query'),
+                    controller: _catalogQuery,
+                    focusNode: _catalogFocus,
+                    hint: '작품 제목이나 작가',
+                    maxLength: 160,
+                    onChanged: (_) {
+                      if (_catalogScroll.hasClients) _catalogScroll.jumpTo(0);
+                      setState(() {});
+                    },
+                    onSubmitted: (_) => _catalogFocus.unfocus(),
                   ),
                 ),
+                Expanded(child: _catalog()),
+              ],
             ],
           ],
         ),

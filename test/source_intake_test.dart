@@ -371,7 +371,7 @@ void main() {
       expect(sourceField.hitTestable(), findsOneWidget);
       expect(find.text('붙여넣기').hitTestable(), findsOneWidget);
       expect(find.text('새 원문 찾기').hitTestable(), findsOneWidget);
-      expect(find.text('천천히 읽을 시'), findsNothing);
+      expect(find.text('작품 제목이나 작가'), findsNothing);
       expect(find.byType(OriginalListItem), findsNothing);
       expect(find.byKey(const ValueKey('original-citation')), findsNothing);
       expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
@@ -1127,9 +1127,9 @@ void main() {
       final result = find.widgetWithText(ListTile, '바람');
       expect(result, findsOneWidget);
       expect(find.text('웹 원문 · 복사 또는 캡처'), findsOneWidget);
-      await tester.tap(find.widgetWithText(ChoiceChip, '시 둘러보기'));
+      await tester.tap(find.widgetWithText(ChoiceChip, '작품 둘러보기'));
       await tester.pumpAndSettle();
-      expect(find.text('천천히 읽을 시'), findsOneWidget);
+      expect(find.text('작품 제목이나 작가'), findsOneWidget);
       expect(result, findsNothing);
       await tester.tap(find.widgetWithText(ChoiceChip, '웹 검색'));
       await tester.pumpAndSettle();
@@ -1317,6 +1317,65 @@ void main() {
     );
   }
 
+  testWidgets('The work catalog filters authors and imports prose paragraphs', (
+    tester,
+  ) async {
+    final requests = <Uri>[];
+    final client = MockClient((request) async {
+      requests.add(request.url);
+      return http.Response.bytes(
+        utf8.encode(
+          jsonEncode({
+            'parse': {
+              'pageid': 2370,
+              'revid': 468924,
+              'categories': [
+                {'category': 'PD-old-50'},
+              ],
+              'text':
+                  '<div class="mw-parser-output"><div class="ws-header">'
+                  '<p>작품 머리말</p></div><p>첫 문단<sup>각주</sup></p>'
+                  '<p>둘째 문단</p></div>',
+            },
+          }),
+        ),
+        200,
+      );
+    });
+
+    await http.runWithClient(() async {
+      final store = MemoryStore();
+      await open(tester, store, FakeIntake());
+      await openRegistration(tester);
+      await openSourceSearch(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey('source-catalog-query')),
+        '현 진 건',
+      );
+      await tester.pumpAndSettle();
+      expect(requests, isEmpty);
+      expect(find.text('진달래꽃'), findsNothing);
+      await tester.tap(find.widgetWithText(ListTile, '운수 좋은 날'));
+      await tester.pumpAndSettle();
+      expect(requests.single.queryParameters['oldid'], '468924');
+      await tester.tap(find.text('원문 가져오기'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(sourceField).controller!.text,
+        '첫 문단\n\n둘째 문단',
+      );
+      await showSourceDetails(tester);
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('original-citation')))
+            .controller!
+            .text,
+        contains('운수 좋은 날 · 현진건 · 위키문헌'),
+      );
+      expect(store.data.records, isEmpty);
+    }, () => client);
+  });
+
   testWidgets('Reviewed poem imports all stanzas and keeps line breaks', (
     tester,
   ) async {
@@ -1413,7 +1472,7 @@ void main() {
         await tester.ensureVisible(more);
         await tester.tap(more);
         await tester.pumpAndSettle();
-        expect(find.text('천천히 읽을 시'), findsOneWidget);
+        expect(find.text('작품 제목이나 작가'), findsOneWidget);
         expect(find.widgetWithText(TextField, '검색어'), findsNothing);
         expect(requests, isEmpty);
         final poem = find.widgetWithText(ListTile, '산유화');
@@ -1505,10 +1564,10 @@ void main() {
             await openRegistration(tester);
           }
           expect(requests, isEmpty);
-          expect(find.text('천천히 읽을 시'), findsNothing);
+          expect(find.text('작품 제목이나 작가'), findsNothing);
           await tester.tap(find.text('새 원문 찾기'));
           await tester.pumpAndSettle();
-          expect(find.text('천천히 읽을 시'), findsOneWidget);
+          expect(find.text('작품 제목이나 작가'), findsOneWidget);
           expect(requests, isEmpty);
           final poem = find.widgetWithText(ListTile, '서시');
           await tester.ensureVisible(poem);

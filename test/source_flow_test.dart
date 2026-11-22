@@ -40,7 +40,7 @@ void main() {
       );
       await tester.tap(find.text('새 원문 찾기'));
       await settleSourceSheets(tester);
-      expect(find.text('천천히 읽을 시'), findsOneWidget);
+      expect(find.text('작품 제목이나 작가'), findsOneWidget);
       expect(store.writes, 0);
       await tester.tap(find.byTooltip('검색 닫기'));
       await settleSourceSheets(tester);

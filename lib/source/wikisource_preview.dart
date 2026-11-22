@@ -6,63 +6,97 @@ import 'package:http/http.dart' as http;
 
 import 'source_intake.dart';
 
-class WikisourcePoem {
-  const WikisourcePoem(
+part 'wikisource_catalog.dart';
+
+class WikisourceWork {
+  const WikisourceWork(
     this.pageId,
     this.revisionId,
     this.title,
     this.author, {
     this.editionIndex,
+    this.prose = false,
+    this.licenseCategory = 'PD-old-70',
+    this.licensedCollection,
   });
 
-  // These editions carry a public domain notice on Korean Wikisource.
-  // Page and revision IDs identify the specific transcription reviewed.
+  // Page and revision IDs identify the specific transcription checked.
   static const reviewed = {
-    1508: WikisourcePoem(1508, 430575, '진달래꽃', '김소월', editionIndex: 0),
-    1515: WikisourcePoem(1515, 387685, '서시', '윤동주'),
-    1866: WikisourcePoem(1866, 387769, '별 헤는 밤', '윤동주'),
-    1879: WikisourcePoem(1879, 203679, '초혼', '김소월'),
-    1861: WikisourcePoem(1861, 387749, '자화상', '윤동주'),
-    2718: WikisourcePoem(2718, 387750, '소년', '윤동주'),
-    2719: WikisourcePoem(2719, 387751, '눈 오는 지도', '윤동주'),
-    19215: WikisourcePoem(19215, 387752, '돌아와 보는 밤', '윤동주'),
-    19216: WikisourcePoem(19216, 387756, '새로운 길', '윤동주'),
-    19217: WikisourcePoem(19217, 387757, '간판 없는 거리', '윤동주'),
-    19218: WikisourcePoem(19218, 387758, '태초의 아침', '윤동주'),
-    19219: WikisourcePoem(19219, 387759, '또 태초의 아침', '윤동주'),
-    19220: WikisourcePoem(19220, 387760, '새벽이 올 때까지', '윤동주'),
-    19221: WikisourcePoem(19221, 387761, '무서운 시간', '윤동주'),
-    1862: WikisourcePoem(1862, 387762, '십자가', '윤동주'),
-    1863: WikisourcePoem(1863, 387763, '바람이 불어', '윤동주'),
-    19222: WikisourcePoem(19222, 387764, '슬픈 족속', '윤동주'),
-    1864: WikisourcePoem(1864, 387767, '또 다른 고향', '윤동주'),
-    10238: WikisourcePoem(10238, 387768, '길', '윤동주'),
-    1867: WikisourcePoem(1867, 387804, '참회록', '윤동주'),
-    1522: WikisourcePoem(1522, 430577, '산유화', '김소월', editionIndex: 0),
-    1521: WikisourcePoem(1521, 203761, '엄마야 누나야', '김소월'),
-    1878: WikisourcePoem(1878, 203584, '못 잊어', '김소월'),
-    34903: WikisourcePoem(34903, 430975, '접동새', '김소월', editionIndex: 0),
-    1970: WikisourcePoem(1970, 203684, '가는 길', '김소월'),
-    1717: WikisourcePoem(1717, 203585, '예전엔 미처 몰랐어요', '김소월'),
-    1519: WikisourcePoem(1519, 204518, '금잔디', '김소월'),
-    1523: WikisourcePoem(1523, 203685, '왕십리', '김소월'),
-    1877: WikisourcePoem(1877, 430584, '먼 후일', '김소월', editionIndex: 0),
-    3609: WikisourcePoem(3609, 203568, '풀 따기', '김소월'),
-    1937: WikisourcePoem(1937, 430586, '봄 밤', '김소월', editionIndex: 0),
-    3619: WikisourcePoem(3619, 203690, '삭주구성', '김소월'),
-    3548: WikisourcePoem(3548, 430599, '달맞이', '김소월', editionIndex: 0),
-    3044: WikisourcePoem(
+    1508: WikisourceWork(1508, 430575, '진달래꽃', '김소월', editionIndex: 0),
+    1515: WikisourceWork(1515, 387685, '서시', '윤동주'),
+    1866: WikisourceWork(1866, 387769, '별 헤는 밤', '윤동주'),
+    1879: WikisourceWork(1879, 203679, '초혼', '김소월'),
+    1513: WikisourceWork(
+      1513,
+      430576,
+      "님의 침묵",
+      "한용운",
+      editionIndex: 1,
+      licensedCollection: _hanYongunCollection,
+    ),
+    1923: WikisourceWork(1923, 465103, "동백꽃", "김유정", prose: true),
+    2370: WikisourceWork(
+      2370,
+      468924,
+      "운수 좋은 날",
+      "현진건",
+      prose: true,
+      licenseCategory: 'PD-old-50',
+    ),
+    1517: WikisourceWork(
+      1517,
+      202488,
+      "청포도",
+      "이육사",
+      licenseCategory: 'PD-old-50',
+    ),
+    2921: WikisourceWork(2921, 389127, "모란이 피기까지는", "김영랑"),
+    2584: WikisourceWork(2584, 426852, "메밀꽃 필 무렵", "이효석", prose: true),
+    1861: WikisourceWork(1861, 387749, '자화상', '윤동주'),
+    2718: WikisourceWork(2718, 387750, '소년', '윤동주'),
+    2719: WikisourceWork(2719, 387751, '눈 오는 지도', '윤동주'),
+    19215: WikisourceWork(19215, 387752, '돌아와 보는 밤', '윤동주'),
+    19216: WikisourceWork(19216, 387756, '새로운 길', '윤동주'),
+    19217: WikisourceWork(19217, 387757, '간판 없는 거리', '윤동주'),
+    19218: WikisourceWork(19218, 387758, '태초의 아침', '윤동주'),
+    19219: WikisourceWork(19219, 387759, '또 태초의 아침', '윤동주'),
+    19220: WikisourceWork(19220, 387760, '새벽이 올 때까지', '윤동주'),
+    19221: WikisourceWork(19221, 387761, '무서운 시간', '윤동주'),
+    1862: WikisourceWork(1862, 387762, '십자가', '윤동주'),
+    1863: WikisourceWork(1863, 387763, '바람이 불어', '윤동주'),
+    19222: WikisourceWork(19222, 387764, '슬픈 족속', '윤동주'),
+    1864: WikisourceWork(1864, 387767, '또 다른 고향', '윤동주'),
+    10238: WikisourceWork(10238, 387768, '길', '윤동주'),
+    1867: WikisourceWork(1867, 387804, '참회록', '윤동주'),
+    1522: WikisourceWork(1522, 430577, '산유화', '김소월', editionIndex: 0),
+    1521: WikisourceWork(1521, 203761, '엄마야 누나야', '김소월'),
+    1878: WikisourceWork(1878, 203584, '못 잊어', '김소월'),
+    34903: WikisourceWork(34903, 430975, '접동새', '김소월', editionIndex: 0),
+    1970: WikisourceWork(1970, 203684, '가는 길', '김소월'),
+    1717: WikisourceWork(1717, 203585, '예전엔 미처 몰랐어요', '김소월'),
+    1519: WikisourceWork(1519, 204518, '금잔디', '김소월'),
+    1523: WikisourceWork(1523, 203685, '왕십리', '김소월'),
+    1877: WikisourceWork(1877, 430584, '먼 후일', '김소월', editionIndex: 0),
+    3609: WikisourceWork(3609, 203568, '풀 따기', '김소월'),
+    1937: WikisourceWork(1937, 430586, '봄 밤', '김소월', editionIndex: 0),
+    3619: WikisourceWork(3619, 203690, '삭주구성', '김소월'),
+    3548: WikisourceWork(3548, 430599, '달맞이', '김소월', editionIndex: 0),
+    3044: WikisourceWork(
       3044,
       430592,
       '빼앗긴 들에도 봄은 오는가',
       '이상화',
       editionIndex: 1,
     ),
-    3045: WikisourcePoem(3045, 381039, '나의 침실로', '이상화'),
+    3045: WikisourceWork(3045, 381039, '나의 침실로', '이상화'),
+    ..._additionalWorks,
   };
 
   final int pageId, revisionId;
   final String title, author;
+  final bool prose;
+  final String licenseCategory;
+  final WikisourceWork? licensedCollection;
 
   // Parallel transcriptions are alternatives. Unset means the blocks follow
   // each other, for example when the poem spans several scanned pages.
@@ -73,55 +107,74 @@ class WikisourcePoem {
 
   String get citation => '$title · $author · 위키문헌 · $url';
 
-  Future<List<String>> load(http.Client client) async {
+  Future<Map> _parse(http.Client client, {required String properties}) async {
     final response = await client
         .get(
           Uri.https('ko.wikisource.org', '/w/api.php', {
             'action': 'parse',
             'oldid': '$revisionId',
-            'prop': 'text|revid|categories',
+            'prop': properties,
             'format': 'json',
             'formatversion': '2',
             'origin': '*',
           }),
         )
         .timeout(const Duration(seconds: 10));
-    if (response.statusCode != 200 || response.bodyBytes.length > 500000) {
-      throw const FormatException('Wikisource preview unavailable');
-    }
-    final data = jsonDecode(utf8.decode(response.bodyBytes));
-    if (data
-        case {
-          'parse': {
-            'pageid': final int page,
-            'revid': final int revision,
-            'text': final String markup,
-            'categories': final List categories,
-          },
-        }
-        when page == pageId &&
-            revision == revisionId &&
-            categories.any(
-              (entry) => entry is Map && entry['category'] == 'PD-old-70',
-            )) {
-      final poems = html.parseFragment(markup).querySelectorAll('.poem');
-      final index = editionIndex;
-      if (poems.isNotEmpty && (index == null || index < poems.length)) {
-        final blocks = index == null ? poems : [poems[index]];
-        final text = blocks.map((block) => _readPoem(block, title)).join('\n');
-        final stanzas = splitSourceParagraphs(text);
-        if (stanzas.isNotEmpty &&
-            stanzas.first.isNotEmpty &&
-            stanzas.join('\n\n').length <= sourceLengthLimit) {
-          return stanzas;
-        }
+    if (response.statusCode == 200 && response.bodyBytes.length <= 500000) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (data case {
+        'parse': final Map page,
+      } when page['pageid'] == pageId && page['revid'] == revisionId) {
+        return page;
       }
     }
     throw const FormatException('Unexpected Wikisource edition');
   }
+
+  bool _hasLicense(Map page) {
+    final categories = page['categories'];
+    return categories is List &&
+        categories.any(
+          (entry) => entry is Map && entry['category'] == licenseCategory,
+        );
+  }
+
+  Future<List<String>> load(http.Client client) async {
+    final page = await _parse(client, properties: 'text|revid|categories');
+    final collection = licensedCollection;
+    final licensed = collection == null
+        ? _hasLicense(page)
+        : page['title'] is String &&
+              (page['title'] as String).startsWith('${collection.title}/') &&
+              collection._hasLicense(
+                await collection._parse(client, properties: 'revid|categories'),
+              );
+    if (!licensed || page['text'] is! String) {
+      throw const FormatException('Wikisource source unavailable');
+    }
+
+    final document = html.parseFragment(page['text'] as String);
+    final blocks = document.querySelectorAll(
+      prose ? '.mw-parser-output > p, .prp-pages-output > p' : '.poem',
+    );
+    final index = editionIndex;
+    if (blocks.isEmpty || (index != null && index >= blocks.length)) {
+      throw const FormatException('Unexpected Wikisource transcription');
+    }
+    final selected = index == null ? blocks : [blocks[index]];
+    final text = selected
+        .map((block) => _readBlock(block, title))
+        .join(prose ? '\n\n' : '\n');
+    final paragraphs = splitSourceParagraphs(text);
+    if (paragraphs.first.isEmpty ||
+        paragraphs.join('\n\n').length > sourceLengthLimit) {
+      throw const FormatException('Invalid Wikisource transcription');
+    }
+    return paragraphs;
+  }
 }
 
-String _readPoem(Element poem, String title) {
+String _readBlock(Element block, String title) {
   final text = StringBuffer();
   void append(Node node) {
     if (node is Text) {
@@ -137,7 +190,8 @@ String _readPoem(Element poem, String title) {
       }
       if (['script', 'style', 'sup'].contains(node.localName) ||
           node.attributes.containsKey('hidden') ||
-          node.classes.contains('pagenum')) {
+          node.classes.contains('pagenum') ||
+          node.classes.contains('ws-noexport')) {
         return;
       }
       for (final child in node.nodes) {
@@ -147,7 +201,7 @@ String _readPoem(Element poem, String title) {
     }
   }
 
-  append(poem);
+  append(block);
   return text
       .toString()
       .split('\n')

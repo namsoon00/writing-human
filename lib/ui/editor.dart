@@ -65,7 +65,7 @@ class PageEditor extends StatefulWidget {
   State<PageEditor> createState() => _PageEditorState();
 }
 
-class _PageEditorState extends State<PageEditor> {
+class _PageEditorState extends State<PageEditor> with WidgetsBindingObserver {
   late final PencilTextController text;
   late final _WritingScrollController scroll;
   late TextEditingValue _observedText;
@@ -185,6 +185,7 @@ class _PageEditorState extends State<PageEditor> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     focus.addListener(_focusChanged);
     final p = widget.page;
     text = PencilTextController(
@@ -326,10 +327,16 @@ class _PageEditorState extends State<PageEditor> {
   }
 
   void _focusChanged() {
+    if (!focus.hasFocus) _sound?.pause();
     _emitEditingState();
     if (mounted) {
       setState(() {});
     }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) _sound?.pause();
   }
 
   void _closeSound() {
@@ -503,6 +510,7 @@ class _PageEditorState extends State<PageEditor> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _closeSound();
     text.removeListener(_textChanged);
     scroll.removeListener(_save);

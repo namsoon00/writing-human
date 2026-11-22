@@ -17,20 +17,19 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test(
-    'The bundled pencil glide has time to finish before another starts',
+    'Writing loads the approved 13-second rhythm and page turns stay one-shot',
     () async {
-      final effect = PaperSoundEffect.pencil;
+      final effect = PaperSoundEffect.writingRhythm;
       final wav = await rootBundle.load('assets/${effect.asset}');
       // The bundled PCM file uses a standard 44-byte WAV header.
       final byteRate = wav.getUint32(28, .little);
       final pcmLength = wav.getUint32(40, .little);
       expect(pcmLength, wav.lengthInBytes - 44);
       final duration = Duration(microseconds: pcmLength * 1000000 ~/ byteRate);
-      expect(duration, pencilGlideDuration);
-      expect(
-        effect.minimumInterval - duration,
-        const Duration(milliseconds: 240),
-      );
+      expect(duration, const Duration(milliseconds: 13050));
+      expect(effect.loops, isTrue);
+      expect(effect.volume, 1);
+      expect(PaperSoundEffect.pageTurn.loops, isFalse);
     },
   );
 

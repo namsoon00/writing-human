@@ -6,9 +6,9 @@ import 'paper_sound_effect.dart';
 import 'writing_sound_native.dart'
     if (dart.library.js_interop) 'writing_sound_web.dart';
 
-/// Keep the last request in a burst and leave started clips to finish.
+/// Keep one writing rhythm active across brief pauses, or play page samples.
 class PaperSound {
-  PaperSound.writing() : this._(PaperSoundEffect.pencil);
+  PaperSound.writing() : this._(PaperSoundEffect.writingRhythm);
   PaperSound.pageTurn() : this._(PaperSoundEffect.pageTurn);
   PaperSound._(this._effect) : _output = PaperSoundOutput(_effect);
 
@@ -20,8 +20,22 @@ class PaperSound {
 
   void play(bool Function() isCurrent) {
     if (_closed || !isCurrent()) return;
-    _pending = PaperSoundRequest(isCurrent);
+    final request = PaperSoundRequest(isCurrent);
+    if (_effect.loops) {
+      _timer?.cancel();
+      _timer = Timer(writingRhythmIdle, pause);
+      _output.play(request);
+      return;
+    }
+    _pending = request;
     if (_timer == null) _flush();
+  }
+
+  void pause() {
+    if (_closed || !_effect.loops) return;
+    _timer?.cancel();
+    _timer = null;
+    _output.pause();
   }
 
   void _flush() {

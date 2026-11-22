@@ -36,6 +36,8 @@ class PaperSoundOutput {
   web.AudioContext? _context;
   web.GainNode? _gain;
   web.AudioBuffer? _buffer;
+  web.AudioBufferSourceNode? _rhythm;
+  Timer? _fadeStop;
   bool _resuming = false, _closed = false;
   PaperSoundRequest? _pending;
 
@@ -101,6 +103,14 @@ class PaperSoundOutput {
 
   void play(PaperSoundRequest request) {
     if (_closed) return;
+    if (_rhythm != null) {
+      if (_fadeStop != null) {
+        _fadeStop?.cancel();
+        _fadeStop = null;
+        _rampRhythm(effect.volume, writingRhythmResumeFade);
+      }
+      return;
+    }
     _pending = request;
     _playPending();
   }
@@ -120,21 +130,57 @@ class PaperSoundOutput {
     try {
       final source = context.createBufferSource();
       source.buffer = buffer;
+      if (effect.loops) {
+        source.loop = true;
+        _gain!.gain.value = effect.volume;
+      }
       source.connect(_gain!);
-      source.onended = ((web.Event _) => source.disconnect()).toJS;
+      source.onended = ((web.Event _) {
+        source.disconnect();
+        if (_rhythm == source) _rhythm = null;
+      }).toJS;
       source.start();
+      if (effect.loops) _rhythm = source;
     } catch (error) {
       debugPrint('Paper sound unavailable: $error');
     }
   }
 
+  void _rampRhythm(double volume, Duration duration) {
+    final context = _context;
+    final gain = _gain?.gain;
+    if (context == null || gain == null) return;
+    final at = context.currentTime;
+    final from = gain.value;
+    gain.cancelScheduledValues(at);
+    gain.setValueAtTime(from, at);
+    gain.linearRampToValueAtTime(volume, at + duration.inMilliseconds / 1000);
+  }
+
+  void pause() {
+    _pending = null;
+    final source = _rhythm;
+    if (source == null || _closed || _fadeStop != null) return;
+    _rampRhythm(0, writingRhythmFade);
+    _fadeStop = Timer(writingRhythmFade, () {
+      _fadeStop = null;
+      _rhythm = null;
+      source.stop();
+    });
+  }
+
   Future<void> dispose() async {
     _closed = true;
     _pending = null;
+    _fadeStop?.cancel();
     for (final event in _activationEvents) {
       web.document.removeEventListener(event, _interaction, true.toJS);
     }
     try {
+      if (_rhythm != null && _context?.state == 'running') {
+        _rampRhythm(0, writingRhythmExitFade);
+        await Future<void>.delayed(writingRhythmExitFade);
+      }
       await _context?.close().toDart;
     } catch (error) {
       debugPrint('Could not release paper sound: $error');

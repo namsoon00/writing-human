@@ -1,15 +1,11 @@
-const _requestLifetimeMs = 240;
-const _pencilGlideMs = 1640;
-const _requestLifetime = Duration(milliseconds: _requestLifetimeMs);
-const pencilGlideDuration = Duration(milliseconds: _pencilGlideMs);
+const _requestLifetime = Duration(milliseconds: 240);
+const writingRhythmIdle = Duration(seconds: 3);
+const writingRhythmFade = Duration(milliseconds: 850);
+const writingRhythmExitFade = Duration(milliseconds: 320);
+const writingRhythmResumeFade = Duration(milliseconds: 280);
 
 enum PaperSoundEffect {
-  // Leave room for delayed audio activation so two glides cannot stack.
-  pencil(
-    'pencil-slow-settle.wav',
-    1,
-    Duration(milliseconds: _pencilGlideMs + _requestLifetimeMs),
-  ),
+  writingRhythm('writing-human-low-rhythm.wav', 1, Duration.zero),
   pageTurn('page-turn.mp3', .42, Duration(milliseconds: 105));
 
   const PaperSoundEffect(this.file, this.volume, this.minimumInterval);
@@ -19,6 +15,7 @@ enum PaperSoundEffect {
   final Duration minimumInterval;
 
   String get asset => 'audio/$file';
+  bool get loops => this == writingRhythm;
 }
 
 class PaperSoundRequest {

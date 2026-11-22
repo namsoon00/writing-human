@@ -1,0 +1,52 @@
+{
+  "source_commit": "3d7647b7d3b59146de58db22d0e6bff0acb01187",
+  "actions_run": 45004626204,
+  "index": {
+    "url": "https://namsoon00.github.io/writing-human/?v=3d7647b",
+    "status": 200,
+    "bytes": 8150,
+    "sha256": "75847346d46efd2f793d44caf1386d48dc5cee6b6c7e78a44921065d9ea01ed7"
+  },
+  "bootstrap": {
+    "url": "https://namsoon00.github.io/writing-human/flutter_bootstrap.js?v=0f912ef3d926ceda",
+    "status": 200,
+    "bytes": 10016,
+    "sha256": "0f912ef3d926ceda6b6e9184061c3be9484bd45a35754846e036e2d96c7aac4e"
+  },
+  "main": {
+    "url": "https://namsoon00.github.io/writing-human/main.dart.js?v=02ca85d62ddd5383",
+    "status": 200,
+    "bytes": 5100451,
+    "sha256": "02ca85d62ddd5383e424e7449375a97e4ee8e82ad94630ef74611238d04d49ff",
+    "matches_local": true
+  },
+  "audio": [
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-bell.wav?v=3d7647b",
+      "status": 200,
+      "bytes": 220544,
+      "sha256": "3e79620dc1f6aa73bbf927991e15ecece8ea68611a0b11ef0760bdfecb6a22b2",
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-tea.wav?v=3d7647b",
+      "status": 200,
+      "bytes": 97064,
+      "sha256": "a5c241b30a12232b77c0c6a4033cf48934398d49d0d139da27ffd45b81cc5e13",
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-water.wav?v=3d7647b",
+      "status": 200,
+      "bytes": 352844,
+      "sha256": "9b148e80814d29e49ff850cfd17d6add0f414c34938d4dd258d3c819bdb4cd48",
+      "matches_local": true
+    }
+  ],
+  "verified_at": "2026-11-22T08:57:23.702780+00:00",
+  "actions_result": "build and deploy success",
+  "limitations": [
+    "No browser UI or iPhone touch/performance/audio verification",
+    "Flutter fixture captures differ from photoreal design concept"
+  ]
+}

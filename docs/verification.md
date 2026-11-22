@@ -2822,3 +2822,17 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   390×844/1200×800 렌더를 확인했지만 iPhone Safari 터치·성능·발열·음향은 미검증이다.
   실제 사용자 데이터와 입력/저장 모델, 기존 Sites ID와 비공개 범위는 변경하지 않았다.
   공개 배포 결과와 실제 HTTP 파일 해시는 완료 뒤 별도로 기록한다.
+
+
+## 2026-11-22 · 고요한 뜰 공개 확인
+
+- [배포 45004626204](https://github.com/namsoon00/writing-human/actions/runs/45004626204)는
+  소스 `3d7647b7d3b59146de58db22d0e6bff0acb01187`의 포맷·정적 분석·전체 테스트·
+  Chrome CanvasKit 재그리기 검사·웹 빌드·게시를 모두 통과했다.
+- [공개 앱](https://namsoon00.github.io/writing-human/?v=3d7647b)의 HTML·버전 bootstrap·
+  main JS가 HTTP 200이며 실제 main JS는 검증한 로컬 빌드와 바이트 단위로 같았다.
+  SHA-256 `02ca85d62ddd5383e424e7449375a97e4ee8e82ad94630ef74611238d04d49ff`.
+  종·차·물소리 WAV도 각각 HTTP 200·로컬 번들과 동일한 해시를 확인했다.
+- [공개 파일 증거](../design/cafe/20261122/quiet-courtyard/deployment-proof.json)를 보관했다.
+  책장 → 필사 카페 → 공간 안내 → 고요한 뜰 또는 카페 안쪽 오른쪽 아치를 눌러 들어간다.
+  실제 iPhone 터치·음향·성능은 미검증이며 기존 비공개 Sites 프로젝트와 범위는 유지했다.

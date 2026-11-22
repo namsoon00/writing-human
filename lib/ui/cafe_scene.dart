@@ -11,7 +11,6 @@ import '../cafe/cafe_view_controller.dart';
 import '../cafe/cafe_visit.dart';
 import '../cafe/cafe_world.dart';
 import '../cafe/cafe_walk.dart';
-import '../cafe/cafe_avatar.dart';
 import 'paper.dart';
 
 /// A real, perspective-projected room seen through an eye-height camera.
@@ -37,15 +36,12 @@ class _CafeSceneState extends State<CafeScene>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   final focus = FocusNode(debugLabel: '카페 둘러보기');
   late final AnimationController travel;
-  late final AnimationController perspective;
-  int viewRequest = 0;
   double lastTravelTime = 0;
   CafeWalkTiming? timing;
   late final Ticker calm;
   late final Ticker keyboard;
   final heldKeys = <LogicalKeyboardKey>{};
   double keySpeed = 0, keyElapsed = 0;
-  void _perspectiveFrame() => widget.controller.setViewBlend(perspective.value);
   void _stopKeys() {
     heldKeys.clear();
     keyboard.stop();
@@ -100,13 +96,6 @@ class _CafeSceneState extends State<CafeScene>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _syncCalm();
-    if (MediaQuery.disableAnimationsOf(context)) {
-      perspective.stop();
-      perspective.removeListener(_perspectiveFrame);
-      perspective.value = widget.controller.thirdPerson ? 1 : 0;
-      perspective.addListener(_perspectiveFrame);
-      widget.controller.setViewBlend(perspective.value, notify: false);
-    }
   }
 
   @override
@@ -116,8 +105,6 @@ class _CafeSceneState extends State<CafeScene>
     if (!appActive) {
       _stopKeys();
       travel.stop();
-      perspective.stop();
-      perspective.value = widget.controller.thirdPerson ? 1 : 0;
       widget.controller.look(0, 0);
     }
   }
@@ -158,12 +145,6 @@ class _CafeSceneState extends State<CafeScene>
         widget.controller.effectTime = sceneTime;
       }
     });
-    perspective = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 380),
-      value: widget.controller.viewBlend,
-    )..addListener(_perspectiveFrame);
-    viewRequest = widget.controller.viewRequest;
     travel = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 850),
@@ -308,14 +289,6 @@ class _CafeSceneState extends State<CafeScene>
 
   void _changed() {
     final c = widget.controller;
-    if (viewRequest != c.viewRequest) {
-      viewRequest = c.viewRequest;
-      if (MediaQuery.disableAnimationsOf(context)) {
-        perspective.value = c.thirdPerson ? 1 : 0;
-      } else {
-        perspective.animateTo(c.thirdPerson ? 1 : 0, curve: Curves.easeInOut);
-      }
-    }
     if (request != c.request) {
       request = c.request;
       travel.stop();
@@ -397,7 +370,6 @@ class _CafeSceneState extends State<CafeScene>
     focus.removeListener(_focusChanged);
     widget.controller.removeListener(_changed);
     travel.dispose();
-    perspective.dispose();
     focus.dispose();
     wood?.dispose();
     garden?.dispose();
@@ -451,8 +423,7 @@ class _CafeSceneState extends State<CafeScene>
     child: LayoutBuilder(
       builder: (context, constraints) {
         final size = constraints.biggest, c = widget.controller;
-        c.configureViewport(size.width);
-        final camera = c.displayCamera;
+        final camera = c.camera;
         final markers = <Widget>[];
         if (widget.interactive && !c.travelling && !c.resting) {
           for (final target in c.world.targets) {
@@ -518,8 +489,7 @@ class _CafeSceneState extends State<CafeScene>
           fit: StackFit.expand,
           children: [
             Semantics(
-              label:
-                  '${c.thirdPerson ? '3인칭' : '1인칭'} 카페. 끌어 둘러보고, 바닥을 눌러 걷고, 책상과 서가를 눌러 이용해요.',
+              label: '1인칭 카페. 끌어 둘러보고, 바닥을 눌러 걷고, 책상과 서가를 눌러 이용해요.',
               child: GestureDetector(
                 key: const ValueKey('cafe-first-person-view'),
                 behavior: HitTestBehavior.opaque,
@@ -559,21 +529,6 @@ class _CafeSceneState extends State<CafeScene>
                       walnut: walnut,
                       limestone: limestone,
                       woven: woven,
-                      avatar: c.showAvatar
-                          ? CafeAvatar(
-                              position: c.camera.position,
-                              yaw: c.bodyYaw,
-                              gait: c.gait,
-                              speed: c.walkSpeed,
-                              seated:
-                                  !c.travelling &&
-                                  (c.seat != null || c.resting),
-                              opacity: ((c.viewBlend - .75) * 4).clamp(
-                                0.0,
-                                1.0,
-                              ),
-                            )
-                          : null,
                       time: sceneTime,
                       teaFilled: c.teaFilled,
                       bellAt: c.bellAt,

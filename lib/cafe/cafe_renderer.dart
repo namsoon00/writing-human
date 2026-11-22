@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'cafe_camera.dart';
 import 'cafe_world.dart';
 import 'cafe_visit.dart';
-import 'cafe_avatar.dart';
 
 class _Vertex {
   const _Vertex(this.point, this.u, this.v, this.color);
@@ -45,12 +44,10 @@ class CafeRenderer extends CustomPainter {
     this.teaFilled = false,
     this.bellAt,
     this.teaAt,
-    this.avatar,
   });
   final CafeWorld world;
   final CafeCamera camera;
   final ui.Image? wood, garden, sign, walnut, limestone, woven;
-  final CafeAvatar? avatar;
   final double time;
   final bool teaFilled;
   final double? bellAt, teaAt;
@@ -275,7 +272,6 @@ class CafeRenderer extends CustomPainter {
 
     for (final face in [
       ...world.faces,
-      ...?avatar?.build(),
       ...world.animatedFaces(
         time,
         teaFilled: teaFilled,
@@ -429,7 +425,6 @@ class CafeRenderer extends CustomPainter {
 
   @override
   bool shouldRepaint(CafeRenderer oldDelegate) =>
-      oldDelegate.avatar != avatar ||
       oldDelegate.time != time ||
       oldDelegate.teaFilled != teaFilled ||
       oldDelegate.bellAt != bellAt ||

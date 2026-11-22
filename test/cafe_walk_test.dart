@@ -30,23 +30,6 @@ void main() {
       }
     },
   );
-  test(
-    'Stance feet stay on the ground at the same world point while hips advance',
-    () {
-      final gait = CafeGait();
-      gait.reset(const CafePoint(0, 0, 0), 0);
-      final plant = gait.foot(0, const CafePoint(0, 0, 0), 0);
-      for (var i = 1; i <= 45; i++) {
-        final actor = CafePoint(0, 0, -i * .01);
-        gait.move(actor, 0);
-        final foot = gait.foot(0, actor, 0);
-        expect((foot - plant).length, lessThan(1e-9));
-        expect(foot.y, .06);
-      }
-      gait.move(const CafePoint(0, 0, -.68), 0);
-      expect(gait.foot(0, const CafePoint(0, 0, -.68), 0).y, greaterThan(.06));
-    },
-  );
   test('Rounded walking paths never cut the table, chair or pond corners', () {
     for (final courtyard in [false, true]) {
       final world = CafeWorld(courtyard: courtyard);
@@ -70,36 +53,6 @@ void main() {
       }
     }
   });
-  test(
-    'Rear camera stays inside walls and each blended viewpoint remains finite',
-    () {
-      final c = CafeViewController();
-      addTearDown(c.dispose);
-      c.togglePerspective();
-      for (final p in [
-        const CafePoint(0, 1.62, 4.65),
-        const CafePoint(-4, 1.62, 3.5),
-        const CafePoint(2.9, 1.62, .3),
-      ]) {
-        for (var i = 0; i < 8; i++) {
-          c.updateCamera(CafeCamera(position: p, yaw: i * math.pi / 4));
-          for (final blend in [.1, .5, 1.0]) {
-            c.setViewBlend(blend);
-            final eye = c.displayCamera;
-            expect(eye.isFinite, isTrue);
-            expect(eye.position.x.abs(), lessThan(4.4));
-            expect(eye.position.z.abs(), lessThan(5));
-            expect(
-              (c.world.clipCamera(c.camera.position, eye.position) -
-                      eye.position)
-                  .length,
-              lessThan(.001),
-            );
-          }
-        }
-      }
-    },
-  );
   test('Retargeting or cancelling a seat walk uses the current position', () {
     final c = CafeViewController();
     addTearDown(c.dispose);
@@ -121,7 +74,7 @@ void main() {
     expect(c.walkTo(const CafePoint(2.3, 0, 2)), isTrue);
   });
   testWidgets(
-    'Perspective selection does not write; holding and releasing W starts and stops walking',
+    'Only first-person controls remain and clicking or holding W walks without writing',
     (tester) async {
       var writes = 0;
       await tester.pumpWidget(
@@ -141,24 +94,28 @@ void main() {
       await tester.pumpAndSettle();
       final c = tester.widget<CafeScene>(find.byType(CafeScene)).controller;
       c.updateCamera(const CafeCamera(position: CafePoint(2.8, 1.62, 2.8)));
-      await tester.tap(find.byKey(const ValueKey('cafe-toggle-perspective')));
       await tester.pumpAndSettle();
-      expect(c.thirdPerson, isTrue);
-      expect(c.viewBlend, 1);
+      expect(
+        find.byKey(const ValueKey('cafe-toggle-perspective')),
+        findsNothing,
+      );
+      expect(find.byTooltip('3인칭으로 보기'), findsNothing);
+      expect(find.byTooltip('1인칭으로 보기'), findsNothing);
       expect(writes, 0);
-      // A floor click is projected from the rear camera, not the actor's eyes.
+      // Rendering and floor picking both use the person's eye-height camera.
       final surface = find.byKey(const ValueKey('cafe-first-person-view'));
       final rect = tester.getRect(surface);
       final destination = CafeRenderer.project(
-        const CafePoint(2.8, 0, 1.6),
-        c.displayCamera,
+        const CafePoint(2.8, 0, -.2),
+        c.camera,
         rect.size,
       )!;
+      expect((Offset.zero & rect.size).contains(destination), isTrue);
       await tester.tapAt(rect.topLeft + destination);
       await tester.pump();
       expect(c.travelling, isTrue);
       expect(c.destination!.position.x, closeTo(2.8, .03));
-      expect(c.destination!.position.z, closeTo(1.6, .03));
+      expect(c.destination!.position.z, closeTo(-.2, .03));
       // Focus the physical scene, without tapping a walk destination.
       tester
           .widget<KeyboardListener>(

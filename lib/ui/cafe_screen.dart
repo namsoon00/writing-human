@@ -443,19 +443,6 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                           ),
                         ),
                         IconButton(
-                          key: const ValueKey('cafe-toggle-perspective'),
-                          tooltip: view.thirdPerson ? '1인칭으로 보기' : '3인칭으로 보기',
-                          onPressed: opening || widget.saveFailed
-                              ? null
-                              : view.togglePerspective,
-                          icon: Icon(
-                            view.thirdPerson
-                                ? Icons.person_outline
-                                : Icons.accessibility_new_outlined,
-                            color: brandInk,
-                          ),
-                        ),
-                        IconButton(
                           tooltip: view.inCourtyard
                               ? (sound ? '물소리 끄기' : '물소리 켜기')
                               : (sound ? '빗소리 끄기' : '빗소리 켜기'),
@@ -499,10 +486,6 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                             ? '잠시 머물러도 좋아요.'
                             : view.seat != null
                             ? '${view.seat!.label} · 노트를 눌러 써요'
-                            : view.thirdPerson &&
-                                  view.viewBlend > .95 &&
-                                  !view.showAvatar
-                            ? '벽 가까이에서는 시점이 가까워져요. 빈 바닥을 눌러 걸어 보세요.'
                             : '바닥을 눌러 걷고, 끌어 둘러봐요',
                         style: const TextStyle(
                           color: Color(0xff62503f),

@@ -13,7 +13,7 @@ import 'package:writing_human/ui/cafe_scene.dart';
 import 'package:writing_human/cafe/cafe_camera.dart';
 
 void main() {
-  testWidgets('Capture rear camera and walking poses', (tester) async {
+  testWidgets('Capture first-person walking without an avatar', (tester) async {
     tester.platformDispatcher.accessibilityFeaturesTestValue =
         const FakeAccessibilityFeatures(disableAnimations: true);
     addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
@@ -62,7 +62,7 @@ void main() {
                     as RenderRepaintBoundary)
                 .toImage(pixelRatio: 2);
         final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-        final file = File('output/cafe-walk-20261122/$name.png');
+        final file = File('output/cafe-first-person-20261122/$name.png');
         await file.parent.create(recursive: true);
         await file.writeAsBytes(bytes!.buffer.asUint8List());
         image.dispose();
@@ -95,9 +95,8 @@ void main() {
     c.updateCamera(
       const CafeCamera(position: CafePoint(.4, 1.62, .3), pitch: -.1),
     );
-    await tester.tap(find.byKey(const ValueKey('cafe-toggle-perspective')));
     await tester.pumpAndSettle();
-    await capture('rear-idle-390');
+    await capture('first-idle-390');
     tester.platformDispatcher.accessibilityFeaturesTestValue =
         const FakeAccessibilityFeatures(disableAnimations: false);
     await tester.pump();
@@ -106,7 +105,7 @@ void main() {
       for (var frame = 0; frame < 22; frame++) {
         await tester.pump(const Duration(milliseconds: 16));
       }
-      await capture('rear-walk-$i');
+      await capture('first-walk-$i');
     }
     tester.platformDispatcher.accessibilityFeaturesTestValue =
         const FakeAccessibilityFeatures(disableAnimations: true);
@@ -115,8 +114,7 @@ void main() {
     c.finishTravel();
     tester.view.physicalSize = const Size(1200, 800);
     await tester.pumpAndSettle();
-    await capture('rear-wide');
-    await tester.tap(find.byKey(const ValueKey('cafe-toggle-perspective')));
+    await capture('first-wide');
     await tester.pumpAndSettle();
     await capture('first-person-wide');
     debugDisableShadows = shadows;

@@ -2521,7 +2521,7 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - 목차·검색·TXT·PDF는 직접 지은 이름 → 원문 출처의 작품명 → 내가 쓴 첫 줄 순으로
   제목을 표시한다. 주소·쪽수만 있는 출처는 제외하고, ‘글 더 보기 → 글 이름 변경’에서
   직접 바꿀 수 있다. JSON의 titleIsManual과 SQLite 14의 title_is_manual로 직접 지은
-  ‘필사 N’ 같은 이름도 자동 이름과 구분해 보존한다. 백업·동기화 병합도 확인했다.
+  ‘필사 N’ 같은 이름도 자동 이름과 구분해 보존한다. JSON 왕복·동기화 병합도 확인했다.
 - 승인한 책 상세 시안의 실제 표지 견본·왼쪽 책 이름·목차·하단 이어 쓰기를 구현했다.
   작은 화면과 큰 시스템 글씨에는 장식용 표지를 생략하거나 주 동작을 목록 끝에 두어
   스크롤로 접근할 수 있게 한다. 실제 선택한 표지·내지·제본 설정을 사용한다.
@@ -2541,3 +2541,11 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - 네 페르소나를 검토하고 디자이너의 접근성 배치, 기획자의 필사/글/목차 단위,
   개발자의 수동 제목 보존 기준을 갱신했다. 기존 Sites 프로젝트·비공개 접근 범위와
   사용자 기록은 배포 대상으로 변경하지 않았다. 공개 게시 결과는 후속 기록으로 구분한다.
+
+- [GitHub Pages 배포 44993214109](https://github.com/namsoon00/writing-human/actions/runs/44993214109)가
+  소스 `61f12e9059d8a1321a8018b923814a9bb6c3e304`의 분석·테스트·빌드·게시를 완료했다.
+  [공개 웹](https://namsoon00.github.io/writing-human/)의 실행 파일이 검증한 release와
+  바이트 단위로 일치했다(SHA-256:
+  `5e4a5005f72ecd0f39747d8a503e11225ad16f64800f154d58eb3d44c2b0952e`).
+  로더와 실행 파일의 버전 쿼리도 갱신됐다. 실제 Safari·Chrome 조작과 iOS·Android
+  실기기는 미검증이다. 기존 Sites 프로젝트·비공개 접근 범위·사용자 기록은 유지했다.

@@ -1,0 +1,54 @@
+{
+  "index": {
+    "url": "https://namsoon00.github.io/writing-human/?v=9fb8468",
+    "status": 200,
+    "bytes": 8150,
+    "sha256": "d4492e7f200ec472f972043bd0bb29d011bcc5680cc44bdf9758f05a8011a914"
+  },
+  "bootstrap": {
+    "url": "https://namsoon00.github.io/writing-human/flutter_bootstrap.js?v=3fe302e5fad14797",
+    "status": 200,
+    "bytes": 10016,
+    "sha256": "3fe302e5fad1479721dbbf14f9f8bf633e879ec6b252c2c9fdfc8bfd78a6e963"
+  },
+  "main": {
+    "url": "https://namsoon00.github.io/writing-human/main.dart.js?v=3ea3d137ca1d4a4d",
+    "status": 200,
+    "bytes": 5012234,
+    "sha256": "3ea3d137ca1d4a4d573093fef2b7470d428b8363a6908510b5d21969d6cd2f95",
+    "matches_local": true
+  },
+  "assets": [
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-limestone-albedo.jpg?v=9fb8468",
+      "status": 200,
+      "bytes": 574488,
+      "sha256": "88a47907d2a5a902847a9b091f8da163b3bf0c08cd59ed48ee0fef13208b74b1",
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-oak-longgrain.jpg?v=9fb8468",
+      "status": 200,
+      "bytes": 539876,
+      "sha256": "1e50be0c6f57ae5d2bd7d62a31fcdb86d890eb526822bc6f1689a17cab0c7552",
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-walnut-longgrain.jpg?v=9fb8468",
+      "status": 200,
+      "bytes": 467727,
+      "sha256": "8d222dc6bcb747b73117ac4d79330bb79af57b6e5fc4897a1b6e137cf4a43d2e",
+      "matches_local": true
+    }
+  ],
+  "source_commit": "9fb8468d330fd91084c71d9fa511771faea907dd",
+  "actions_run": 45001213161,
+  "actions_result": "build and deploy success",
+  "local_native_tests": 257,
+  "real_chrome_repaint_test": "24 frames, all 6 source images retained",
+  "limitations": [
+    "Flutter fixture renders, no browser UI capture",
+    "iPhone Safari touch, FPS and heat unverified",
+    "Canvas painter order and simple lighting differ from photoreal concept"
+  ]
+}

@@ -2733,3 +2733,18 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   않는다. 복잡한 면 가림의 한계와 iPhone Safari 터치/성능/발열 미검증은 남는다.
   CUA 브라우저 접근은 이 대화에서 지원되지 않았다. 입력/저장/동기화와 기존 Sites
   프로젝트 ID·비공개 범위는 변경하지 않았다. 공개 빌드·배포·HTTP 확인은 뒤에 추가한다.
+
+
+## 2026-11-22 · 아이보리 석재 카페 공개 배포 확인
+
+- 소스 `9fb8468d330fd91084c71d9fa511771faea907dd`의
+  [배포 45001213161](https://github.com/namsoon00/writing-human/actions/runs/45001213161)는
+  서버의 포맷·정적 분석·전체 테스트·Chrome CanvasKit 회귀 검사·빌드·게시를 통과했다.
+- [새 버전 웹 앱](https://namsoon00.github.io/writing-human/?v=9fb8468)은
+  HTML→버전 bootstrap→버전 main JS가 모두 HTTP 200이며 실제 main JS가 로컬
+  release와 바이트 단위로 일치했다. SHA-256:
+  `3ea3d137ca1d4a4d573093fef2b7470d428b8363a6908510b5d21969d6cd2f95`.
+- 새 석재·오크·월넛 JPG도 공개 URL에서 HTTP 200·번들 파일과 동일한 해시를
+  확인했다. 경로·해시는 [공개 파일 확인 기록](../design/cafe/20261122/material-study/release-verification.json)에 보관했다.
+  ‘책장 → 필사 카페’로 연다. 이 HTTP/엔진 검사를 iPhone Safari의 실제 터치·성능
+  검증으로 확대하지 않는다. 기존 비공개 Sites 프로젝트와 접근 범위는 유지했다.

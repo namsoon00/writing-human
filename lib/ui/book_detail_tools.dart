@@ -195,6 +195,7 @@ class _DetailChoices extends StatelessWidget {
     required this.selected,
     required this.onSelected,
     this.specimen,
+    this.compact = false,
   });
 
   final String title, control;
@@ -202,6 +203,7 @@ class _DetailChoices extends StatelessWidget {
   final int selected;
   final ValueChanged<int>? onSelected;
   final Widget Function(int)? specimen;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -219,7 +221,7 @@ class _DetailChoices extends StatelessWidget {
           header: true,
           child: Text(title, style: const TextStyle(fontSize: 16)),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: compact ? 4 : 6),
         LayoutBuilder(
           builder: (context, box) {
             final columns = ((box.maxWidth + gap) ~/ (minWidth + gap)).clamp(
@@ -241,9 +243,9 @@ class _DetailChoices extends StatelessWidget {
                         onPressed: choose == null ? null : () => choose(i),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size(48, 48),
-                          padding: const EdgeInsets.symmetric(
+                          padding: EdgeInsets.symmetric(
                             horizontal: 4,
-                            vertical: 6,
+                            vertical: compact ? 4 : 6,
                           ),
                           backgroundColor: selected == i
                               ? panelSelectedColor(paper)
@@ -269,7 +271,7 @@ class _DetailChoices extends StatelessWidget {
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
+                                  SizedBox(height: compact ? 2 : 4),
                                 ] else
                                   const SizedBox(height: 10),
                                 Text(
@@ -406,33 +408,77 @@ class BookDetailOptions extends StatelessWidget {
     required this.kind,
     required this.choice,
     required this.onChanged,
+    this.heading,
+    this.description,
   });
 
   final BookDetailKind kind;
   final BookDetailChoice choice;
   final ValueChanged<BookDetailChoice Function(BookDetailChoice)> onChanged;
+  final Widget? heading;
+  final String? description;
 
   @override
   Widget build(BuildContext context) {
     final design = BookDetailDesign.of(kind);
     final ribbon = kind == BookDetailKind.ribbon;
     final target = ribbon ? '책갈피' : design.title;
+    final title = heading;
+    final compact = title != null;
+    final inlineSwitch =
+        compact && MediaQuery.textScalerOf(context).scale(16) <= 24;
+    final note = description;
+    final switchKey = ValueKey('detail-${kind.name}-enabled');
+    void switchDisplay(bool value) =>
+        onChanged((current) => current.copy(enabled: value));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SwitchListTile(
-          key: ValueKey('detail-${kind.name}-enabled'),
-          contentPadding: EdgeInsets.zero,
-          title: Text('$target 표시'),
-          value: choice.enabled,
-          activeTrackColor: panelSwitchTrack,
-          activeThumbColor: panelSwitchThumb,
-          onChanged: (value) =>
-              onChanged((current) => current.copy(enabled: value)),
-        ),
+        if (inlineSwitch)
+          Row(
+            children: [
+              Expanded(child: title),
+              const SizedBox(width: 4),
+              const ExcludeSemantics(
+                child: Text('표시', style: TextStyle(fontSize: 14)),
+              ),
+              Semantics(
+                label: '$target 표시',
+                child: Switch(
+                  key: switchKey,
+                  value: choice.enabled,
+                  activeTrackColor: panelSwitchTrack,
+                  activeThumbColor: panelSwitchThumb,
+                  materialTapTargetSize: MaterialTapTargetSize.padded,
+                  onChanged: switchDisplay,
+                ),
+              ),
+            ],
+          )
+        else ...[
+          ?title,
+          SwitchListTile(
+            key: switchKey,
+            contentPadding: EdgeInsets.zero,
+            title: Text('$target 표시'),
+            value: choice.enabled,
+            activeTrackColor: panelSwitchTrack,
+            activeThumbColor: panelSwitchThumb,
+            onChanged: switchDisplay,
+          ),
+        ],
+        if (note != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              note,
+              style: const TextStyle(fontSize: 14, color: detailMetadataInk),
+            ),
+          ),
         const Divider(height: 1),
-        const SizedBox(height: 12),
+        SizedBox(height: compact ? 6 : 12),
         _DetailChoices(
+          compact: compact,
           title: kind == BookDetailKind.pencil ? '농도' : '모양',
           control: 'detail-${kind.name}-variant',
           labels: design.variants,
@@ -443,16 +489,21 @@ class BookDetailOptions extends StatelessWidget {
           specimen: (index) {
             final option = choice.copy(enabled: true, variant: index);
             return ribbon
-                ? RibbonBookmark(choice: option, width: 18, height: 28)
+                ? RibbonBookmark(
+                    choice: option,
+                    width: 18,
+                    height: compact ? 24 : 28,
+                  )
                 : BookDetailSample(
                     kind: kind,
                     choice: option,
-                    size: const Size(52, 32),
+                    size: Size(52, compact ? 26 : 32),
                   );
           },
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: compact ? 5 : 10),
         _DetailChoices(
+          compact: compact,
           title: '색',
           control: 'detail-${kind.name}-tone',
           labels: design.tones,
@@ -464,11 +515,11 @@ class BookDetailOptions extends StatelessWidget {
               ? RibbonBookmark(
                   choice: BookDetailChoice(tone: index),
                   width: 23,
-                  height: 17,
+                  height: compact ? 14 : 17,
                 )
               : Container(
                   width: 23,
-                  height: 17,
+                  height: compact ? 14 : 17,
                   decoration: BoxDecoration(
                     color: design.colors[index],
                     borderRadius: BorderRadius.circular(2),
@@ -477,8 +528,9 @@ class BookDetailOptions extends StatelessWidget {
                 ),
         ),
         if (kind == BookDetailKind.pressedFlower) ...[
-          const SizedBox(height: 10),
+          SizedBox(height: compact ? 5 : 10),
           _DetailChoices(
+            compact: compact,
             title: '위치',
             control: 'detail-pressedFlower-placement',
             labels: const ['오른쪽 아래', '왼쪽 아래', '아래 가운데'],

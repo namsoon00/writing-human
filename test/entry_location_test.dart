@@ -260,7 +260,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(options(BookDetailKind.dateStamp), findsOneWidget);
       expect(dateStamp, findsNothing);
-      expect(tester.getRect(preview), previewRect);
+      expect(tester.getRect(preview).top, previewRect.top);
+      expect(
+        tester.getRect(preview).height,
+        lessThanOrEqualTo(previewRect.height),
+      );
       await tester.tap(find.text('책 장식'));
       await tester.pumpAndSettle();
       expect(options(BookDetailKind.dateStamp), findsNothing);
@@ -298,7 +302,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(options(BookDetailKind.bookplate), findsNothing);
       expect(options(BookDetailKind.pressedFlower), findsOneWidget);
-      expect(tester.getRect(preview), previewRect);
+      expect(tester.getRect(preview).top, previewRect.top);
+      expect(
+        tester.getRect(preview).height,
+        lessThanOrEqualTo(previewRect.height),
+      );
       expect(find.byType(BookCover), findsOneWidget);
 
       final shade = find.byKey(const ValueKey('detail-pressedFlower-tone-1'));
@@ -346,4 +354,92 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('Decoration controls fit below the preview on a short phone', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 620);
+    tester.view.padding = const FakeViewPadding(bottom: 16);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetPadding);
+    final fixture = specimen();
+    final book = fixture.books.single.copy(
+      detailOverrides: {
+        for (final kind in BookDetailKind.values)
+          kind: const BookDetailChoice(),
+      },
+    );
+    final library = fixture.copy(books: [book]);
+    final controller = LibraryController(
+      MemoryStore()..data = library,
+      library,
+    );
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BookAppearance(controller: controller, book: book),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final preview = find.byKey(const ValueKey('book-appearance-preview'));
+    final listHeight = tester.getSize(preview).height;
+    for (final (tab, kinds) in [
+      (
+        '책 장식',
+        [
+          BookDetailKind.ribbon,
+          BookDetailKind.bookplate,
+          BookDetailKind.pressedFlower,
+        ],
+      ),
+      (
+        '쪽 장식',
+        [
+          BookDetailKind.sourceSlip,
+          BookDetailKind.pencil,
+          BookDetailKind.ornament,
+          BookDetailKind.recordDivider,
+          BookDetailKind.dateStamp,
+        ],
+      ),
+    ]) {
+      await tester.tap(find.text(tab));
+      await tester.pumpAndSettle();
+      for (final kind in kinds) {
+        final row = find.byKey(ValueKey('book-detail-${kind.name}'));
+        await tester.scrollUntilVisible(row, 80);
+        await tester.ensureVisible(row);
+        await tester.pumpAndSettle();
+        await tester.tap(row);
+        await tester.pumpAndSettle();
+        final inherited = find.text('서재 기본값 사용');
+        expect(inherited.hitTestable(), findsOneWidget, reason: kind.name);
+        expect(tester.getRect(inherited).bottom, lessThanOrEqualTo(604));
+        expect(
+          tester.getSize(preview).height,
+          inInclusiveRange(90, listHeight),
+        );
+        expect(
+          tester
+              .getSize(find.byKey(ValueKey('detail-${kind.name}-tone-0')))
+              .height,
+          greaterThanOrEqualTo(48),
+        );
+        expect(
+          tester
+              .state<ScrollableState>(find.byType(Scrollable))
+              .position
+              .maxScrollExtent,
+          lessThan(1),
+        );
+        await tester.tap(find.text('목록'));
+        await tester.pumpAndSettle();
+        expect(row.hitTestable(), findsOneWidget, reason: kind.name);
+        expect(tester.getSize(preview).height, listHeight);
+      }
+    }
+    expect(tester.takeException(), isNull);
+  });
 }

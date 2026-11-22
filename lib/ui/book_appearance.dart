@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../data/library_controller.dart';
 import '../data/model.dart';
@@ -118,44 +119,44 @@ class _BookAppearanceState extends State<BookAppearance> {
       final pinPreview =
           height >= 520 && MediaQuery.textScalerOf(context).scale(16) <= 24;
       final previewWidth = pinPreview ? math.min(450.0, height * .55) : 450.0;
-      final header = Column(
-        children: [
-          Center(
-            child: SizedBox(
-              width: previewWidth,
-              child: AspectRatio(
-                key: const ValueKey('book-appearance-preview'),
-                aspectRatio: 1.53,
-                child: closed
-                    ? Center(
-                        child: LayoutBuilder(
-                          builder: (_, box) => BookCover(
-                            title: book.title,
-                            width: box.maxHeight / 1.36,
-                            variant: cover,
-                            materialPreview: true,
-                            pageCount: pages.length,
-                            details: details,
-                          ),
-                        ),
-                      )
-                    : _OpenBook(
-                        book: book,
-                        cover: cover,
-                        stock: stock,
-                        details: details,
-                        detail: opened,
-                        excerpt: excerpt,
-                        writingStyle: writingStyle,
+      final preview = Center(
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: previewWidth),
+          child: AspectRatio(
+            key: const ValueKey('book-appearance-preview'),
+            aspectRatio: 1.53,
+            child: closed
+                ? Center(
+                    child: LayoutBuilder(
+                      builder: (_, box) => BookCover(
+                        title: book.title,
+                        width: box.maxHeight / 1.36,
+                        variant: cover,
+                        materialPreview: true,
                         pageCount: pages.length,
-                        pageNumber: sample == null
-                            ? null
-                            : pages.indexWhere((p) => p.id == sample.id) + 1,
+                        details: details,
                       ),
-              ),
-            ),
+                    ),
+                  )
+                : _OpenBook(
+                    book: book,
+                    cover: cover,
+                    stock: stock,
+                    details: details,
+                    detail: opened,
+                    excerpt: excerpt,
+                    writingStyle: writingStyle,
+                    pageCount: pages.length,
+                    pageNumber: sample == null
+                        ? null
+                        : pages.indexWhere((p) => p.id == sample.id) + 1,
+                  ),
           ),
-          const SizedBox(height: 16),
+        ),
+      );
+      final tabs = Column(
+        children: [
           Center(
             child: Wrap(
               spacing: 6,
@@ -196,6 +197,9 @@ class _BookAppearanceState extends State<BookAppearance> {
           const Divider(height: 1, color: line),
         ],
       );
+      final header = Column(
+        children: [preview, const SizedBox(height: 16), tabs],
+      );
       return PopScope(
         canPop: opened == null,
         onPopInvokedWithResult: (didPop, _) {
@@ -221,80 +225,112 @@ class _BookAppearanceState extends State<BookAppearance> {
                 constraints: const BoxConstraints(maxWidth: 560),
                 child: Column(
                   children: [
-                    if (pinPreview)
+                    if (opened == null && pinPreview)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                         child: header,
                       ),
-                    Expanded(
-                      child: ListView(
-                        key: PageStorageKey((section, opened)),
-                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-                        children: [
-                          if (!pinPreview) header,
-                          const SizedBox(height: 10),
-                          if (section == _Section.materials) ...[
-                            Semantics(
-                              header: true,
-                              child: const Text(
-                                '표지',
-                                style: TextStyle(color: muted),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 8,
-                              children: [
-                                for (final (i, name) in coverNames.indexed)
-                                  ChoiceChip(
-                                    label: Text(name),
-                                    selected: cover == i,
-                                    onSelected: (selected) {
-                                      setState(() => showCover = true);
-                                      if (selected) _save(coverIndex: i);
-                                    },
-                                  ),
-                              ],
-                            ),
-                            const Divider(height: 24, color: line),
-                            Semantics(
-                              header: true,
-                              child: const Text(
-                                '내지',
-                                style: TextStyle(color: muted),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 8,
-                              children: [
-                                ChoiceChip(
-                                  label: const Text('기본 종이 사용'),
-                                  selected: selectedPaper == null,
-                                  onSelected: (selected) {
-                                    setState(() => showCover = false);
-                                    if (selected) _save(useDefaultPaper: true);
-                                  },
+                    if (opened == null)
+                      Expanded(
+                        child: ListView(
+                          key: PageStorageKey((section, opened)),
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                          children: [
+                            if (!pinPreview) header,
+                            const SizedBox(height: 10),
+                            if (section == _Section.materials) ...[
+                              Semantics(
+                                header: true,
+                                child: const Text(
+                                  '표지',
+                                  style: TextStyle(color: muted),
                                 ),
-                                for (var i = 0; i < paperNames.length; i++)
-                                  PaperChoice(
-                                    index: i,
-                                    selected: selectedPaper == i,
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                children: [
+                                  for (final (i, name) in coverNames.indexed)
+                                    ChoiceChip(
+                                      label: Text(name),
+                                      selected: cover == i,
+                                      onSelected: (selected) {
+                                        setState(() => showCover = true);
+                                        if (selected) _save(coverIndex: i);
+                                      },
+                                    ),
+                                ],
+                              ),
+                              const Divider(height: 24, color: line),
+                              Semantics(
+                                header: true,
+                                child: const Text(
+                                  '내지',
+                                  style: TextStyle(color: muted),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                children: [
+                                  ChoiceChip(
+                                    label: const Text('기본 종이 사용'),
+                                    selected: selectedPaper == null,
                                     onSelected: (selected) {
                                       setState(() => showCover = false);
-                                      if (selected) _save(paperIndex: i);
+                                      if (selected) {
+                                        _save(useDefaultPaper: true);
+                                      }
                                     },
                                   ),
-                              ],
-                            ),
-                          ] else if (opened != null)
-                            _detailEditor(opened, details.choice(opened), book)
-                          else
-                            for (final kind in section.kinds)
-                              _detailRow(kind, details.choice(kind), book),
-                        ],
+                                  for (var i = 0; i < paperNames.length; i++)
+                                    PaperChoice(
+                                      index: i,
+                                      selected: selectedPaper == i,
+                                      onSelected: (selected) {
+                                        setState(() => showCover = false);
+                                        if (selected) _save(paperIndex: i);
+                                      },
+                                    ),
+                                ],
+                              ),
+                            ] else
+                              for (final kind in section.kinds)
+                                _detailRow(kind, details.choice(kind), book),
+                          ],
+                        ),
+                      )
+                    else
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, viewport) {
+                            const padding = EdgeInsets.fromLTRB(20, 12, 20, 12);
+                            return SingleChildScrollView(
+                              key: PageStorageKey((section, opened)),
+                              padding: padding,
+                              child: _DecorationFit(
+                                visibleHeight:
+                                    viewport.maxHeight - padding.vertical,
+                                preview: Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: preview,
+                                ),
+                                controls: Column(
+                                  children: [
+                                    tabs,
+                                    const SizedBox(height: 4),
+                                    _detailEditor(
+                                      opened,
+                                      details.choice(opened),
+                                      book,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                    ),
                     if (controller.saveError != null)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -330,34 +366,32 @@ class _BookAppearanceState extends State<BookAppearance> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            TextButton.icon(
-              onPressed: () => _showDetail(null),
-              icon: const Icon(CupertinoIcons.chevron_left, size: 14),
-              label: const Text('목록'),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Semantics(
-                header: true,
-                child: Text(design.title, style: const TextStyle(fontSize: 18)),
-              ),
-            ),
-          ],
-        ),
-        if (kind != BookDetailKind.ribbon)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Text(
-              design.description,
-              style: const TextStyle(fontSize: 14, color: detailMetadataInk),
-            ),
-          ),
         BookDetailOptions(
           key: ValueKey('book-options-${kind.name}'),
           kind: kind,
           choice: choice,
+          heading: Row(
+            children: [
+              TextButton.icon(
+                onPressed: () => _showDetail(null),
+                icon: const Icon(CupertinoIcons.chevron_left, size: 14),
+                label: const Text('목록'),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    design.title,
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          description: kind == BookDetailKind.ribbon
+              ? null
+              : design.description,
           onChanged: (update) {
             final latest = controller.detailsFor(current).choice(kind);
             _save(changes: {kind: update(latest)});
@@ -367,7 +401,7 @@ class _BookAppearanceState extends State<BookAppearance> {
           alignment: Alignment.centerRight,
           child: inherited
               ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
+                  padding: EdgeInsets.symmetric(vertical: 8),
                   child: Text(
                     '서재 기본값 사용 중',
                     style: TextStyle(fontSize: 14, color: detailMetadataInk),
@@ -413,6 +447,84 @@ class _BookAppearanceState extends State<BookAppearance> {
       ],
     );
   }
+}
+
+/// Measures the controls before fitting the book into the visible height.
+/// A short viewport can still scroll the complete editor and preview together.
+class _DecorationFit extends MultiChildRenderObjectWidget {
+  _DecorationFit({
+    required this.visibleHeight,
+    required Widget preview,
+    required Widget controls,
+  }) : super(children: [preview, controls]);
+
+  final double visibleHeight;
+
+  @override
+  _RenderDecorationFit createRenderObject(BuildContext context) =>
+      _RenderDecorationFit(visibleHeight);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderDecorationFit renderObject,
+  ) {
+    renderObject.visibleHeight = visibleHeight;
+  }
+}
+
+class _DecorationParentData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderDecorationFit extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _DecorationParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _DecorationParentData> {
+  _RenderDecorationFit(this._visibleHeight);
+
+  double _visibleHeight;
+  set visibleHeight(double value) {
+    if (_visibleHeight == value) return;
+    _visibleHeight = value;
+    markNeedsLayout();
+  }
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _DecorationParentData) {
+      child.parentData = _DecorationParentData();
+    }
+  }
+
+  @override
+  void performLayout() {
+    final preview = firstChild!;
+    final controls = lastChild!;
+    final width = constraints.maxWidth;
+    final measure = BoxConstraints.tightFor(width: width);
+    controls.layout(measure, parentUsesSize: true);
+    preview.layout(
+      measure.copyWith(
+        maxHeight: math.max(100, _visibleHeight - controls.size.height),
+      ),
+      parentUsesSize: true,
+    );
+    (preview.parentData! as _DecorationParentData).offset = Offset.zero;
+    (controls.parentData! as _DecorationParentData).offset = Offset(
+      0,
+      preview.size.height,
+    );
+    size = constraints.constrain(
+      Size(width, preview.size.height + controls.size.height),
+    );
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      defaultHitTestChildren(result, position: position);
+
+  @override
+  void paint(PaintingContext context, Offset offset) =>
+      defaultPaint(context, offset);
 }
 
 class _OpenBook extends StatelessWidget {

@@ -28,6 +28,7 @@ import 'package:writing_human/ui/reading_details.dart';
 import 'package:writing_human/ui/source_import_sheet.dart';
 import 'package:writing_human/ui/source_reading.dart';
 import 'package:writing_human/ui/writing_chrome.dart';
+import 'package:writing_human/ui/writing_pen.dart';
 import 'package:writing_human/ui/transcription_guide.dart';
 
 import 'widget_test.dart' show MemoryStore;
@@ -2636,7 +2637,10 @@ void main() {
       expect(find.text('담기'), findsOneWidget);
       expect(tester.getSize(sheet), const Size(320, 640));
       expect(tester.getBottomLeft(confirm).dy, closeTo(628, 1));
-      final sourceCaret = find.descendant(of: sheet, matching: caret);
+      final sourceCaret = find.descendant(
+        of: find.ancestor(of: sourceField, matching: find.byType(WritingCaret)),
+        matching: caret,
+      );
       expect(sourceCaret, findsOneWidget);
       expect(tester.widget<TextField>(sourceField).showCursor, isFalse);
       double caretLeft() {

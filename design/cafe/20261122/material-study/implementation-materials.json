@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-22",
+  "selection": "A / 아이보리 석재",
+  "mode": "built-in imagegen",
+  "purpose": "Actual mesh albedo maps, not an image of the cafe or a physical PBR capture",
+  "assets": [
+    {
+      "material": "limestone",
+      "path": "assets/images/cafe-limestone-albedo.jpg",
+      "source": "exec-b247d934-8fd2-4d63-ab45-201a7706f3e6.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: seamless repeatable PBR-style BASE COLOR / ALBEDO texture for a real-time 3D cafe's warm ivory honed limestone floor. Render only a flat orthographic close view of a continuous limestone surface, square image, edge-to-edge. Soft warm ivory and pale cream with restrained tiny natural pores, occasional fine fossil fragments and subtle low-frequency mineral variations. Quiet matte fine-grained stone, no marble veins, no cracks, no slab borders or grout, no perspective, no objects, no labels or text, no shadows or baked illumination, no vignette, no highlights, absolutely even neutral diffuse capture. The overall average tone should be pale warm ivory near #E3D7C1, with delicate believable detail rather than heavy noise. Tile edges should repeat seamlessly. This will be mapped onto separately modeled 600x900mm floor slabs. Do not depict an actual room or a grid of tiles. One single seamless square limestone albedo texture, natural restrained photographic material detail.",
+      "sha256": "88a47907d2a5a902847a9b091f8da163b3bf0c08cd59ed48ee0fef13208b74b1"
+    },
+    {
+      "material": "oak",
+      "path": "assets/images/cafe-oak-longgrain.jpg",
+      "source": "exec-5bfc7a68-e969-45a9-aa24-4982028a70cf.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: seamless wood BASE COLOR / ALBEDO texture for a crafted solid-oak writing table in a real-time cafe. Render only one continuous surface of beautiful quarter-sawn honey oak, flat orthographic capture, square image edge to edge. Long straight restrained grain runs VERTICALLY from top to bottom, subtle fine medullary rays and pores, calm light golden tan near #C99B65, natural variation between narrow bands, no giant dark knots, no log-ring cross section, no seams, no floorboards, no plank grid. Fine solid timber detail at a believable furniture scale, gently oiled character without any baked specular highlights. Absolutely even neutral diffuse illumination, no directional shadows, no vignette, no perspective, no objects, no text, no border. Seamlessly repeatable on all sides. A quiet refined honey-oak furniture albedo map, not orange and not dark brown. Do not draw a room or a wooden object.",
+      "sha256": "1e50be0c6f57ae5d2bd7d62a31fcdb86d890eb526822bc6f1689a17cab0c7552"
+    },
+    {
+      "material": "walnut",
+      "path": "assets/images/cafe-walnut-longgrain.jpg",
+      "source": "exec-2eddab5c-897b-436c-bf8c-6d24b535f639.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: seamless repeatable solid-WALNUT BASE COLOR / ALBEDO texture for crafted cafe shelves and curved wooden chairs. Square edge-to-edge flat orthographic material capture. Fine elegant medium-dark walnut grain runs VERTICALLY from top to bottom, refined mostly straight grain with restrained organic waviness and tiny pores. Rich natural brown near #815D40 with nuanced lighter and darker narrow bands; no orange cast, no black streaks, no huge knots or cathedrals, no cross-cut log circles, no borders, no floorboards or plank divisions. Convincing natural walnut detail without a repetitive high-contrast motif. Neutral perfectly even diffuse light, absolutely no baked shadow, highlight, vignette, perspective, objects or text. Seams should tile smoothly in all directions. One quiet fine-grained satin-walnut furniture albedo map, not an interior photograph.",
+      "sha256": "8d222dc6bcb747b73117ac4d79330bb79af57b6e5fc4897a1b6e137cf4a43d2e"
+    }
+  ],
+  "encoding": "Generated PNG originals encoded as JPEG quality 90 using sips; no cropping or visual retouch. Runtime decode width 768."
+}

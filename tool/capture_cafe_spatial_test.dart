@@ -59,7 +59,7 @@ void main() {
                       as RenderRepaintBoundary)
                   .toImage(pixelRatio: 2);
           final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-          final file = File('output/cafe-spatial-20261122/$name.png');
+          final file = File('output/cafe-ivory-20261122/$name.png');
           await file.parent.create(recursive: true);
           await file.writeAsBytes(bytes!.buffer.asUint8List());
           image.dispose();

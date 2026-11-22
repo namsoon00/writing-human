@@ -116,3 +116,22 @@ Use case: photorealistic-natural. Asset type: seamless PBR base-color texture fo
 ### 창밖 정원 · 최종 프롬프트 · 내장 imagegen
 
 Use case: photorealistic-natural. Asset type: exterior garden color texture seen beyond a real-time 3D cafe window. Wide landscape photograph of a quiet leafy courtyard on a softly rainy overcast day, eye level, weathered low stone garden wall, layered lush green broad-leaved shrubs and Japanese maple trees, pale mist and delicate raindrops. Natural photographic detail, muted sage and blue-green tones, soft diffuse daylight. No cafe interior, no furniture, no people, no window frames, no lettering, no watermark. Compose foliage and the courtyard at human eye level with pale sky in top quarter, suitable as an outdoor view through tall cafe windows.
+
+
+## 승인한 아이보리 석재와 별도 원목 재질 · 2026-11-22
+
+사용자는 아이보리 석재 A안을 선택했다. [선택 이미지](../design/cafe/20261122/material-study/selected-stone-concept.jpg)는
+인테리어 목표이며 실행 화면이 아니다. 구현에는 내장 imagegen으로 생성한 albedo 세 장을
+실제 기하에 매핑한다. 별도 CLI/API는 사용하지 않았다. 생성 PNG 원본은 generated_images에
+보존하고 프로젝트용 JPEG(품질 90)로 인코딩해 전송 크기를 약 7.1MB에서 1.51MB로 줄였다.
+색·구도 보정이나 크롭은 하지 않았다. 좌판의 반복 짜임은 코드로 그린다.
+
+- `assets/images/cafe-limestone-albedo.jpg`: 미세 기공이 있는 무광 아이보리 석회석.
+- `assets/images/cafe-oak-longgrain.jpg`: 오크 상판·선반의 긴 결.
+- `assets/images/cafe-walnut-longgrain.jpg`: 의자·서가·창틀의 월넛 긴 결.
+
+원본 이름·최종 프롬프트 전문·번들 파일 SHA-256은
+[재질 생성 기록](../design/cafe/20261122/material-study/implementation-materials.json)에 있다.
+카페 전체 이미지를 배경으로 사용하지 않으며 실제 재질·기하·조명 검수 범위는
+[검증 기록](verification.md)을 따른다. 이전 `cafe-oak-albedo.png`는 과거 재질 이력이며
+현재 CafeScene은 새 오크와 월넛을 구분해서 읽는다.

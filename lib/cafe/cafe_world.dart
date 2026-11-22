@@ -4,6 +4,10 @@ import 'dart:ui';
 import 'cafe_camera.dart';
 import 'cafe_visit.dart';
 
+enum CafeSurface { plain, oak, walnut, limestone, cord, brass }
+
+enum CafeGrain { x, y, z }
+
 class CafeFace {
   CafeFace(
     this.points,
@@ -17,7 +21,21 @@ class CafeFace {
     this.textureCoordinates,
     this.target,
     this.signRow = 0,
-  });
+    CafeSurface? surface,
+    this.grain = CafeGrain.y,
+    this.vertexNormals,
+    this.vertexColors,
+  }) : surface =
+           surface ??
+           (wood
+               ? (color == CafeWorld.oak ? CafeSurface.oak : CafeSurface.walnut)
+               : color == CafeWorld.brass
+               ? CafeSurface.brass
+               : CafeSurface.plain);
+  final CafeSurface surface;
+  final CafeGrain grain;
+  final List<CafePoint>? vertexNormals;
+  final List<Color>? vertexColors;
   final int signRow;
   final CafeTarget? target;
   final List<CafePoint> points;
@@ -175,16 +193,56 @@ class CafeWorld {
     bool wood = false,
     bool unlit = false,
     int layer = 2,
-  }) => faces.add(
-    CafeFace(
-      [a, b, c, d],
-      color,
-      wood: wood,
-      unlit: unlit,
-      layer: layer,
-      target: _target,
-    ),
-  );
+    CafeSurface? surface,
+    CafeGrain grain = CafeGrain.y,
+    List<CafePoint>? normals,
+    List<Color>? colors,
+  }) {
+    // Small solids need local painter depths: a single long apron face would
+    // otherwise paint across the tabletop or objects resting on it.
+    final across = layer >= 2 && !unlit
+        ? math.max(1, ((b - a).length / .28).ceil())
+        : 1;
+    final down = layer >= 2 && !unlit
+        ? math.max(1, ((d - a).length / .28).ceil())
+        : 1;
+    CafePoint at(double u, double v) =>
+        CafePoint.lerp(CafePoint.lerp(a, b, u), CafePoint.lerp(d, c, u), v);
+    CafePoint normalAt(double u, double v) => CafePoint.lerp(
+      CafePoint.lerp(normals![0], normals[1], u),
+      CafePoint.lerp(normals[3], normals[2], u),
+      v,
+    ).normalized;
+    for (var i = 0; i < across; i++) {
+      for (var j = 0; j < down; j++) {
+        final u = i / across,
+            v = j / down,
+            uu = (i + 1) / across,
+            vv = (j + 1) / down;
+        faces.add(
+          CafeFace(
+            [at(u, v), at(uu, v), at(uu, vv), at(u, vv)],
+            color,
+            wood: wood,
+            unlit: unlit,
+            layer: layer,
+            target: _target,
+            surface: surface,
+            grain: grain,
+            vertexNormals: normals == null
+                ? null
+                : [
+                    normalAt(u, v),
+                    normalAt(uu, v),
+                    normalAt(uu, vv),
+                    normalAt(u, vv),
+                  ],
+            vertexColors: colors,
+          ),
+        );
+      }
+    }
+  }
 
   void box(
     double x,
@@ -195,21 +253,35 @@ class CafeWorld {
     double d,
     Color color, {
     bool wood = false,
+    CafeSurface? surface,
+    CafeGrain? grain,
+    bool topFace = true,
   }) {
+    final axis =
+        grain ??
+        (h > w && h > d
+            ? CafeGrain.y
+            : w >= d
+            ? CafeGrain.x
+            : CafeGrain.z);
     final l = x - w / 2,
         r = x + w / 2,
         b = y - h / 2,
         t = y + h / 2,
         n = z - d / 2,
         f = z + d / 2;
-    quad(
-      CafePoint(l, t, f),
-      CafePoint(r, t, f),
-      CafePoint(r, t, n),
-      CafePoint(l, t, n),
-      color,
-      wood: wood,
-    );
+    if (topFace) {
+      quad(
+        CafePoint(l, t, f),
+        CafePoint(r, t, f),
+        CafePoint(r, t, n),
+        CafePoint(l, t, n),
+        color,
+        wood: wood,
+        surface: surface,
+        grain: axis,
+      );
+    }
     quad(
       CafePoint(l, b, n),
       CafePoint(r, b, n),
@@ -217,6 +289,8 @@ class CafeWorld {
       CafePoint(l, b, f),
       color,
       wood: wood,
+      surface: surface,
+      grain: axis,
     );
     quad(
       CafePoint(l, b, f),
@@ -225,6 +299,8 @@ class CafeWorld {
       CafePoint(l, t, f),
       color,
       wood: wood,
+      surface: surface,
+      grain: axis,
     );
     quad(
       CafePoint(r, b, n),
@@ -233,6 +309,8 @@ class CafeWorld {
       CafePoint(r, t, n),
       color,
       wood: wood,
+      surface: surface,
+      grain: axis,
     );
     quad(
       CafePoint(r, b, f),
@@ -241,6 +319,8 @@ class CafeWorld {
       CafePoint(r, t, f),
       color,
       wood: wood,
+      surface: surface,
+      grain: axis,
     );
     quad(
       CafePoint(l, b, n),
@@ -249,6 +329,8 @@ class CafeWorld {
       CafePoint(l, t, n),
       color,
       wood: wood,
+      surface: surface,
+      grain: axis,
     );
   }
 
@@ -286,7 +368,17 @@ class CafeWorld {
         y + height / 2,
         z + math.sin(a) * rt,
       );
-      quad(p, s, r, q, color, unlit: unlit);
+      final na = CafePoint(
+        math.cos(a),
+        (radius - rt) / height,
+        math.sin(a),
+      ).normalized;
+      final nb = CafePoint(
+        math.cos(b),
+        (radius - rt) / height,
+        math.sin(b),
+      ).normalized;
+      quad(p, s, r, q, color, unlit: unlit, normals: [na, na, nb, nb]);
       faces.add(
         CafeFace(
           [CafePoint(x, y + height / 2, z), r, s],
@@ -303,28 +395,140 @@ class CafeWorld {
     double z,
     double rx,
     double rz, {
-    double strength = .09,
+    double strength = .12,
+    double y = .012,
+    int layer = 1,
   }) {
-    for (var ring = 0; ring < 3; ring++) {
-      final scale = 1 - ring * .22;
-      final pts = <CafePoint>[];
-      for (var i = 0; i < 20; i++) {
-        final a = i * math.pi / 10;
-        pts.add(
-          CafePoint(
-            x + math.cos(a) * rx * scale,
-            .012 + ring * .001,
-            z + math.sin(a) * rz * scale,
-          ),
+    final count = rx < .12 ? 10 : 20;
+    final bands = rx < .12 ? 3 : 4;
+    for (var ring = 0; ring < bands; ring++) {
+      final inner = ring / bands, outer = (ring + 1) / bands;
+      Color shade(double radius) =>
+          Color.fromRGBO(43, 32, 22, strength * math.pow(1 - radius, 1.6));
+      for (var i = 0; i < count; i++) {
+        final a = i * 2 * math.pi / count, b = (i + 1) * 2 * math.pi / count;
+        CafePoint at(double radius, double angle) => CafePoint(
+          x + math.cos(angle) * rx * radius,
+          y,
+          z + math.sin(angle) * rz * radius,
+        );
+        quad(
+          at(inner, a),
+          at(outer, a),
+          at(outer, b),
+          at(inner, b),
+          shade(inner),
+          unlit: true,
+          layer: layer,
+          colors: [shade(inner), shade(outer), shade(outer), shade(inner)],
         );
       }
-      faces.add(
-        CafeFace(
-          pts,
-          Color.fromRGBO(39, 26, 16, strength),
-          unlit: true,
-          layer: 1,
-        ),
+    }
+  }
+
+  /// Rounded solid timber with a real bevel, subdivided for local light pools.
+  void _roundedSlab(
+    double x,
+    double z,
+    double width,
+    double depth, {
+    double top = .7525,
+    double thickness = .035,
+    double radius = .065,
+    CafeSurface surface = CafeSurface.oak,
+    Color color = oak,
+  }) {
+    final axis = depth >= width ? CafeGrain.z : CafeGrain.x;
+    List<CafePoint> ring(double inset, double y) {
+      final w = width / 2 - inset, d = depth / 2 - inset, r = radius - inset;
+      final points = <CafePoint>[];
+      for (final corner in [
+        (-w + r, d - r, math.pi),
+        (w - r, d - r, math.pi / 2),
+        (w - r, -d + r, 0.0),
+        (-w + r, -d + r, -math.pi / 2),
+      ]) {
+        for (var i = 0; i < 5; i++) {
+          final angle = corner.$3 - i * math.pi / 8;
+          points.add(
+            CafePoint(
+              x + corner.$1 + math.cos(angle) * r,
+              y,
+              z + corner.$2 + math.sin(angle) * r,
+            ),
+          );
+        }
+      }
+      return points;
+    }
+
+    final upper = ring(.005, top),
+        side = ring(0, top - .005),
+        bottom = ring(0, top - thickness);
+    // Clip a fine regular grid to the rounded outline. Radial fans have long
+    // triangles whose average depth can incorrectly cover a notebook or cup.
+    final nx = (width / .05).ceil(), nz = (depth / .05).ceil();
+    for (var ix = 0; ix < nx; ix++) {
+      for (var iz = 0; iz < nz; iz++) {
+        final l = x - width / 2 + ix * width / nx,
+            r = x - width / 2 + (ix + 1) * width / nx,
+            n = z - depth / 2 + iz * depth / nz,
+            f = z - depth / 2 + (iz + 1) * depth / nz;
+        var polygon = [
+          CafePoint(l, top, f),
+          CafePoint(r, top, f),
+          CafePoint(r, top, n),
+          CafePoint(l, top, n),
+        ];
+        for (var edge = 0; edge < upper.length && polygon.isNotEmpty; edge++) {
+          final a = upper[edge], b = upper[(edge + 1) % upper.length];
+          double side(CafePoint p) =>
+              (b.x - a.x) * (p.z - a.z) - (b.z - a.z) * (p.x - a.x);
+          final clipped = <CafePoint>[];
+          for (var i = 0; i < polygon.length; i++) {
+            final start = polygon[i],
+                end = polygon[(i + 1) % polygon.length],
+                ds = side(start),
+                de = side(end);
+            if (ds <= 1e-9) clipped.add(start);
+            if ((ds <= 1e-9) != (de <= 1e-9)) {
+              clipped.add(CafePoint.lerp(start, end, ds / (ds - de)));
+            }
+          }
+          polygon = clipped;
+        }
+        if (polygon.length >= 3) {
+          faces.add(
+            CafeFace(
+              polygon,
+              color,
+              surface: surface,
+              grain: axis,
+              target: _target,
+            ),
+          );
+        }
+      }
+    }
+    for (var i = 0; i < upper.length; i++) {
+      final next = (i + 1) % upper.length;
+      quad(
+        upper[i],
+        side[i],
+        side[next],
+        upper[next],
+        color,
+        surface: surface,
+        grain: axis,
+      );
+      quad(
+        side[i],
+        bottom[i],
+        bottom[next],
+        side[next],
+        color,
+        surface: surface,
+        grain: axis,
       );
     }
   }
@@ -358,53 +562,72 @@ class CafeWorld {
       );
     }
 
-    part(0, .43, 0, .48, .055, .45, oak);
+    box(
+      x,
+      .43,
+      z,
+      .47,
+      .055,
+      .45,
+      const Color(0xffd8c095),
+      surface: CafeSurface.cord,
+    );
     for (final dx in [-.18, .18]) {
       for (final dz in [-.16, .16]) {
         part(dx, .21, dz, .035, .42, .035, dark);
+        final foot = rot(dx, 0, dz);
+        shadow(foot.x, foot.z, .065, .065, strength: .19);
       }
       part(dx, .59, .16, .035, .36, .035, dark);
     }
-    // Open curved back, rather than three opaque fence-like planks.
-    for (var i = 0; i < 12; i++) {
-      final a = i * math.pi / 12, b = (i + 1) * math.pi / 12;
-      final pa = rot(math.cos(a) * .245, .77, math.sin(a) * .21 - .02);
-      final pb = rot(math.cos(b) * .245, .77, math.sin(b) * .21 - .02);
-      final direction = pb - pa;
-      final side = const CafePoint(0, 1, 0).cross(direction).normalized * .022;
-      const up = CafePoint(0, .024, 0);
-      quad(
-        pa + up + side,
-        pb + up + side,
-        pb + up - side,
-        pa + up - side,
-        oak,
-        wood: true,
-      );
-      quad(
-        pa - up - side,
-        pb - up - side,
-        pb - up + side,
-        pa - up + side,
-        oak,
-        wood: true,
-      );
-      quad(
-        pa - up + side,
-        pb - up + side,
-        pb + up + side,
-        pa + up + side,
-        oak,
-        wood: true,
-      );
-      quad(
-        pb - up - side,
-        pa - up - side,
-        pa + up - side,
-        pb + up - side,
-        oak,
-        wood: true,
-      );
+    // A sculpted round rail, not flat rectangular arc segments.
+    CafePoint rotateNormal(CafePoint n) => CafePoint(
+      n.x * math.cos(angle) - n.z * math.sin(angle),
+      n.y,
+      n.x * math.sin(angle) + n.z * math.cos(angle),
+    );
+    for (var i = 0; i < 18; i++) {
+      final a = i * math.pi / 18, b = (i + 1) * math.pi / 18;
+      for (var j = 0; j < 8; j++) {
+        final u = j * math.pi / 4, v = (j + 1) * math.pi / 4;
+        CafePoint normal(double t, double q) =>
+            (CafePoint(math.cos(t), 0, math.sin(t)) * math.cos(q) +
+                    const CafePoint(0, 1, 0) * math.sin(q))
+                .normalized;
+        CafePoint at(double t, double q) {
+          final n = normal(t, q);
+          return rot(
+            math.cos(t) * .245 + n.x * .026,
+            .77 + n.y * .026,
+            math.sin(t) * .21 - .02 + n.z * .026,
+          );
+        }
+
+        var points = [at(a, u), at(b, u), at(b, v), at(a, v)];
+        var normals = [
+          rotateNormal(normal(a, u)),
+          rotateNormal(normal(b, u)),
+          rotateNormal(normal(b, v)),
+          rotateNormal(normal(a, v)),
+        ];
+        if ((points[1] - points[0])
+                .cross(points[2] - points[0])
+                .dot(normals[0]) <
+            0) {
+          points = points.reversed.toList();
+          normals = normals.reversed.toList();
+        }
+        faces.add(
+          CafeFace(
+            points,
+            dark,
+            surface: CafeSurface.walnut,
+            grain: math.cos(angle).abs() > .5 ? CafeGrain.x : CafeGrain.z,
+            vertexNormals: normals,
+            target: _target,
+          ),
+        );
+      }
     }
     obstacles.add(
       Rect.fromCenter(center: Offset(x, z), width: .48, height: .45),
@@ -413,6 +636,7 @@ class CafeWorld {
   }
 
   void _book(double x, double y, double z) {
+    shadow(x + .012, z + .015, .29, .20, y: y - .014, layer: 2, strength: .13);
     box(x, y, z, .43, .018, .30, sage);
     box(x, y + .013, z, .40, .016, .28, cream);
     box(x - .104, y + .023, z, .19, .009, .276, const Color(0xfff5efdf));
@@ -471,7 +695,9 @@ class CafeWorld {
 
   void _pendant(double x, double z, {double radius = .25}) {
     cylinder(x, 2.65, z, .012, .56, dark, sides: 5);
-    cylinder(x, 2.28, z, radius, .20, brass, topRadius: .08, sides: 16);
+    cylinder(x, 2.28, z, radius, .20, brass, topRadius: .08, sides: 24);
+    cylinder(x, 2.407, z, .042, .055, brass, sides: 16);
+    cylinder(x, 2.181, z, radius * 1.015, .018, brass, sides: 24);
     cylinder(
       x,
       2.175,
@@ -489,11 +715,22 @@ class CafeWorld {
     _target = target;
     obstacles.add(bounds);
     final x = bounds.center.dx, z = bounds.center.dy;
-    box(x, .72, z, bounds.width, .065, bounds.height, oak, wood: true);
-    box(x, .676, z, bounds.width - .08, .025, bounds.height - .08, dark);
+    _roundedSlab(x, z, bounds.width, bounds.height);
+    box(
+      x,
+      .682,
+      z,
+      bounds.width - .16,
+      .055,
+      bounds.height - .16,
+      dark,
+      wood: true,
+      topFace: false,
+    );
     for (final dx in [-bounds.width / 2 + .10, bounds.width / 2 - .10]) {
       for (final dz in [-bounds.height / 2 + .10, bounds.height / 2 - .10]) {
         box(x + dx, .34, z + dz, .055, .68, .055, dark, wood: true);
+        shadow(x + dx, z + dz, .085, .085, strength: .20);
       }
     }
     shadow(x, z, bounds.width * .65, bounds.height * .65);
@@ -535,28 +772,40 @@ class CafeWorld {
       const CafePoint(-w, -.008, d),
       const CafePoint(w, -.008, d),
       const CafePoint(w, -.008, -d),
-      oak,
+      const Color(0xffc9bda8),
       layer: -1,
     );
-    for (var row = 0; row < 26; row++) {
-      final x = -w + row * .34;
-      for (var col = 0; col < 9; col++) {
-        final z = -d + col * 1.3 - (row.isEven ? .6 : 0);
-        final a = z.clamp(-d, d).toDouble(),
-            b = (z + 1.295).clamp(-d, d).toDouble();
-        if (b <= a) continue;
-        quad(
-          CafePoint(x, 0, a),
-          CafePoint(x, 0, b),
-          CafePoint(math.min(x + .335, w), 0, b),
-          CafePoint(math.min(x + .335, w), 0, a),
-          Color.lerp(
-            const Color(0xffac855f),
-            const Color(0xffc6a17b),
-            random.nextDouble(),
-          )!,
-          wood: true,
-          layer: 0,
+    for (var row = 0; row < 15; row++) {
+      final left = -w + row * .6 + .0015,
+          right = math.min(w, -w + (row + 1) * .6 - .0015);
+      for (var col = 0; col < 12; col++) {
+        final back = -d + col * .9 + .0015,
+            front = math.min(d, -d + (col + 1) * .9 - .0015);
+        if (front <= back || right <= left) continue;
+        final u = random.nextDouble(), v = random.nextDouble();
+        final tone = Color.lerp(
+          const Color(0xffffffff),
+          const Color(0xffe4d9c7),
+          random.nextDouble() * .20,
+        )!;
+        faces.add(
+          CafeFace(
+            [
+              CafePoint(left, 0, back),
+              CafePoint(left, 0, front),
+              CafePoint(right, 0, front),
+              CafePoint(right, 0, back),
+            ],
+            tone,
+            surface: CafeSurface.limestone,
+            layer: 0,
+            textureCoordinates: [
+              Offset(u, v),
+              Offset(u, v + (front - back) / 2.4),
+              Offset(u + (right - left) / 2.4, v + (front - back) / 2.4),
+              Offset(u + (right - left) / 2.4, v),
+            ],
+          ),
         );
       }
     }
@@ -696,12 +945,44 @@ class CafeWorld {
     _pendant(0, -.83);
     _pendant(0, .68);
     // Rear writing alcove, framed in walnut and lit like the selected concept.
-    box(-2.25, 1.42, -4.90, 1.95, 2.7, .12, dark, wood: true);
-    box(-2.25, 1.46, -4.81, 1.65, 2.42, .035, const Color(0xff81765e));
+    const alcove = Color(0xff8d856c);
+    box(-2.25, .94, -4.81, 1.7, 1.82, .035, alcove);
     for (final x in [-3.16, -1.34]) {
-      box(x, 1.35, -4.68, .12, 2.7, .32, dark, wood: true);
+      box(x, .94, -4.68, .12, 1.82, .32, dark, wood: true);
     }
-    box(-2.25, 2.70, -4.68, 1.9, .12, .32, dark, wood: true);
+    for (var i = 0; i < 24; i++) {
+      final a = i * math.pi / 24, b = (i + 1) * math.pi / 24;
+      CafePoint arch(double angle, double radius, double z) => CafePoint(
+        -2.25 + math.cos(angle) * radius,
+        1.85 + math.sin(angle) * radius,
+        z,
+      );
+      faces.add(
+        CafeFace([
+          const CafePoint(-2.25, 1.85, -4.79),
+          arch(a, .86, -4.79),
+          arch(b, .86, -4.79),
+        ], alcove),
+      );
+      quad(
+        arch(a, .97, -4.52),
+        arch(b, .97, -4.52),
+        arch(b, .85, -4.52),
+        arch(a, .85, -4.52),
+        dark,
+        wood: true,
+        grain: CafeGrain.x,
+      );
+      quad(
+        arch(a, .85, -4.52),
+        arch(b, .85, -4.52),
+        arch(b, .85, -4.80),
+        arch(a, .85, -4.80),
+        dark,
+        wood: true,
+        grain: CafeGrain.x,
+      );
+    }
     _writingSurface(tableBounds(CafeSeat.quiet), target: CafeTarget.quiet);
     _target = CafeTarget.quiet;
     _chair(-2.25, -3.3);
@@ -714,7 +995,17 @@ class CafeWorld {
     for (var i = 0; i < 43; i++) {
       box(-.61 + i * .074, .48, -4.06, .029, .91, .025, oak, wood: true);
     }
-    box(.95, 1.015, -4.47, 3.32, .07, .91, cream);
+    _roundedSlab(
+      .95,
+      -4.47,
+      3.32,
+      .91,
+      top: 1.05,
+      thickness: .07,
+      radius: .045,
+      surface: CafeSurface.limestone,
+      color: const Color(0xfff5eee2),
+    );
     box(1.05, 1.29, -4.52, .75, .45, .40, const Color(0xff55534b));
     box(1.05, 1.26, -4.29, .67, .23, .04, const Color(0xffb5aea0));
     for (var i = 0; i < 4; i++) {

@@ -38,7 +38,7 @@ class _CafeSceneState extends State<CafeScene>
   List<double> lengths = [];
   double total = 0;
   int request = 0;
-  ui.Image? wood, garden, sign;
+  ui.Image? wood, garden, sign, walnut, limestone, woven;
 
   @override
   void initState() {
@@ -117,11 +117,45 @@ class _CafeSceneState extends State<CafeScene>
     return image;
   }
 
+  Future<ui.Image?> _makeWovenCord() async {
+    final recorder = ui.PictureRecorder(), canvasSize = 256;
+    final canvas = Canvas(recorder);
+    canvas.drawColor(const Color(0xffc9ab7c), BlendMode.src);
+    final paint = Paint()..strokeWidth = 3;
+    // A repeatable cord weave, at a 0.62 m physical scale in the renderer.
+    for (var i = 0; i < canvasSize; i += 4) {
+      paint.color = const Color(0xffab8d60);
+      canvas.drawLine(
+        Offset(i.toDouble(), 0),
+        Offset(i.toDouble(), 256),
+        paint,
+      );
+      paint.color = const Color(0xffe0c698);
+      canvas.drawLine(Offset(i + 1.0, 0), Offset(i + 1.0, 256), paint);
+      for (var j = 0; j < canvasSize; j += 8) {
+        final y = j + ((i ~/ 4).isEven ? 0 : 4);
+        paint.color = const Color(0xffdbc092);
+        canvas.drawLine(
+          Offset(i - 1.0, y.toDouble()),
+          Offset(i + 3.0, y.toDouble()),
+          paint,
+        );
+      }
+    }
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(256, 256);
+    picture.dispose();
+    return image;
+  }
+
   Future<void> _loadMaterials() async {
     final images = await Future.wait([
-      _texture('cafe-oak-albedo.png'),
+      _texture('cafe-oak-longgrain.jpg'),
       _texture('cafe-garden-view.png'),
       _makeSign(),
+      _texture('cafe-walnut-longgrain.jpg'),
+      _texture('cafe-limestone-albedo.jpg'),
+      _makeWovenCord(),
     ]);
     if (!mounted) {
       for (final image in images) {
@@ -133,6 +167,9 @@ class _CafeSceneState extends State<CafeScene>
       wood = images[0];
       garden = images[1];
       sign = images[2];
+      walnut = images[3];
+      limestone = images[4];
+      woven = images[5];
     });
   }
 
@@ -219,6 +256,9 @@ class _CafeSceneState extends State<CafeScene>
     wood?.dispose();
     garden?.dispose();
     sign?.dispose();
+    walnut?.dispose();
+    limestone?.dispose();
+    woven?.dispose();
     super.dispose();
   }
 
@@ -347,6 +387,9 @@ class _CafeSceneState extends State<CafeScene>
                       wood: wood,
                       garden: garden,
                       sign: sign,
+                      walnut: walnut,
+                      limestone: limestone,
+                      woven: woven,
                     ),
                     size: Size.infinite,
                   ),

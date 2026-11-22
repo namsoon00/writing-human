@@ -23,8 +23,12 @@ void main() {
           return image;
         }
 
-        final wood = await texture('assets/images/cafe-oak-albedo.png');
+        final wood = await texture('assets/images/cafe-oak-longgrain.jpg');
         final garden = await texture('assets/images/cafe-garden-view.png');
+        final walnut = await texture('assets/images/cafe-walnut-longgrain.jpg');
+        final limestone = await texture(
+          'assets/images/cafe-limestone-albedo.jpg',
+        );
         final world = CafeWorld();
         const size = ui.Size(240, 400);
         try {
@@ -39,6 +43,8 @@ void main() {
                   world: world,
                   wood: wood,
                   garden: garden,
+                  walnut: walnut,
+                  limestone: limestone,
                   camera: CafeCamera(
                     position: position,
                     yaw: turn * math.pi / 6,
@@ -53,7 +59,8 @@ void main() {
                 ))!.buffer.asUint8List();
                 var visible = 0, samples = 0;
                 // Exclude the outer vignette, and compare against the empty renderer
-                // background. No app labels can disguise a blank 3D room here.
+                // background. Ivory surfaces may be close in tone, so a small RGB
+                // difference still counts; labels cannot disguise a blank room.
                 for (var y = 80; y < 320; y += 8) {
                   for (var x = 48; x < 192; x += 8) {
                     final i = (y * 240 + x) * 4;
@@ -61,7 +68,7 @@ void main() {
                         (bytes[i] - 243).abs() +
                         (bytes[i + 1] - 234).abs() +
                         (bytes[i + 2] - 219).abs();
-                    if (delta > 45) visible++;
+                    if (delta > 12) visible++;
                     samples++;
                   }
                 }
@@ -78,6 +85,8 @@ void main() {
         } finally {
           wood.dispose();
           garden.dispose();
+          walnut.dispose();
+          limestone.dispose();
         }
       });
     },

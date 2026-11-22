@@ -26,8 +26,11 @@ void main() {
 
       final wood = await texture(),
           garden = await texture(),
-          sign = await texture();
-      final originals = [wood, garden, sign];
+          sign = await texture(),
+          walnut = await texture(),
+          limestone = await texture(),
+          woven = await texture();
+      final originals = [wood, garden, sign, walnut, limestone, woven];
       final world = CafeWorld();
       try {
         for (var frame = 0; frame < 24; frame++) {
@@ -37,6 +40,9 @@ void main() {
             wood: wood,
             garden: garden,
             sign: sign,
+            walnut: walnut,
+            limestone: limestone,
+            woven: woven,
             camera: CafeCamera(
               position: frame < 12
                   ? CafeCamera.entrance.position

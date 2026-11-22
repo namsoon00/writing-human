@@ -9,13 +9,15 @@ import 'cafe_world.dart';
 import 'cafe_visit.dart';
 
 class _Vertex {
-  const _Vertex(this.point, this.u, this.v);
+  const _Vertex(this.point, this.u, this.v, this.color);
   final CafePoint point;
   final double u, v;
+  final Color color;
   static _Vertex lerp(_Vertex a, _Vertex b, double t) => _Vertex(
     CafePoint.lerp(a.point, b.point, t),
     a.u + (b.u - a.u) * t,
     a.v + (b.v - a.v) * t,
+    Color.lerp(a.color, b.color, t)!,
   );
 }
 
@@ -35,10 +37,13 @@ class CafeRenderer extends CustomPainter {
     this.wood,
     this.garden,
     this.sign,
+    this.walnut,
+    this.limestone,
+    this.woven,
   });
   final CafeWorld world;
   final CafeCamera camera;
-  final ui.Image? wood, garden, sign;
+  final ui.Image? wood, garden, sign, walnut, limestone, woven;
   static const near = .075;
   static final _daylightDirection = const CafePoint(-.78, .58, .22).normalized;
 
@@ -145,25 +150,96 @@ class CafeRenderer extends CustomPainter {
     return output;
   }
 
-  Color _light(CafeFace face) {
-    if (face.unlit) return face.color;
+  ui.Image? _texture(CafeFace face) {
+    if (face.garden) return garden;
+    if (face.sign) return sign;
+    return switch (face.surface) {
+      CafeSurface.oak => wood,
+      CafeSurface.walnut => walnut ?? wood,
+      CafeSurface.limestone => limestone,
+      CafeSurface.cord => woven,
+      _ => null,
+    };
+  }
+
+  /// Physical repeat lengths keep long grain aligned with each timber member.
+  /// End faces use two cross-grain axes instead of a collapsed UV coordinate.
+  static Offset materialUv(CafeFace face, CafePoint p) {
     final n = face.normal;
-    // Broad window light plus warm ceiling fill, baked onto real mesh normals.
-    final daylight = math.max(0, n.dot(_daylightDirection));
-    final ceiling = math.max(0, n.y);
-    final windowFalloff = (1 - (face.center.x + 4.4) / 15).clamp(.35, 1.0);
-    final brightness = (.91 + .16 * daylight * windowFalloff + .08 * ceiling)
-        .clamp(.85, 1.15);
-    final base = face.wood && wood != null
-        ? Color.lerp(face.color, Colors.white, .60)!
+    switch (face.grain) {
+      case CafeGrain.x:
+        if (n.x.abs() > .8) return Offset(p.z / .6, -p.y / .6);
+        return Offset((n.y.abs() > .6 ? p.z : p.y) / .62, -p.x / 2.4);
+      case CafeGrain.y:
+        if (n.y.abs() > .8) return Offset(p.x / .6, -p.z / .6);
+        return Offset((n.x.abs() > .6 ? p.z : p.x) / .62, -p.y / 2.4);
+      case CafeGrain.z:
+        if (n.z.abs() > .8) return Offset(p.x / .6, -p.y / .6);
+        return Offset((n.y.abs() > .6 ? p.x : p.y) / .62, -p.z / 2.4);
+    }
+  }
+
+  static const _lamps = [
+    CafePoint(0, 2.175, -.83),
+    CafePoint(0, 2.175, .68),
+    CafePoint(-3.68, 2.175, -2.5),
+    CafePoint(-3.68, 2.175, -.3),
+    CafePoint(-3.68, 2.175, 1.9),
+    CafePoint(-2.25, 2.175, -3.95),
+  ];
+  // Geometry and diffuse light are static; retain only weak face references.
+  static final _illumination = Expando<List<CafePoint>>();
+  List<CafePoint> _diffuse(
+    CafeFace face,
+  ) => _illumination[face] ??= List.generate(face.points.length, (i) {
+    final p = face.points[i], n = face.vertexNormals?[i] ?? face.normal;
+    final window = (1 - (p.x + 4.4) / 15).clamp(.35, 1.0);
+    final fill =
+        .80 +
+        .20 * math.max(0, n.dot(_daylightDirection)) * window +
+        .09 * math.max(0, n.y);
+    var warm = 0.0;
+    for (final lamp in _lamps) {
+      final delta = lamp - p, distance = delta.length;
+      warm +=
+          .29 *
+          math.max(0, n.dot(delta * (1 / distance))) /
+          (1 + .65 * distance * distance);
+    }
+    // Cabinet strips: a local warm fill in the shelf recess, not a screen tint.
+    if (p.x > 3.6 && p.z < 1.45) warm += .07;
+    warm = math.min(.32, warm);
+    return CafePoint(fill + warm, fill + warm * .84, fill + warm * .60);
+  });
+
+  double _specular(CafeFace face) {
+    final metal = face.surface == CafeSurface.brass;
+    if (!metal &&
+        face.surface != CafeSurface.oak &&
+        face.surface != CafeSurface.walnut) {
+      return 0;
+    }
+    final view = (camera.position - face.center).normalized;
+    final halfVector = (view + _daylightDirection).normalized;
+    return math.pow(math.max(0, face.normal.dot(halfVector)), metal ? 22 : 35) *
+        (metal ? .26 : .055);
+  }
+
+  Color _light(CafeFace face, int i, bool textured, double specular) {
+    if (face.vertexColors != null) return face.vertexColors![i];
+    if ((face.garden || face.sign) && textured) return Colors.white;
+    if (face.unlit) return face.color;
+    final light = _diffuse(face)[i];
+    final base = textured && face.surface != CafeSurface.limestone
+        ? Colors.white
         : face.color;
-    int c(double channel, double warmth) =>
-        (channel * 255 * brightness * warmth).round().clamp(0, 255);
+    int channel(double value, double factor) =>
+        ((value * factor + specular) * 255).round().clamp(0, 255);
     return Color.fromARGB(
       (base.a * 255).round(),
-      c(base.r, 1.015),
-      c(base.g, 1.0),
-      c(base.b, .985),
+      channel(base.r, light.x),
+      channel(base.g, light.y),
+      channel(base.b, light.z),
     );
   }
 
@@ -196,36 +272,30 @@ class CafeRenderer extends CustomPainter {
           face.normal.dot(camera.position - face.center) < -.015) {
         continue;
       }
-      final alongZ = face.normal.x.abs() > .6;
-      final horizontal = face.normal.y.abs() > .6;
-      final image = face.garden
-          ? garden
-          : face.sign
-          ? sign
-          : face.wood
-          ? wood
-          : null;
+      final image = _texture(face);
+      final specular = _specular(face);
       var vertices = <_Vertex>[];
       for (var i = 0; i < face.points.length; i++) {
         final p = face.points[i];
-        var u = (alongZ ? p.z : p.x) * 190, v = (horizontal ? p.z : p.y) * 190;
-        if ((face.garden || face.sign) && image != null) {
-          if (face.textureCoordinates != null) {
-            u = face.textureCoordinates![i].dx * (image.width - 1);
-            v = face.textureCoordinates![i].dy * (image.height - 1);
-          } else {
-            final a = face.points[0],
-                edgeU = face.points[1] - a,
-                edgeV = face.points[3] - a;
-            final delta = p - a;
-            u = delta.dot(edgeU) / edgeU.dot(edgeU) * (image.width - 1);
-            v = (1 - delta.dot(edgeV) / edgeV.dot(edgeV)) * (image.height - 1);
-            if (face.sign) {
-              v = (face.signRow + v / (image.height - 1)) * image.height / 4;
-            }
+        var uv = materialUv(face, p);
+        var u = uv.dx * (image?.width ?? 1), v = uv.dy * (image?.height ?? 1);
+        if (image != null && face.textureCoordinates != null) {
+          u = face.textureCoordinates![i].dx * (image.width - 1);
+          v = face.textureCoordinates![i].dy * (image.height - 1);
+        } else if ((face.garden || face.sign) && image != null) {
+          final a = face.points[0],
+              edgeU = face.points[1] - a,
+              edgeV = face.points[3] - a,
+              delta = p - a;
+          u = delta.dot(edgeU) / edgeU.dot(edgeU) * (image.width - 1);
+          v = (1 - delta.dot(edgeV) / edgeV.dot(edgeV)) * (image.height - 1);
+          if (face.sign) {
+            v = (face.signRow + v / (image.height - 1)) * image.height / 4;
           }
         }
-        vertices.add(_Vertex(toView(p), u, v));
+        vertices.add(
+          _Vertex(toView(p), u, v, _light(face, i, image != null, specular)),
+        );
       }
       if (vertices.every((p) => p.point.z < near)) continue;
       if (vertices.any((p) => p.point.z < near)) vertices = _clip(vertices);
@@ -246,9 +316,11 @@ class CafeRenderer extends CustomPainter {
           : a.face.layer.compareTo(b.face.layer),
     );
     final f = focalLength(size);
-    final paint = Paint()..isAntiAlias = true;
+    final paint = Paint()
+      ..isAntiAlias = true
+      ..filterQuality = FilterQuality.medium;
     final shaders = <ui.Image, ui.ImageShader>{};
-    for (final image in [wood, garden, sign]) {
+    for (final image in {wood, walnut, limestone, woven, garden, sign}) {
       if (image == null) continue;
       // Flutter 3.41.2 CanvasKit's CkImageShader.dispose() also disposes the
       // exact Image handle passed to its constructor. Give it a dedicated
@@ -256,63 +328,69 @@ class CafeRenderer extends CustomPainter {
       // Native dart:ui borrows the image and keeps its own underlying reference.
       shaders[image] = ui.ImageShader(
         kIsWeb ? image.clone() : image,
-        image == wood ? TileMode.repeated : TileMode.clamp,
-        image == wood ? TileMode.repeated : TileMode.clamp,
+        image == garden || image == sign ? TileMode.clamp : TileMode.repeated,
+        image == garden || image == sign ? TileMode.clamp : TileMode.repeated,
         Float64List.fromList([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
       );
     }
+    // Batch only consecutive compatible surfaces, preserving painter order.
+    // This avoids one CanvasKit bridge call per small chair/stone triangle.
+    final positions = <Offset>[], uv = <Offset>[];
+    final colors = <Color>[];
+    ui.ImageShader? batchShader;
+    bool batchAA = false;
+    void flush() {
+      if (positions.isEmpty) return;
+      paint
+        ..shader = batchShader
+        ..color = Colors.white
+        ..isAntiAlias = batchAA;
+      final mesh = ui.Vertices(
+        VertexMode.triangles,
+        positions,
+        textureCoordinates: batchShader == null ? null : uv,
+        colors: colors,
+      );
+      canvas.drawVertices(mesh, BlendMode.modulate, paint);
+      mesh.dispose();
+      positions.clear();
+      uv.clear();
+      colors.clear();
+    }
+
     for (final face in faces) {
-      // Adjacent wall/floor tiles must share a hard edge. Antialiasing each
-      // tile independently leaves pale cracks between otherwise solid faces.
-      paint.isAntiAlias = face.face.layer >= 2;
-      final positions = <Offset>[], uv = <Offset>[];
+      final projected = <Offset>[];
       for (final v in face.vertices) {
-        positions.add(
+        projected.add(
           Offset(
             size.width / 2 + v.point.x * f / v.point.z,
             size.height / 2 - v.point.y * f / v.point.z,
           ),
         );
-        uv.add(Offset(v.u, v.v));
       }
-      final bounds = Rect.fromPoints(positions.first, positions.first)
-          .expandToInclude(
-            positions.fold<Rect>(
-              Rect.fromPoints(positions.first, positions.first),
-              (r, p) => r.expandToInclude(Rect.fromPoints(p, p)),
-            ),
-          );
+      var bounds = Rect.fromPoints(projected.first, projected.first);
+      for (final p in projected.skip(1)) {
+        bounds = bounds.expandToInclude(Rect.fromPoints(p, p));
+      }
       if (!bounds.overlaps(Offset.zero & size)) continue;
-      final texture = face.face.garden
-          ? garden
-          : face.face.sign
-          ? sign
-          : face.face.wood
-          ? wood
-          : null;
-      final shader = shaders[texture];
-      final color = (face.face.garden || face.face.sign) && texture != null
-          ? Colors.white
-          : _light(face.face);
-      if (shader != null) {
-        paint
-          ..shader = shader
-          ..color = Colors.white;
-        final vertices = ui.Vertices(
-          VertexMode.triangleFan,
-          positions,
-          textureCoordinates: uv,
-          colors: List.filled(positions.length, color),
-        );
-        canvas.drawVertices(vertices, BlendMode.modulate, paint);
-        vertices.dispose();
-        paint.shader = null;
-      } else {
-        final path = Path()..addPolygon(positions, true);
-        paint.color = color;
-        canvas.drawPath(path, paint);
+      final shader = shaders[_texture(face.face)];
+      final aa = face.face.layer >= 2;
+      if (shader != batchShader || aa != batchAA || positions.length > 12000) {
+        flush();
+        batchShader = shader;
+        batchAA = aa;
+      }
+      for (var i = 1; i + 1 < projected.length; i++) {
+        for (final index in [0, i, i + 1]) {
+          positions.add(projected[index]);
+          final v = face.vertices[index];
+          uv.add(Offset(v.u, v.v));
+          colors.add(v.color);
+        }
       }
     }
+    flush();
+    paint.shader = null;
     for (final shader in shaders.values) {
       shader.dispose();
     }
@@ -336,6 +414,9 @@ class CafeRenderer extends CustomPainter {
       oldDelegate.wood != wood ||
       oldDelegate.garden != garden ||
       oldDelegate.sign != sign ||
+      oldDelegate.walnut != walnut ||
+      oldDelegate.limestone != limestone ||
+      oldDelegate.woven != woven ||
       oldDelegate.world != world;
 }
 

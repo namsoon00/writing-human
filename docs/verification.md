@@ -2933,3 +2933,10 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - 배포용 main JS에도 `cafe-toggle-perspective`·`3인칭으로 보기`·`CafeAvatar`가
   없는 것을 확인했다. 사용자 데이터/DB/계정/기존 Sites 식별자와 비공개 범위는
   변경하지 않았다. 공개 배포와 실행 파일 비교 결과는 완료 후 별도로 기록한다.
+
+
+## 2026-11-22 · 1인칭 전용 공개 배포 확인
+
+- 소스 `cc256d841f4946c4233e85f29707bce68bd5aff0`의 [배포 45022269468](https://github.com/namsoon00/writing-human/actions/runs/45022269468)가 포맷·정적 분석·전체 테스트·실제 Chrome CanvasKit 검사·빌드·게시를 통과했다.
+- [공개 앱](https://namsoon00.github.io/writing-human/?v=cc256d8)의 HTML·bootstrap·main JS·아이콘 폰트를 HTTP 200으로 확인했다. main JS와 아이콘 폰트가 로컬 검증 빌드와 바이트 단위로 같고 `cafe-toggle-perspective`·`3인칭으로 보기`·`CafeAvatar`가 없다. main JS SHA-256은 `4d8fa453456d158fd59b01e71bb33e5358cba923677b0e923f8bd7f69747a7d0`이다.
+- [HTTP 비교 증거](../design/cafe/20261122/darker-floor/removal-deployment-proof.json)를 보관했다. 바닥 두 안은 이미지 시안이며 런타임의 바닥과 조명은 변경하지 않았다. iPhone 실제 터치·프레임 속도/발열 검증은 남아 있다.

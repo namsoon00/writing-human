@@ -1,0 +1,34 @@
+{
+  "source_commit": "cc256d841f4946c4233e85f29707bce68bd5aff0",
+  "actions_run": 45022269468,
+  "index": {
+    "url": "https://namsoon00.github.io/writing-human/?v=cc256d8",
+    "status": 200,
+    "bytes": 8150,
+    "sha256": "294915be2b2f257bdd7b7c3cabc7d437ffabf2bdf85b0ea30af4853a235339ee"
+  },
+  "bootstrap": {
+    "url": "https://namsoon00.github.io/writing-human/flutter_bootstrap.js?v=8394ebf588bf608a",
+    "status": 200,
+    "bytes": 10016,
+    "sha256": "8394ebf588bf608a7ed17c4144d4a15f953bbb7aa92e2c2005cfb2e3e843815d"
+  },
+  "main": {
+    "url": "https://namsoon00.github.io/writing-human/main.dart.js?v=4d8fa453456d158f",
+    "status": 200,
+    "bytes": 5112693,
+    "sha256": "4d8fa453456d158fd59b01e71bb33e5358cba923677b0e923f8bd7f69747a7d0",
+    "matches_local": true,
+    "removed_labels_absent": true
+  },
+  "icons": {
+    "url": "https://namsoon00.github.io/writing-human/assets/fonts/MaterialIcons-Regular.otf?v=cc256d8",
+    "status": 200,
+    "bytes": 9044,
+    "sha256": "3dc223b37b6f95e164aa709c420a6f00aa8bdf98c00ce8fe62e3a239032c3de9",
+    "matches_local": true
+  },
+  "floor": "concepts only; current runtime stone material unchanged",
+  "checked_at": "2026-11-22T12:31:38.322990+00:00",
+  "actions_conclusion": "build and deploy success"
+}

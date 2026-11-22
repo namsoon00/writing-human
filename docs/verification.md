@@ -2666,3 +2666,17 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   밝기·원본 수명에 대한 판단을 브랜드 페르소나에 기록했다. CUA 브라우저 접근은
   지원되지 않았고 iPhone Safari 실기기 터치·발열·프레임 속도는 아직 미검증이다.
   배포 결과는 완료 후 별도로 기록한다.
+
+
+## 2026-11-22 · 카페 재그리기 수정 공개 확인
+
+- [배포 44998375243](https://github.com/namsoon00/writing-human/actions/runs/44998375243)가
+  소스 6482b530c9543e6443c79c9c3791950317ee8616의 포맷·정적 분석·전체 테스트·
+  Chrome CanvasKit 이미지 수명 회귀 검사·웹 빌드·게시를 모두 통과했다.
+- [새 실행 파일로 여는 웹 앱](https://namsoon00.github.io/writing-human/?v=6482b53)의
+  HTML·버전 bootstrap·main JS 연결과 각각 HTTP 200을 확인했다. 실제 main JS가
+  검증한 로컬 release와 바이트 단위로 일치했다. SHA-256:
+  b160bfef2eab54d4707082147f496e61b330567c9759717361a420047b11e0c6.
+- 재그리기 시 원본 이미지가 닫히는 결함은 실제 CanvasKit 엔진에서 수정 전 실패와
+  수정 후 통과를 확인했다. iPhone Safari 실기기의 실제 터치·프레임 속도·발열을
+  확인한 결과로 확대하지 않는다. 기존 Sites 프로젝트·접근 범위·기록은 유지했다.

@@ -2996,3 +2996,18 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   접근은 제공되지 않았고 iPhone Safari 실제 터치·프레임 속도/발열은 미검증이다.
   Canvas 평균 깊이 정렬과 단순 국소 조명을 유지하며 사진 같은 PBR/광선 추적 결과로
   보고하지 않는다. [구현/렌더 기록](../design/cafe/20261122/mocha-interior/implementation.json)을 보관했다.
+
+
+## 2026-11-22 · 모카 실내 공개 배포 확인
+
+- 소스 `afda9fc3a3bc6faeaefb50e1d11f63ebc5a39f7f`의
+  [배포 45024153409](https://github.com/namsoon00/writing-human/actions/runs/45024153409)가
+  포맷·분석·전체 테스트·실제 Chrome CanvasKit·웹 빌드·게시를 모두 통과했다.
+- [공개 앱](https://namsoon00.github.io/writing-human/?v=afda9fc)의 HTML·bootstrap·
+  main JS·아이콘 폰트가 모두 HTTP 200이다. 실행 JS와 폰트가 깨끗한 로컬 검증 빌드와
+  바이트 단위로 같았다. main JS SHA-256:
+  `7dd19decb12a03493d78f53fc1e3b5fd931f93909716f2157aee4f68cf60f7f1`.
+- B안 모카 석재와 벽/실내 세부가 적용된 배포이며 아바타·3인칭 항목은 계속 없다.
+  [HTTP 증거](../design/cafe/20261122/mocha-interior/deployment-proof.json)를 보관했다.
+  `책장 → 필사 카페`로 들어가 바닥을 눌러 걷고 끌어 둘러본다.
+  iPhone Safari 실제 터치·프레임 속도/발열 검증은 남아 있다.

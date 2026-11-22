@@ -1268,9 +1268,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
 
     try {
       final available = originals();
-      final match = bookDetails == null
-          ? matchOriginal(available, selectedPage.text, selectedPage.extent)
-          : null;
       final scope = (
         bookId: bookId,
         recordId: bookId == null ? selectedPage.recordId : null,
@@ -1285,6 +1282,10 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               pageOriginals(selectedPage, available),
               selectedPage.extent,
             )
+          : null;
+      final match = bookDetails == null
+          ? matchTranscriptionPosition(selectedPage, activeLink, available) ??
+                matchOriginal(available, selectedPage.text, selectedPage.extent)
           : null;
       final guided =
           activeLink?.original?.id ??

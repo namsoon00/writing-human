@@ -2,6 +2,7 @@ import '../data/model.dart';
 import '../data/library_search.dart';
 import '../data/original_removals.dart';
 import 'page_originals.dart';
+import 'transcription_comparison.dart';
 
 RegisteredOriginal _legacyOriginal(String text, [String citation = '']) =>
     RegisteredOriginal(
@@ -275,6 +276,47 @@ class OriginalMatch {
   }
 }
 
+/// Locates the next source character for a saved cursor in a guided passage.
+OriginalMatch? matchTranscriptionPosition(
+  WritingPage page,
+  PagePassage? link,
+  List<RegisteredOriginal> originals,
+) {
+  if (link == null || link.referenceOnly) return null;
+  final source = passageOriginal(link);
+  if (source == null || !source.canTranscribe) return null;
+  final original = originals.where((item) => item.id == source.id).firstOrNull;
+  if (original == null) return null;
+
+  final range = original.writingRange;
+  final narrowed = !sameOriginalCopy(source, originalSnapshot(original));
+  if (narrowed &&
+      (range == null ||
+          !sameOriginalCopy(
+            source,
+            originalSnapshot(original, useLegacyRange: true),
+          ))) {
+    return null;
+  }
+
+  final rangeStart = narrowed ? range!.start : 0;
+  final written = page.text.substring(
+    link.start,
+    page.extent.clamp(link.start, page.text.length),
+  );
+  final consumed = TranscriptionComparison(
+    source,
+    sourceOffset: link.sourceOffset,
+  ).sourceOffsetFor(written);
+  final remaining = source.text.trimLeft();
+  final position =
+      rangeStart +
+      source.text.length -
+      remaining.length +
+      (link.sourceOffset + consumed).clamp(0, remaining.length);
+  return OriginalMatch(original, position, position, useWritingRange: narrowed);
+}
+
 /// Matches only the beginning of the source deliberately opened on an empty page.
 OriginalMatch? matchGuidedOriginal(
   RegisteredOriginal original,
@@ -311,23 +353,22 @@ Map<String, ({Passage passage, bool marked})> originalWritingLocations(
         );
       }
     }
-    for (final link in pageOriginals(page, originals)) {
+    final links = pageOriginals(page, originals);
+    final caret = page.extent.clamp(0, page.text.length);
+    final active = passageAt(links, caret);
+    for (final link in links) {
       final source = passageOriginal(link);
       if (source == null) continue;
       final stored = originals.where((o) => o.id == source.id).firstOrNull;
       if (stored == null) continue;
-      final end = passageEnd(
-        pageOriginals(page, originals),
-        link,
-        page.text.length,
-      );
+      final end = passageEnd(links, link, page.text.length);
       if (end <= link.start) continue;
       locations[source.id] = (
         passage: Passage(
           page,
           '',
           page.text.substring(link.start, end).trim(),
-          offset: link.start,
+          offset: active?.id == link.id ? caret : link.start,
         ),
         marked: page.pencilMarks.any(
           (m) => m.start < end && m.end > link.start,

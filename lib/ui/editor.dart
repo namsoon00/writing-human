@@ -547,9 +547,12 @@ class _PageEditorState extends State<PageEditor> {
         final paperHeight = math.max(0.0, constraints.maxHeight - overlap);
         final scaler = MediaQuery.textScalerOf(context);
         final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+        final selection = text.selection;
         final showInlineGuide =
             _comparison != null &&
             !keyboardVisible &&
+            selection.isCollapsed &&
+            selection.extentOffset == text.text.length &&
             active?.id == passages.lastOrNull?.id &&
             end == text.text.length;
         final referenceStyle = writingTextStyle(

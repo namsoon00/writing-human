@@ -124,6 +124,8 @@ class TranscriptionComparison {
         in _anchors[_anchorAt(typed, input)] ?? const <int>[]) {
       if (candidate <= source) continue;
       final length = _matchLength(typed, input, candidate);
+      // A few words can occur far ahead in the source as well as in a note.
+      if (candidate - source >= 32 && length < 6) continue;
       final startsWord = _source[candidate].start > _source[candidate - 1].end;
       // A short ending within a word is easy to match in unrelated notes.
       if (candidate > source + 1 && !startsWord && length < 6) continue;

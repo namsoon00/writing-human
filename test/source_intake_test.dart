@@ -2754,6 +2754,90 @@ void main() {
     },
   );
 
+  testWidgets('Reopening a continued page follows the saved cursor', (
+    tester,
+  ) async {
+    const repeated = '같은 문장을 적습니다.\n';
+    const next = '이어서 쓰던 문장입니다.\n';
+    const last = '마지막으로 읽을 문장입니다.';
+    const original = RegisteredOriginal(
+      'o',
+      '$repeated앞쪽 장면이 지나갑니다.\n$repeated$next$last',
+    );
+    final anchor = original.text.lastIndexOf(repeated);
+    const written = '$repeated$next';
+    final page = WritingPage(
+      id: 'p',
+      recordId: 'r',
+      number: 2,
+      text: written,
+      base: repeated.length,
+      extent: repeated.length,
+      guidedOriginalId: original.id,
+      passages: [
+        PagePassage(
+          id: 'link-resume',
+          start: 0,
+          source: original.text,
+          original: original,
+          sourceOffset: anchor,
+          continued: true,
+          attached: true,
+        ),
+      ],
+    );
+    final store = MemoryStore()
+      ..data = Library.decode(
+        Library(
+          records: const [
+            WritingRecord(id: 'r', title: '필사 노트', originals: [original]),
+          ],
+          pages: [
+            const WritingPage(id: 'first', recordId: 'r', number: 1),
+            page,
+          ],
+          activePageId: 'p',
+          writing: true,
+        ).encode(),
+      );
+    await open(tester, store, FakeIntake());
+    final input = tester.widget<TextField>(bodyField).controller!;
+    expect(input.selection, TextSelection.collapsed(offset: repeated.length));
+    expect(remainingReference(tester), '$next$last');
+    expect(transcriptionGuide, findsNothing);
+
+    await tester.tap(place);
+    await tester.pumpAndSettle();
+    final savedList = tester.widget<SourceReading>(reading);
+    expect(savedList.initialOriginalId, isNull);
+    expect(savedList.match?.original.id, original.id);
+    expect(savedList.match?.start, anchor + repeated.length);
+    await tester.tap(closeIn(reading));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(bodyField).controller, same(input));
+    expect(input.text, written);
+    expect(input.selection, TextSelection.collapsed(offset: repeated.length));
+    expect(remainingReference(tester), '$next$last');
+
+    input.selection = TextSelection.collapsed(offset: written.length);
+    await tester.pumpAndSettle();
+    expect(remainingInline(tester), last);
+  });
+
+  test('A short phrase in a note cannot jump far ahead in the original', () {
+    final longMiddle = List.filled(12, '사잇길을 걸어갑니다.').join(' ');
+    final original = RegisteredOriginal(
+      'o',
+      '첫 문장.\n$longMiddle\n공책에 적어둡니다. 마지막 줄.',
+    );
+    final comparison = TranscriptionComparison(original);
+    expect(
+      comparison.remainderFor('첫 문장.\n공책에'),
+      '$longMiddle\n공책에 적어둡니다. 마지막 줄.',
+    );
+    expect(comparison.remainderFor('첫 문장.\n공책에 적어둡니다'), '. 마지막 줄.');
+  });
+
   test('Transcription waits for the text to resume after an interruption', () {
     final comparison = TranscriptionComparison(
       const RegisteredOriginal('o', '가나다라마바사.'),
@@ -3075,7 +3159,8 @@ void main() {
         tester.view.resetViewInsets();
         await tester.pumpAndSettle();
         expect(field.focusNode!.hasFocus, !dismissWithButton);
-        expect(transcriptionGuide, findsOneWidget);
+        expect(transcriptionGuide, findsNothing);
+        expect(remainingReference(tester), lines.join('\n').substring(caret));
         expect(
           tester.widget<TextField>(bodyField).controller,
           same(controller),
@@ -3086,7 +3171,10 @@ void main() {
         expect(store.data.activePage!.scroll, paperOffset);
       }
 
-      // Reading ahead on the paper can scroll past the end of the draft.
+      // With the cursor at the end, the paper can show the remaining source.
+      controller.selection = TextSelection.collapsed(offset: written.length);
+      await tester.pumpAndSettle();
+      expect(transcriptionGuide, findsOneWidget);
       final guideEnd = paper.position.maxScrollExtent;
       paper.jumpTo(guideEnd);
       await tester.pumpAndSettle();
@@ -3095,6 +3183,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(paper.position.maxScrollExtent, lessThan(guideEnd));
       expect(paper.offset, lessThanOrEqualTo(paper.position.maxScrollExtent));
+      expect(controller.selection.extentOffset, written.length);
+      controller.selection = value.selection;
+      await tester.pumpAndSettle();
       expect(controller.value, value);
 
       final continued = value.replaced(value.selection, '한');

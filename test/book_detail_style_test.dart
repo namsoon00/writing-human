@@ -428,7 +428,7 @@ void main() {
       expect(c.library.style.bookDetails.ribbon.tone, 2);
       expect(
         tester
-            .widget<OutlinedButton>(
+            .widget<IconButton>(
               find.byKey(const ValueKey('detail-ribbon-tone-2')),
             )
             .onPressed,

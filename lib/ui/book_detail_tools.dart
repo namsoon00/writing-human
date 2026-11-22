@@ -208,95 +208,223 @@ class _DetailChoices extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final buildSpecimen = specimen;
-    const labelSize = 14.0;
+    final inlineTitle = compact && buildSpecimen == null;
+    final labelSize = inlineTitle ? 13.0 : 14.0;
     const gap = 6.0;
+    final scaler = MediaQuery.textScalerOf(context);
     final longest = labels.map((label) => label.length).reduce(math.max);
-    final minWidth =
-        MediaQuery.textScalerOf(context).scale(labelSize) * longest + 12;
+    final minWidth = scaler.scale(labelSize) * longest + 12;
     final choose = onSelected;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Semantics(
-          header: true,
-          child: Text(title, style: const TextStyle(fontSize: 16)),
-        ),
-        SizedBox(height: compact ? 4 : 6),
-        LayoutBuilder(
-          builder: (context, box) {
-            final columns = ((box.maxWidth + gap) ~/ (minWidth + gap)).clamp(
-              1,
-              labels.length,
-            );
-            final width = (box.maxWidth - (columns - 1) * gap) / columns;
-            return Wrap(
-              spacing: gap,
-              runSpacing: gap,
-              children: [
-                for (var i = 0; i < labels.length; i++)
-                  SizedBox(
-                    width: width,
-                    child: Semantics(
-                      selected: selected == i,
-                      child: OutlinedButton(
-                        key: ValueKey('$control-$i'),
-                        onPressed: choose == null ? null : () => choose(i),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(48, 48),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: compact ? 4 : 6,
-                          ),
-                          backgroundColor: selected == i
-                              ? panelSelectedColor(paper)
-                              : null,
-                          side: BorderSide(
-                            color: selected == i ? brandInk : line,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                        ),
-                        child: Stack(
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                if (buildSpecimen != null) ...[
-                                  Center(
-                                    child: ExcludeSemantics(
-                                      child: Opacity(
-                                        opacity: choose == null ? .42 : 1,
-                                        child: buildSpecimen(i),
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(height: compact ? 2 : 4),
-                                ] else
-                                  const SizedBox(height: 10),
-                                Text(
-                                  labels[i],
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(fontSize: labelSize),
-                                ),
-                              ],
-                            ),
-                            if (selected == i)
-                              const Positioned(
-                                right: 1,
-                                top: 0,
-                                child: Icon(CupertinoIcons.checkmark, size: 12),
-                              ),
-                          ],
-                        ),
+    final heading = Semantics(
+      header: true,
+      child: Text(title, style: const TextStyle(fontSize: 16)),
+    );
+    return LayoutBuilder(
+      builder: (context, box) {
+        final titleWidth = scaler.scale(16) * title.length;
+        final inline =
+            inlineTitle &&
+            box.maxWidth >= titleWidth + labels.length * (minWidth + gap);
+        final choiceWidth = inline
+            ? box.maxWidth - titleWidth - gap
+            : box.maxWidth;
+        final columns = ((choiceWidth + gap) ~/ (minWidth + gap)).clamp(
+          1,
+          labels.length,
+        );
+        final width = (choiceWidth - (columns - 1) * gap) / columns;
+        final choices = Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (var i = 0; i < labels.length; i++)
+              SizedBox(
+                width: width,
+                child: Semantics(
+                  selected: selected == i,
+                  child: OutlinedButton(
+                    key: ValueKey('$control-$i'),
+                    onPressed: choose == null ? null : () => choose(i),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: compact ? 4 : 6,
+                      ),
+                      backgroundColor: selected == i
+                          ? panelSelectedColor(paper)
+                          : null,
+                      side: BorderSide(
+                        color: selected == i
+                            ? brandInk
+                            : inlineTitle
+                            ? Colors.transparent
+                            : line,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(3),
                       ),
                     ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (buildSpecimen != null) ...[
+                              Center(
+                                child: ExcludeSemantics(
+                                  child: Opacity(
+                                    opacity: choose == null ? .42 : 1,
+                                    child: buildSpecimen(i),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(height: compact ? 2 : 4),
+                            ],
+                            Text(
+                              labels[i],
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: labelSize),
+                            ),
+                          ],
+                        ),
+                        if (selected == i && buildSpecimen != null)
+                          const Positioned(
+                            right: 1,
+                            top: 0,
+                            child: Icon(CupertinoIcons.checkmark, size: 12),
+                          ),
+                      ],
+                    ),
                   ),
-              ],
-            );
-          },
+                ),
+              ),
+          ],
+        );
+        return inline
+            ? Row(
+                children: [
+                  SizedBox(width: titleWidth, child: heading),
+                  const SizedBox(width: gap),
+                  Expanded(child: choices),
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  heading,
+                  SizedBox(height: compact ? 4 : 6),
+                  choices,
+                ],
+              );
+      },
+    );
+  }
+}
+
+class _DetailColors extends StatelessWidget {
+  const _DetailColors({
+    required this.kind,
+    required this.design,
+    required this.choice,
+    required this.onSelected,
+  });
+
+  final BookDetailKind kind;
+  final BookDetailDesign design;
+  final BookDetailChoice choice;
+  final ValueChanged<int>? onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final choose = onSelected;
+    return SizedBox(
+      width: double.infinity,
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 6,
+        children: [
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 7,
+            children: [
+              Semantics(
+                header: true,
+                child: const Text('색', style: TextStyle(fontSize: 16)),
+              ),
+              Text(
+                design.tones[choice.tone],
+                semanticsLabel: '현재 색: ${design.tones[choice.tone]}',
+                style: const TextStyle(color: detailMetadataInk, fontSize: 13),
+              ),
+            ],
+          ),
+          Wrap(
+            children: [
+              for (var index = 0; index < design.colors.length; index++)
+                _swatch(index, choose),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _swatch(int index, ValueChanged<int>? choose) {
+    final color = design.colors[index];
+    final selected = choice.tone == index;
+    return Semantics(
+      label: design.tones[index],
+      selected: selected,
+      child: Tooltip(
+        message: design.tones[index],
+        excludeFromSemantics: true,
+        child: IconButton(
+          key: ValueKey('detail-${kind.name}-tone-$index'),
+          onPressed: choose == null ? null : () => choose(index),
+          style: IconButton.styleFrom(
+            minimumSize: const Size.square(48),
+            padding: EdgeInsets.zero,
+            tapTargetSize: MaterialTapTargetSize.padded,
+            visualDensity: VisualDensity.standard,
+          ),
+          icon: Opacity(
+            opacity: choose == null ? .42 : 1,
+            child: Container(
+              width: 28,
+              height: 28,
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected ? brandInk : Colors.transparent,
+                ),
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color,
+                  border: Border.all(
+                    color: detailMetadataInk.withValues(alpha: .6),
+                  ),
+                ),
+                child: selected
+                    ? Icon(
+                        CupertinoIcons.checkmark,
+                        size: 13,
+                        color: color.computeLuminance() > .35
+                            ? ink
+                            : Colors.white,
+                      )
+                    : const SizedBox.expand(),
+              ),
+            ),
+          ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -488,45 +616,34 @@ class BookDetailOptions extends StatelessWidget {
               : null,
           specimen: (index) {
             final option = choice.copy(enabled: true, variant: index);
-            return ribbon
-                ? RibbonBookmark(
-                    choice: option,
-                    width: 18,
-                    height: compact ? 24 : 28,
-                  )
-                : BookDetailSample(
-                    kind: kind,
-                    choice: option,
-                    size: Size(52, compact ? 26 : 32),
-                  );
+            return switch (kind) {
+              BookDetailKind.ribbon => RibbonBookmark(
+                choice: option,
+                width: 26,
+                height: 46,
+              ),
+              BookDetailKind.pressedFlower => PressedFlower(
+                choice: option,
+                size: 51,
+              ),
+              _ => BookDetailSample(
+                kind: kind,
+                choice: option,
+                size: const Size(92, 48),
+              ),
+            };
           },
         ),
         SizedBox(height: compact ? 5 : 10),
-        _DetailChoices(
-          compact: compact,
-          title: '색',
-          control: 'detail-${kind.name}-tone',
-          labels: design.tones,
-          selected: choice.tone,
+        _DetailColors(
+          kind: kind,
+          design: design,
+          choice: choice,
           onSelected: choice.enabled
               ? (index) => onChanged((current) => current.copy(tone: index))
               : null,
-          specimen: (index) => ribbon
-              ? RibbonBookmark(
-                  choice: BookDetailChoice(tone: index),
-                  width: 23,
-                  height: compact ? 14 : 17,
-                )
-              : Container(
-                  width: 23,
-                  height: compact ? 14 : 17,
-                  decoration: BoxDecoration(
-                    color: design.colors[index],
-                    borderRadius: BorderRadius.circular(2),
-                    border: Border.all(color: line),
-                  ),
-                ),
         ),
+        const Divider(height: 1),
         if (kind == BookDetailKind.pressedFlower) ...[
           SizedBox(height: compact ? 5 : 10),
           _DetailChoices(

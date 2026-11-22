@@ -389,9 +389,10 @@ class _BookAppearanceState extends State<BookAppearance> {
               ),
             ],
           ),
-          description: kind == BookDetailKind.ribbon
-              ? null
-              : design.description,
+          description: switch (kind) {
+            BookDetailKind.ribbon || BookDetailKind.pressedFlower => null,
+            _ => design.description,
+          },
           onChanged: (update) {
             final latest = controller.detailsFor(current).choice(kind);
             _save(changes: {kind: update(latest)});

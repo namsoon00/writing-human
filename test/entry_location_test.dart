@@ -7,6 +7,7 @@ import 'package:writing_human/main.dart';
 import 'package:writing_human/ui/book_appearance.dart';
 import 'package:writing_human/ui/book_details.dart';
 import 'package:writing_human/ui/paper.dart';
+import 'package:writing_human/ui/reading_details.dart';
 import 'book_details_test.dart' show specimen;
 import 'widget_test.dart' show MemoryStore;
 
@@ -314,6 +315,21 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(shade);
       await tester.pumpAndSettle();
+      expect(find.text('포도'), findsOneWidget);
+      final shapeCard = find.byKey(
+        const ValueKey('detail-pressedFlower-variant-2'),
+      );
+      final flowerSpecimen = find.descendant(
+        of: shapeCard,
+        matching: find.byType(PressedFlower),
+      );
+      expect(
+        tester.widget<PressedFlower>(flowerSpecimen).size,
+        greaterThan(45),
+      );
+      expect(tester.widget<PressedFlower>(flowerSpecimen).choice.tone, 1);
+      await tester.tap(shapeCard);
+      await tester.pumpAndSettle();
       expect(
         tester
             .widget<BookCover>(find.byType(BookCover))
@@ -321,6 +337,14 @@ void main() {
             .pressedFlower
             .tone,
         1,
+      );
+      expect(
+        tester
+            .widget<BookCover>(find.byType(BookCover))
+            .details
+            .pressedFlower
+            .variant,
+        2,
       );
       expect(
         store
@@ -421,12 +445,19 @@ void main() {
           tester.getSize(preview).height,
           inInclusiveRange(90, listHeight),
         );
-        expect(
-          tester
-              .getSize(find.byKey(ValueKey('detail-${kind.name}-tone-0')))
-              .height,
-          greaterThanOrEqualTo(48),
-        );
+        final tones = [
+          for (var index = 0; index < 4; index++)
+            tester.getRect(
+              find.byKey(ValueKey('detail-${kind.name}-tone-$index')),
+            ),
+        ];
+        expect(tones.map((rect) => rect.top).toSet(), hasLength(1));
+        final lastShape = find.byKey(ValueKey('detail-${kind.name}-variant-2'));
+        expect(tones.last.right, closeTo(tester.getRect(lastShape).right, 1));
+        for (final rect in tones) {
+          expect(rect.width, greaterThanOrEqualTo(48));
+          expect(rect.height, greaterThanOrEqualTo(48));
+        }
         expect(
           tester
               .state<ScrollableState>(find.byType(Scrollable))

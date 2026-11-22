@@ -637,10 +637,8 @@ void main() {
       await tester.ensureVisible(find.text('나눔고딕'));
       await tester.tap(find.text('나눔고딕'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('글씨 설정'));
-      await tester.tap(find.text('글씨 설정'));
-      await tester.pumpAndSettle();
-      expect(find.text('글꼴'), findsNothing);
+      expect(find.text('글꼴'), findsOneWidget);
+      expect(find.text('글씨 설정'), findsNothing);
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
@@ -697,17 +695,23 @@ void main() {
       await tester.tap(writingTools);
       await tester.pumpAndSettle();
       expect(find.text('잉크').hitTestable(), findsOneWidget);
-      final chip = tester.widget<ChoiceChip>(
-        find.widgetWithText(ChoiceChip, '나눔고딕'),
-      );
+      final gothic = find.widgetWithText(TextButton, '나눔고딕');
       final toolPaper = find.descendant(
         of: find.byType(ToolsScreen),
         matching: find.byType(PaperBackdrop),
       );
       final panel = panelPaperColor(paperColors[2]);
       expect(tester.widget<PaperBackdrop>(toolPaper).color, panel);
-      expect(chip.selectedColor, panelSelectedColor(panel));
-      expect(chip.selected, isTrue);
+      expect(
+        find.ancestor(
+          of: gothic,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics && widget.properties.selected == true,
+          ),
+        ),
+        findsOneWidget,
+      );
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(editor).controller, same(controller));

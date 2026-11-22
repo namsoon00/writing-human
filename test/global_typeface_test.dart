@@ -159,16 +159,16 @@ void main() {
       expect(tester.widget<TextField>(field).style!.fontSize, 20);
       await tester.tap(find.byTooltip('쓰기 도구'));
       await tester.pumpAndSettle();
-      final control = find.byTooltip('글자 크게');
+      final control = find.byKey(const ValueKey('font-size-slider'));
       await tester.ensureVisible(control);
       await tester.tap(control);
       await tester.pumpAndSettle();
-      expect(Library.decode(store.snapshot).style.fontSize, 21);
+      expect(Library.decode(store.snapshot).style.fontSize, 23);
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(field).controller, same(controller));
       expect(controller.value, before);
-      expect(tester.widget<TextField>(field).style!.fontSize, 21);
+      expect(tester.widget<TextField>(field).style!.fontSize, 23);
       final bounds = tester.getRect(field);
       final middle = Offset(bounds.center.dx, bounds.top + 100);
 
@@ -192,7 +192,7 @@ void main() {
 
       await pinch(1.35);
       final enlarged = Library.decode(store.snapshot).style.fontSize;
-      expect(enlarged, greaterThan(21));
+      expect(enlarged, greaterThan(23));
       expect(enlarged, lessThanOrEqualTo(WritingStyle.maxFontSize));
       expect(tester.widget<TextField>(field).controller, same(controller));
       expect(controller.text, before.text);
@@ -242,12 +242,12 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('쓰기 도구'));
       await tester.pumpAndSettle();
-      final smaller = find.byTooltip('글자 작게');
-      await tester.ensureVisible(smaller);
+      final slider = find.byKey(const ValueKey('font-size-slider'));
+      await tester.ensureVisible(slider);
       await tester.pumpAndSettle();
-      await tester.tap(smaller);
+      await tester.tap(slider);
       await tester.pumpAndSettle();
-      expect(Library.decode(store.snapshot).style.fontSize, 29);
+      expect(Library.decode(store.snapshot).style.fontSize, 23);
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
@@ -357,10 +357,14 @@ void main() {
       await tester.pumpAndSettle();
       expectTypeface('쓰는 인간체');
       expect(
-        tester
-            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, '쓰는 인간체'))
-            .selected,
-        isTrue,
+        find.ancestor(
+          of: find.widgetWithText(TextButton, '쓰는 인간체'),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics && widget.properties.selected == true,
+          ),
+        ),
+        findsOneWidget,
       );
       await tester.ensureVisible(find.text('나눔고딕'));
       await tester.tap(find.text('나눔고딕'));

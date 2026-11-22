@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'paper_palette.dart';
@@ -5,22 +7,15 @@ import 'paper_tool.dart';
 
 /// Static stationery specimens. Interaction and names belong to the buttons.
 class StationeryTool extends StatelessWidget {
-  const StationeryTool({
-    super.key,
-    required this.tool,
-    required this.color,
-    this.width = 136,
-    this.height = 42,
-  });
+  const StationeryTool({super.key, required this.tool, required this.color});
 
   final PaperTool tool;
   final Color color;
-  final double width, height;
 
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
     child: CustomPaint(
-      size: Size(width, height),
+      size: const Size(74, 76),
       painter: _StationeryPainter(tool, color),
     ),
   );
@@ -65,13 +60,12 @@ class _StationeryPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     canvas.save();
-    // A single uniform scale keeps the nib and barrel in proportion.
-    final scale = (size.width / 140).clamp(0.0, size.height / 42);
-    canvas.translate(
-      (size.width - 140 * scale) / 2,
-      (size.height - 42 * scale) / 2,
-    );
-    canvas.scale(scale);
+    final eraser = tool == PaperTool.eraser;
+    final scale = math.min(size.width / 74, size.height / 76);
+    canvas.translate(size.width / 2, size.height / 2);
+    canvas.rotate((eraser ? 78 : 71) * math.pi / 180);
+    canvas.scale(scale * (eraser ? .68 : .54));
+    canvas.translate(-70, -21);
     final brass = Paint()..color = const Color(0xffb39a69);
     final edge = Paint()
       ..color = const Color(0xff685135)

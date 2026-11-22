@@ -9,6 +9,7 @@ import 'package:writing_human/ui/paper.dart';
 import 'package:writing_human/ui/paper_tool.dart';
 import 'package:writing_human/ui/pencil_marks.dart';
 import 'package:writing_human/ui/tools_screen.dart';
+import 'package:writing_human/ui/stationery_tool.dart';
 
 import 'widget_test.dart' show MemoryStore;
 
@@ -92,6 +93,15 @@ void main() {
           expect(tester.getSize(button).width, greaterThanOrEqualTo(48));
           expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
         }
+        for (final drawing in tester.widgetList(find.byType(StationeryTool))) {
+          final illustration = tester.getSize(find.byWidget(drawing));
+          expect(illustration.height, greaterThan(illustration.width));
+        }
+        final fontRow = [
+          for (final name in [developmentFontLabel, ...fontNames])
+            tester.getCenter(find.widgetWithText(TextButton, name)).dy,
+        ];
+        expect(fontRow.toSet(), hasLength(size.width == 320 ? 2 : 1));
       }
       final picker = find.byKey(const ValueKey('tool-picker'));
       final specimen = find.byKey(const ValueKey('tool-paper-specimen'));
@@ -126,18 +136,22 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.getRect(specimen), before);
       expect(specimen.hitTestable(), findsOneWidget);
-      final slider = tester.widget<Slider>(sliderFinder);
-      slider.onChanged!(27);
+      final sliderFrame = tester.getRect(sliderFinder);
+      final gesture = await tester.startGesture(sliderFrame.center);
+      await gesture.moveBy(const Offset(64, 0));
       await tester.pumpAndSettle();
+      final selectedSize = tester.widget<Slider>(sliderFinder).value;
+      expect(selectedSize, greaterThan(20));
       final preview = tester.widget<Text>(
         find.byKey(const ValueKey('tool-specimen-text')),
       );
-      expect(preview.textSpan!.style!.fontSize, 27);
+      expect(preview.textSpan!.style!.fontSize, selectedSize);
+      expect(tester.getRect(sliderFinder), sliderFrame);
       expect(controller.library.style.fontSize, 20);
       expect(store.writes, 0);
-      slider.onChangeEnd!(27);
+      await gesture.up();
       await tester.pumpAndSettle();
-      expect(store.data.style.fontSize, 27);
+      expect(store.data.style.fontSize, selectedSize);
       expect(store.data.pages.single.toJson(), _library.pages.single.toJson());
       expect(tester.getRect(specimen).top, before.top);
       expect(tester.takeException(), isNull);

@@ -130,98 +130,24 @@ class _ToolsScreenState extends State<ToolsScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
-              _settingsGroup('글씨 설정', [
-                LayoutBuilder(
-                  builder: (context, box) {
-                    final columns =
-                        box.maxWidth >= 310 &&
-                            MediaQuery.textScalerOf(context).scale(14) <= 20
-                        ? 2
-                        : 1;
-                    final width = (box.maxWidth - (columns - 1) * 8) / columns;
-                    Widget option(
-                      String name,
-                      String family,
-                      bool selected,
-                      VoidCallback choose, {
-                      FontWeight weight = FontWeight.w400,
-                    }) => SizedBox(
-                      width: width,
-                      child: ChoiceChip(
-                        label: SizedBox(
-                          width: double.infinity,
-                          child: Text(
-                            name,
-                            style: TextStyle(
-                              fontFamily: family,
-                              fontFamilyFallback: appFontFallback,
-                              fontWeight: weight,
-                              fontSize: 16,
-                              height: 1.6,
-                            ),
-                          ),
-                        ),
-                        labelPadding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        selected: selected,
-                        onSelected: (_) => choose(),
-                        selectedColor: panelSelectedColor(panel),
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.zero,
-                          side: BorderSide(color: line),
-                        ),
-                      ),
-                    );
-                    return Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: [
-                        option(
-                          developmentFontLabel,
-                          developmentSerif,
-                          style.useDevelopmentTypeface,
-                          () => controller.setStyle(
-                            style.copy(useDevelopmentTypeface: true),
-                          ),
-                        ),
-                        for (var i = 0; i < 3; i++)
-                          option(
-                            fontNames[i],
-                            i == 2 ? 'NanumGothic' : serif,
-                            !style.useDevelopmentTypeface &&
-                                style.fontIndex == i,
-                            () => controller.setStyle(
-                              style.copy(
-                                fontIndex: i,
-                                useDevelopmentTypeface: false,
-                              ),
-                            ),
-                            weight: i == 1 ? FontWeight.w700 : FontWeight.w400,
-                          ),
-                      ],
-                    );
-                  },
+              const Divider(height: 16),
+              _fontChoices(style),
+              const Divider(height: 12),
+              FontSizeControl(
+                style: effectiveStyle,
+                onPreviewChanged: (value) =>
+                    setState(() => _previewFontSize = value),
+                onChanged: (value) => controller.setStyle(
+                  controller.library.style.copy(fontSize: value),
                 ),
-                const SizedBox(height: 8),
-                FontSizeControl(
-                  style: effectiveStyle,
-                  showSpecimen: false,
-                  onPreviewChanged: (value) =>
-                      setState(() => _previewFontSize = value),
-                  onChanged: (value) =>
-                      controller.setStyle(style.copy(fontSize: value)),
-                ),
-                const SizedBox(height: 8),
-                _toggle(
-                  panel,
-                  '줄 가이드',
-                  style.guides,
-                  (value) => controller.setStyle(style.copy(guides: value)),
-                ),
-              ], initiallyExpanded: true),
+              ),
+              const Divider(height: 12),
+              _toggle(
+                panel,
+                '줄 가이드',
+                style.guides,
+                (value) => controller.setStyle(style.copy(guides: value)),
+              ),
             ],
           ],
         ),
@@ -295,6 +221,97 @@ class _ToolsScreenState extends State<ToolsScreen> {
     },
   );
 
+  Widget _fontChoices(WritingStyle style) {
+    Widget option(
+      String name,
+      TextStyle textStyle,
+      bool selected,
+      VoidCallback choose,
+    ) => Semantics(
+      selected: selected,
+      child: TextButton(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          foregroundColor: selected ? brandInk : ink,
+        ),
+        onPressed: choose,
+        child: Container(
+          padding: const EdgeInsets.only(bottom: 4),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: selected ? brandInk : Colors.transparent,
+                width: 1.5,
+              ),
+            ),
+          ),
+          child: Text(name, textAlign: TextAlign.center, style: textStyle),
+        ),
+      ),
+    );
+
+    final choices = [
+      option(
+        developmentFontLabel,
+        const TextStyle(
+          fontFamily: developmentSerif,
+          fontFamilyFallback: appFontFallback,
+          fontSize: 14,
+        ),
+        style.useDevelopmentTypeface,
+        () => controller.setStyle(style.copy(useDevelopmentTypeface: true)),
+      ),
+      for (var i = 0; i < fontNames.length; i++)
+        option(
+          fontNames[i],
+          TextStyle(
+            fontFamily: i == 2 ? 'NanumGothic' : serif,
+            fontFamilyFallback: appFontFallback,
+            fontSize: 14,
+            fontWeight: i == 1 ? FontWeight.w700 : FontWeight.w400,
+          ),
+          !style.useDevelopmentTypeface && style.fontIndex == i,
+          () => controller.setStyle(
+            style.copy(fontIndex: i, useDevelopmentTypeface: false),
+          ),
+        ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text('글꼴', style: TextStyle(fontSize: 14, color: muted)),
+        const SizedBox(height: 4),
+        LayoutBuilder(
+          builder: (context, box) {
+            final scaled = MediaQuery.textScalerOf(context).scale(14);
+            if (box.maxWidth >= 320 && scaled <= 16) {
+              const widths = [10, 9, 13, 9];
+              return Row(
+                children: [
+                  for (var i = 0; i < choices.length; i++)
+                    Expanded(flex: widths[i], child: choices[i]),
+                ],
+              );
+            }
+            const spacing = 4.0;
+            final columns = box.maxWidth >= scaled * 9 + spacing ? 2 : 1;
+            return Wrap(
+              spacing: spacing,
+              children: [
+                for (final choice in choices)
+                  SizedBox(
+                    width: (box.maxWidth - (columns - 1) * spacing) / columns,
+                    child: choice,
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
   Widget _tools(
     PaperTool selected,
     Color inkColor,
@@ -328,11 +345,19 @@ class _ToolsScreenState extends State<ToolsScreen> {
                     onTap: enabled ? () => _select(tool) : null,
                     excludeSemantics: true,
                     child: Material(
-                      color: Colors.transparent,
+                      color: active
+                          ? Colors.white.withValues(alpha: .18)
+                          : Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        side: active
+                            ? BorderSide(color: brandInk.withValues(alpha: .4))
+                            : BorderSide.none,
+                      ),
                       child: InkWell(
                         key: ValueKey('choose-paper-tool-${tool.name}'),
                         onTap: enabled ? () => _select(tool) : null,
-                        borderRadius: BorderRadius.circular(3),
+                        borderRadius: BorderRadius.circular(6),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 4,
@@ -350,8 +375,6 @@ class _ToolsScreenState extends State<ToolsScreen> {
                                           BookDetailKind.pencil,
                                           wash,
                                         ),
-                                  width: 128,
-                                  height: 32,
                                 ),
                                 const SizedBox(height: 4),
                                 Wrap(
@@ -474,7 +497,13 @@ class _ToolSpecimen extends StatelessWidget {
       color: penColors[style.penIndex],
       useDevelopmentTypeface: style.useDevelopmentTypeface,
     );
-    const lines = ['마음에 남은 문장을', '천천히 옮겨 씁니다.'];
+    final scaler = MediaQuery.textScalerOf(context);
+    final maxStyle = textStyle.copyWith(fontSize: WritingStyle.maxFontSize);
+    const spacing = 1.4;
+    final strut = StrutStyle.fromTextStyle(
+      maxStyle.copyWith(height: spacing),
+      forceStrutHeight: true,
+    );
     return Semantics(
       label: switch (tool) {
         PaperTool.writing => '펜 글씨 견본',
@@ -484,42 +513,52 @@ class _ToolSpecimen extends StatelessWidget {
       child: Container(
         key: const ValueKey('tool-paper-specimen'),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: color,
-          image: paperGrain(color, .22),
-          border: Border.all(color: line, width: .7),
-          boxShadow: [
-            BoxShadow(
-              color: brandInk.withValues(alpha: .12),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            CustomPaint(
-              painter: style.guides
-                  ? _SpecimenGuides(
-                      MediaQuery.textScalerOf(context).scale(style.fontSize) *
-                          1.8,
-                    )
-                  : null,
-              child: Text.rich(
-                pencilTextSpan(
-                  value: TextEditingValue(text: lines.join('\n')),
-                  marks: tool == PaperTool.highlighter
-                      ? [PencilMark(lines[0].length + 1, lines[0].length + 7)]
-                      : const [],
-                  choice: style.bookDetails.pencil,
-                  style: textStyle,
+        decoration: BoxDecoration(color: color, image: paperGrain(color, .22)),
+        child: LayoutBuilder(
+          builder: (context, box) {
+            const longSample = ['마음에 남은 문장을', '천천히 옮겨 씁니다.'];
+            const shortSample = ['마음에 남은 글을', '천천히 옮겨 써요.'];
+            // Reserve the largest sample even while the slider is still moving.
+            final maxSample = TextPainter(
+              text: TextSpan(text: longSample.join('\n'), style: maxStyle),
+              strutStyle: strut,
+              textScaler: scaler,
+              textDirection: Directionality.of(context),
+            )..layout(maxWidth: box.maxWidth);
+            final lines = maxSample.computeLineMetrics().length > 2
+                ? shortSample
+                : longSample;
+            final sample = lines.join('\n');
+            if (identical(lines, shortSample)) {
+              maxSample
+                ..text = TextSpan(text: sample, style: maxStyle)
+                ..layout(maxWidth: box.maxWidth);
+            }
+            final reservedHeight = maxSample.height;
+            maxSample.dispose();
+            return ConstrainedBox(
+              constraints: BoxConstraints(minHeight: reservedHeight),
+              child: CustomPaint(
+                painter: style.guides
+                    ? _SpecimenGuides(
+                        scaler.scale(WritingStyle.maxFontSize) * spacing,
+                      )
+                    : null,
+                child: Text.rich(
+                  pencilTextSpan(
+                    value: TextEditingValue(text: sample),
+                    marks: tool == PaperTool.highlighter
+                        ? [PencilMark(lines[0].length + 1, lines[0].length + 7)]
+                        : const [],
+                    choice: style.bookDetails.pencil,
+                    style: textStyle,
+                  ),
+                  key: const ValueKey('tool-specimen-text'),
+                  strutStyle: strut,
                 ),
-                key: const ValueKey('tool-specimen-text'),
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );

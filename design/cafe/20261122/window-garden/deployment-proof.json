@@ -1,0 +1,35 @@
+{
+  "source_commit": "39458571dccdf113170c0a6cd6b0beff0160c627",
+  "index": {
+    "url": "https://namsoon00.github.io/writing-human/?v=3945857",
+    "status": 200,
+    "bytes": 8150,
+    "sha256": "e0513357f33627fa01a1eedc10ea9d155cd16cefd4f1c17458ca841f570d8ddd"
+  },
+  "bootstrap": {
+    "url": "https://namsoon00.github.io/writing-human/flutter_bootstrap.js?v=8a830b87ac5afcb2",
+    "status": 200,
+    "bytes": 10016,
+    "sha256": "8a830b87ac5afcb20f7052163556ec6f119b5bec13309bae1ff8b1388eba8360"
+  },
+  "main": {
+    "url": "https://namsoon00.github.io/writing-human/main.dart.js?v=ef0e4c634323dde9",
+    "status": 200,
+    "bytes": 5130078,
+    "sha256": "ef0e4c634323dde9002f7f7af593ab3672b593ac43966d1e91c27c57d919872b",
+    "matches_local": true,
+    "new_garden_loaded": true,
+    "old_forest_not_loaded": true
+  },
+  "garden": {
+    "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-window-garden-panorama.jpg?v=3945857",
+    "status": 200,
+    "bytes": 561771,
+    "sha256": "2cfbe7b714e136acd37c0826a04e27fd7a46954b19d67c46c8f7c1aca678c8ad",
+    "matches_local": true
+  },
+  "runtime_scope": "Static, continuous window panorama with a camera-projected distant plane. Separate courtyard behavior unchanged.",
+  "checked_at": "2026-11-22T13:34:37.939062+00:00",
+  "actions_run": 45027743236,
+  "actions_conclusion": "build and deploy success"
+}

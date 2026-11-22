@@ -3038,3 +3038,19 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   구분한다. 이 채팅의 브라우저 UI 접근은 제공되지 않았으며 iPhone Safari의 실제 터치·
   프레임 속도/발열은 미검증이다. 사용자 기록/DB·계정과 기존 Sites 식별자/비공개 범위는
   변경하지 않았다. 공개 CI/HTTP 실행 파일·배경 이미지 비교는 게시 후 별도로 기록한다.
+
+
+## 2026-11-22 · 창가 정원 공개 배포 확인
+
+- 소스 `39458571dccdf113170c0a6cd6b0beff0160c627`의
+  [배포 45027743236](https://github.com/namsoon00/writing-human/actions/runs/45027743236)가
+  포맷·분석·전체 테스트·실제 Chrome CanvasKit·빌드·게시를 통과했다.
+- [공개 앱](https://namsoon00.github.io/writing-human/?v=3945857)의 HTML·bootstrap·
+  실행 JS와 새 정원 JPG가 모두 HTTP 200이다. JS와 정원 파일은 로컬 검증 빌드와
+  바이트 단위로 같았다. main JS SHA-256:
+  `ef0e4c634323dde9002f7f7af593ab3672b593ac43966d1e91c27c57d919872b`.
+  정원 JPG SHA-256: `2cfbe7b714e136acd37c0826a04e27fd7a46954b19d67c46c8f7c1aca678c8ad`.
+- 컴파일된 앱은 새 정원 이미지를 참조하며 기존 숲 이미지 파일명은 없다.
+  [HTTP 증거](../design/cafe/20261122/window-garden/deployment-proof.json)를 보관했다.
+  창밖은 정지 파노라마이고 별도 3D 뜰의 기존 움직임과 구분한다. iPhone Safari의
+  실제 터치·프레임 속도/발열 검증은 남아 있다.

@@ -25,7 +25,7 @@ class CafeCamera {
   const CafeCamera({required this.position, this.yaw = 0, this.pitch = -.06});
   static const entrance = CafeCamera(
     position: CafePoint(0, 1.62, 4.25),
-    pitch: -.10,
+    pitch: -.18,
   );
   final CafePoint position;
   final double yaw, pitch;

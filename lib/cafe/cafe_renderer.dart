@@ -43,7 +43,7 @@ class CafeRenderer extends CustomPainter {
 
   // Keep useful horizontal context on a phone without changing camera position.
   static double focalLength(Size size) =>
-      math.min(size.height * .75, size.width * .95);
+      math.min(size.height * .75, size.width * 1.25);
 
   static Offset? project(CafePoint point, CafeCamera camera, Size size) {
     if (!camera.isFinite ||
@@ -257,6 +257,9 @@ class CafeRenderer extends CustomPainter {
       );
     }
     for (final face in faces) {
+      // Adjacent wall/floor tiles must share a hard edge. Antialiasing each
+      // tile independently leaves pale cracks between otherwise solid faces.
+      paint.isAntiAlias = face.face.layer >= 2;
       final positions = <Offset>[], uv = <Offset>[];
       for (final v in face.vertices) {
         positions.add(

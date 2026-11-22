@@ -1,7 +1,48 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
-export 'writing_sound_native.dart'
+import 'paper_sound_effect.dart';
+import 'writing_sound_native.dart'
     if (dart.library.js_interop) 'writing_sound_web.dart';
+
+/// Keep the last request in a burst and leave started clips to finish.
+class PaperSound {
+  PaperSound.writing() : this._(PaperSoundEffect.pencil);
+  PaperSound.pageTurn() : this._(PaperSoundEffect.pageTurn);
+  PaperSound._(this._effect) : _output = PaperSoundOutput(_effect);
+
+  final PaperSoundEffect _effect;
+  final PaperSoundOutput _output;
+  PaperSoundRequest? _pending;
+  Timer? _timer;
+  bool _closed = false;
+
+  void play(bool Function() isCurrent) {
+    if (_closed || !isCurrent()) return;
+    _pending = PaperSoundRequest(isCurrent);
+    if (_timer == null) _flush();
+  }
+
+  void _flush() {
+    _timer = null;
+    final request = _pending;
+    if (request == null || !request.canPlay) {
+      _pending = null;
+      return;
+    }
+    _pending = null;
+    _timer = Timer(_effect.minimumInterval, _flush);
+    _output.play(request);
+  }
+
+  Future<void> dispose() {
+    _closed = true;
+    _timer?.cancel();
+    _pending = null;
+    return _output.dispose();
+  }
+}
 
 /// Play once when a visible letter is inserted or starts composing. As an IME
 /// updates a syllable in place or commits it, that syllable already had a sound.

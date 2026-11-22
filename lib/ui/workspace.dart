@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +19,7 @@ import 'source_reading.dart';
 import '../source/page_originals.dart';
 import 'collection_sheet.dart';
 import 'editor.dart';
+import 'writing_sound.dart';
 import 'new_book_dialog.dart';
 import 'paper.dart';
 import 'paper_panel.dart';
@@ -63,7 +63,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   LibraryController get c => widget.controller;
   final editorFocus = FocusNode();
   final _pageTurn = PageTurnController();
-  AudioPlayer? _pageAudio;
+  PaperSound? _pageAudio;
   ({String bookId, String anchor, _BookLeaf leaf})? _bookLeaf;
   Book? get _leafBook {
     final target = _bookLeaf;
@@ -161,30 +161,31 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           owner.saveError == null &&
           c.library.style.pageSound &&
           (page.id != origin || previousLeaf != _visibleLeaf)) {
-        unawaited(_playPageSound());
+        _pageAudio?.play(
+          () =>
+              mounted &&
+              c == owner &&
+              !_accountLocked &&
+              c.library.style.pageSound,
+        );
       }
     } finally {
       if (mounted) setState(() => _pageNavigationBusy = false);
     }
   }
 
-  Future<void> _playPageSound() async {
-    try {
-      final player = _pageAudio ??= AudioPlayer();
-      await player.play(
-        AssetSource('audio/page-turn.mp3'),
-        volume: .42,
-        ctx: AudioContext(
-          android: const AudioContextAndroid(
-            audioFocus: AndroidAudioFocus.none,
-            usageType: AndroidUsageType.assistanceSonification,
-          ),
-          iOS: AudioContextIOS(category: AVAudioSessionCategory.ambient),
-        ),
-      );
-    } catch (error) {
-      debugPrint('Page sound unavailable: $error');
+  void _updatePageSound() {
+    if (c.library.style.pageSound && !_accountLocked) {
+      _pageAudio ??= PaperSound.pageTurn();
+    } else {
+      _closePageSound();
     }
+  }
+
+  void _closePageSound() {
+    final audio = _pageAudio;
+    _pageAudio = null;
+    if (audio != null) unawaited(audio.dispose());
   }
 
   Future<void> _openPage(
@@ -376,6 +377,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     });
     c.addListener(_changed);
     widget.sync?.addListener(_changed);
+    _updatePageSound();
   }
 
   @override
@@ -399,11 +401,14 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       userFresh = false;
       draft = _blank();
       draftBookId = null;
+      _closePageSound();
+      _updatePageSound();
     }
   }
 
   void _changed() {
     if (!mounted) return;
+    _updatePageSound();
     setState(() {
       if (fresh && !userFresh && c.library.activePage != null) fresh = false;
       if (_accountLocked) {
@@ -433,8 +438,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     c.removeListener(_changed);
     widget.sync?.removeListener(_changed);
     editorFocus.dispose();
-    final audio = _pageAudio;
-    if (audio != null) unawaited(audio.dispose());
+    _closePageSound();
     super.dispose();
   }
 

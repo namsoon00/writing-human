@@ -5,12 +5,18 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:web/web.dart' as web;
 
-class WritingSound {
-  WritingSound() {
+import 'paper_sound_effect.dart';
+
+class PaperSoundOutput {
+  PaperSoundOutput(this.effect) {
+    _bytes = _readAsset();
     for (final event in _activationEvents) {
       web.document.addEventListener(event, _interaction, true.toJS);
     }
   }
+
+  final PaperSoundEffect effect;
+  late final Future<ByteData?> _bytes;
 
   static const _activationEvents = [
     'pointerdown',
@@ -19,7 +25,7 @@ class WritingSound {
     'keydown',
   ];
   late final JSFunction _interaction = ((web.Event event) {
-    if (!event.isTrusted || _closed || _context?.state == 'running') return;
+    if (_closed || !event.isTrusted) return;
     if (event.type == 'pointerdown' &&
         (event as web.PointerEvent).pointerType != 'mouse') {
       return;
@@ -30,10 +36,17 @@ class WritingSound {
   web.AudioContext? _context;
   web.GainNode? _gain;
   web.AudioBuffer? _buffer;
-  web.AudioBufferSourceNode? _playing;
-  double _nextStroke = 0;
-  bool _closed = false;
-  ({bool Function() isFocused, DateTime expires})? _pending;
+  bool _resuming = false, _closed = false;
+  PaperSoundRequest? _pending;
+
+  Future<ByteData?> _readAsset() async {
+    try {
+      return await rootBundle.load('assets/${effect.asset}');
+    } catch (error) {
+      if (!_closed) debugPrint('Could not load paper sound: $error');
+      return null;
+    }
+  }
 
   void _activate() {
     try {
@@ -41,33 +54,35 @@ class WritingSound {
       if (context == null) {
         context = _context = web.AudioContext();
         final gain = _gain = context.createGain();
-        gain.gain.value = .68;
+        gain.gain.value = effect.volume;
         gain.connect(context.destination);
-        unawaited(_load(context));
+        unawaited(_decode(context));
       }
-      // Start the resume request in the browser's trusted event handler.
-      // Asset loading and IME updates can occur after activation expires.
-      if (context.state != 'running') {
+      // Resume inside the trusted event, before page storage or IME awaits.
+      if (context.state != 'running' && !_resuming) {
         unawaited(_resume(context));
       }
     } catch (error) {
-      debugPrint('Writing audio activation failed: $error');
+      debugPrint('Paper audio activation failed: $error');
     }
   }
 
   Future<void> _resume(web.AudioContext context) async {
+    _resuming = true;
     try {
       await context.resume().toDart;
       _playPending();
     } catch (error) {
-      if (!_closed) debugPrint('Writing audio activation failed: $error');
+      if (!_closed) debugPrint('Paper audio activation failed: $error');
+    } finally {
+      _resuming = false;
     }
   }
 
-  Future<void> _load(web.AudioContext context) async {
+  Future<void> _decode(web.AudioContext context) async {
     try {
-      final bytes = await rootBundle.load('assets/audio/pencil-stroke.wav');
-      if (_closed) return;
+      final bytes = await _bytes;
+      if (_closed || bytes == null) return;
       final data = bytes.buffer.asUint8List(
         bytes.offsetInBytes,
         bytes.lengthInBytes,
@@ -80,49 +95,36 @@ class WritingSound {
         _playPending();
       }
     } catch (error) {
-      if (!_closed) debugPrint('Writing audio could not be loaded: $error');
+      if (!_closed) debugPrint('Could not decode paper sound: $error');
     }
   }
 
-  Future<void> stroke(bool Function() isFocused) async {
-    if (_closed || !isFocused()) return;
-    if (_context?.state != 'running' || _buffer == null) {
-      _pending = (
-        isFocused: isFocused,
-        expires: DateTime.now().add(const Duration(milliseconds: 200)),
-      );
-      return;
-    }
-    _play();
+  void play(PaperSoundRequest request) {
+    if (_closed) return;
+    _pending = request;
+    _playPending();
   }
 
   void _playPending() {
-    if (_closed || _context?.state != 'running' || _buffer == null) return;
-    final pending = _pending;
-    _pending = null;
-    if (pending != null &&
-        DateTime.now().isBefore(pending.expires) &&
-        pending.isFocused()) {
-      _play();
+    final context = _context;
+    final buffer = _buffer;
+    if (_closed ||
+        context == null ||
+        context.state != 'running' ||
+        buffer == null) {
+      return;
     }
-  }
-
-  void _play() {
-    final context = _context!;
-    if (context.currentTime < _nextStroke) return;
+    final request = _pending;
+    _pending = null;
+    if (request == null || !request.canPlay) return;
     try {
       final source = context.createBufferSource();
-      source.buffer = _buffer;
+      source.buffer = buffer;
       source.connect(_gain!);
-      source.onended = ((web.Event _) {
-        source.disconnect();
-        if (_playing == source) _playing = null;
-      }).toJS;
-      _nextStroke = context.currentTime + .130;
-      _playing = source;
+      source.onended = ((web.Event _) => source.disconnect()).toJS;
       source.start();
     } catch (error) {
-      debugPrint('Writing sound unavailable: $error');
+      debugPrint('Paper sound unavailable: $error');
     }
   }
 
@@ -132,12 +134,10 @@ class WritingSound {
     for (final event in _activationEvents) {
       web.document.removeEventListener(event, _interaction, true.toJS);
     }
-    final context = _context;
     try {
-      _playing?.stop();
-      if (context != null) await context.close().toDart;
+      await _context?.close().toDart;
     } catch (error) {
-      debugPrint('Could not release writing audio: $error');
+      debugPrint('Could not release paper sound: $error');
     }
   }
 }

@@ -69,7 +69,7 @@ class _PageEditorState extends State<PageEditor> {
   late final PencilTextController text;
   late final _WritingScrollController scroll;
   late TextEditingValue _observedText;
-  WritingSound? _sound;
+  PaperSound? _sound;
   final _guideLayout = TextPainter();
   TranscriptionComparison? _comparison;
   Object? _comparisonKey;
@@ -205,7 +205,7 @@ class _PageEditorState extends State<PageEditor> {
       lastLineExtent: _lastLineExtent,
     );
     _prepareReveal();
-    if (widget.style.writingSound) _sound = WritingSound();
+    if (widget.style.writingSound) _sound = PaperSound.writing();
     _observedText = text.value;
     text.addListener(_textChanged);
     scroll.addListener(_save);
@@ -226,7 +226,7 @@ class _PageEditorState extends State<PageEditor> {
     text.choice = widget.style.bookDetails.pencil;
     if (oldWidget.style.writingSound != widget.style.writingSound) {
       if (widget.style.writingSound) {
-        _sound = WritingSound();
+        _sound = PaperSound.writing();
       } else {
         _closeSound();
       }
@@ -357,7 +357,7 @@ class _PageEditorState extends State<PageEditor> {
         !restoring &&
         focus.hasFocus &&
         hasNewWrittenCharacter(previous, next)) {
-      unawaited(sound.stroke(() => mounted && focus.hasFocus));
+      sound.play(() => mounted && focus.hasFocus);
     }
   }
 

@@ -1,61 +1,77 @@
+import 'dart:async';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
-class WritingSound {
-  AudioPlayer? _player;
-  final _interval = Stopwatch();
-  bool _busy = false, _disposed = false;
+import 'paper_sound_effect.dart';
 
-  Future<void> stroke(bool Function() isFocused) async {
-    // Coalesce bursts and keep only one playback in flight.
-    if (_disposed ||
-        _busy ||
-        (_interval.isRunning && _interval.elapsedMilliseconds < 130)) {
-      return;
-    }
-    _busy = true;
-    _interval
-      ..reset()
-      ..start();
+class PaperSoundOutput {
+  PaperSoundOutput(this.effect) {
+    _pool = _preload();
+  }
+
+  final PaperSoundEffect effect;
+  Future<AudioPool?>? _pool;
+  Future<void>? _starting;
+  PaperSoundRequest? _pending;
+  bool _closed = false;
+
+  Future<AudioPool?> _preload() async {
     try {
-      var player = _player;
-      if (player == null) {
-        player = _player = AudioPlayer();
-        await player.setAudioContext(
-          AudioContext(
-            android: const AudioContextAndroid(
-              audioFocus: AndroidAudioFocus.none,
-              usageType: AndroidUsageType.assistanceSonification,
-            ),
-            iOS: AudioContextIOS(category: AVAudioSessionCategory.ambient),
+      return await AudioPool.create(
+        source: AssetSource(effect.asset),
+        minPlayers: 2,
+        maxPlayers: effect == PaperSoundEffect.pencil ? 3 : 6,
+        audioContext: AudioContext(
+          android: const AudioContextAndroid(
+            audioFocus: AndroidAudioFocus.none,
+            usageType: AndroidUsageType.assistanceSonification,
           ),
-        );
-        await player.setReleaseMode(ReleaseMode.stop);
-        await player.setVolume(.68);
-        await player.setSource(AssetSource('audio/pencil-stroke.wav'));
-      }
-      if (!_disposed && isFocused()) await player.resume();
+          iOS: AudioContextIOS(category: AVAudioSessionCategory.ambient),
+        ),
+      );
     } catch (error) {
-      debugPrint('Writing sound unavailable: $error');
-      final player = _player;
-      _player = null;
-      await _disposePlayer(player);
+      if (!_closed) debugPrint('Could not prepare paper sound: $error');
+      return null;
+    }
+  }
+
+  void play(PaperSoundRequest request) {
+    if (_closed) return;
+    _pending = request;
+    _starting ??= _start();
+  }
+
+  Future<void> _start() async {
+    try {
+      final pool = await (_pool ??= _preload());
+      final request = _pending;
+      _pending = null;
+      if (_closed) return;
+      if (pool == null) {
+        _pool = null;
+        return;
+      }
+      if (request != null && request.canPlay) {
+        await pool.start(volume: effect.volume);
+      }
+    } catch (error) {
+      if (!_closed) debugPrint('Paper sound unavailable: $error');
     } finally {
-      _busy = false;
-      if (_disposed) await _disposePlayer(_player);
+      _starting = null;
+      if (!_closed && _pending != null) _starting = _start();
     }
   }
 
   Future<void> dispose() async {
-    _disposed = true;
-    if (!_busy) await _disposePlayer(_player);
-  }
-
-  Future<void> _disposePlayer(AudioPlayer? player) async {
+    _closed = true;
+    _pending = null;
     try {
-      await player?.dispose();
+      await _starting;
+      final pool = await _pool;
+      await pool?.dispose();
     } catch (error) {
-      debugPrint('Could not release writing audio: $error');
+      debugPrint('Could not release paper sound: $error');
     }
   }
 }

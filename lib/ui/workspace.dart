@@ -41,6 +41,7 @@ typedef _SavedOriginal = ({
   String? bookId,
   RegisteredOriginal original,
   bool startWriting,
+  String? transcriptionPageId,
 });
 
 enum _BookLeaf { frontCover, bookplate, backCover }
@@ -838,6 +839,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     RegisteredOriginal? extractFrom,
     Future<bool> Function(SourceImportResult)? onSaveExtraction,
     Future<bool> Function(SourceImportResult)? onSaveOriginal,
+    Future<bool> Function(SourceImportResult)? onSaveTranscription,
     bool initialSearch = false,
     String? bookId,
     bool allowUnbound = true,
@@ -869,6 +871,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               existingPhotoId: extractFrom?.photoId,
               onSaveExtraction: onSaveExtraction,
               onSaveOriginal: onSaveOriginal,
+              onSaveTranscription: onSaveTranscription,
               initialSearch: initialSearch,
               initialPhotoRegion: extractFrom?.photoRegion,
               style: style,
@@ -902,36 +905,62 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         return null;
       }
       RegisteredOriginal? registered;
+      String? transcriptionPageId;
+      final origin = page;
       final originalId = const Uuid().v4();
       final registeredAt = DateTime.now().millisecondsSinceEpoch;
+      bool canSave() =>
+          mounted &&
+          c == owner &&
+          !_accountLocked &&
+          !owner.composing &&
+          page.id == origin.id;
+      RegisteredOriginal originalFor(SourceImportResult result) =>
+          RegisteredOriginal(
+            originalId,
+            result.text,
+            citation: result.citation,
+            registeredAt: registeredAt,
+            photoId: result.photoId,
+            photoRegion: result.photoRegion,
+            isFullPage: result.isFullPage,
+            photoLines: result.photoLines,
+          );
+
       final result = await _reviewOriginal(
         initialPhoto: initialPhoto,
         initialSearch: initialSearch,
         bookId: bookId,
         allowUnbound: selectedPage != null,
         onSaveOriginal: (result) async {
-          if (!mounted ||
-              c != owner ||
-              _accountLocked ||
-              owner.composing ||
-              (selectedPage != null && page.id != selectedPage.id)) {
-            return false;
-          }
+          if (!canSave()) return false;
           registered = await owner.saveNewOriginal(
             bookId: result.bookId,
             page: selectedPage,
-            original: RegisteredOriginal(
-              originalId,
-              result.text,
-              citation: result.citation,
-              registeredAt: registeredAt,
-              photoId: result.photoId,
-              photoRegion: result.photoRegion,
-              isFullPage: result.isFullPage,
-              photoLines: result.photoLines,
-            ),
+            original: originalFor(result),
           );
           return registered != null;
+        },
+        onSaveTranscription: (result) async {
+          if (!canSave()) return false;
+          final original = originalFor(result);
+          final next = fresh ? draft : _blank();
+          final saved = await owner.saveImportedTranscription(
+            draft: next,
+            bookId: result.bookId,
+            looseRecordId: origin.recordId,
+            original: original,
+          );
+          if (!saved || !mounted || c != owner || _accountLocked) return false;
+          setState(() {
+            _bookLeaf = null;
+            fresh = false;
+            userFresh = false;
+            _directPageChange++;
+          });
+          registered = original;
+          transcriptionPageId = next.id;
+          return true;
         },
       );
       if (result == null ||
@@ -949,6 +978,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         bookId: result.bookId,
         original: registered!,
         startWriting: result.startWriting,
+        transcriptionPageId: transcriptionPageId,
       );
     } finally {
       _sourceBusy = false;
@@ -1049,6 +1079,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         bookId: result.bookId,
         original: registered!,
         startWriting: result.startWriting,
+        transcriptionPageId: null,
       ));
     } finally {
       _sourceBusy = false;
@@ -1113,6 +1144,10 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     WritingPage origin,
     _SavedOriginal saved,
   ) async {
+    if (saved.transcriptionPageId case final target?) {
+      _focusTranscription(c, target);
+      return;
+    }
     if (page.id != origin.id) return;
     if (saved.startWriting) {
       await _startTranscription(saved.original, saved.bookId, origin);
@@ -1179,19 +1214,25 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       );
       target = page.id;
     }, paperTurn: false);
-    if (target == null ||
+    final opened = target;
+    if (opened == null ||
         !mounted ||
-        page.id != target ||
+        page.id != opened ||
         c != owner ||
         _accountLocked ||
         c.saveError != null) {
       return;
     }
+    _focusTranscription(owner, opened);
+  }
+
+  void _focusTranscription(LibraryController owner, String target) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && c == owner && !_accountLocked && page.id == target) {
         editorFocus.requestFocus();
       }
     });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   Future<void> _showOriginals({

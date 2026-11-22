@@ -226,13 +226,22 @@ class _SourceHit {
   }
 }
 
+/// Returns null if the user cancels replacement of an existing draft.
+typedef CatalogTranscription =
+    Future<bool?> Function(String text, String citation);
+
 Future<SourceSearchChoice?> showSourceSearch(
   BuildContext context,
   WritingStyle style,
-  SourceIntake intake,
-) async {
+  SourceIntake intake, {
+  CatalogTranscription? onCatalogTranscription,
+}) async {
   final route = paperPanelRoute<SourceSearchChoice>(
-    (_) => _SourceSearch(style: style, intake: intake),
+    (_) => _SourceSearch(
+      style: style,
+      intake: intake,
+      onCatalogTranscription: onCatalogTranscription,
+    ),
     color: originalPanelColor,
   );
   final result = await Navigator.of(context).push(route);
@@ -241,10 +250,15 @@ Future<SourceSearchChoice?> showSourceSearch(
 }
 
 class _SourceSearch extends StatefulWidget {
-  const _SourceSearch({required this.style, required this.intake});
+  const _SourceSearch({
+    required this.style,
+    required this.intake,
+    this.onCatalogTranscription,
+  });
 
   final WritingStyle style;
   final SourceIntake intake;
+  final CatalogTranscription? onCatalogTranscription;
 
   @override
   State<_SourceSearch> createState() => _SourceSearchState();
@@ -260,6 +274,7 @@ class _SourceSearchState extends State<_SourceSearch> {
   String? _searched, _linkError;
   bool _loading = false, _importing = false;
   bool _webSearch = false;
+  ({WikisourceWork work, String? text, String error})? _catalogRetry;
   WikisourceGenre? _catalogGenre;
   _SearchMode _mode = _SearchMode.title;
   _SourceHit? _selected;
@@ -435,6 +450,50 @@ class _SourceSearchState extends State<_SourceSearch> {
       return await work.load(_client);
     } on Exception {
       return null;
+    }
+  }
+
+  Future<void> _selectCatalogWork(WikisourceWork work, {String? text}) async {
+    if (_importing) return;
+    final transcribe = widget.onCatalogTranscription;
+    if (transcribe == null) {
+      _showHit(_SourceHit(_Collection.works, work.title, work.pageId));
+      return;
+    }
+    _catalogFocus.unfocus();
+    setState(() {
+      _importing = true;
+      _catalogRetry = null;
+      _linkError = null;
+    });
+    String? error;
+    try {
+      final body = text ?? (await _loadPreview(work))?.join('\n\n');
+      if (!mounted) return;
+      if (body == null) {
+        error = '원문을 불러오지 못했어요.';
+      } else {
+        text = body;
+        final saved = await transcribe(body, work.citation);
+        if (!mounted) return;
+        if (saved == true && ModalRoute.isCurrentOf(context) == true) {
+          Navigator.pop(context);
+          return;
+        }
+        if (saved == false) error = '원문과 필사 쪽을 저장하지 못했어요.';
+      }
+    } on Exception {
+      error = '원문과 필사 쪽을 저장하지 못했어요.';
+    } finally {
+      if (mounted) {
+        if (error != null) _resetCatalogScroll();
+        setState(() {
+          _importing = false;
+          _catalogRetry = error == null
+              ? null
+              : (work: work, text: text, error: error);
+        });
+      }
     }
   }
 
@@ -618,6 +677,7 @@ class _SourceSearchState extends State<_SourceSearch> {
               children: [
                 PaperSearchField(
                   fieldKey: const ValueKey('source-catalog-query'),
+                  enabled: !_importing,
                   controller: _catalogQuery,
                   focusNode: _catalogFocus,
                   hint: '작품 제목이나 작가',
@@ -647,11 +707,13 @@ class _SourceSearchState extends State<_SourceSearch> {
                           color: genre == filter ? Colors.white : brandInk,
                         ),
                         materialTapTargetSize: MaterialTapTargetSize.padded,
-                        onSelected: (_) {
-                          _catalogFocus.unfocus();
-                          _resetCatalogScroll();
-                          setState(() => _catalogGenre = filter);
-                        },
+                        onSelected: _importing
+                            ? null
+                            : (_) {
+                                _catalogFocus.unfocus();
+                                _resetCatalogScroll();
+                                setState(() => _catalogGenre = filter);
+                              },
                       ),
                   ],
                 ),
@@ -659,6 +721,27 @@ class _SourceSearchState extends State<_SourceSearch> {
             ),
           ),
         ),
+        if (widget.onCatalogTranscription != null)
+          const SliverPadding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+            sliver: SliverToBoxAdapter(
+              child: Text(
+                '작품을 누르면 바로 필사를 시작해요.',
+                style: TextStyle(color: muted, fontSize: 13),
+              ),
+            ),
+          ),
+        if (_catalogRetry case final retry?)
+          SliverToBoxAdapter(
+            child: ListTile(
+              title: Semantics(liveRegion: true, child: Text(retry.error)),
+              trailing: TextButton(
+                onPressed: () =>
+                    _selectCatalogWork(retry.work, text: retry.text),
+                child: const Text('다시 시도'),
+              ),
+            ),
+          ),
         if (works.isEmpty)
           SliverToBoxAdapter(
             child: ListTile(
@@ -684,9 +767,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                   subtitle: _workDetails(work),
                   indexCard: true,
                   showDivider: index > 0,
-                  onTap: () => _showHit(
-                    _SourceHit(_Collection.works, work.title, work.pageId),
-                  ),
+                  onTap: _importing ? null : () => _selectCatalogWork(work),
                 );
               },
             ),
@@ -784,12 +865,14 @@ class _SourceSearchState extends State<_SourceSearch> {
                                 ? TextDecoration.underline
                                 : null,
                           ),
-                          onSelected: (_) {
-                            _focus.unfocus();
-                            _catalogFocus.unfocus();
-                            setState(() => _webSearch = web);
-                            _queueCompletions();
-                          },
+                          onSelected: _importing
+                              ? null
+                              : (_) {
+                                  _focus.unfocus();
+                                  _catalogFocus.unfocus();
+                                  setState(() => _webSearch = web);
+                                  _queueCompletions();
+                                },
                         ),
                     ],
                   ),
@@ -931,8 +1014,11 @@ class _SourceSearchState extends State<_SourceSearch> {
                     ],
                   ),
                 ),
-              ] else
+              ] else ...[
+                if (_importing)
+                  const LinearProgressIndicator(semanticsLabel: '원문을 담고 있어요'),
                 Expanded(child: _catalog()),
+              ],
             ],
           ],
         ),

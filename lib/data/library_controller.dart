@@ -4,6 +4,7 @@ import 'model.dart';
 import 'store.dart';
 import 'library_backup.dart';
 import 'original_removals.dart';
+import 'writing_title.dart';
 import '../source/originals.dart';
 import '../source/photo_lines.dart';
 import '../source/page_originals.dart';
@@ -372,6 +373,62 @@ class LibraryController extends ChangeNotifier {
         )
         ? original
         : null;
+  }
+
+  /// Commit the original and its first transcription page together.
+  Future<bool> saveImportedTranscription({
+    required WritingPage draft,
+    required String? bookId,
+    required String looseRecordId,
+    required RegisteredOriginal original,
+  }) async {
+    await settled;
+    if (_disposed ||
+        editorFocused ||
+        composing ||
+        (saveError != null && saveError != _originalRegistrationError) ||
+        !original.canTranscribe ||
+        !RegisteredOriginal.validList([original]) ||
+        library.records.any((record) => record.id == draft.recordId)) {
+      return false;
+    }
+    final book = library.books.where((item) => item.id == bookId).firstOrNull;
+    if (bookId != null && book == null) return false;
+
+    final page = attachedPage(draft, original).withDetails(writtenOn: _today());
+    final record = WritingRecord(
+      id: page.recordId,
+      bookId: bookId,
+      title: originalWritingTitle(original),
+      originals: book == null
+          ? [
+              ...originalsFor(library, bookId: null, recordId: looseRecordId),
+              original,
+            ]
+          : const [],
+    );
+    final next = library
+        .copy(
+          books: book == null
+              ? null
+              : [
+                  for (final item in library.books)
+                    if (item.id == bookId)
+                      item.copy(originals: [...item.originals, original])
+                    else
+                      item,
+                ],
+          records: [...library.records, record],
+          pages: [...library.pages, page],
+          activePageId: page.id,
+          writing: true,
+        )
+        .rememberActiveBookPosition();
+    return _saveBeforePublishing(
+      next,
+      error: _originalRegistrationError,
+      activeChanged: true,
+    );
   }
 
   static const _originalDeleteError = '원문 삭제를 저장하지 못했어요. 다시 시도해 주세요.';

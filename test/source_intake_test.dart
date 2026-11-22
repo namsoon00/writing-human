@@ -1369,11 +1369,12 @@ void main() {
         expect(card.indexCard, isTrue);
         expect(card.subtitle, contains('현진건 · 소설 · 약 '));
         expect(card.preview, startsWith('새침하게'));
+        store.fail = true;
         await tester.tap(novel);
         await tester.pumpAndSettle();
         expect(requests.single.queryParameters['oldid'], '468924');
-        await tester.tap(find.byTooltip('작품 목록으로 돌아가기'));
-        await tester.pumpAndSettle();
+        expect(find.text('원문과 필사 쪽을 저장하지 못했어요.'), findsOneWidget);
+        expect(store.data.records, isEmpty);
         expect(tester.widget<ChoiceChip>(novelFilter).selected, isTrue);
         expect(
           tester
@@ -1384,25 +1385,17 @@ void main() {
               .text,
           '현 진 건',
         );
-        await tester.tap(novel);
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('원문 가져오기'));
-        await tester.pumpAndSettle();
-        expect(
-          tester.widget<TextField>(sourceField).controller!.text,
-          '첫 문단\n\n둘째 문단',
-        );
-        await showSourceDetails(tester);
-        expect(
-          tester
-              .widget<TextField>(
-                find.byKey(const ValueKey('original-citation')),
-              )
-              .controller!
-              .text,
-          contains('운수 좋은 날 · 현진건 · 위키문헌'),
-        );
-        expect(store.data.records, isEmpty);
+
+        store.fail = false;
+        await tester.tap(find.text('다시 시도'));
+        await settleSourceSheets(tester);
+        expect(requests, hasLength(1));
+        expect(find.byType(SourceImportSheet), findsNothing);
+        final saved = store.data.activeRecord!.originals.single;
+        expect(saved.text, '첫 문단\n\n둘째 문단');
+        expect(saved.citation, contains('운수 좋은 날 · 현진건 · 위키문헌'));
+        expect(store.data.activePage!.guidedOriginalId, saved.id);
+        expect(remainingInline(tester), saved.text);
       }, () => client);
     },
   );
@@ -1472,11 +1465,13 @@ void main() {
   });
 
   testWidgets(
-    'A collection title opens a preview and only explicit save starts writing',
+    'One catalog tap saves the chosen edition and opens its first page',
     (tester) async {
       final requests = <Uri>[];
+      final release = Completer<void>();
       final client = MockClient((request) async {
         requests.add(request.url);
+        await release.future;
         return http.Response.bytes(
           utf8.encode(
             jsonEncode({
@@ -1516,15 +1511,16 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.widget<OriginalListItem>(poem).indexCard, isTrue);
         await tester.tap(poem);
-        await settleSourceSheets(tester);
+        await tester.pump();
         expect(requests.single.queryParameters['oldid'], '430577');
-        expect(find.text('원문 미리보기'), findsOneWidget);
         expect(store.writes, 0);
-        await tester.tap(find.text('원문 가져오기'));
-        await tester.pumpAndSettle();
-        expect(store.writes, 0);
-        await tester.tap(find.text('필사하기'));
+        await tester.tap(poem);
+        await tester.pump();
+        expect(requests, hasLength(1));
+        release.complete();
         await settleSourceSheets(tester);
+        expect(store.writes, 1);
+        expect(find.text('원문 미리보기'), findsNothing);
         expect(find.byType(SourceImportSheet), findsNothing);
         final saved = store.data.activeRecord!.originals.single;
         expect(saved.text, '첫 줄\n둘째 줄');
@@ -1536,7 +1532,7 @@ void main() {
 
   for (final existingText in [false, true]) {
     testWidgets(
-      'Poems from source search preview and start writing with the full text (existing text: $existingText)',
+      'Catalog transcription retries loading and preserves prior writing (existing text: $existingText)',
       (tester) async {
         final requests = <Uri>[];
         final client = MockClient((request) async {
@@ -1564,13 +1560,14 @@ void main() {
           final store = MemoryStore();
           if (existingText) {
             store.data = const Library(
-              records: [
-                WritingRecord(
-                  id: 'r',
+              books: [
+                Book(
+                  id: 'book',
                   title: '기록',
                   originals: [RegisteredOriginal('previous', '이미 담은 원문')],
                 ),
               ],
+              records: [WritingRecord(id: 'r', bookId: 'book', title: '글')],
               pages: [
                 WritingPage(id: 'p', recordId: 'r', number: 1, text: '이미 쓴 글'),
               ],
@@ -1579,15 +1576,14 @@ void main() {
             );
           }
           await open(tester, store, FakeIntake());
+          await tester.tap(place);
+          await tester.pumpAndSettle();
           if (existingText) {
-            await tester.tap(place);
-            await tester.pumpAndSettle();
             await openOriginalRegistration(tester);
-          } else {
-            await openRegistration(tester);
+            await tester.enterText(sourceField, '새로 적던 원문');
+            await tester.pumpAndSettle();
           }
           expect(requests, isEmpty);
-          expect(find.text('작품 제목이나 작가'), findsNothing);
           await tester.tap(find.text('새 원문 찾기'));
           await tester.pumpAndSettle();
           expect(find.text('작품 제목이나 작가'), findsOneWidget);
@@ -1601,29 +1597,46 @@ void main() {
           await tester.ensureVisible(poem);
           await tester.tap(poem);
           await settleSourceSheets(tester);
-          if (!existingText) {
-            expect(find.textContaining('원문 미리보기를 불러오지 못했어요'), findsOneWidget);
+          if (existingText) {
+            final dialog = find.byType(AlertDialog);
+            expect(find.text('작성 중인 원문을 바꾸고 필사할까요?'), findsOneWidget);
+            final writes = store.writes;
+            await tester.tap(find.widgetWithText(TextButton, '취소'));
+            await tester.pumpAndSettle();
+            expect(store.writes, writes);
+            await tester.tap(find.byTooltip('검색 닫기'));
+            await settleSourceSheets(tester);
+            expect(
+              tester.widget<TextField>(sourceField).controller!.text,
+              '새로 적던 원문',
+            );
+            await tester.tap(find.text('새 원문 찾기'));
+            await tester.pumpAndSettle();
+            await tester.enterText(
+              find.byKey(const ValueKey('source-catalog-query')),
+              '서시',
+            );
+            await tester.pumpAndSettle();
+            await tester.tap(poem);
+            await tester.pumpAndSettle();
+            await tester.tap(
+              find.descendant(of: dialog, matching: find.text('필사하기')),
+            );
+            await settleSourceSheets(tester);
+          } else {
+            expect(find.text('원문을 불러오지 못했어요.'), findsOneWidget);
             expect(store.writes, 0);
             await tester.tap(find.text('다시 시도'));
             await settleSourceSheets(tester);
           }
           expect(
             requests.map((request) => request.queryParameters['oldid']),
-            List.filled(existingText ? 1 : 2, '387685'),
+            List.filled(2, '387685'),
           );
-          expect(find.text('원문 미리보기'), findsOneWidget);
-          expect(find.byType(SourceImportSheet), findsNothing);
-          expect(
-            store.data.records
-                .expand((r) => r.originals)
-                .where((o) => o.citation.contains('oldid=387685')),
-            isEmpty,
-          );
-          await tester.tap(find.text('원문 가져오기'));
-          await tester.pumpAndSettle();
-          await tester.tap(find.text('필사하기'));
-          await settleSourceSheets(tester);
-          final saved = store.data.activeRecord!.originals.last;
+          expect(find.text('원문 미리보기'), findsNothing);
+          final saved = existingText
+              ? store.data.books.single.originals.last
+              : store.data.activeRecord!.originals.last;
           final page = store.data.activePage!;
           expect(saved.text, '첫 번째 연\n\n옮겨 쓸 연');
           expect(saved.citation, contains('oldid=387685'));
@@ -1631,6 +1644,8 @@ void main() {
           expect(page.text, isEmpty);
           expect(page.referenceOnly, isFalse);
           if (existingText) {
+            expect(store.data.books.single.originals.first.id, 'previous');
+            expect(store.data.activeRecord!.bookId, 'book');
             expect(store.data.pages.first.text, '이미 쓴 글');
             expect(store.data.pages.first.guidedOriginalId, isNull);
             expect(page.number, 1);

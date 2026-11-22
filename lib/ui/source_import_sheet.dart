@@ -45,6 +45,7 @@ class SourceImportSheet extends StatefulWidget {
     this.existingPhotoId,
     this.onSaveExtraction,
     this.onSaveOriginal,
+    this.onSaveTranscription,
     this.initialSearch = false,
     this.initialPhotoRegion,
     this.initialCitation = '',
@@ -64,6 +65,7 @@ class SourceImportSheet extends StatefulWidget {
   final String? existingPhotoId;
   final Future<bool> Function(SourceImportResult)? onSaveExtraction;
   final Future<bool> Function(SourceImportResult)? onSaveOriginal;
+  final Future<bool> Function(SourceImportResult)? onSaveTranscription;
   final bool initialSearch;
   final List<double>? initialPhotoRegion;
   final bool shared, registration, allowUnbound;
@@ -249,8 +251,52 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   Future<void> _searchSources({bool closeOnCancel = false}) async {
     if (!_editable) return;
     FocusScope.of(context).unfocus();
-    final choice = await showSourceSearch(context, widget.style, widget.intake);
-    if (!mounted || !_editable) return;
+    SourceImportResult? catalogResult;
+    (String, String)? confirmedCatalog;
+    final saveTranscription = widget.onSaveTranscription;
+    final choice = await showSourceSearch(
+      context,
+      widget.style,
+      widget.intake,
+      onCatalogTranscription: saveTranscription == null
+          ? null
+          : (text, citation) async {
+              if (!mounted || !_editable) return null;
+              final work = (text, citation);
+              if (confirmedCatalog != work) {
+                if (!await _confirmSourceReplacement(
+                      text: text,
+                      citation: citation,
+                      replacePhoto: _originalPhoto != null,
+                      startWriting: true,
+                    ) ||
+                    !mounted ||
+                    !_editable) {
+                  return null;
+                }
+                confirmedCatalog = work;
+              }
+              final SourceImportResult result = (
+                text: text,
+                citation: citation,
+                bookId: _bookId,
+                isFullPage: false,
+                photoLines: const [],
+                photoId: null,
+                photoRegion: null,
+                startWriting: true,
+              );
+              if (!await saveTranscription(result)) return false;
+              catalogResult = result;
+              return true;
+            },
+    );
+    if (!mounted) return;
+    if (catalogResult case final result?) {
+      _finish(result);
+      return;
+    }
+    if (!_editable) return;
     if (choice == null) {
       if (closeOnCancel) await _close();
       return;
@@ -308,6 +354,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
     String? text,
     String? citation,
     bool replacePhoto = false,
+    bool startWriting = false,
   }) async {
     final replacesText =
         text != null && _text.text.trim().isNotEmpty && _text.text != text;
@@ -320,7 +367,9 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         context: context,
         builder: (context) => AlertDialog(
           title: Text(
-            replacePhoto
+            startWriting
+                ? '작성 중인 원문을 바꾸고 필사할까요?'
+                : replacePhoto
                 ? '담을 사진을 이 원문으로 바꿀까요?'
                 : replacesText
                 ? '입력한 원문을 바꿀까요?'
@@ -333,7 +382,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('바꾸기'),
+              child: Text(startWriting ? '필사하기' : '바꾸기'),
             ),
           ],
         ),
@@ -704,9 +753,15 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         return;
       }
     }
+    _finish(result);
+  }
+
+  void _finish(SourceImportResult result) {
     setState(() => _allowClose = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) Navigator.pop<SourceImportResult>(context, result);
+      if (mounted && ModalRoute.isCurrentOf(context) == true) {
+        Navigator.pop<SourceImportResult>(context, result);
+      }
     });
   }
 

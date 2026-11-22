@@ -58,9 +58,9 @@ void main() {
                   for (var x = 48; x < 192; x += 8) {
                     final i = (y * 240 + x) * 4;
                     final delta =
-                        (bytes[i] - 201).abs() +
-                        (bytes[i + 1] - 188).abs() +
-                        (bytes[i + 2] - 165).abs();
+                        (bytes[i] - 243).abs() +
+                        (bytes[i + 1] - 234).abs() +
+                        (bytes[i + 2] - 219).abs();
                     if (delta > 45) visible++;
                     samples++;
                   }

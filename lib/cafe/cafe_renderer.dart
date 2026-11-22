@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import 'cafe_camera.dart';
@@ -151,18 +152,18 @@ class CafeRenderer extends CustomPainter {
     final daylight = math.max(0, n.dot(_daylightDirection));
     final ceiling = math.max(0, n.y);
     final windowFalloff = (1 - (face.center.x + 4.4) / 15).clamp(.35, 1.0);
-    final brightness = (.70 + .23 * daylight * windowFalloff + .11 * ceiling)
-        .clamp(.25, 1.05);
+    final brightness = (.91 + .16 * daylight * windowFalloff + .08 * ceiling)
+        .clamp(.85, 1.15);
     final base = face.wood && wood != null
-        ? Color.lerp(face.color, Colors.white, .40)!
+        ? Color.lerp(face.color, Colors.white, .60)!
         : face.color;
     int c(double channel, double warmth) =>
         (channel * 255 * brightness * warmth).round().clamp(0, 255);
     return Color.fromARGB(
       (base.a * 255).round(),
-      c(base.r, 1.025),
+      c(base.r, 1.015),
       c(base.g, 1.0),
-      c(base.b, .96),
+      c(base.b, .985),
     );
   }
 
@@ -171,7 +172,7 @@ class CafeRenderer extends CustomPainter {
     if (size.isEmpty || !camera.isFinite) return;
     canvas.save();
     canvas.clipRect(Offset.zero & size);
-    canvas.drawColor(const Color(0xffc9bca5), BlendMode.srcOver);
+    canvas.drawColor(const Color(0xfff3eadb), BlendMode.srcOver);
     final faces = <_ProjectedFace>[];
     final forward = camera.forward,
         right = camera.right,
@@ -249,8 +250,12 @@ class CafeRenderer extends CustomPainter {
     final shaders = <ui.Image, ui.ImageShader>{};
     for (final image in [wood, garden, sign]) {
       if (image == null) continue;
+      // Flutter 3.41.2 CanvasKit's CkImageShader.dispose() also disposes the
+      // exact Image handle passed to its constructor. Give it a dedicated
+      // clone so repaint cleanup cannot destroy CafeScene's original assets.
+      // Native dart:ui borrows the image and keeps its own underlying reference.
       shaders[image] = ui.ImageShader(
-        image,
+        kIsWeb ? image.clone() : image,
         image == wood ? TileMode.repeated : TileMode.clamp,
         image == wood ? TileMode.repeated : TileMode.clamp,
         Float64List.fromList([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
@@ -313,7 +318,7 @@ class CafeRenderer extends CustomPainter {
     }
     // A subtle lens vignette, independent of camera input and mesh lighting.
     final vignette = const RadialGradient(
-      colors: [Color(0x00000000), Color(0x240f100b)],
+      colors: [Color(0x00000000), Color(0x080f100b)],
       stops: [.35, 1],
       radius: .86,
     ).createShader(Offset.zero & size);

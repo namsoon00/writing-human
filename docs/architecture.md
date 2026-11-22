@@ -710,3 +710,26 @@ CoverHinge는 앞표지의 왼쪽 책등과 겉뒷표지의 오른쪽 책등을 
 뒷표지를 열 때는 종이 미리보기 위에서 표지가 움직인다. ‘마지막 장 펼치기’도
 같은 회전을 사용하고 기존 편집기와 마지막 쪽을 복원한다. 효과를 끄거나 OS 동작
 줄이기를 쓰면 회전을 생략한다.
+
+
+## 카페 재질 이미지 수명 · CanvasKit 재그리기 수정 · 2026-11-22
+
+고정한 Flutter 3.41.2의 CanvasKit CkImageShader는 생성자에 받은 Image 핸들을
+그대로 저장하고 dispose에서 그 핸들도 닫는다. 기존 CafeRenderer는 매 paint에서
+화면이 소유한 원본으로 셰이더를 만들고 정리했기 때문에, 첫 프레임이 원본 세 장을
+닫고 다음 카메라 paint가 배경을 그린 뒤 실패했다. 네이티브의 이미지 수명 처리와
+달라서 기존 호스트 렌더 검사로 발견하지 못했다.
+
+웹 셰이더에 image.clone()으로 별도 핸들을 넘겨 원본은 CafeScene만 소유하게 했다.
+셰이더·Vertices는 여전히 paint 끝에, 원본은 Scene 종료 시 정리한다. 네이티브의
+기존 빌린 참조는 유지한다. 현재 웹 빌드는 JS·CanvasKit이며 Skwasm을 배포하지 않는다.
+SDK·웹 렌더러를 바꿀 때 이 수명 계약과 회귀 검사를 함께 다시 확인한다.
+
+- [Flutter 3.41.2 CanvasKit 원문](https://github.com/flutter/flutter/blob/3.41.2/engine/src/flutter/lib/web_ui/lib/src/engine/canvaskit/shader.dart#L244-L321)
+- test/cafe_image_lifetime_test.dart는 실제 브라우저 엔진에서 원본 생존과 24개 연속
+  위치·회전 자세의 픽셀 표시를 검사한다. .github/workflows/github-pages.yml에서
+  네이티브 검사 외에 Chrome 대상 검사도 반드시 실행한다. UI 조작 자동화와 구분한다.
+
+밝기는 기본 광량·목재의 표시색을 높이고 화면 가장자리 어둡힘을 줄였다. 상단의
+검은 그라데이션을 옅은 종이색과 짙은 잉크색 조작부로 바꿨다. 본문·쓰기 설정·
+저장 구조·방의 배치에는 관여하지 않는다.

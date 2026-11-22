@@ -359,14 +359,14 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
             top: 0,
             left: 0,
             right: 0,
-            height: 170,
+            height: 150,
             child: IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Color(0xaa211a14), Color(0x00211a14)],
+                    colors: [Color(0xf2faf5eb), Color(0x00faf5eb)],
                   ),
                 ),
               ),
@@ -388,10 +388,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                         const Expanded(
                           child: Text(
                             '쓰는 인간 · 필사 카페',
-                            style: TextStyle(
-                              color: Color(0xfffff4e1),
-                              fontSize: 16,
-                            ),
+                            style: TextStyle(color: brandInk, fontSize: 16),
                           ),
                         ),
                         IconButton(
@@ -401,7 +398,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                             sound
                                 ? Icons.volume_up_outlined
                                 : Icons.volume_off_outlined,
-                            color: const Color(0xfffff4e1),
+                            color: brandInk,
                           ),
                         ),
                         IconButton(
@@ -412,7 +409,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                               : _guide,
                           icon: const Icon(
                             Icons.explore_outlined,
-                            color: Color(0xfffff4e1),
+                            color: brandInk,
                           ),
                         ),
                         IconButton(
@@ -420,10 +417,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                           onPressed: opening || widget.saveFailed
                               ? null
                               : () => Navigator.pop(context),
-                          icon: const Icon(
-                            Icons.close,
-                            color: Color(0xfffff4e1),
-                          ),
+                          icon: const Icon(Icons.close, color: brandInk),
                         ),
                       ],
                     ),
@@ -437,7 +431,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                             ? '${view.seat!.label} · 노트를 눌러 써요'
                             : '바닥을 눌러 걷고, 끌어 둘러봐요',
                         style: const TextStyle(
-                          color: Color(0xfff2e7d4),
+                          color: Color(0xff62503f),
                           fontSize: 14,
                           height: 1.5,
                         ),
@@ -452,9 +446,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                                 pending = null;
                                 view.stand();
                               },
-                        style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xfffff4e1),
-                        ),
+                        style: TextButton.styleFrom(foregroundColor: brandInk),
                         child: const Text('일어나 둘러보기'),
                       ),
                   ],

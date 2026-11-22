@@ -252,3 +252,15 @@ test('Multiple anchored originals retain independent text and photo snapshots', 
   delete library.pages[0].passages[0].original;
   assert.equal(validLibrary(library), true);
 });
+
+
+test('Explicit writing titles retain their marker and reject invalid marker types', () => {
+  const library = empty();
+  const record = {id: 'r', bookId: null, title: '필사 7', source: '', titleIsManual: true};
+  library.records = [record];
+  assert.equal(validLibrary(library), true);
+  for (const invalid of ['true', 1, null, {}]) {
+    record.titleIsManual = invalid;
+    assert.equal(validLibrary(library), false);
+  }
+});

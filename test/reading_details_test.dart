@@ -177,7 +177,7 @@ void main() {
       LibraryController? c;
       try {
         final migrated = await store.load();
-        expect(await store.db.getVersion(), 13);
+        expect(await store.db.getVersion(), 14);
         expect(migrated.encode(), original.encode());
         expect(migrated.pages.single.passages, isEmpty);
         expect(migrated.pages.single.originalCitations, isEmpty);

@@ -619,6 +619,28 @@ class LibraryController extends ChangeNotifier {
     ),
   );
 
+  void setRecordTitle(String id, String title) {
+    if (_disposed || composing || saveError != null) return;
+    final name = title.trim();
+    final record = library.records.where((r) => r.id == id).firstOrNull;
+    if (record == null ||
+        name.isEmpty ||
+        (record.title == name && record.titleIsManual)) {
+      return;
+    }
+    _publish(
+      library.copy(
+        records: [
+          for (final item in library.records)
+            if (item.id == id)
+              item.copy(title: name, titleIsManual: true)
+            else
+              item,
+        ],
+      ),
+    );
+  }
+
   void setBookTitle(String id, String title) {
     final name = title.trim();
     final book = library.books.where((book) => book.id == id).firstOrNull;
@@ -698,6 +720,7 @@ class LibraryController extends ChangeNotifier {
   void saveDraft(
     WritingPage page, {
     String source = '',
+    String? title,
     List<RegisteredOriginal> originals = const [],
     String? bookId,
     bool keepBlank = false,
@@ -709,7 +732,7 @@ class LibraryController extends ChangeNotifier {
     if (page.text.isEmpty && source.isEmpty && !keepBlank) return;
     final record = WritingRecord(
       id: page.recordId,
-      title: '필사 ${library.records.length + 1}',
+      title: title ?? '필사 ${library.records.length + 1}',
       source: source,
       originals: originals,
       bookId: bookId,

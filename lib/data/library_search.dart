@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart' show StringCharacters;
 
 import 'model.dart';
+import 'writing_title.dart';
 
 class Passage {
   const Passage(this.page, this.label, this.excerpt, {this.offset});
@@ -14,15 +15,26 @@ class Passage {
 class LibraryPassages {
   LibraryPassages(this.library)
     : _records = {for (final record in library.records) record.id: record},
-      _books = {for (final book in library.books) book.id: book};
+      _books = {for (final book in library.books) book.id: book} {
+    for (final page in library.pages) {
+      (_pagesByRecord[page.recordId] ??= []).add(page);
+    }
+    for (final pages in _pagesByRecord.values) {
+      pages.sort((a, b) => a.number.compareTo(b.number));
+    }
+  }
 
   final Library library;
   final Map<String, WritingRecord> _records;
   final Map<String, Book> _books;
 
+  final _pagesByRecord = <String, List<WritingPage>>{};
+  String _title(WritingRecord record) =>
+      writingTitle(record, _pagesByRecord[record.id] ?? const []);
+
   String _label(WritingRecord record) => [
     if (_books[record.bookId] case final book?) book.title,
-    record.title,
+    _title(record),
   ].join(' · ');
 
   Iterable<String> completions(String query, {String? bookId}) =>
@@ -40,7 +52,7 @@ class LibraryPassages {
         yield book.title;
         yield book.author;
       }
-      yield record.title;
+      yield _title(record);
     }
     for (final page in library.pages.reversed) {
       if (bookId != null && _records[page.recordId]?.bookId != bookId) continue;
@@ -81,7 +93,7 @@ class LibraryPassages {
       if (page == null || matchedRecords.contains(record.id)) continue;
       final book = _books[record.bookId];
       if ([
-        record.title,
+        _title(record),
         book?.title,
         book?.author,
       ].nonNulls.any(match.hasMatch)) {

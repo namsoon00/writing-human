@@ -94,6 +94,7 @@ export function validLibrary(l) {
   for (const r of l.records) {
     if (!object(r) || !id(r.id) || records.has(r.id) || (r.bookId !== null && !books.has(r.bookId)) || !text(r.title, 500) || !text(r.source)) return false;
     if ('sourceParagraph' in r && (!integer(r.sourceParagraph) || r.sourceParagraph < 0)) return false;
+    if ('titleIsManual' in r && typeof r.titleIsManual !== 'boolean') return false;
     if ('originals' in r && !originals(r.originals)) return false;
     records.set(r.id, r.bookId);
   }

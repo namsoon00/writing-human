@@ -75,8 +75,13 @@ class NewBookDialogState extends State<NewBookDialog> {
 }
 
 class BookTitleDialog extends StatefulWidget {
-  const BookTitleDialog({super.key, required this.title});
+  const BookTitleDialog({
+    super.key,
+    required this.title,
+    this.isWriting = false,
+  });
   final String title;
+  final bool isWriting;
 
   @override
   State<BookTitleDialog> createState() => _BookTitleDialogState();
@@ -87,6 +92,9 @@ class _BookTitleDialogState extends State<BookTitleDialog> {
   final form = GlobalKey<FormState>();
 
   void _submit() {
+    if (text.value.isComposingRangeValid && !text.value.composing.isCollapsed) {
+      return;
+    }
     if (form.currentState!.validate()) {
       Navigator.pop(context, text.text.trim());
     }
@@ -101,19 +109,24 @@ class _BookTitleDialogState extends State<BookTitleDialog> {
   @override
   Widget build(BuildContext context) => AlertDialog(
     scrollable: true,
-    title: const Text('책 이름 변경'),
+    title: Text(widget.isWriting ? '글 이름 변경' : '책 이름 변경'),
     content: SizedBox(
       width: 320,
       child: Form(
         key: form,
         child: TextFormField(
-          key: const ValueKey('book-title-input'),
+          key: ValueKey(
+            widget.isWriting ? 'writing-title-input' : 'book-title-input',
+          ),
           controller: text,
           autofocus: true,
           maxLength: 80,
-          decoration: const InputDecoration(labelText: '책 이름'),
-          validator: (value) =>
-              value == null || value.trim().isEmpty ? '책 이름을 입력해 주세요.' : null,
+          decoration: InputDecoration(
+            labelText: widget.isWriting ? '글 이름' : '책 이름',
+          ),
+          validator: (value) => value == null || value.trim().isEmpty
+              ? (widget.isWriting ? '글 이름을 입력해 주세요.' : '책 이름을 입력해 주세요.')
+              : null,
           onFieldSubmitted: (_) => _submit(),
         ),
       ),

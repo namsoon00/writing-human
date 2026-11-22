@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import '../data/library_backup.dart';
 import '../data/library_controller.dart';
 import '../data/model.dart';
+import '../data/writing_title.dart';
 import '../data/writing_export.dart';
 import 'paper.dart';
 import 'paper_panel.dart';
@@ -174,7 +175,13 @@ class _ArchiveSheetState extends State<ArchiveSheet> {
 
   Future<String?> _text(WritingRecord record) async =>
       await _save(
-        _fileName(record.title, 'txt'),
+        _fileName(
+          writingTitle(
+            record,
+            _controller.library.volumePages(recordId: record.id),
+          ),
+          'txt',
+        ),
         exportRecordText(_controller.library, record),
       )
       ? _savedMessage

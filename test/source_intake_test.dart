@@ -353,7 +353,7 @@ void main() {
       expect(store.data.pages.first.extent, before.extent);
       expect(store.data.activePage!.text, isEmpty);
       expect(find.byKey(const ValueKey('page-original-markers')), findsNothing);
-      expect(store.data.records.single.originals, hasLength(2));
+      expect(store.data.activeRecord!.originals, hasLength(2));
     },
   );
 
@@ -384,8 +384,8 @@ void main() {
       expect(sourceField, findsNothing);
       await openPhotoMenu(tester);
       await saveWithPhoto(tester, action: find.text('사진만 담기'));
-      expect(store.data.records.single.originals.single.photoId, isNotNull);
-      expect(store.data.records.single.originals.single.canTranscribe, isFalse);
+      expect(store.data.activeRecord!.originals.single.photoId, isNotNull);
+      expect(store.data.activeRecord!.originals.single.canTranscribe, isFalse);
       expect(reading, findsOneWidget);
       expect(store.data.activePage!.guidedOriginalId, isNull);
     },
@@ -539,12 +539,12 @@ void main() {
       final page = store.data.activePage!;
       expect(
         page.guidedOriginalId,
-        store.data.records.single.originals.single.id,
+        store.data.activeRecord!.originals.single.id,
       );
       expect(page.text, isEmpty);
       expect(reading, findsNothing);
       expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isTrue);
-      final original = store.data.records.single.originals.single;
+      final original = store.data.activeRecord!.originals.single;
       expect(original.text, corrected);
       expect(page.passages.single.original?.text, corrected);
       expect(original.photoId, isNotNull);
@@ -621,7 +621,7 @@ void main() {
     await settleSourceSheets(tester);
     await tester.tap(find.text('필사하기'));
     await tester.pumpAndSettle();
-    expect(store.data.records.single.originals.single.text, cleaned);
+    expect(store.data.activeRecord!.originals.single.text, cleaned);
     expect(store.data.activePage!.text, isEmpty);
     expect(remainingInline(tester), cleaned);
   });
@@ -681,21 +681,21 @@ void main() {
     await tester.tap(cleanup);
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(text).controller!.text, '"고친 글"...');
-    expect(store.data.records.single.originals.single.text, '고치기 전 원문');
+    expect(store.data.activeRecord!.originals.single.text, '고치기 전 원문');
 
     store.fail = true;
     await tester.tap(button);
     await tester.pumpAndSettle();
     expect(find.text('수정 내용을 저장하지 못했어요. 입력한 내용은 남아 있어요.'), findsOneWidget);
     expect(tester.widget<TextField>(text).controller!.text, '"고친 글"...');
-    expect(store.data.records.single.originals.single.text, '고치기 전 원문');
+    expect(store.data.activeRecord!.originals.single.text, '고치기 전 원문');
     store.fail = false;
     await tester.tap(button);
     await tester.pumpAndSettle();
     expect(text, findsNothing);
-    expect(store.data.records.single.originals.single.text, '"고친 글"...');
-    expect(store.data.records.single.originals.single.citation, '개정판');
-    expect(store.data.records.single.originals.single.id, 'source');
+    expect(store.data.activeRecord!.originals.single.text, '"고친 글"...');
+    expect(store.data.activeRecord!.originals.single.citation, '개정판');
+    expect(store.data.activeRecord!.originals.single.id, 'source');
     expect(store.data.activePage!.toJson(), writing);
   });
 
@@ -737,7 +737,7 @@ void main() {
       await askToDelete();
       await tester.tap(find.text('취소'));
       await tester.pumpAndSettle();
-      expect(store.data.records.single.originals.length, 2);
+      expect(store.data.activeRecord!.originals.length, 2);
 
       store.fail = true;
       await askToDelete();
@@ -745,7 +745,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('원문을 삭제하지 못했어요. 다시 시도해 주세요.'), findsOneWidget);
       expect(
-        store.data.records.single.originals.first.reflection!.text,
+        store.data.activeRecord!.originals.first.reflection!.text,
         '함께 지울 느낀 점',
       );
 
@@ -755,7 +755,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('남겨 둘 원문'), findsOneWidget);
       expect(find.text('지울 원문'), findsNothing);
-      expect(store.data.records.single.originals.single.id, 'keep');
+      expect(store.data.activeRecord!.originals.single.id, 'keep');
       expect(store.data.activePage!.text, writing);
       expect(store.data.activePage!.guidedOriginalId, isNull);
       expect(store.data.activePage!.originalCitations, ['이전에 읽은 책']);
@@ -1191,7 +1191,7 @@ void main() {
       await tester.tap(confirm);
       await tester.pumpAndSettle();
       expect(
-        store.data.records.single.originals.single.citation,
+        store.data.activeRecord!.originals.single.citation,
         contains('위키문헌'),
       );
     }, () => client);
@@ -1299,9 +1299,9 @@ void main() {
           expect(intake.scans, fromBrowser ? 2 : 1);
           expect(find.text('원문 확인'), findsOneWidget);
           expect(photoDraft(tester).data, '캡처 첫 문단\n\n캡처 둘째 문단');
-          expect(store.data.records.single.originals, isEmpty);
+          expect(store.data.activeRecord!.originals, isEmpty);
           await saveWithPhoto(tester);
-          final saved = store.data.records.single.originals.single;
+          final saved = store.data.activeRecord!.originals.single;
           expect(saved.text, '캡처 첫 문단\n\n캡처 둘째 문단');
           expect(saved.citation, contains('curid=5182'));
           expect(saved.photoId, isNotNull);
@@ -1438,7 +1438,7 @@ void main() {
         await tester.tap(find.text('필사하기'));
         await settleSourceSheets(tester);
         expect(find.byType(SourceImportSheet), findsNothing);
-        final saved = store.data.records.single.originals.single;
+        final saved = store.data.activeRecord!.originals.single;
         expect(saved.text, '첫 줄\n둘째 줄');
         expect(store.data.activePage!.guidedOriginalId, saved.id);
         expect(remainingInline(tester), saved.text);
@@ -1530,7 +1530,7 @@ void main() {
           await tester.pumpAndSettle();
           await tester.tap(find.text('필사하기'));
           await settleSourceSheets(tester);
-          final saved = store.data.records.single.originals.last;
+          final saved = store.data.activeRecord!.originals.last;
           final page = store.data.activePage!;
           expect(saved.text, '첫 번째 연\n\n옮겨 쓸 연');
           expect(saved.citation, contains('oldid=387685'));
@@ -1540,7 +1540,11 @@ void main() {
           if (existingText) {
             expect(store.data.pages.first.text, '이미 쓴 글');
             expect(store.data.pages.first.guidedOriginalId, isNull);
-            expect(page.number, 2);
+            expect(page.number, 1);
+            expect(
+              store.data.activeRecord!.id,
+              isNot(store.data.records.first.id),
+            );
           }
           expect(reading, findsNothing);
           expect(find.byType(SourceImportSheet), findsNothing);
@@ -1633,7 +1637,7 @@ void main() {
     tester.widget<TextField>(bodyField).scrollController!.jumpTo(12);
     await tester.pumpAndSettle();
     expect(marker, findsNothing);
-    expect(store.data.records.single.originals.single.reflection!.text, note);
+    expect(store.data.activeRecord!.originals.single.reflection!.text, note);
   });
 
   testWidgets('Book originals can open from another record', (tester) async {
@@ -1706,7 +1710,7 @@ void main() {
     expect(store.data.pages.map((page) => page.text), ['', '먼저 쓰던 기록']);
     await tester.tap(closeIn(reading));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('먼저 쓰던 기록'));
+    await tester.tap(find.byKey(const ValueKey('contents-record-r2')));
     await tester.pumpAndSettle();
     expect(store.data.activePageId, 'p2');
 
@@ -2084,7 +2088,7 @@ void main() {
       expect(store.data.records.single.source, isEmpty);
       await tester.tap(confirm);
       await tester.pumpAndSettle();
-      expect(store.data.records.single.originals.single.text, '첫 줄\n\n둘째 줄');
+      expect(store.data.activeRecord!.originals.single.text, '첫 줄\n\n둘째 줄');
       expect(reading, findsOneWidget);
       await tester.tap(closeIn(reading));
       await tester.pumpAndSettle();
@@ -2123,7 +2127,7 @@ void main() {
       await tester.pumpAndSettle();
       await saveWithPhoto(tester);
       expect(
-        store.data.records.single.originals.single.text,
+        store.data.activeRecord!.originals.single.text,
         '첫 문단입니다.\n\n"둘째 문단입니다."',
       );
       expect(reading, findsOneWidget);
@@ -2176,7 +2180,7 @@ void main() {
       await tester.enterText(citation, '12쪽');
       await tester.pumpAndSettle();
       await saveWithPhoto(tester);
-      final original = store.data.records.single.originals.single;
+      final original = store.data.activeRecord!.originals.single;
       expect(original.text, '왼쪽 문단\n\n오른쪽 문단');
       expect(original.citation, '12쪽');
       expect(original.isFullPage, isTrue);
@@ -2470,7 +2474,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(confirm);
       await tester.pumpAndSettle();
-      expect(store.data.records.single.originals.single.text, '한');
+      expect(store.data.activeRecord!.originals.single.text, '한');
       expect(tester.takeException(), isNull);
     },
   );
@@ -2527,7 +2531,7 @@ void main() {
       final saved = store.data;
       expect(
         saved.activePage!.guidedOriginalId,
-        saved.records.single.originals.single.id,
+        saved.activeRecord!.originals.single.id,
       );
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();

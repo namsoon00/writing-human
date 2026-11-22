@@ -347,6 +347,7 @@ MergeResult mergeLibraries(Library base, Library local, Library remote) {
       id: winner.id,
       bookId: winner.bookId,
       title: winner.title,
+      titleIsManual: winner.titleIsManual,
       source: winner.source,
       originals: _mergeOriginals(
         b?.originals ?? const [],

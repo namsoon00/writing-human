@@ -466,23 +466,28 @@ class WritingRecord {
     this.bookId,
     required this.title,
     this.source = '',
+    this.titleIsManual = false,
     this.sourceParagraph = 0,
     this.originals = const [],
   });
   final String id, title, source;
   final String? bookId;
   final int sourceParagraph;
+  final bool titleIsManual;
   final List<RegisteredOriginal> originals;
 
   WritingRecord copy({
     String? bookId,
+    String? title,
+    bool? titleIsManual,
     String? source,
     int? sourceParagraph,
     List<RegisteredOriginal>? originals,
   }) => WritingRecord(
     id: id,
     bookId: bookId ?? this.bookId,
-    title: title,
+    title: title ?? this.title,
+    titleIsManual: titleIsManual ?? this.titleIsManual,
     source: source ?? this.source,
     sourceParagraph: sourceParagraph ?? this.sourceParagraph,
     originals: originals ?? this.originals,
@@ -491,6 +496,7 @@ class WritingRecord {
     'id': id,
     'bookId': bookId,
     'title': title,
+    if (titleIsManual) 'titleIsManual': true,
     'source': source,
     if (sourceParagraph != 0) 'sourceParagraph': sourceParagraph,
     if (originals.isNotEmpty)
@@ -500,6 +506,7 @@ class WritingRecord {
     id: j['id'] as String,
     bookId: j['bookId'] as String?,
     title: j['title'] as String,
+    titleIsManual: j['titleIsManual'] as bool? ?? false,
     source: j['source'] as String? ?? '',
     sourceParagraph: j['sourceParagraph'] as int? ?? 0,
     originals: RegisteredOriginal.read(j['originals']),

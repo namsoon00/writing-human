@@ -90,7 +90,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(SourceImportSheet), findsOneWidget);
       expect(find.text('원문을 저장하지 못했어요. 이 화면에서 다시 담아 주세요.'), findsOneWidget);
-      expect(store.data.records.single.originals, isEmpty);
+      expect(store.data.activeRecord!.originals, isEmpty);
       await tester.enterText(sourceField, '고쳐서 보관할 문장');
       await tester.pumpAndSettle();
       store.fail = false;
@@ -101,7 +101,7 @@ void main() {
         tester.widget<Text>(readingText).textSpan!.toPlainText(),
         '고쳐서 보관할 문장',
       );
-      expect(store.data.records.single.originals.single.text, '고쳐서 보관할 문장');
+      expect(store.data.activeRecord!.originals.single.text, '고쳐서 보관할 문장');
       expect(store.data.activePageId, 'p');
       expect(body.value, before);
       expect(store.data.activePage!.guidedOriginalId, isNull);
@@ -122,7 +122,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('필사하기'));
       await settleSourceSheets(tester);
-      final original = store.data.records.single.originals.single;
+      final original = store.data.activeRecord!.originals.single;
       expect(reading, findsNothing);
       expect(find.byType(SourceImportSheet), findsNothing);
       expect(store.data.pages.first.text, before.text);

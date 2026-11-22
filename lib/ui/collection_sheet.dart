@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/library_controller.dart';
 import '../data/library_search.dart';
 import '../data/model.dart';
+import '../data/writing_title.dart';
 import 'paper.dart';
 import 'paper_panel.dart';
 import 'paper_search_field.dart';
@@ -83,6 +84,17 @@ class _CollectionSheetState extends State<CollectionSheet> {
     );
     if (name != null && mounted && controller == c) {
       c.setBookTitle(book.id, name);
+    }
+  }
+
+  Future<void> _renameWriting(WritingRecord record, String title) async {
+    final owner = c;
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => BookTitleDialog(title: title, isWriting: true),
+    );
+    if (name != null && mounted && c == owner) {
+      owner.setRecordTitle(record.id, name);
     }
   }
 
@@ -169,7 +181,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
   }
 
   Widget _bookActions(Book book) => Wrap(
-    alignment: WrapAlignment.center,
+    alignment: WrapAlignment.start,
     spacing: 8,
     children: [
       TextButton.icon(
@@ -190,45 +202,93 @@ class _CollectionSheetState extends State<CollectionSheet> {
     ],
   );
 
-  Widget _contentsHeader(Book book, String summary, int? resumeNumber) {
+  Widget _contentsHeader(Book book, String summary, int pageCount) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 18, 4, 24),
+      padding: const EdgeInsets.fromLTRB(4, 24, 4, 20),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const InkMark(size: 12),
-          const SizedBox(height: 12),
-          Semantics(
-            header: true,
-            child: Text(
-              book.title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 30, height: 1.3, color: ink),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            summary,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, height: 1.5, color: muted),
-          ),
-          if (resumeNumber != null) ...[
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: () => widget.onResumeBook(book),
-              icon: const Icon(CupertinoIcons.book, size: 16),
-              label: Text(
-                '이어서 쓰기 · $resumeNumber쪽',
-                textAlign: TextAlign.center,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const InkMark(size: 10),
+                    const SizedBox(height: 12),
+                    Semantics(
+                      header: true,
+                      child: Text(
+                        book.title,
+                        style: const TextStyle(
+                          fontSize: 28,
+                          height: 1.4,
+                          color: ink,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      summary,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        height: 1.6,
+                        color: muted,
+                      ),
+                    ),
+                    if (book.author.isNotEmpty)
+                      Text(
+                        '지은이 ${book.author}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          height: 1.6,
+                          color: muted,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-              style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-            ),
-          ],
-          const SizedBox(height: 8),
+              if (MediaQuery.textScalerOf(context).scale(20) < 32) ...[
+                const SizedBox(width: 18),
+                ExcludeSemantics(
+                  child: BookCover(
+                    key: const ValueKey('contents-cover-preview'),
+                    title: '',
+                    width: 84,
+                    variant: c.coverIndexFor(book),
+                    details: c.detailsFor(book),
+                    pageCount: pageCount,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 14),
           _bookActions(book),
         ],
       ),
     );
   }
+
+  Widget _resumeWriting(Book book, int number) => Padding(
+    key: const ValueKey('contents-resume-footer'),
+    padding: const EdgeInsets.fromLTRB(26, 8, 26, 16),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Divider(height: 20),
+        FilledButton.icon(
+          key: const ValueKey('contents-resume-writing'),
+          onPressed: () => widget.onResumeBook(book),
+          icon: const Icon(CupertinoIcons.book, size: 19),
+          label: Text('이어서 쓰기 · $number쪽', textAlign: TextAlign.center),
+          style: FilledButton.styleFrom(minimumSize: const Size(0, 56)),
+        ),
+      ],
+    ),
+  );
 
   Widget _contents(
     List<WritingRecord> records,
@@ -237,171 +297,198 @@ class _CollectionSheetState extends State<CollectionSheet> {
     String summary,
   ) {
     final first = <String, ({WritingPage page, int number})>{};
-    final firstWrittenLine = <String, String>{};
+    final byRecord = <String, List<WritingPage>>{};
     for (final (i, page) in pages.indexed) {
       first.putIfAbsent(page.recordId, () => (page: page, number: i + 1));
-      final text = page.text.trim();
-      if (text.isNotEmpty) {
-        firstWrittenLine.putIfAbsent(
-          page.recordId,
-          () => text.split('\n').first,
-        );
-      }
+      (byRecord[page.recordId] ??= []).add(page);
     }
     final resumePage = c.resumePageForBook(book.id);
     final resumeIndex = pages.indexWhere((page) => page.id == resumePage?.id);
     final details = c.detailsFor(book);
-    return ListView.builder(
-      key: ValueKey('book-contents-${book.id}'),
-      padding: const EdgeInsets.fromLTRB(26, 4, 26, 24),
-      itemCount: records.length + 1,
-      itemBuilder: (_, index) {
-        if (index == 0) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (!showSearch)
-                _contentsHeader(
-                  book,
-                  summary,
-                  resumeIndex < 0 ? null : resumeIndex + 1,
-                ),
-              const Divider(height: 1, color: line),
-              Row(
-                children: [
-                  Expanded(
-                    child: Semantics(
-                      header: true,
-                      child: const Text('목차', style: TextStyle(fontSize: 19)),
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: () => widget.onNewWriting(book.id),
-                    icon: const Icon(CupertinoIcons.plus, size: 16),
-                    label: const Text('새 글'),
-                    style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
-                  ),
-                ],
-              ),
-              if (records.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 22),
-                  child: Text('아직 쓴 글이 없어요.', style: TextStyle(color: muted)),
-                ),
-            ],
-          );
-        }
-        final record = records[index - 1];
-        final entry = first[record.id];
-        final resumed = record.id == resumePage?.recordId;
-        final excerpt = firstWrittenLine[record.id];
-        final title =
-            RegExp(r'^필사 [0-9]+$').hasMatch(record.title) && excerpt != null
-            ? excerpt
-            : record.title;
+    return LayoutBuilder(
+      builder: (context, box) {
+        final pinResume =
+            box.maxHeight >= 360 &&
+            !(MediaQuery.textScalerOf(context).scale(20) >= 40 &&
+                box.maxHeight < 700);
+        final hasResume = resumeIndex >= 0;
         return Column(
           children: [
-            if (index > 1)
-              if (details.recordDivider.enabled)
-                RecordDivider(choice: details.recordDivider)
-              else
-                const Divider(height: 1, color: line),
-            Semantics(
-              selected: resumed,
-              label: resumed ? '이어서 쓰는 글' : null,
-              child: Material(
-                type: MaterialType.transparency,
-                borderRadius: BorderRadius.circular(4),
-                child: InkWell(
-                  key: ValueKey('contents-record-${record.id}'),
-                  borderRadius: BorderRadius.circular(4),
-                  onTap: entry == null
-                      ? null
-                      : () {
-                          final open = widget.onContentsPage;
-                          if (open == null) {
-                            widget.onRecord(record);
-                          } else {
-                            open(entry.page);
-                          }
-                        },
-                  child: Stack(
-                    children: [
-                      Padding(
-                        padding: EdgeInsetsDirectional.fromSTEB(
-                          details.ribbon.enabled ? 26 : 4,
-                          14,
-                          4,
-                          14,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+            Expanded(
+              child: ListView.builder(
+                key: ValueKey('book-contents-${book.id}'),
+                padding: const EdgeInsets.fromLTRB(26, 4, 26, 24),
+                itemCount:
+                    records.length + 1 + (!pinResume && hasResume ? 1 : 0),
+                itemBuilder: (_, index) {
+                  if (index == 0) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (!showSearch)
+                          _contentsHeader(book, summary, pages.length),
+                        const Divider(height: 1, color: line),
+                        Row(
                           children: [
-                            LayoutBuilder(
-                              builder: (_, box) => Row(
-                                children: [
-                                  ConstrainedBox(
-                                    constraints: BoxConstraints(
-                                      maxWidth: entry == null
-                                          ? box.maxWidth
-                                          : box.maxWidth * .72,
-                                    ),
-                                    child: Text(
-                                      title,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 17,
-                                        height: 1.55,
-                                      ),
-                                    ),
-                                  ),
-                                  if (entry != null) ...[
-                                    const Expanded(child: _ContentsLeader()),
-                                    Text(
-                                      '${entry.number}',
-                                      key: ValueKey(
-                                        'contents-page-${record.id}',
-                                      ),
-                                      semanticsLabel: '${entry.number}쪽',
-                                      style: const TextStyle(
-                                        color: muted,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            if (excerpt != null && excerpt != title)
-                              Text(
-                                excerpt,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: muted,
-                                  fontSize: 12,
-                                  height: 1.55,
+                            Expanded(
+                              child: Semantics(
+                                header: true,
+                                child: const Text(
+                                  '목차',
+                                  style: TextStyle(fontSize: 19),
                                 ),
                               ),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => widget.onNewWriting(book.id),
+                              icon: const Icon(CupertinoIcons.plus, size: 16),
+                              label: const Text('새 글'),
+                              style: TextButton.styleFrom(
+                                minimumSize: const Size(0, 48),
+                              ),
+                            ),
                           ],
                         ),
-                      ),
-                      if (resumed && details.ribbon.enabled)
-                        PositionedDirectional(
-                          top: 0,
-                          start: 4,
-                          child: RibbonBookmark(
-                            choice: details.ribbon.copy(variant: 1),
-                            width: 13,
-                            height: 32,
+                        if (records.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 22),
+                            child: Text(
+                              '아직 쓴 글이 없어요.',
+                              style: TextStyle(color: muted),
+                            ),
                           ),
-                        ),
+                      ],
+                    );
+                  }
+                  if (index > records.length) {
+                    return _resumeWriting(book, resumeIndex + 1);
+                  }
+                  final record = records[index - 1];
+                  final entry = first[record.id];
+                  final resumed = record.id == resumePage?.recordId;
+                  final title = writingTitle(
+                    record,
+                    byRecord[record.id] ?? const [],
+                  );
+                  return Column(
+                    children: [
+                      if (index > 1)
+                        if (details.recordDivider.enabled)
+                          RecordDivider(choice: details.recordDivider)
+                        else
+                          const Divider(height: 1, color: line),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Semantics(
+                              selected: resumed,
+                              label: resumed ? '이어서 쓰는 글' : null,
+                              child: Material(
+                                type: MaterialType.transparency,
+                                borderRadius: BorderRadius.circular(4),
+                                child: InkWell(
+                                  key: ValueKey('contents-record-${record.id}'),
+                                  borderRadius: BorderRadius.circular(4),
+                                  onTap: entry == null
+                                      ? null
+                                      : () {
+                                          final open = widget.onContentsPage;
+                                          if (open == null) {
+                                            widget.onRecord(record);
+                                          } else {
+                                            open(entry.page);
+                                          }
+                                        },
+                                  child: Stack(
+                                    children: [
+                                      Padding(
+                                        padding: EdgeInsetsDirectional.fromSTEB(
+                                          details.ribbon.enabled ? 26 : 4,
+                                          14,
+                                          4,
+                                          14,
+                                        ),
+                                        child: LayoutBuilder(
+                                          builder: (_, box) => Row(
+                                            children: [
+                                              ConstrainedBox(
+                                                constraints: BoxConstraints(
+                                                  maxWidth: entry == null
+                                                      ? box.maxWidth
+                                                      : box.maxWidth * .72,
+                                                ),
+                                                child: Text(
+                                                  title,
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontSize: 17,
+                                                    height: 1.55,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (entry != null) ...[
+                                                const Expanded(
+                                                  child: _ContentsLeader(),
+                                                ),
+                                                Text(
+                                                  '${entry.number}',
+                                                  key: ValueKey(
+                                                    'contents-page-${record.id}',
+                                                  ),
+                                                  semanticsLabel:
+                                                      '${entry.number}쪽',
+                                                  style: const TextStyle(
+                                                    color: muted,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      if (resumed && details.ribbon.enabled)
+                                        Positioned(
+                                          left: 0,
+                                          top: 8,
+                                          child: RibbonBookmark(
+                                            width: 13,
+                                            height: 32,
+                                            choice: details.ribbon.copy(
+                                              variant: 1,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          PopupMenuButton<VoidCallback>(
+                            key: ValueKey('contents-writing-menu-${record.id}'),
+                            enabled: c.saveError == null,
+                            tooltip: '글 더 보기',
+                            icon: const Icon(CupertinoIcons.ellipsis, size: 18),
+                            onSelected: (action) => action(),
+                            itemBuilder: (_) => [
+                              PopupMenuItem(
+                                value: () => _renameWriting(record, title),
+                                child: const Text('글 이름 변경'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ],
-                  ),
-                ),
+                  );
+                },
               ),
             ),
+            if (pinResume && hasResume) _resumeWriting(book, resumeIndex + 1),
           ],
         );
       },
@@ -477,9 +564,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
       final volume = book == null
           ? const <WritingPage>[]
           : c.library.volumePages(bookId: book.id);
-      final summary =
-          '${records.length}편 · ${volume.length}쪽'
-          '${book == null || book.author.isEmpty ? '' : ' · ${book.author}'}';
+      final summary = '${records.length}편 · ${volume.length}쪽';
       final sheet = Column(
         children: [
           Padding(
@@ -691,7 +776,15 @@ class _CollectionSheetState extends State<CollectionSheet> {
             grainOpacity: book == null
                 ? panelGrainOpacity
                 : paperGrainOpacity[paperIndex],
-            child: sheet,
+            child: book == null
+                ? sheet
+                : Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      BookBinding(choice: c.detailsFor(book).binding),
+                      sheet,
+                    ],
+                  ),
           ),
         ),
       );

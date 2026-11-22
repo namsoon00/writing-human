@@ -348,6 +348,11 @@ void main() {
       expect(store.data.activePageId, isNot('p'));
       expect(store.data.pages.first.toJson(), blankBefore);
       expect(store.data.pages, hasLength(2));
+      expect(store.data.records, hasLength(2));
+      final aRecord = store.data.activeRecord!;
+      expect(aRecord.id, isNot('r'));
+      expect(aRecord.title, first.citation);
+      expect(store.data.activePage!.number, 1);
       final aPage = store.data.activePageId;
       final aInput = tester.widget<TextField>(field).controller!;
       await tester.enterText(field, '첫 원문');
@@ -363,6 +368,8 @@ void main() {
       expect(aInput.value, value);
       final writtenBefore = store.data.activePage!.toJson();
       await transcribe('a', doubleTap: true);
+      expect(store.data.records, hasLength(3));
+      expect(store.data.activeRecord!.id, isNot(aRecord.id));
       final repeatPage = store.data.activePage!;
       expect(repeatPage.id, isNot(aPage));
       expect(repeatPage.text, isEmpty);
@@ -388,6 +395,8 @@ void main() {
         'a',
       );
       expect(store.data.pages, hasLength(4));
+      expect(store.data.records, hasLength(4));
+      expect(store.data.activePage!.number, 1);
       expect(store.data.activePage!.passages.single.original!.id, 'b');
       expect(store.data.activePage!.text, isEmpty);
       expect(find.byKey(const ValueKey('page-original-markers')), findsNothing);

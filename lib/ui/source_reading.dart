@@ -477,7 +477,7 @@ class _SourceReadingState extends State<SourceReading> {
           const Padding(
             padding: EdgeInsets.only(bottom: 8),
             child: Text(
-              '새 쪽에서 시작해요.',
+              '새 글의 첫 쪽에서 시작해요.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, height: 1.5, color: muted),
             ),

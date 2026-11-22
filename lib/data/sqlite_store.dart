@@ -18,7 +18,7 @@ class SqliteLibraryStore implements LibraryStore {
     final db = await (factory ?? databaseFactory).openDatabase(
       file,
       options: OpenDatabaseOptions(
-        version: 13,
+        version: 14,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
         onUpgrade: (db, oldVersion, newVersion) async {
           if (oldVersion < 2) {
@@ -94,13 +94,18 @@ class SqliteLibraryStore implements LibraryStore {
           if (oldVersion < 13) {
             await db.execute('ALTER TABLE pages ADD COLUMN original_slip TEXT');
           }
+          if (oldVersion < 14) {
+            await db.execute(
+              'ALTER TABLE records ADD COLUMN title_is_manual INTEGER NOT NULL DEFAULT 0',
+            );
+          }
         },
         onCreate: (db, version) async {
           await db.execute(
             "CREATE TABLE books (id TEXT PRIMARY KEY, title TEXT NOT NULL, author TEXT NOT NULL, owner TEXT NOT NULL DEFAULT '', index_label TEXT NOT NULL DEFAULT '', cover_index INTEGER CHECK(cover_index BETWEEN 0 AND 2), paper_index INTEGER CHECK(paper_index BETWEEN 0 AND 3), detail_overrides TEXT NOT NULL DEFAULT '{}', originals TEXT NOT NULL DEFAULT '[]')",
           );
           await db.execute(
-            "CREATE TABLE records (id TEXT PRIMARY KEY, book_id TEXT REFERENCES books(id), title TEXT NOT NULL, source TEXT NOT NULL DEFAULT '', source_paragraph INTEGER NOT NULL DEFAULT 0, originals TEXT NOT NULL DEFAULT '[]')",
+            "CREATE TABLE records (id TEXT PRIMARY KEY, book_id TEXT REFERENCES books(id), title TEXT NOT NULL, title_is_manual INTEGER NOT NULL DEFAULT 0, source TEXT NOT NULL DEFAULT '', source_paragraph INTEGER NOT NULL DEFAULT 0, originals TEXT NOT NULL DEFAULT '[]')",
           );
           await db.execute(
             "CREATE TABLE pages (id TEXT PRIMARY KEY, record_id TEXT NOT NULL REFERENCES records(id), number INTEGER NOT NULL, text TEXT NOT NULL, selection_base INTEGER NOT NULL, selection_extent INTEGER NOT NULL, scroll REAL NOT NULL, written_on TEXT, pencil_marks TEXT NOT NULL DEFAULT '[]', passages TEXT NOT NULL DEFAULT '[]', guided_original_id TEXT, reference_only INTEGER NOT NULL DEFAULT 0, original_citations TEXT NOT NULL DEFAULT '[]', original_slip TEXT, UNIQUE(record_id, number))",
@@ -146,6 +151,7 @@ class SqliteLibraryStore implements LibraryStore {
               id: j['id'] as String,
               bookId: j['book_id'] as String?,
               title: j['title'] as String,
+              titleIsManual: j['title_is_manual'] == 1,
               source: j['source'] as String,
               sourceParagraph: j['source_paragraph'] as int,
               originals: RegisteredOriginal.read(
@@ -242,6 +248,7 @@ class SqliteLibraryStore implements LibraryStore {
           'id': r.id,
           'book_id': r.bookId,
           'title': r.title,
+          'title_is_manual': r.titleIsManual ? 1 : 0,
           'source': r.source,
           'source_paragraph': r.sourceParagraph,
           'originals': jsonEncode(r.originals.map((o) => o.toJson()).toList()),

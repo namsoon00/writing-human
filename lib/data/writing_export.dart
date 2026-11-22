@@ -5,6 +5,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import 'model.dart';
+import 'writing_title.dart';
 
 List<WritingPage> _orderedPages(Library library, String recordId) =>
     library.pages.where((p) => p.recordId == recordId).toList()
@@ -13,7 +14,7 @@ List<WritingPage> _orderedPages(Library library, String recordId) =>
 Uint8List exportRecordText(Library library, WritingRecord record) =>
     utf8.encode(
       [
-        record.title,
+        writingTitle(record, _orderedPages(library, record.id)),
         ..._orderedPages(library, record.id).map((p) => p.text),
       ].join('\n\n'),
     );
@@ -30,7 +31,7 @@ Future<Uint8List> exportBookPdf(Library library, Book book) async {
     entries: [
       for (final record in library.records.where((r) => r.bookId == book.id))
         (
-          title: record.title,
+          title: writingTitle(record, _orderedPages(library, record.id)),
           pages: _orderedPages(library, record.id).map((p) => p.text).toList(),
         ),
     ],

@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../data/library_controller.dart';
+import '../data/writing_title.dart';
 import '../data/library_search.dart';
 import '../data/model.dart';
 import '../data/original_photo_store.dart';
@@ -1133,36 +1134,20 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               )
               .firstOrNull;
       if (source == null) return;
-      if (bookId == null
-          ? page.recordId == origin.recordId
-          : book?.id == bookId) {
-        _bookLeaf = null;
-        if (fresh) {
-          fresh = false;
-          userFresh = false;
-          c.saveDraft(
-            c.attachedPage(draft, source),
-            bookId: bookId,
-            keepBlank: true,
-          );
-        } else {
-          // Starting a transcription is distinct from opening an existing one.
-          c.addPage(
-            recordId: page.recordId,
-            guidedOriginalId: source.id,
-            originalCitation: source.citation,
-          );
-        }
-      } else {
-        _bookLeaf = null;
-        fresh = false;
-        userFresh = false;
-        c.saveDraft(
-          c.attachedPage(_blank(), source),
-          bookId: bookId,
-          keepBlank: true,
-        );
-      }
+      // Each new transcription is its own writing; continuation uses addPage.
+      final next = fresh ? draft : _blank();
+      _bookLeaf = null;
+      fresh = false;
+      userFresh = false;
+      c.saveDraft(
+        c.attachedPage(next, source),
+        bookId: bookId,
+        title: originalWritingTitle(source),
+        // Loose originals belong to a record. Keep the catalog available when
+        // starting another writing without a book.
+        originals: bookId == null ? originals : const [],
+        keepBlank: true,
+      );
       target = page.id;
     }, paperTurn: false);
     if (target == null ||

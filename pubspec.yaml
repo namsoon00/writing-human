@@ -114,7 +114,7 @@ flutter:
   assets:
     - assets/images/
     - assets/audio/page-turn.mp3
-    - assets/audio/pencil-stroke.wav
+    - assets/audio/pencil-slow-settle.wav
     - assets/audio/cafe-rain.wav
     - assets/audio/supertonic-license.txt
     - assets/audio/supertonic-code-license.txt

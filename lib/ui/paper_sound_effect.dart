@@ -1,5 +1,15 @@
+const _requestLifetimeMs = 240;
+const _pencilGlideMs = 1640;
+const _requestLifetime = Duration(milliseconds: _requestLifetimeMs);
+const pencilGlideDuration = Duration(milliseconds: _pencilGlideMs);
+
 enum PaperSoundEffect {
-  pencil('pencil-stroke.wav', .68, Duration(milliseconds: 85)),
+  // Leave room for delayed audio activation so two glides cannot stack.
+  pencil(
+    'pencil-slow-settle.wav',
+    1,
+    Duration(milliseconds: _pencilGlideMs + _requestLifetimeMs),
+  ),
   pageTurn('page-turn.mp3', .42, Duration(milliseconds: 105));
 
   const PaperSoundEffect(this.file, this.volume, this.minimumInterval);
@@ -17,6 +27,5 @@ class PaperSoundRequest {
   final bool Function() isCurrent;
   final Stopwatch _age;
 
-  bool get canPlay =>
-      _age.elapsed < const Duration(milliseconds: 240) && isCurrent();
+  bool get canPlay => _age.elapsed < _requestLifetime && isCurrent();
 }

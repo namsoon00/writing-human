@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:writing_human/ui/paper_sound_effect.dart';
 import 'package:writing_human/ui/writing_sound.dart';
 
 TextEditingValue input(
@@ -13,6 +14,26 @@ TextEditingValue input(
 );
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test(
+    'The bundled pencil glide has time to finish before another starts',
+    () async {
+      final effect = PaperSoundEffect.pencil;
+      final wav = await rootBundle.load('assets/${effect.asset}');
+      // The bundled PCM file uses a standard 44-byte WAV header.
+      final byteRate = wav.getUint32(28, .little);
+      final pcmLength = wav.getUint32(40, .little);
+      expect(pcmLength, wav.lengthInBytes - 44);
+      final duration = Duration(microseconds: pcmLength * 1000000 ~/ byteRate);
+      expect(duration, pencilGlideDuration);
+      expect(
+        effect.minimumInterval - duration,
+        const Duration(milliseconds: 240),
+      );
+    },
+  );
+
   test('Each new letter or syllable requests one stroke', () {
     final cases = [
       (input('', 0), input('ㅎ', 1, const TextRange(start: 0, end: 1)), true),

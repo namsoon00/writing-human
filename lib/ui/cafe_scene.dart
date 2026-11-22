@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../cafe/cafe_camera.dart';
+import '../cafe/cafe_materials.dart';
 import '../cafe/cafe_renderer.dart';
 import '../cafe/cafe_view_controller.dart';
 import '../cafe/cafe_visit.dart';
@@ -129,7 +130,7 @@ class _CafeSceneState extends State<CafeScene>
   List<double> lengths = [];
   double total = 0;
   int request = 0;
-  ui.Image? wood, garden, sign, walnut, limestone, woven;
+  ui.Image? wood, garden, sign, walnut, limestone, woven, plaster, artwork;
 
   @override
   void initState() {
@@ -259,6 +260,8 @@ class _CafeSceneState extends State<CafeScene>
       _texture('cafe-walnut-longgrain.jpg'),
       _texture('cafe-limestone-albedo.jpg'),
       _makeWovenCord(),
+      CafeMaterials.plaster(),
+      CafeMaterials.artwork(),
     ]);
     if (!mounted) {
       for (final image in images) {
@@ -273,6 +276,8 @@ class _CafeSceneState extends State<CafeScene>
       walnut = images[3];
       limestone = images[4];
       woven = images[5];
+      plaster = images[6];
+      artwork = images[7];
     });
   }
 
@@ -377,6 +382,8 @@ class _CafeSceneState extends State<CafeScene>
     walnut?.dispose();
     limestone?.dispose();
     woven?.dispose();
+    plaster?.dispose();
+    artwork?.dispose();
     super.dispose();
   }
 
@@ -529,6 +536,8 @@ class _CafeSceneState extends State<CafeScene>
                       walnut: walnut,
                       limestone: limestone,
                       woven: woven,
+                      plaster: plaster,
+                      artwork: artwork,
                       time: sceneTime,
                       teaFilled: c.teaFilled,
                       bellAt: c.bellAt,

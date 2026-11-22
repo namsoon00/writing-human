@@ -1,0 +1,36 @@
+{
+  "type": "actual Flutter fixture renders; not generated concepts or browser/device captures",
+  "floor_selection": "B warm mocha stone",
+  "scope": [
+    "mocha honed stone floor",
+    "lime-plaster walls",
+    "walnut entrance panels and frames",
+    "brass sconces and picture lighting",
+    "sage tile backsplash",
+    "coffee counter and writing desk details"
+  ],
+  "renders": [
+    {
+      "name": "entrance-wide",
+      "path": "design/cafe/20261122/mocha-interior/entrance-wide.jpg",
+      "bytes": 400381,
+      "sha256": "26db7f81ceddad30fbc7e4920cf5af9673bc50323749bd36b4b85383e697a96b"
+    },
+    {
+      "name": "entrance-wall-wide",
+      "path": "design/cafe/20261122/mocha-interior/entrance-wall-wide.jpg",
+      "bytes": 226675,
+      "sha256": "4ecc2bded8c884c4bf8700845df1caa307b16043177ce1cfb833673d8f8fb9c8"
+    },
+    {
+      "name": "shared-390",
+      "path": "design/cafe/20261122/mocha-interior/shared-390.jpg",
+      "bytes": 170435,
+      "sha256": "1fd36d5228b908fa64402c81c2bdf3af1f282de4dac59f37d6c42822a83a484c"
+    }
+  ],
+  "limitations": [
+    "Canvas painter depth sorting and diffuse/local lighting; no path tracing or physically based reflections",
+    "iPhone Safari actual touch, frame rate and heat not verified"
+  ]
+}

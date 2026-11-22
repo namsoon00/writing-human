@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/cafe/cafe_camera.dart';
+import 'package:writing_human/cafe/cafe_materials.dart';
 import 'package:writing_human/cafe/cafe_renderer.dart';
 import 'package:writing_human/cafe/cafe_world.dart';
 
@@ -29,6 +30,8 @@ void main() {
         final limestone = await texture(
           'assets/images/cafe-limestone-albedo.jpg',
         );
+        final plaster = await CafeMaterials.plaster();
+        final artwork = await CafeMaterials.artwork();
         final world = CafeWorld();
         const size = ui.Size(240, 400);
         try {
@@ -45,6 +48,8 @@ void main() {
                   garden: garden,
                   walnut: walnut,
                   limestone: limestone,
+                  plaster: plaster,
+                  artwork: artwork,
                   camera: CafeCamera(
                     position: position,
                     yaw: turn * math.pi / 6,
@@ -87,6 +92,8 @@ void main() {
           garden.dispose();
           walnut.dispose();
           limestone.dispose();
+          plaster.dispose();
+          artwork.dispose();
         }
       });
     },

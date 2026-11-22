@@ -9,6 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/data/demo_store.dart';
 import 'package:writing_human/data/model.dart';
 import 'package:writing_human/main.dart';
+import 'package:writing_human/ui/cafe_scene.dart';
+import 'package:writing_human/cafe/cafe_camera.dart';
 
 void main() {
   testWidgets(
@@ -59,7 +61,7 @@ void main() {
                       as RenderRepaintBoundary)
                   .toImage(pixelRatio: 2);
           final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-          final file = File('output/cafe-ivory-20261122/$name.png');
+          final file = File('output/cafe-mocha-20261122/$name.png');
           await file.parent.create(recursive: true);
           await file.writeAsBytes(bytes!.buffer.asUint8List());
           image.dispose();
@@ -84,6 +86,23 @@ void main() {
       tester.view.physicalSize = const Size(1200, 800);
       await tester.pumpAndSettle();
       await capture('entrance-wide');
+      final c = tester.widget<CafeScene>(find.byType(CafeScene)).controller;
+      c.updateCamera(
+        const CafeCamera(
+          position: CafePoint(1.8, 1.62, 2.2),
+          yaw: 3.14,
+          pitch: -.05,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await capture('entrance-wall-wide');
+      c.updateCamera(
+        const CafeCamera(position: CafePoint(.4, 1.62, -2.7), pitch: -.12),
+      );
+      await tester.pumpAndSettle();
+      await capture('counter-close-wide');
+      c.updateCamera(CafeCamera.entrance);
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('공간 안내'));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('cafe-seat-shared')));

@@ -29,8 +29,19 @@ void main() {
           sign = await texture(),
           walnut = await texture(),
           limestone = await texture(),
-          woven = await texture();
-      final originals = [wood, garden, sign, walnut, limestone, woven];
+          woven = await texture(),
+          plaster = await texture(),
+          artwork = await texture();
+      final originals = [
+        wood,
+        garden,
+        sign,
+        walnut,
+        limestone,
+        woven,
+        plaster,
+        artwork,
+      ];
       final world = CafeWorld();
       final courtyard = CafeWorld(courtyard: true);
       try {
@@ -46,6 +57,8 @@ void main() {
             walnut: walnut,
             limestone: limestone,
             woven: woven,
+            plaster: plaster,
+            artwork: artwork,
             camera: CafeCamera(
               position: frame < 12
                   ? CafeCamera.entrance.position
@@ -77,7 +90,10 @@ void main() {
                     (pixels[i] - 243).abs() +
                     (pixels[i + 1] - 234).abs() +
                     (pixels[i + 2] - 219).abs();
-                if (difference > 45) visible++;
+                // Bright plaster is deliberately close to the room background.
+                // Use the same RGB-distance criterion as the bundled-material
+                // rotation test; an empty/vignette-only frame still fails.
+                if (difference > 12) visible++;
                 samples++;
               }
             }

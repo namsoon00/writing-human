@@ -1,5 +1,5 @@
 {
-  "status": "바닥 색상 이미지 시안 · 사용자 선택 전 · 앱 미반영",
+  "status": "B안 선택 · 모카 바닥과 실내 세부 구현",
   "mode": "built-in image_gen edit",
   "reference": "../material-study/stone-entrance-concept.png",
   "assets": [
@@ -24,11 +24,12 @@
   ],
   "direction": "바닥 재질의 명도를 낮추되 조도·벽·천장·종이의 밝기는 유지한다.",
   "recommendation": "B는 더 짙고 포근한 모카, A는 더 부드러운 웜 토프. 바닥 선택 전에는 앱의 기존 석재를 유지한다.",
-  "implementation_boundary": "사용자가 명시한 3인칭/아바타 제거는 별도 구현한다. 바닥 색은 이미지 제안만 하며 이번 제거 배포에 적용하지 않는다.",
+  "implementation_boundary": "선택된 B안의 모카 바닥을 적용하고 벽·조명·가구의 세부를 구현한다. A안은 비교 이력이다.",
   "role_review": {
     "designer": "같은 공간과 조도에서 바닥만 어둡게 비교한다. 화면 전체를 어둡게 만들지 않는다.",
     "planner": "사용자가 3인칭을 철회했으므로 기존 1인칭 공간과 걷기에 집중한다.",
     "marketer": "생성 시안과 실제 앱 적용을 구분한다.",
     "developer": "아바타/3인칭 구현을 제거하되 경로·가감속·키보드·입력/저장 검증을 유지한다."
-  }
+  },
+  "selected_option": "B"
 }

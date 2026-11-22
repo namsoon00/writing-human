@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/cafe/cafe_camera.dart';
+import 'package:writing_human/cafe/cafe_materials.dart';
 import 'package:writing_human/cafe/cafe_renderer.dart';
 import 'package:writing_human/cafe/cafe_visit.dart';
 import 'package:writing_human/cafe/cafe_world.dart';
@@ -49,6 +50,57 @@ void main() {
   );
 
   test(
+    'Framed wall art stays visible from straight and oblique first-person views',
+    () async {
+      final world = CafeWorld(), art = await CafeMaterials.artwork();
+      try {
+        for (final position in [
+          const CafePoint(2.44, 1.62, 3.1),
+          const CafePoint(1.8, 1.62, 2.2),
+        ]) {
+          final camera = CafeCamera(
+            position: position,
+            yaw: 3.14159265,
+            pitch: -.05,
+          );
+          const size = ui.Size(800, 600);
+          final recorder = ui.PictureRecorder();
+          CafeRenderer(
+            world: world,
+            camera: camera,
+            artwork: art,
+          ).paint(ui.Canvas(recorder), size);
+          final picture = recorder.endRecording();
+          final image = await picture.toImage(800, 600);
+          try {
+            final pixels = (await image.toByteData(
+              format: ui.ImageByteFormat.rawRgba,
+            ))!.buffer.asUint8List();
+            for (final x in [2.32, 2.44, 2.56]) {
+              final point = CafeRenderer.project(
+                CafePoint(x, 1.77, 4.819),
+                camera,
+                size,
+              )!;
+              final i = (point.dy.round() * 800 + point.dx.round()) * 4;
+              expect(
+                pixels[i] + pixels[i + 1] + pixels[i + 2],
+                lessThan(460),
+                reason: 'walnut/mat backing must not hide landscape at $x',
+              );
+            }
+          } finally {
+            image.dispose();
+            picture.dispose();
+          }
+        }
+      } finally {
+        art.dispose();
+      }
+    },
+  );
+
+  test(
     'Tabletop does not paint across the seated notebook, pencil or cup',
     () async {
       final world = CafeWorld(), camera = CafeCamera.seated(CafeSeat.shared);
@@ -82,7 +134,7 @@ void main() {
             reason: 'pencil hidden at x=$x',
           );
         }
-        for (final z in [.67, .74, .83]) {
+        for (final z in [.64, .67, .83]) {
           expect(
             brightness(CafePoint(.32, .8005, z)),
             greaterThan(650),

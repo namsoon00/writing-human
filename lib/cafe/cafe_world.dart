@@ -5,8 +5,18 @@ import 'cafe_camera.dart';
 import 'cafe_visit.dart';
 
 part 'cafe_courtyard.dart';
+part 'cafe_interior.dart';
 
-enum CafeSurface { plain, oak, walnut, limestone, cord, brass }
+enum CafeSurface {
+  plain,
+  oak,
+  walnut,
+  limestone,
+  cord,
+  brass,
+  plaster,
+  artwork,
+}
 
 enum CafeGrain { x, y, z }
 
@@ -60,6 +70,7 @@ class CafeWorld {
     } else {
       _build();
     }
+    _subdividePrints();
   }
   final bool courtyard;
   Iterable<CafeTarget> get targets =>
@@ -73,6 +84,7 @@ class CafeWorld {
       sage = Color(0xff58634f),
       cream = Color(0xffeee4cf);
   CafeTarget? _target;
+  static const mochaFloor = Color(0xff827163);
   static const halfWidth = 4.4, halfDepth = 5.0, ceiling = 2.95;
   static CafePoint desk(CafeSeat seat) => switch (seat) {
     CafeSeat.window => const CafePoint(-3.72, .77, 1.9),
@@ -659,25 +671,63 @@ class CafeWorld {
     shadow(x, z, .32, .3, strength: .045);
   }
 
-  void _book(double x, double y, double z) {
+  void _book(double x, double y, double z, {double angle = 0}) {
+    final firstFace = faces.length;
     shadow(x + .012, z + .015, .29, .20, y: y - .014, layer: 2, strength: .13);
-    box(x, y, z, .43, .018, .30, sage);
-    box(x, y + .013, z, .40, .016, .28, cream);
-    box(x - .104, y + .023, z, .19, .009, .276, const Color(0xfff5efdf));
-    box(x + .104, y + .023, z, .19, .009, .276, const Color(0xfff5efdf));
+    box(x, y, z, .43, .018, .30, sage, topFace: false);
+    box(x, y + .013, z, .40, .016, .28, cream, topFace: false);
+    // Expose only the cover border, not an opaque full face under the pages.
+    // A full backing sorts in front of small page patches at low eye angles.
+    for (final xx in [x - .2075, x + .2075]) {
+      box(xx, y, z, .015, .018, .30, sage);
+    }
+    for (final zz in [z - .145, z + .145]) {
+      box(x, y, zz, .40, .018, .01, sage);
+    }
+    for (final side in [-1, 1]) {
+      final center = x + side * .104;
+      box(
+        center,
+        y + .023,
+        z,
+        .19,
+        .009,
+        .276,
+        const Color(0xfff5efdf),
+        topFace: false,
+      );
+      faces.add(
+        CafeFace(
+          [
+            CafePoint(center - .095, y + .0275, z + .138),
+            CafePoint(center + .095, y + .0275, z + .138),
+            CafePoint(center + .095, y + .0275, z - .138),
+            CafePoint(center - .095, y + .0275, z - .138),
+          ],
+          const Color(0xfff5efdf),
+          surface: CafeSurface.artwork,
+          target: _target,
+          textureCoordinates: const [
+            Offset(0, 1),
+            Offset(1, 1),
+            Offset(1, 2 / 3),
+            Offset(0, 2 / 3),
+          ],
+        ),
+      );
+    }
     box(x, y + .027, z, .007, .009, .28, const Color(0xffbfb29b));
-    for (var side = 0; side < 2; side++) {
-      for (var line = 0; line < 8; line++) {
-        final start = x + (side == 0 ? -.18 : .025);
-        final length = .12 + ((line * 13) % 4) * .009;
-        quad(
-          CafePoint(start, y + .029, z - .10 + line * .025),
-          CafePoint(start + length, y + .029, z - .10 + line * .025),
-          CafePoint(start + length, y + .029, z - .098 + line * .025),
-          CafePoint(start, y + .029, z - .098 + line * .025),
-          const Color(0xffb3a791),
-          unlit: true,
-        );
+    if (angle != 0) {
+      final c = math.cos(angle), s = math.sin(angle);
+      for (final face in faces.skip(firstFace)) {
+        for (var i = 0; i < face.points.length; i++) {
+          final p = face.points[i], dx = p.x - x, dz = p.z - z;
+          face.points[i] = CafePoint(
+            x + dx * c - dz * s,
+            p.y,
+            z + dx * s + dz * c,
+          );
+        }
       }
     }
   }
@@ -784,6 +834,7 @@ class CafeWorld {
             at((i + 1) / 14, (j + 1) / 5),
             at(i / 14, (j + 1) / 5),
             color,
+            surface: color == wall ? CafeSurface.plaster : null,
             layer: 0,
           );
         }
@@ -796,21 +847,21 @@ class CafeWorld {
       const CafePoint(-w, -.008, d),
       const CafePoint(w, -.008, d),
       const CafePoint(w, -.008, -d),
-      const Color(0xffc9bda8),
+      const Color(0xff7d6b59),
       layer: -1,
     );
     for (var row = 0; row < 15; row++) {
-      final left = -w + row * .6 + .0015,
-          right = math.min(w, -w + (row + 1) * .6 - .0015);
+      final left = -w + row * .6 + .001,
+          right = math.min(w, -w + (row + 1) * .6 - .001);
       for (var col = 0; col < 12; col++) {
-        final back = -d + col * .9 + .0015,
-            front = math.min(d, -d + (col + 1) * .9 - .0015);
+        final back = -d + col * .9 + .001,
+            front = math.min(d, -d + (col + 1) * .9 - .001);
         if (front <= back || right <= left) continue;
         final u = random.nextDouble(), v = random.nextDouble();
         final tone = Color.lerp(
-          const Color(0xffffffff),
-          const Color(0xffe4d9c7),
-          random.nextDouble() * .20,
+          mochaFloor,
+          const Color(0xff8a796a),
+          random.nextDouble() * .36,
         )!;
         faces.add(
           CafeFace(
@@ -939,7 +990,7 @@ class CafeWorld {
       );
       _target = target;
       _chair(-3.0, z, angle: math.pi / 2);
-      _book(-3.72, .773, z);
+      _book(-3.72, .773, z, angle: math.pi / 2);
       cylinder(-3.8, .83, z - .40, .06, .10, cream, sides: 12);
       _target = null;
       _pendant(-3.68, z, radius: .19);
@@ -951,9 +1002,9 @@ class CafeWorld {
       _chair(.98, z, angle: -math.pi / 2);
       _chair(-.98, z, angle: math.pi / 2);
     }
-    _book(.24, .773, .75);
-    _book(-.23, .773, -.85);
-    box(.29, .805, .49, .22, .012, .015, dark);
+    _book(.24, .773, .75, angle: math.pi / 2);
+    _book(-.23, .773, -.85, angle: -math.pi / 2);
+    _pencil(.29, .806, .49);
     cylinder(-.2, .82, .18, .06, .10, cream, sides: 14);
     cylinder(
       0,
@@ -1142,7 +1193,7 @@ class CafeWorld {
       box(3.92, .95 + i * .022, 2.89, .31, .018, .28, i.isEven ? sage : cream);
       box(3.86, .95, 1.94 + i * .10, .23, .013, .018, dark);
     }
-    _book(3.87, .947, 2.4);
+    _book(3.87, .947, 2.4, angle: math.pi / 2);
     faces.add(
       CafeFace(
         [
@@ -1169,5 +1220,6 @@ class CafeWorld {
     box(0, .32, 4.85, 1.26, .48, .05, oak, wood: true);
     cylinder(.5, 1.12, 4.80, .024, .25, brass, sides: 8);
     _target = null;
+    _interiorDetails();
   }
 }

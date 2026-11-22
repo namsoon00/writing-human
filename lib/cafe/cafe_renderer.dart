@@ -40,6 +40,8 @@ class CafeRenderer extends CustomPainter {
     this.walnut,
     this.limestone,
     this.woven,
+    this.plaster,
+    this.artwork,
     this.time = 0,
     this.teaFilled = false,
     this.bellAt,
@@ -47,7 +49,14 @@ class CafeRenderer extends CustomPainter {
   });
   final CafeWorld world;
   final CafeCamera camera;
-  final ui.Image? wood, garden, sign, walnut, limestone, woven;
+  final ui.Image? wood,
+      garden,
+      sign,
+      walnut,
+      limestone,
+      woven,
+      plaster,
+      artwork;
   final double time;
   final bool teaFilled;
   final double? bellAt, teaAt;
@@ -165,6 +174,8 @@ class CafeRenderer extends CustomPainter {
       CafeSurface.walnut => walnut ?? wood,
       CafeSurface.limestone => limestone,
       CafeSurface.cord => woven,
+      CafeSurface.plaster => plaster,
+      CafeSurface.artwork => artwork,
       _ => null,
     };
   }
@@ -173,6 +184,10 @@ class CafeRenderer extends CustomPainter {
   /// End faces use two cross-grain axes instead of a collapsed UV coordinate.
   static Offset materialUv(CafeFace face, CafePoint p) {
     final n = face.normal;
+    if (face.surface == CafeSurface.plaster) {
+      if (n.y.abs() > .8) return Offset(p.x / 1.4, p.z / 1.4);
+      return Offset((n.x.abs() > .8 ? p.z : p.x) / 1.4, -p.y / 1.4);
+    }
     switch (face.grain) {
       case CafeGrain.x:
         if (n.x.abs() > .8) return Offset(p.z / .6, -p.y / .6);
@@ -193,6 +208,10 @@ class CafeRenderer extends CustomPainter {
     CafePoint(-3.68, 2.175, -.3),
     CafePoint(-3.68, 2.175, 1.9),
     CafePoint(-2.25, 2.175, -3.95),
+    CafePoint(-3.60, 2.10, -4.68),
+    CafePoint(-3.72, 2.25, 4.67),
+    CafePoint(3.61, 2.25, 4.67),
+    CafePoint(.70, 2.73, -4.68),
   ];
   // Geometry and diffuse light are static; retain only weak face references.
   static final _illumination = Expando<List<CafePoint>>();
@@ -216,20 +235,43 @@ class CafeRenderer extends CustomPainter {
     // Cabinet strips: a local warm fill in the shelf recess, not a screen tint.
     if (p.x > 3.6 && p.z < 1.45) warm += .07;
     warm = math.min(.32, warm);
-    return CafePoint(fill + warm, fill + warm * .84, fill + warm * .60);
+    // A narrow ambient contact falloff grounds plaster and cabinet recesses.
+    var contact = 1.0;
+    if (face.surface == CafeSurface.plaster && n.y.abs() < .8) {
+      contact -= .085 * math.exp(-p.y * 5);
+      contact -= .035 * math.exp(-(2.95 - p.y).abs() * 6);
+    }
+    return CafePoint(
+      (fill + warm) * contact,
+      (fill + warm * .84) * contact,
+      (fill + warm * .60) * contact,
+    );
   });
 
   double _specular(CafeFace face) {
     final metal = face.surface == CafeSurface.brass;
+    final stone = face.surface == CafeSurface.limestone;
     if (!metal &&
+        !stone &&
         face.surface != CafeSurface.oak &&
         face.surface != CafeSurface.walnut) {
       return 0;
     }
     final view = (camera.position - face.center).normalized;
     final halfVector = (view + _daylightDirection).normalized;
-    return math.pow(math.max(0, face.normal.dot(halfVector)), metal ? 22 : 35) *
-        (metal ? .26 : .055);
+    return math.pow(
+          math.max(0, face.normal.dot(halfVector)),
+          metal
+              ? 22
+              : stone
+              ? 48
+              : 35,
+        ) *
+        (metal
+            ? .26
+            : stone
+            ? .024
+            : .055);
   }
 
   Color _light(CafeFace face, int i, bool textured, double specular) {
@@ -335,7 +377,16 @@ class CafeRenderer extends CustomPainter {
       ..isAntiAlias = true
       ..filterQuality = FilterQuality.medium;
     final shaders = <ui.Image, ui.ImageShader>{};
-    for (final image in {wood, walnut, limestone, woven, garden, sign}) {
+    for (final image in {
+      wood,
+      walnut,
+      limestone,
+      woven,
+      plaster,
+      artwork,
+      garden,
+      sign,
+    }) {
       if (image == null) continue;
       // Flutter 3.41.2 CanvasKit's CkImageShader.dispose() also disposes the
       // exact Image handle passed to its constructor. Give it a dedicated
@@ -343,8 +394,12 @@ class CafeRenderer extends CustomPainter {
       // Native dart:ui borrows the image and keeps its own underlying reference.
       shaders[image] = ui.ImageShader(
         kIsWeb ? image.clone() : image,
-        image == garden || image == sign ? TileMode.clamp : TileMode.repeated,
-        image == garden || image == sign ? TileMode.clamp : TileMode.repeated,
+        image == garden || image == sign || image == artwork
+            ? TileMode.clamp
+            : TileMode.repeated,
+        image == garden || image == sign || image == artwork
+            ? TileMode.clamp
+            : TileMode.repeated,
         Float64List.fromList([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
       );
     }
@@ -436,6 +491,8 @@ class CafeRenderer extends CustomPainter {
       oldDelegate.walnut != walnut ||
       oldDelegate.limestone != limestone ||
       oldDelegate.woven != woven ||
+      oldDelegate.plaster != plaster ||
+      oldDelegate.artwork != artwork ||
       oldDelegate.world != world;
 }
 

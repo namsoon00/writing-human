@@ -929,6 +929,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
             : Row(
                 children: [
                   SizedBox(width: constraints.maxWidth * .37, child: caption),
+                  const SizedBox(width: 8),
                   Expanded(child: content),
                 ],
               ),

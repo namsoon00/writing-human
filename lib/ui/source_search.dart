@@ -1015,7 +1015,7 @@ class _SourceSearchState extends State<_SourceSearch> {
                   ),
                 ),
               ] else ...[
-                if (_importing)
+                if (_importing && ModalRoute.isCurrentOf(context) == true)
                   const LinearProgressIndicator(semanticsLabel: '원문을 담고 있어요'),
                 Expanded(child: _catalog()),
               ],

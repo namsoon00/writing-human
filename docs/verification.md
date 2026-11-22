@@ -2891,3 +2891,21 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   구현하지 않았다. 인물과 발의 접촉은 단순 메시이며 iPhone Safari의 실제 터치·
   프레임 속도/발열은 미검증이다. 새 기록·사용자 프로필/외모 저장·DB 변경은 없고,
   기존 Sites 프로젝트 식별자와 비공개 범위를 유지한다.
+
+
+## 2026-11-22 · 걷기와 뒤 카메라 공개 확인
+
+- 소스 `c5ec31c6000f3e59e1e1de481657e4002ae87ff8`의
+  [배포 45019693230](https://github.com/namsoon00/writing-human/actions/runs/45019693230)가
+  포맷·정적 분석·전체 테스트·24개 뒤 시점의 실제 CanvasKit 검사·빌드·게시를 통과했다.
+- [공개 앱](https://namsoon00.github.io/writing-human/?v=c5ec31c)의 HTML·bootstrap·
+  main JS와 새 시점 아이콘 폰트가 모두 HTTP 200이며, 캐시를 지우고 다시 만든 검증
+  빌드와 main JS/폰트가 바이트 단위로 같았다. 최종 main JS SHA-256:
+  `a3f4167b74bcd770792b3ed81167e017ac5292016a1183544c1638769a38600b`.
+- 첫 로컬 빌드는 실행 중 자세 상수를 수정해 캐시에 이전 값(-0.39)이 남아 있었다.
+  공개 CI는 최종 소스(-0.2)로 정상 빌드됐으며 `flutter clean` 뒤 다시 빌드해 일치를
+  확인했다. [공개 파일 증거](../design/cafe/20261122/camera-study/deployment-proof.json)를 보관했다.
+- 책장 → 필사 카페의 상단 사람 아이콘으로 3인칭을 켜고 빈 바닥을 눌러 걷는다.
+  드래그는 이동을 멈추고 둘러보기이며 키보드는 누르는 동안만 이동한다.
+  기본 1인칭·입력/저장·기존 Sites 프로젝트와 비공개 범위를 유지했다.
+  iPhone 실제 터치·프레임 속도/발열 검증은 남아 있다.

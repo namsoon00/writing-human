@@ -1,0 +1,38 @@
+{
+  "source_commit": "c5ec31c6000f3e59e1e1de481657e4002ae87ff8",
+  "actions_run": 45019693230,
+  "index": {
+    "url": "https://namsoon00.github.io/writing-human/?v=c5ec31c",
+    "status": 200,
+    "bytes": 8150,
+    "sha256": "cdaa442cc7618ac3598d93aa73ab5043e0fcaecb46f5168f0df429913e53ca1f"
+  },
+  "bootstrap": {
+    "url": "https://namsoon00.github.io/writing-human/flutter_bootstrap.js?v=7216abacc0a64acc",
+    "status": 200,
+    "bytes": 10016,
+    "sha256": "7216abacc0a64accfe90786093410c6c2df716d1ac7a5f112bc0a0e131d4471e"
+  },
+  "main": {
+    "url": "https://namsoon00.github.io/writing-human/main.dart.js?v=a3f4167b74bcd770",
+    "status": 200,
+    "bytes": 5128471,
+    "sha256": "a3f4167b74bcd770792b3ed81167e017ac5292016a1183544c1638769a38600b",
+    "matches_local": true
+  },
+  "icons": {
+    "url": "https://namsoon00.github.io/writing-human/assets/fonts/MaterialIcons-Regular.otf?v=c5ec31c",
+    "status": 200,
+    "bytes": 9300,
+    "sha256": "ade0a81694c5d760527c8362b59ee5e1a9239eb4767fe272ffa6969bcae1d9bf",
+    "matches_local": true
+  },
+  "verified_at": "2026-11-22T12:03:17.734035+00:00",
+  "actions_result": "build and deploy success",
+  "local_clean_build": "flutter clean followed by build_github_pages.mjs",
+  "limits": [
+    "Flutter fixture captures, not browser UI or iPhone captures",
+    "Temporary articulated mesh; photoreal human/hand actions are not implemented",
+    "iPhone touch, FPS and heat unverified"
+  ]
+}

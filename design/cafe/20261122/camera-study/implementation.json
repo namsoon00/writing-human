@@ -1,5 +1,5 @@
 {
-  "status": "걷기·3인칭 구현 완료 · 배포 검사 진행 중",
+  "status": "걷기·3인칭 구현 및 공개 웹 배포 완료",
   "design_target": "approved-rear-follow.jpg",
   "runtime": "Flutter/Dart articulated mesh, not the photoreal concept image",
   "implemented": [
@@ -22,5 +22,9 @@
     "full_native": 271,
     "targeted_native": 7,
     "chrome": "24 rear viewpoints in cafe/courtyard with original image/clone lifetime check"
-  }
+  },
+  "source_commit": "c5ec31c6000f3e59e1e1de481657e4002ae87ff8",
+  "actions_run": 45019693230,
+  "url": "https://namsoon00.github.io/writing-human/?v=c5ec31c",
+  "proof": "deployment-proof.json"
 }

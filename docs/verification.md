@@ -3122,3 +3122,16 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   복잡한 가림과 iPhone Safari 실제 터치·프레임 속도/발열은 미검증이다.
   본문 입력/저장·사용자 기록·DB·계정과 기존 비공개 Sites 식별자/접근 범위는 바꾸지 않았다.
   병행 낭독 변경 `594360a`를 보존한 독립 릴리스에서 검사했다.
+
+
+## 2026-11-22 · 실내외 공유 정원과 조명 공개 배포 확인
+
+- 소스 `8040a0475ad5a002078ad0ea7073a40ee1091cd5`의
+  [배포 45031653193](https://github.com/namsoon00/writing-human/actions/runs/45031653193)가
+  포맷·분석·전체 테스트·낭독 DSP/카페 Chrome 검사·빌드·게시를 통과했다.
+- [공개 앱](https://namsoon00.github.io/writing-human/?v=8040a04)의 HTML·bootstrap·
+  main JS·새 재질 WebP 3개는 HTTP 200이며 JS와 재질이 로컬 검증 빌드와 바이트 단위로
+  같다. main JS SHA-256: `c7e38906e1e1996198642b815056f3ed8c97f7e26f43150d2ef7f988fd760eb3`.
+- 실행 JS에는 새 나무·꽃·회벽 재질을 참조하고 이전 숲/정원 파노라마 파일명은 없다.
+  [HTTP 비교 증거](../design/cafe/20261122/unified-cafe/deployment-proof.json)를 보관했다.
+  이 검사는 iPhone Safari 실제 터치·프레임 속도/발열·사진 같은 광원/식물 표현의 검증은 아니다.

@@ -1,0 +1,53 @@
+{
+  "source_commit": "8040a0475ad5a002078ad0ea7073a40ee1091cd5",
+  "checked_at": "2026-11-22T14:19:08.841564+00:00",
+  "index": {
+    "url": "https://namsoon00.github.io/writing-human/?v=8040a04",
+    "status": 200,
+    "bytes": 8150,
+    "sha256": "a453c38a50b12bd0f61f3b3c1e4e3845836e73bb063abcde59f6b70172a14e9e"
+  },
+  "bootstrap": {
+    "url": "https://namsoon00.github.io/writing-human/flutter_bootstrap.js?v=c717ad425931155d",
+    "status": 200,
+    "bytes": 10015,
+    "sha256": "c717ad425931155dd6b7559b37f63507359539f580fca00eafcc982a2db49d65"
+  },
+  "main": {
+    "url": "https://namsoon00.github.io/writing-human/main.dart.js?v=c7e38906e1e19961",
+    "status": 200,
+    "bytes": 5129912,
+    "sha256": "c7e38906e1e1996198642b815056f3ed8c97f7e26f43150d2ef7f988fd760eb3",
+    "matches_local": true,
+    "static_garden_removed": true
+  },
+  "assets": [
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-garden-tree.webp?v=8040a04",
+      "status": 200,
+      "bytes": 601182,
+      "sha256": "e87b6abb1cc0ff80da31aa5a9b235719e7a8a379e3b6a92e1d578136628b8675",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-garden-flowers.webp?v=8040a04",
+      "status": 200,
+      "bytes": 606608,
+      "sha256": "33ec55a2443679740f922054713d2e8a1c25d5ba5bf69533de6eacd0afc26195",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-lime-plaster.webp?v=8040a04",
+      "status": 200,
+      "bytes": 346502,
+      "sha256": "405f6efbdf1ce97de15ff4644d0173ec57c77bad0e2cb0fa2cf6f1e74b2ccebc",
+      "matches_local": true,
+      "referenced_by_app": true
+    }
+  ],
+  "runtime_scope": "Shared 3D courtyard via window portals, local warm lighting and wall materials. Plants use photographic transparent billboards. Actual iPhone touch/performance not tested.",
+  "actions_run": 45031653193,
+  "actions_conclusion": "build and deploy success"
+}

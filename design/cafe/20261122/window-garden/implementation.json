@@ -1,0 +1,50 @@
+{
+  "status": "approved window garden implemented; publication verification pending",
+  "mode": "built-in image_gen edit",
+  "prompt": "Use case: precise-object-edit.\nAsset type: PRODUCTION outdoor panorama texture for the first-person writing cafe \"쓰는 인간\", derived from the approved garden concept. Not a UI screenshot or another interior concept.\nInput image: the supplied window-seat-garden-concept.png is the approved garden design and material/light reference. Preserve the garden's visual identity.\nPrimary request: remove EVERY indoor element and extend the approved garden into a single coherent horizontal panorama for four adjacent cafe windows. The entire image must show ONLY the outdoor garden. No window frame, window sill, glazing, hanging lamp, foreground desk, book, notebook, pen, cup or interior wall anywhere.\nComposition: a very wide landscape panorama, exactly 3:1 aspect ratio, ideally 3072 by 1024. Camera looks out from the cafe at a seated person's height. Straight, level architectural perspective with no fisheye or spherical distortion. The garden is modest and shallow, about 9m wide by 4m deep. A quiet cream lime-plaster boundary wall spans the rear; enough blue-white sky appears across the top 15–20 percent. A small airy multi-stem tree near the right third and one small shrub near the left edge, with no overhead foliage wall. Leave generous blank plaster and open gravel between plant groups, like the approved reference. A simple low oak bench sits near the center-right against the rear wall. The paving is pale warm gravel and large restrained stepping stones curving gently along the garden. Low planting beds of small white and pale lavender flowers and short grasses occupy the bottom edges only.\nPond: a single modest low stone-edged shallow pond, clear water and exactly three small orange/ivory goldfish, positioned left of center, roughly image x=35 percent, in the lower middle. The pond must be fully visible between image y=48 and y=78 percent, NOT cropped off at the bottom. The pale stepping-stone path remains visible on the right. Keep a narrow gravel foreground in the bottom 10 percent; do not make a large near pond fill the entire view. Natural scale, quiet fine planting, soft water reflections and a few ripples.\nLighting: soft bright daylight after a brief shower, lightly damp stone, the same restrained natural green, warm plaster and fine realistic stone/leaf textures as the reference. Bright and open, no dark forest or autumn orange cast. The garden must be continuous across the FULL image, with no panels, repeated views, extra ponds or duplicate benches. Maintain a coherent ground plane and lighting across the panorama so adjoining windows can sample different portions of ONE image.\nAvoid: all indoor objects and window frames, close-up branches, dense woods, forests, jungles, mountains, huge park, ornate religious structures, large water features, waterfall, thick fog, flowers everywhere, people, avatars, text, logos, labels, borders or watermarks.",
+  "reference": "window-seat-garden-concept.png",
+  "generated_source": "exec-b75a51d6-dda3-4711-a991-31b09d578e68.png",
+  "runtime_asset": "assets/images/cafe-window-garden-panorama.jpg",
+  "dimensions": [
+    2172,
+    724
+  ],
+  "asset_sha256": "2cfbe7b714e136acd37c0826a04e27fd7a46954b19d67c46c8f7c1aca678c8ad",
+  "runtime_decode_width": 2048,
+  "implementation": {
+    "continuity": "all four windows sample one world-aligned panorama; image-right follows -Z",
+    "distance": "eye rays intersect a virtual plane at X=-7.4; image width 14.4m, height4.8m, topY3.75",
+    "borders": "decal sampling with plain sky/wall/gravel continuation, not stretched edge columns",
+    "mesh": "8x8 patches per glazed window; clear glass without opaque rain streak decals",
+    "limits": "The garden photograph and its fish are static. It is not a walkable 3D garden mesh or a live view of the separate courtyard.",
+    "preserved": "first-person walking, materials/interior layout, writing/IME/storage and separate courtyard interaction"
+  },
+  "captures": {
+    "type": "Flutter test fixture renders, not browser or device captures",
+    "viewport_sizes": [
+      [
+        390,
+        844
+      ],
+      [
+        1200,
+        800
+      ]
+    ],
+    "views": "entrance and three window seats; original writing gaze and raised lookout gaze",
+    "selected": [
+      "actual-window-390.jpg",
+      "actual-window-lookout-wide.jpg",
+      "actual-windowRear-lookout-wide.jpg"
+    ]
+  },
+  "checks": {
+    "format_files": 166,
+    "analyze": "no issues",
+    "native_tests": 270,
+    "native_rotation_views": 180,
+    "chrome_lifetime_views": 24,
+    "chrome_source_images": 8,
+    "web_build": "success"
+  }
+}

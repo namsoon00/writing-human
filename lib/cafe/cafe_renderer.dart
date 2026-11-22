@@ -180,6 +180,24 @@ class CafeRenderer extends CustomPainter {
     };
   }
 
+  /// The outdoor image lies on one virtual plane 3.2 m beyond the glazing.
+  /// Intersecting eye rays with that plane keeps it distant as the visitor
+  /// changes seats; sampling window-local UVs would magnify it like wallpaper.
+  Offset _gardenUv(CafePoint point) {
+    final direction = point - camera.position;
+    final distance = (-7.4 - camera.position.x) / direction.x;
+    final outside = camera.position + direction * distance;
+    return Offset((7.2 - outside.z) / 14.4, (3.75 - outside.y) / 4.8);
+  }
+
+  // Outside the finite photo, extend quiet sky/wall/gravel rather than dragging
+  // the texture's last pixel into long streaks during close or oblique views.
+  static Color _gardenSurround(double v) {
+    if (v < .20) return const Color(0xffdce8f0);
+    if (v < .65) return const Color(0xffe5d5bd);
+    return const Color(0xffcdbfa8);
+  }
+
   /// Physical repeat lengths keep long grain aligned with each timber member.
   /// End faces use two cross-grain axes instead of a collapsed UV coordinate.
   static Offset materialUv(CafeFace face, CafePoint p) {
@@ -336,7 +354,11 @@ class CafeRenderer extends CustomPainter {
         final p = face.points[i];
         var uv = materialUv(face, p);
         var u = uv.dx * (image?.width ?? 1), v = uv.dy * (image?.height ?? 1);
-        if (image != null && face.textureCoordinates != null) {
+        if (image != null && face.garden) {
+          final outside = _gardenUv(p);
+          u = outside.dx * (image.width - 1);
+          v = outside.dy * (image.height - 1);
+        } else if (image != null && face.textureCoordinates != null) {
           u = face.textureCoordinates![i].dx * (image.width - 1);
           v = face.textureCoordinates![i].dy * (image.height - 1);
         } else if ((face.garden || face.sign) && image != null) {
@@ -365,6 +387,24 @@ class CafeRenderer extends CustomPainter {
       final depth =
           vertices.fold<double>(0, (sum, v) => sum + v.point.z) /
           vertices.length;
+      if (face.garden && image != null) {
+        faces.add(
+          _ProjectedFace(
+            CafeFace(face.points, Colors.white, unlit: true, layer: 0),
+            vertices
+                .map(
+                  (v) => _Vertex(
+                    v.point,
+                    0,
+                    0,
+                    _gardenSurround(v.v / math.max(1, image.height - 1)),
+                  ),
+                )
+                .toList(),
+            depth,
+          ),
+        );
+      }
       faces.add(_ProjectedFace(face, vertices, depth));
     }
     faces.sort(
@@ -394,10 +434,14 @@ class CafeRenderer extends CustomPainter {
       // Native dart:ui borrows the image and keeps its own underlying reference.
       shaders[image] = ui.ImageShader(
         kIsWeb ? image.clone() : image,
-        image == garden || image == sign || image == artwork
+        image == garden
+            ? TileMode.decal
+            : image == sign || image == artwork
             ? TileMode.clamp
             : TileMode.repeated,
-        image == garden || image == sign || image == artwork
+        image == garden
+            ? TileMode.decal
+            : image == sign || image == artwork
             ? TileMode.clamp
             : TileMode.repeated,
         Float64List.fromList([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),

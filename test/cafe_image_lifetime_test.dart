@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/cafe/cafe_camera.dart';
 import 'package:writing_human/cafe/cafe_renderer.dart';
 import 'package:writing_human/cafe/cafe_world.dart';
+import 'package:writing_human/cafe/cafe_visit.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -60,7 +61,9 @@ void main() {
             plaster: plaster,
             artwork: artwork,
             camera: CafeCamera(
-              position: frame < 12
+              position: frame < 6
+                  ? CafeCamera.seated(CafeSeat.window).position
+                  : frame < 12
                   ? CafeCamera.entrance.position
                   : CafeCamera.courtyardEntrance.position,
               yaw: (frame % 12) * math.pi / 6,

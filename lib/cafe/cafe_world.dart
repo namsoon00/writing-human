@@ -923,49 +923,33 @@ class CafeWorld {
     for (final x in [-4.36, 4.36]) {
       box(x, .08, 0, .08, .16, 10, dark, wood: true);
     }
-    // Rainy windows, wooden reveals and shallow pools of reflected daylight.
+    // One continuous outdoor panorama, wooden reveals and reflected daylight.
     for (final z in [-3.35, -1.05, 1.25, 3.55]) {
       for (final dz in [-1.08, 1.08]) {
         box(-4.31, 1.72, z + dz, .12, 2.25, .07, dark, wood: true);
       }
       box(-4.30, .61, z, .12, .07, 2.20, dark, wood: true);
       box(-4.30, 2.83, z, .12, .07, 2.20, dark, wood: true);
-      for (var i = 0; i < 4; i++) {
-        for (var j = 0; j < 4; j++) {
-          final u = i / 4, v = j / 4, du = (i + 1) / 4, dv = (j + 1) / 4;
+      // The renderer samples one distant garden plane in room coordinates.
+      for (var i = 0; i < 8; i++) {
+        for (var j = 0; j < 8; j++) {
+          final u = i / 8, v = j / 8, du = (i + 1) / 8, dv = (j + 1) / 8;
           CafePoint at(double u, double v) =>
               CafePoint(-4.235, 2.78 - v * 2.12, z - 1.02 + u * 2.04);
+          final points = [at(u, dv), at(du, dv), at(du, v), at(u, v)];
           faces.add(
             CafeFace(
-              [at(u, dv), at(du, dv), at(du, v), at(u, v)],
-              const Color(0xffbfccb6),
+              points,
+              const Color(0xffdce5cf),
               garden: true,
               unlit: true,
               layer: 1,
-              textureCoordinates: [
-                Offset(u, dv),
-                Offset(du, dv),
-                Offset(du, v),
-                Offset(u, v),
-              ],
             ),
           );
         }
       }
       box(-4.20, 1.70, z, .12, 2.2, .04, dark, wood: true);
       box(-4.20, .63, z, .30, .055, 2.20, oak, wood: true);
-      for (var i = 0; i < 14; i++) {
-        final zz = z - 1 + random.nextDouble() * 2,
-            yy = .8 + random.nextDouble() * 1.7;
-        quad(
-          CafePoint(-4.18, yy, zz),
-          CafePoint(-4.18, yy + .14, zz),
-          CafePoint(-4.18, yy + .14, zz + .008),
-          CafePoint(-4.18, yy, zz + .008),
-          const Color(0x50ffffff),
-          unlit: true,
-        );
-      }
       quad(
         CafePoint(-4.1, .007, z - .9),
         CafePoint(-2.0, .007, z - .6),

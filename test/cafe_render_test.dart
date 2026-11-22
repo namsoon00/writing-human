@@ -7,6 +7,7 @@ import 'package:writing_human/cafe/cafe_camera.dart';
 import 'package:writing_human/cafe/cafe_materials.dart';
 import 'package:writing_human/cafe/cafe_renderer.dart';
 import 'package:writing_human/cafe/cafe_world.dart';
+import 'package:writing_human/cafe/cafe_visit.dart';
 
 void main() {
   testWidgets(
@@ -25,7 +26,9 @@ void main() {
         }
 
         final wood = await texture('assets/images/cafe-oak-longgrain.jpg');
-        final garden = await texture('assets/images/cafe-garden-view.png');
+        final garden = await texture(
+          'assets/images/cafe-window-garden-panorama.jpg',
+        );
         final walnut = await texture('assets/images/cafe-walnut-longgrain.jpg');
         final limestone = await texture(
           'assets/images/cafe-limestone-albedo.jpg',
@@ -38,6 +41,9 @@ void main() {
           for (final position in [
             CafeCamera.entrance.position,
             const CafePoint(2.85, 1.62, .3),
+            CafeCamera.seated(CafeSeat.window).position,
+            CafeCamera.seated(CafeSeat.windowMiddle).position,
+            CafeCamera.seated(CafeSeat.windowRear).position,
           ]) {
             for (final pitch in [-.72, -.10, .65]) {
               for (var turn = 0; turn < 12; turn++) {

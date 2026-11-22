@@ -3011,3 +3011,30 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   [HTTP 증거](../design/cafe/20261122/mocha-interior/deployment-proof.json)를 보관했다.
   `책장 → 필사 카페`로 들어가 바닥을 눌러 걷고 끌어 둘러본다.
   iPhone Safari 실제 터치·프레임 속도/발열 검증은 남아 있다.
+
+
+## 2026-11-22 · 승인한 창가 정원 적용
+
+- 승인된 창가 정원 시안을 참고해 실내 사물/창틀을 제외한 2172×724px 파노라마를
+  내장 imagegen으로 만들었다. 낮은 꽃·작은 나무·디딤돌·벤치·밝은 담장과 하늘·
+  세 금붕어 연못을 확인했다. [앱용 배경](../assets/images/cafe-window-garden-panorama.jpg)과
+  [전체 프롬프트/재질 해시](../design/cafe/20261122/window-garden/implementation.json)를 보관한다.
+- 네 창은 하나의 가상 외부 평면을 샘플링한다. 정원을 창 면에 고정했을 때 과하게
+  확대되는 첫 결과를 확인해 광선-외부 평면 교차로 수정했다. 사선/화면 끝에서 생기는
+  끝 픽셀 늘어짐은 decal과 단순 하늘/담장/자갈 뒷면으로 처리했다. 유리의 굵은
+  빗방울 선도 제외했다. 카페 가구/모카 바닥·벽·보행/선택·기존 별도 뜰은 그대로다.
+- `/tmp/writing-cafe-window-garden-release`에서 포맷 **166파일** 변경 없음, 전체 분석
+  이상 없음, 전체 네이티브 테스트 **270개 통과**, 실제 Chrome CanvasKit **24개 시선·
+  이미지 8개/clone 생존** 검사를 통과했다. 네이티브 번들 재질 회전 검사는 창가 세 자리
+  위치를 포함한 **180개 시선**으로 확장했다. 기존 IME/선택·저장 실패·실제 SQLite
+  재열기와 1인칭 보행/도구/뜰 흐름도 전체 검사에 포함했다. 최종 소스를 고정한 웹 빌드가 성공했다.
+- 입구와 창가 세 자리의 기본 쓰기 시선/올려 본 시선 **8개 화면**을 Flutter로 렌더했다.
+  [휴대폰 창가](../design/cafe/20261122/window-garden/actual-window-390.jpg)·
+  [연못 방향](../design/cafe/20261122/window-garden/actual-window-lookout-wide.jpg)·
+  [안쪽 창가](../design/cafe/20261122/window-garden/actual-windowRear-lookout-wide.jpg)를 확인했다.
+  합성 빈 라이브러리의 테스트 렌더이며 실제 브라우저 UI/실기기 캡처가 아니다.
+- 창밖 정원과 금붕어는 **정지 사진 배경**이다. 개별 식물/연못의 실제 3D 깊이 또는
+  움직임·밖으로 걸어가는 동작은 추가하지 않았다. 기존 아치로 들어가는 3D 뜰의 움직임과
+  구분한다. 이 채팅의 브라우저 UI 접근은 제공되지 않았으며 iPhone Safari의 실제 터치·
+  프레임 속도/발열은 미검증이다. 사용자 기록/DB·계정과 기존 Sites 식별자/비공개 범위는
+  변경하지 않았다. 공개 CI/HTTP 실행 파일·배경 이미지 비교는 게시 후 별도로 기록한다.

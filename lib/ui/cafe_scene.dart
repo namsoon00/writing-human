@@ -155,12 +155,12 @@ class _CafeSceneState extends State<CafeScene>
     _loadMaterials();
   }
 
-  Future<ui.Image?> _texture(String name) async {
+  Future<ui.Image?> _texture(String name, {int width = 768}) async {
     try {
       final data = await rootBundle.load('assets/images/$name');
       final codec = await ui.instantiateImageCodec(
         data.buffer.asUint8List(),
-        targetWidth: 768,
+        targetWidth: width,
       );
       final frame = await codec.getNextFrame();
       codec.dispose();
@@ -255,7 +255,7 @@ class _CafeSceneState extends State<CafeScene>
   Future<void> _loadMaterials() async {
     final images = await Future.wait([
       _texture('cafe-oak-longgrain.jpg'),
-      _texture('cafe-garden-view.png'),
+      _texture('cafe-window-garden-panorama.jpg', width: 2048),
       _makeSign(),
       _texture('cafe-walnut-longgrain.jpg'),
       _texture('cafe-limestone-albedo.jpg'),

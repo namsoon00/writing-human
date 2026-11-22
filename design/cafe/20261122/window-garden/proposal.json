@@ -1,0 +1,23 @@
+{
+  "status": "창가 정원 시안 승인 · 연속 파노라마 구현",
+  "mode": "built-in image_gen",
+  "intent": "new composition using three style and subject references",
+  "image": "window-seat-garden-concept.png",
+  "source": "exec-3c88d820-1ac1-4cf8-bbb0-cf72e8e5b64d.png",
+  "prompt": "Use case: photorealistic-natural.\nAsset type: architectural concept proposal for the window-seat garden view at the Korean writing cafe \"쓰는 인간\". This is a design concept, not an implemented app screenshot.\nPrimary request: show the OUTSIDE as an intentionally designed small, open cafe garden, viewed in FIRST PERSON while seated at the cafe window writing desk. The present forest-like view must become a calm human-scale courtyard garden.\nInput images: Image 1 (warm-mocha-concept.png) is the approved cafe material/style reference: oak and walnut, warm brass lights, pale lime-plaster and low-lightness warm mocha stone flooring. Image 2 (goldfish-pond-concept.png) is a reference for the previously discussed modest garden, small pond and goldfish, not a layout to copy exactly. Image 3 (seated-concept.png) is a writing-desk foreground reference only; do not repeat its wooded exterior or wooden floor.\nComposition: one wide landscape 16:10 architectural image. Camera at seated eye height about 1.18m, looking mostly straight out through a large clear walnut-framed window, with just a little oblique depth. The garden occupies around 75% of the picture. The lower 20% includes the near edge of an oak writing desk, an open ivory notebook with restrained handwriting, a fountain pen, a closed muted olive cloth book and one handmade ceramic tea cup on a coaster. A slim walnut mullion at one side and a small warm brass pendant in an upper corner establish that the viewer is INSIDE. Include a subtle small glimpse of the approved mocha stone floor at the edge if natural. No foreground person or hands. Keep the writing surface legible and uncluttered.\nGarden layout: a modest enclosed cafe garden approximately 6m wide by 4.5m deep, visibly curated and cared for, with generous open breathing space. A few large pale warm stone stepping slabs lead along a light gravel edge. A low, gently irregular planting bed contains a FEW white and pale lavender flowers and short grasses, not a flower meadow. One small airy multi-stem tree about 2.5m tall at a rear corner, plus a small shrub; foliage takes only a limited part of the view and never forms a canopy across the window. A shallow, small 1.7m by 1.1m pond is near enough to the window for three modest orange and pale goldfish to be discernible in clear water. Its edge is restrained, low weathered stone, with a few water ripples and no waterfall. Place a simple wood bench against a quiet warm off-white plaster boundary wall at the rear. The boundary wall and a visible patch of pale sky give a readable garden edge and openness. Keep the planting low around the pond and paths; no large outdoor furniture or cafe seating rows.\nLighting and materials: soft bright daylight after a light shower, faintly damp garden stones, clear unobstructed glazing with subtle believable reflection only, natural restrained greens, warm plaster and oak, warm small interior light. Fine stone pores, soft contact shadows and accurate perspective. Peaceful, intimate and tactile, consistent with the writing cafe's existing brand. Warm without an orange cast or underexposure.\nAvoid: dense forest, jungle, rows of tall trees, a wall of foliage, mountainous scenery, oversized park, huge pond, dramatic waterfall, thick mist, abundant flowers, ornate zen/religious props, red torii, statues, excessive lanterns, people, avatar, UI, captions, labels, comparison panels, borders, watermarks or new signage. Do not hide the designed garden behind branches or opaque/rain-covered glass. Make the contrast with the prior forest-like view unmistakable.",
+  "references": [
+    "../darker-floor/warm-mocha-concept.png",
+    "../quiet-courtyard/goldfish-pond-concept.png",
+    "../seated-concept.png"
+  ],
+  "direction": "울창한 숲 대신 정원 경계와 하늘·낮은 꽃·작은 나무·금붕어 연못·디딤돌과 벤치를 창가 착석 시점에서 바라본다.",
+  "implementation_boundary": "승인한 시안을 바탕으로 실내 사물이 없는 정원 파노라마를 만들고 창가 배경에 연결한다. 배경은 정지 이미지이며 별도 3D 뜰의 이동/물고기 동작과 구분한다.",
+  "role_review": {
+    "designer": "열린 하늘과 밝은 담장·낮은 식재로 창밖 깊이와 경계를 읽게 한다. 카페의 원목·종이·황동과 작은 정원을 연결한다.",
+    "planner": "이번 요청은 창가에서 보이는 조경 시안이며 새 정원 이동·벤치/연못 동작 구현이나 동선 변경을 포함하지 않는다.",
+    "marketer": "생성한 제안 이미지와 현재 실행 화면을 구분한다.",
+    "developer": "구현 승인 전 런타임 배경·메시·사용자 기록을 수정하지 않는다."
+  },
+  "sha256": "6f462c874a96488e4d1adbcff0adb7d20bfaf9bd852a4e7a8f6a0aaf19546674",
+  "preview": "window-seat-garden-concept.jpg"
+}

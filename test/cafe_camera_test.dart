@@ -254,7 +254,13 @@ void main() {
         tester.getSize(scene),
       )!;
       await tester.tapAt(tester.getTopLeft(scene) + local);
-      await tester.pumpAndSettle();
+      // The window fish keep painting while seated; wait for the route,
+      // rather than requiring the whole live scene to become idle.
+      await tester.pump();
+      for (var i = 0; i < 120 && c.travelling; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(c.travelling, isFalse);
       expect(c.seat, CafeSeat.shared);
       expect(c.camera.position.y, 1.18);
       expect(

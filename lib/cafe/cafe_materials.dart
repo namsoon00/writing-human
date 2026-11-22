@@ -8,30 +8,68 @@ abstract final class CafeMaterials {
     final recorder = ui.PictureRecorder(), canvas = ui.Canvas(recorder);
     canvas.drawColor(const ui.Color(0xfff4eee2), ui.BlendMode.src);
     final random = math.Random(419), paint = ui.Paint();
-    // Periodic broad trowel variation: both tile boundaries meet exactly.
-    for (var y = 0; y < 512; y += 4) {
-      for (var x = 0; x < 512; x += 4) {
-        final wave =
-            math.sin(x * math.pi / 256) * math.cos(y * math.pi / 128) +
-            .5 * math.cos((x + y) * math.pi / 128);
-        final value = (238 + wave * 3).round();
-        paint.color = ui.Color.fromARGB(255, value + 8, value + 3, value - 7);
-        canvas.drawRect(
-          ui.Rect.fromLTWH(x.toDouble(), y.toDouble(), 4, 4),
-          paint,
-        );
+    // Lime plaster: broad, irregular trowel traces plus fine mineral pores.
+    // Wrap each mark at texture edges so repeated wall panels have no seams.
+    for (var i = 0; i < 1900; i++) {
+      final x = random.nextDouble() * 1024, y = random.nextDouble() * 1024;
+      final length = 35 + random.nextDouble() * 180,
+          rise = (random.nextDouble() - .5) * 28;
+      paint
+        ..color =
+            (i.isEven ? const ui.Color(0xffbdb29e) : const ui.Color(0xffffffff))
+                .withValues(alpha: .018 + random.nextDouble() * .025)
+        ..style = ui.PaintingStyle.stroke
+        ..strokeCap = ui.StrokeCap.round
+        ..strokeWidth = 2 + random.nextDouble() * 25;
+      for (final dx in [-1024.0, 0.0, 1024.0]) {
+        for (final dy in [-1024.0, 0.0, 1024.0]) {
+          final path = ui.Path()
+            ..moveTo(x + dx, y + dy)
+            ..quadraticBezierTo(
+              x + dx + length * .45,
+              y + dy - rise * .6,
+              x + dx + length,
+              y + dy + rise,
+            );
+          canvas.drawPath(path, paint);
+        }
       }
     }
-    for (var i = 0; i < 18000; i++) {
-      final light = i.isEven;
-      paint.color = light
-          ? const ui.Color(0x12ffffff)
-          : const ui.Color(0x0b6e604e);
+    paint.style = ui.PaintingStyle.fill;
+    for (var i = 0; i < 42000; i++) {
+      paint.color = i.isEven
+          ? const ui.Color(0x1affffff)
+          : const ui.Color(0x116e604e);
       canvas.drawCircle(
-        ui.Offset(random.nextDouble() * 512, random.nextDouble() * 512),
-        .25 + random.nextDouble() * .65,
+        ui.Offset(random.nextDouble() * 1024, random.nextDouble() * 1024),
+        .3 + random.nextDouble() * .65,
         paint,
       );
+    }
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(1024, 1024);
+    picture.dispose();
+    return image;
+  }
+
+  static Future<ui.Image> gravel() async {
+    final recorder = ui.PictureRecorder(), canvas = ui.Canvas(recorder);
+    canvas.drawColor(const ui.Color(0xffcbbfa8), ui.BlendMode.src);
+    final random = math.Random(617), paint = ui.Paint();
+    const colors = [
+      ui.Color(0xffd4c8b2),
+      ui.Color(0xffe5dbc8),
+      ui.Color(0xffb7ad99),
+      ui.Color(0xffc4b9a1),
+    ];
+    for (var i = 0; i < 12500; i++) {
+      final x = random.nextDouble() * 512, y = random.nextDouble() * 512;
+      final width = 1.4 + random.nextDouble() * 4.0,
+          height = 1.2 + random.nextDouble() * 2.5;
+      paint.color = const ui.Color(0xffa69b85);
+      canvas.drawOval(ui.Rect.fromLTWH(x, y + .8, width, height), paint);
+      paint.color = colors[i % colors.length];
+      canvas.drawOval(ui.Rect.fromLTWH(x, y, width, height), paint);
     }
     final picture = recorder.endRecording();
     final image = await picture.toImage(512, 512);

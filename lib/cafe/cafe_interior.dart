@@ -119,6 +119,24 @@ extension _CafeInterior on CafeWorld {
     for (final z in [-4.975, 4.975]) {
       box(0, 2.905, z, 8.75, .028, .035, const Color(0xffb5a48b));
     }
+    // Inset panels below the glazing: real shadow gaps and oak rails at the
+    // junctions, rather than a single flat strip painted the same wall colour.
+    for (final z in [-3.35, -1.05, 1.25, 3.55]) {
+      for (final dz in [-.53, .53]) {
+        box(
+          -4.32,
+          .36,
+          z + dz,
+          .05,
+          .32,
+          .96,
+          CafeWorld.wall,
+          surface: CafeSurface.plaster,
+        );
+        box(-4.27, .535, z + dz, .045, .022, 1.0, CafeWorld.oak, wood: true);
+        box(-4.27, .185, z + dz, .045, .022, 1.0, CafeWorld.dark, wood: true);
+      }
+    }
     // The entrance wall has solid walnut wainscot rather than an empty plane.
     for (final x in [-2.65, 2.65]) {
       box(x, .46, 4.94, 3.35, .90, .07, CafeWorld.dark, wood: true);
@@ -359,6 +377,7 @@ extension _CafeInterior on CafeWorld {
       .086,
       CafeWorld.cream,
       topRadius: radius,
+      topFace: false,
       sides: 20,
     );
     cylinder(
@@ -370,6 +389,18 @@ extension _CafeInterior on CafeWorld {
       filled ? const Color(0xff684b32) : const Color(0xffc6bba6),
       sides: 20,
     );
+    for (var i = 0; i < 20; i++) {
+      final a = i * math.pi / 10, b = (i + 1) * math.pi / 10;
+      CafePoint edge(double t, double r) =>
+          CafePoint(x + math.cos(t) * r, bottom + .102, z + math.sin(t) * r);
+      quad(
+        edge(a, radius),
+        edge(a, radius * .87),
+        edge(b, radius * .87),
+        edge(b, radius),
+        CafeWorld.cream,
+      );
+    }
     // A vertical elliptical handle, aligned away from the writing page.
     for (var i = 0; i < 12; i++) {
       final a = i * math.pi / 6, b = (i + 1) * math.pi / 6;
@@ -454,16 +485,7 @@ extension _CafeInterior on CafeWorld {
         const Color(0xffa18c65),
         sides: 18,
       );
-      // Replace the plain cup top with the recessed tea surface and rim.
-      cylinder(
-        -3.80,
-        .883,
-        z - .40,
-        .049,
-        .004,
-        const Color(0xff78603d),
-        sides: 18,
-      );
+
       box(-3.46, .765, z + .33, .015, .012, .22, CafeWorld.dark);
       box(-3.46, .772, z + .25, .019, .008, .035, CafeWorld.brass);
     }

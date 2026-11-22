@@ -13,6 +13,39 @@ void arrive(CafeViewController c) {
 }
 
 void main() {
+  testWidgets(
+    'Fish motion is visible from the window and pauses with reduced motion',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CafeScreen(
+            books: const [],
+            currentWritingLabel: '지금 펼친 쪽',
+            initialSeat: CafeSeat.window,
+            onWrite: (s, b) async => true,
+            onLeave: () {},
+            onRetry: () {},
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
+      final c = tester.widget<CafeScene>(find.byType(CafeScene)).controller;
+      expect(c.inCourtyard, isFalse);
+      expect(c.effectTime, greaterThan(0));
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await tester.pump();
+      final paused = c.effectTime;
+      await tester.pump(const Duration(seconds: 1));
+      expect(c.effectTime, paused);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+    },
+  );
   test(
     'Courtyard travel, resting and return never cross the pond or retain a pending portal',
     () {
@@ -25,8 +58,8 @@ void main() {
       expect(c.visit(CafeTarget.courtyard), isTrue);
       arrive(c);
       expect(c.inCourtyard, isTrue);
-      expect(c.world.canStand(const CafePoint(-1.2, 1.62, -.3)), isFalse);
-      expect(c.walkTo(const CafePoint(-1.2, 0, -.3)), isFalse);
+      expect(c.world.canStand(const CafePoint(-1.2, 1.62, 1.0)), isFalse);
+      expect(c.walkTo(const CafePoint(-1.2, 0, 1.0)), isFalse);
       expect(c.visit(CafeTarget.bench), isTrue);
       arrive(c);
       expect(c.resting, isTrue);

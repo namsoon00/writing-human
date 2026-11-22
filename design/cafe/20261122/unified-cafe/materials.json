@@ -1,0 +1,24 @@
+{
+  "mode": "built-in image_gen",
+  "assets": [
+    {
+      "name": "unifiedTreePrompt",
+      "prompt": "Use case: photorealistic-natural.\nAsset type: production transparent plant sprite texture for the approved writing cafe garden, NOT a concept board or scene.\nCreate one isolated small airy multi-stem deciduous garden tree, about 2.4m mature height, with slender natural brown-gray branching trunks and a restrained rounded canopy of fresh muted olive-green small leaves. A Japanese maple or small serviceberry-like habit, natural fine leaf detail, sparse enough to see sky through branches. Whole tree visible from root base to top, broad 3:4 portrait composition with empty transparent padding. Realistic photographic cutout for a calm Korean courtyard with limestone, warm plaster and low white flowers. Soft diffuse daylight, neutral white balance, even exposure. The camera is eye-level from a few metres away, no severe perspective.\nTransparent background, including the spaces between leaves and branches. No ground, planter, pot, grass patch, building, horizon, shadow plane, labels, text, outline, border, watermarks, people, illustration style, polygonal leaves or dense forest canopy. The root base ends naturally, not cut through a planter. Only one tree. Genuine clean alpha edges, no white matte.",
+      "saved_path": "assets/images/cafe-garden-tree.webp",
+      "sha256": "e87b6abb1cc0ff80da31aa5a9b235719e7a8a379e3b6a92e1d578136628b8675"
+    },
+    {
+      "name": "unifiedFlowersPrompt",
+      "prompt": "Use case: photorealistic-natural.\nAsset type: production transparent low planting sprite texture for the writing cafe garden, NOT a whole garden scene or proposal.\nOne single small restrained clump of natural low leafy garden plants, fine soft grasses, a few tiny white daisy-like flowers and a few pale lavender flower spikes, growing together as a 50cm-wide by 40cm-high bed section. Photographic textures with fine realistic stems, leaf veins and delicate petals, greens are subdued and varied. Most of the silhouette is low foliage, only a few taller slender flower stalks. At an ordinary eye-level view from several metres away, show the whole clump including natural stem bases. Wide 4:3 framing, modest transparent margin on all sides. Soft diffuse daylight and neutral white balance, no dramatic shadow.\nGenuine transparent background and transparent spaces between stems and leaves. No ground surface, soil mound, planter, pot, rocks, pond, trees, garden wall, building, horizon, labels, text, border, outline, watermarks, people, illustration style or oversized flower bouquet. A believable small outdoor planting clump, not a vase arrangement. Clean alpha edges, no white matte.",
+      "saved_path": "assets/images/cafe-garden-flowers.webp",
+      "sha256": "33ec55a2443679740f922054713d2e8a1c25d5ba5bf69533de6eacd0afc26195"
+    },
+    {
+      "name": "unifiedPlasterPrompt",
+      "prompt": "Use case: photorealistic-natural.\nAsset type: seamless square albedo material texture for the ACTUAL rendered walls of a warm writing cafe, not an interior concept image.\nA close, straight-on orthographic material scan of fine warm off-white lime plaster. Very subtle irregular hand-trowelled mineral texture and tiny realistic pores, quiet restrained wall finish, warm ivory-gray rather than yellow or brown. Uniform neutral diffuse illumination, physically plausible fine surface detail at about 0.7 metre repeat scale. Natural soft mineral variation of only a few percent in value. The whole square is one continuous plane of plaster.\nAll four edges must tile seamlessly. No visible horizontal stripes, wood grain, sand dunes, clouds, obvious looping waves, scratches, peeling, cracks, stains, dirt, mold, grout, tile lines, panels, corners, framing, fixtures, doors, windows, vignettes, directional shadows, bright light pools, reflections, text, logos or watermarks. Not a staged room and not a wall with decorative objects. One full-bleed square high-resolution realistic plaster surface.",
+      "saved_path": "assets/images/cafe-lime-plaster.webp",
+      "sha256": "405f6efbdf1ce97de15ff4644d0173ec57c77bad0e2cb0fa2cf6f1e74b2ccebc"
+    }
+  ],
+  "scope": "Production albedo/cutout assets, not a new cafe concept. Trees and flowers are camera-facing billboards in the same linked 3D courtyard. Plaster wraps wall geometry."
+}

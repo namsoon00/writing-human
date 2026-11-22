@@ -66,11 +66,12 @@ class CafeCamera {
   }
 
   static const courtyardEntrance = CafeCamera(
-    position: CafePoint(0, 1.62, 2.35),
+    position: CafePoint(3.8, 1.62, 2.35),
+    yaw: -.55,
     pitch: -.17,
   );
   static const gardenRest = CafeCamera(
-    position: CafePoint(2.08, 1.18, -.7),
+    position: CafePoint(3.88, 1.18, -.7),
     yaw: -1.45,
     pitch: -.30,
   );
@@ -95,7 +96,7 @@ class CafeCamera {
       pitch: -.50,
     ),
     CafeSeat.garden => const CafeCamera(
-      position: CafePoint(2.08, 1.18, .58),
+      position: CafePoint(3.88, 1.18, .58),
       yaw: -math.pi / 2,
       pitch: -.40,
     ),

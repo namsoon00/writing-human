@@ -2,23 +2,6 @@ part of 'cafe_world.dart';
 
 /// A second real mesh room; the concept photograph is never used as a backdrop.
 extension _CourtyardGeometry on CafeWorld {
-  void _arch(double x, double y, double z, double outer, double inner) {
-    for (var i = 0; i < 24; i++) {
-      final a = i * math.pi / 24, b = (i + 1) * math.pi / 24;
-      CafePoint at(double t, double r) =>
-          CafePoint(x + math.cos(t) * r, y + math.sin(t) * r, z);
-      quad(
-        at(a, outer),
-        at(b, outer),
-        at(b, inner),
-        at(a, inner),
-        CafeWorld.dark,
-        wood: true,
-        grain: CafeGrain.x,
-      );
-    }
-  }
-
   void _oval(
     CafePoint center,
     CafePoint radius,
@@ -29,6 +12,7 @@ extension _CourtyardGeometry on CafeWorld {
     int rings = 6,
     CafeTarget? target,
     int layer = 2,
+    CafeSurface? surface,
   }) {
     final output = into ?? faces;
     CafePoint rotate(CafePoint p) => CafePoint(
@@ -65,6 +49,7 @@ extension _CourtyardGeometry on CafeWorld {
             color,
             doubleSided: true,
             layer: layer,
+            surface: surface,
             target: target ?? _target,
             vertexNormals: points.map((p) => (p - center).normalized).toList(),
           ),
@@ -73,99 +58,28 @@ extension _CourtyardGeometry on CafeWorld {
     }
   }
 
-  void _branch(CafePoint a, CafePoint b, double radius) {
-    final axis = (b - a).normalized;
-    final across = axis.cross(const CafePoint(0, 0, 1)).normalized;
-    final other = axis.cross(across).normalized;
-    for (var i = 0; i < 8; i++) {
-      CafePoint edge(double t) =>
-          across * (math.cos(t) * radius) + other * (math.sin(t) * radius);
-      final u = edge(i * math.pi / 4), v = edge((i + 1) * math.pi / 4);
-      quad(
-        a + u,
-        b + u * .7,
-        b + v * .7,
-        a + v,
-        const Color(0xff79634b),
-        wood: true,
-      );
-    }
-  }
-
   void _tree(double x, double z, double height, int seed) {
-    final random = math.Random(seed);
-    final root = CafePoint(x, .08, z),
-        crown = CafePoint(x + .12, height * .75, z);
-    _branch(root, crown, .075);
-    for (var i = 0; i < 9; i++) {
-      final angle = i * 2.4, reach = .45 + random.nextDouble() * .4;
-      final start = CafePoint.lerp(root, crown, .5 + random.nextDouble() * .45);
-      final tip = CafePoint(
-        x + math.cos(angle) * reach,
-        height * .74 + random.nextDouble() * height * .22,
-        z + math.sin(angle) * reach,
-      );
-      _branch(start, tip, .022);
-      for (var j = 0; j < 65; j++) {
-        final p =
-            tip +
-            CafePoint(
-              (random.nextDouble() - .5) * .65,
-              (random.nextDouble() - .5) * .45,
-              (random.nextDouble() - .5) * .65,
-            );
-        final turn = random.nextDouble() * math.pi,
-            length = .045 + random.nextDouble() * .035;
-        final u = CafePoint(
-          math.cos(turn) * length,
-          .025,
-          math.sin(turn) * length,
-        );
-        final v = CafePoint(
-          -math.sin(turn) * .045,
-          .018,
-          math.cos(turn) * .045,
-        );
-        final color = [
-          const Color(0xff6a8551),
-          const Color(0xff91a568),
-          const Color(0xff4f7046),
-          const Color(0xffa2ae73),
-        ][j % 4];
-        faces.add(
-          CafeFace(
-            List.generate(8, (k) {
-              final t = k * math.pi / 4;
-              return p + u * math.cos(t) + v * math.sin(t);
-            }),
-            color,
-            doubleSided: true,
-          ),
-        );
-      }
-    }
-    shadow(x + .15, z + .1, .75, .7, strength: .08);
+    plants.add(
+      CafePlant(
+        CafePoint(x, .02, z),
+        height * .74,
+        height,
+        CafeSurface.tree,
+        flip: seed.isEven,
+      ),
+    );
+    shadow(x + .06, z + .02, .7, .65, strength: .12);
   }
 
   void _flower(double x, double z, Color color) {
-    final stem = CafePoint(x, .13, z), top = CafePoint(x + .02, .27, z);
-    _branch(stem, top, .004);
-    for (var i = 0; i < 5; i++) {
-      final angle = i * 2 * math.pi / 5;
-      _oval(
-        top + CafePoint(math.cos(angle) * .025, 0, math.sin(angle) * .025),
-        const CafePoint(.022, .008, .026),
-        color,
-        segments: 6,
-        rings: 3,
-      );
-    }
-    _oval(
-      top + const CafePoint(0, .008, 0),
-      const CafePoint(.012, .01, .012),
-      const Color(0xffc7ae64),
-      segments: 6,
-      rings: 3,
+    plants.add(
+      CafePlant(
+        CafePoint(x, .025, z),
+        .75,
+        .55,
+        CafeSurface.flowers,
+        flip: x < -1,
+      ),
     );
   }
 
@@ -184,6 +98,7 @@ extension _CourtyardGeometry on CafeWorld {
             at((i + 1) / 12, (j + 1) / 6),
             at(i / 12, (j + 1) / 6),
             color,
+            surface: CafeSurface.plaster,
             layer: 0,
           );
         }
@@ -191,77 +106,100 @@ extension _CourtyardGeometry on CafeWorld {
     }
 
     quad(
-      const CafePoint(-2.8, -.005, -3),
-      const CafePoint(-2.8, -.005, 3.1),
-      const CafePoint(2.8, -.005, 3.1),
-      const CafePoint(2.8, -.005, -3),
+      const CafePoint(-4.65, -.005, -3),
+      const CafePoint(-4.65, -.005, 3.1),
+      const CafePoint(4.65, -.005, 3.1),
+      const CafePoint(4.65, -.005, -3),
       const Color(0xffcec5b3),
       layer: -1,
     );
-    for (var ix = 0; ix < 10; ix++) {
+    for (var ix = 0; ix < 17; ix++) {
       for (var iz = 0; iz < 7; iz++) {
-        final x = -2.8 + ix * .56, z = -3 + iz * .86;
+        final x = -4.65 + ix * .56, z = -3 + iz * .86;
         faces.add(
           CafeFace(
             [
               CafePoint(x, 0, z),
-              CafePoint(x, 0, z + .856),
-              CafePoint(x + .556, 0, z + .856),
-              CafePoint(x + .556, 0, z),
+              CafePoint(x, 0, z + .86),
+              CafePoint(x + .56, 0, z + .86),
+              CafePoint(x + .56, 0, z),
             ],
             const Color(0xfff4eddf),
-            surface: CafeSurface.limestone,
+            surface: CafeSurface.gravel,
             layer: 0,
             textureCoordinates: [
-              Offset(ix * .24, iz * .35),
-              Offset(ix * .24, (iz + 1) * .35),
-              Offset((ix + 1) * .24, (iz + 1) * .35),
-              Offset((ix + 1) * .24, iz * .35),
+              Offset(x / .6, z / .6),
+              Offset(x / .6, (z + .86) / .6),
+              Offset((x + .56) / .6, (z + .86) / .6),
+              Offset((x + .56) / .6, z / .6),
             ],
           ),
         );
       }
     }
     wall(
-      const CafePoint(-2.8, 0, -3),
-      const CafePoint(2.8, 0, -3),
-      const CafePoint(2.8, 2.95, -3),
-      const CafePoint(-2.8, 2.95, -3),
+      const CafePoint(-4.65, 0, -3),
+      const CafePoint(4.65, 0, -3),
+      const CafePoint(4.65, 2.15, -3),
+      const CafePoint(-4.65, 2.15, -3),
       CafeWorld.wall,
     );
     wall(
-      const CafePoint(2.8, 0, -3),
-      const CafePoint(2.8, 0, 3),
-      const CafePoint(2.8, 2.95, 3),
-      const CafePoint(2.8, 2.95, -3),
+      const CafePoint(4.65, 0, -3),
+      const CafePoint(4.65, 0, 3),
+      const CafePoint(4.65, 2.15, 3),
+      const CafePoint(4.65, 2.15, -3),
       CafeWorld.wall,
     );
     wall(
-      const CafePoint(-2.8, 0, 3),
-      const CafePoint(-2.8, 0, -3),
-      const CafePoint(-2.8, 2.95, -3),
-      const CafePoint(-2.8, 2.95, 3),
+      const CafePoint(-4.65, 0, 3),
+      const CafePoint(-4.65, 0, -3),
+      const CafePoint(-4.65, 2.15, -3),
+      const CafePoint(-4.65, 2.15, 3),
       CafeWorld.wall,
     );
+    // Same glazed facade as the cafe, viewed from the garden side.
     wall(
-      const CafePoint(2.8, 0, 3),
-      const CafePoint(-2.8, 0, 3),
-      const CafePoint(-2.8, 2.95, 3),
-      const CafePoint(2.8, 2.95, 3),
+      const CafePoint(-4.65, 0, 3.165),
+      const CafePoint(4.65, 0, 3.165),
+      const CafePoint(4.65, .61, 3.165),
+      const CafePoint(-4.65, .61, 3.165),
       CafeWorld.wall,
     );
+    for (final x in [3.35, 1.05, -1.25, -3.55]) {
+      for (final dx in [-1.08, 1.08]) {
+        box(x + dx, 1.72, 3.165, .07, 2.25, .12, CafeWorld.dark, wood: true);
+      }
+      box(x, .61, 3.165, 2.20, .07, .12, CafeWorld.dark, wood: true);
+      box(x, 2.83, 3.165, 2.20, .07, .12, CafeWorld.dark, wood: true);
+      faces.add(
+        CafeFace(
+          [
+            CafePoint(x - 1.02, .66, 3.164),
+            CafePoint(x + 1.02, .66, 3.164),
+            CafePoint(x + 1.02, 2.78, 3.164),
+            CafePoint(x - 1.02, 2.78, 3.164),
+          ],
+          CafeWorld.cream,
+          garden: true,
+          unlit: true,
+          layer: 1,
+        ),
+      );
+      box(x, 1.70, 3.16, .04, 2.2, .12, CafeWorld.dark, wood: true);
+    }
     quad(
-      const CafePoint(-2.8, 4, -3),
-      const CafePoint(-2.8, 4, 3),
-      const CafePoint(2.8, 4, 3),
-      const CafePoint(2.8, 4, -3),
+      const CafePoint(-4.65, 4, -3),
+      const CafePoint(-4.65, 4, 3),
+      const CafePoint(4.65, 4, 3),
+      const CafePoint(4.65, 4, -3),
       const Color(0xffdce5de),
       unlit: true,
       layer: -1,
     );
     for (var i = 0; i < 23; i++) {
       box(
-        1.85,
+        3.65,
         2.93,
         -2.95 + i * .265,
         1.9,
@@ -271,21 +209,35 @@ extension _CourtyardGeometry on CafeWorld {
         wood: true,
       );
     }
-    box(2.65, 1.45, -1.8, .12, 2.9, .12, CafeWorld.dark, wood: true);
-    box(2.65, 1.45, 2.4, .12, 2.9, .12, CafeWorld.dark, wood: true);
+    box(4.45, 1.45, -1.8, .12, 2.9, .12, CafeWorld.dark, wood: true);
+    box(4.45, 1.45, 2.4, .12, 2.9, .12, CafeWorld.dark, wood: true);
+    // Low stone steps through fine gravel, shared by the window and garden view.
+    for (final point in [
+      (3.5, 1.9),
+      (2.2, 1.65),
+      (1.2, 1.15),
+      (.48, .45),
+      (.40, -.35),
+      (.60, -1.20),
+      (1.5, -1.9),
+    ]) {
+      _roundedSlab(
+        point.$1,
+        point.$2,
+        .70,
+        .47,
+        top: .028,
+        thickness: .028,
+        radius: .085,
+        surface: CafeSurface.limestone,
+        color: const Color(0xffe9dfca),
+      );
+    }
     // A planted bank and pond are a single blocked region, never a walking tile.
-    obstacles.add(const Rect.fromLTWH(-2.65, -2.5, 2.55, 3.8));
-    _oval(
-      const CafePoint(-1.45, -.02, -.6),
-      const CafePoint(1.25, .06, 1.8),
-      const Color(0xff7c875c),
-      segments: 24,
-      rings: 4,
-      layer: 0,
-    );
+    obstacles.add(const Rect.fromLTWH(-2.65, -.9, 2.55, 3.35));
     final random = math.Random(22012);
     _target = CafeTarget.pond;
-    const center = CafePoint(-1.25, .095, -.3);
+    const center = CafePoint(-1.25, .095, 1.0);
     for (var i = 0; i < 36; i++) {
       final a = i * 2 * math.pi / 36, b = (i + 1) * 2 * math.pi / 36;
       CafePoint edge(double t) =>
@@ -293,7 +245,8 @@ extension _CourtyardGeometry on CafeWorld {
       faces.add(
         CafeFace(
           [center, edge(b), edge(a)],
-          const Color(0xff9aafa0),
+          const Color(0xffa2bcab),
+          surface: CafeSurface.water,
           target: _target,
           layer: 1,
         ),
@@ -302,10 +255,16 @@ extension _CourtyardGeometry on CafeWorld {
         final p = edge(a);
         _oval(
           p + const CafePoint(0, -.015, 0),
-          const CafePoint(.14, .065, .11),
-          i % 4 == 0 ? const Color(0xffaaa78d) : const Color(0xff828773),
-          segments: 8,
-          rings: 4,
+          CafePoint(
+            .11 + random.nextDouble() * .065,
+            .045 + random.nextDouble() * .035,
+            .085 + random.nextDouble() * .045,
+          ),
+          i % 4 == 0 ? const Color(0xffc4bcaa) : const Color(0xffa49d8d),
+          segments: 16,
+          rings: 8,
+          surface: CafeSurface.limestone,
+          yaw: a * .35,
         );
       }
     }
@@ -322,14 +281,16 @@ extension _CourtyardGeometry on CafeWorld {
       );
     }
     _target = null;
-    _tree(-2.02, -.85, 2.7, 18);
-    _tree(-.9, -2.05, 1.9, 29);
+    obstacles.add(const Rect.fromLTWH(-3.36, -1.76, .42, .42));
+    obstacles.add(const Rect.fromLTWH(3.04, -2.26, .42, .42));
+    _tree(-3.15, -1.55, 2.55, 18);
+    _tree(3.25, -2.05, 2.30, 29);
     for (var i = 0; i < 18; i++) {
-      final x = -2.5 + random.nextDouble() * 2.2,
-          z = -2.4 + random.nextDouble() * 3.5;
+      final x = -2.9 + random.nextDouble() * 3.2,
+          z = -1.3 + random.nextDouble() * 3.7;
       // Flowers stay on the banks, leaving the water readable.
       if (((x + 1.25) / 1.03) * ((x + 1.25) / 1.03) +
-              ((z + .3) / 1.35) * ((z + .3) / 1.35) <
+              ((z - 1.0) / 1.35) * ((z - 1.0) / 1.35) <
           1) {
         continue;
       }
@@ -340,60 +301,77 @@ extension _CourtyardGeometry on CafeWorld {
       );
       _flower(x + .07, z + .04, const Color(0xfff0eee0));
     }
+    for (final p in [
+      (-3.8, -1.5),
+      (-2.2, -2.6),
+      (.2, -2.65),
+      (2.2, -2.6),
+      (3.9, -1.7),
+    ]) {
+      plants.add(
+        CafePlant(
+          CafePoint(p.$1, .025, p.$2),
+          1.10,
+          .72,
+          CafeSurface.flowers,
+          flip: p.$1 < 0,
+        ),
+      );
+    }
     _target = CafeTarget.bench;
-    box(2.25, .28, -.05, .72, .46, 2.9, CafeWorld.dark, wood: true);
-    box(2.2, .53, -.05, .74, .16, 2.87, CafeWorld.sage);
-    box(2.63, .91, -.05, .14, .7, 2.9, CafeWorld.sage);
-    box(2.48, .82, -.95, .25, .48, .5, CafeWorld.cream);
-    obstacles.add(const Rect.fromLTWH(1.83, -1.5, .87, 2.9));
+    box(4.05, .28, -.05, .72, .46, 2.9, CafeWorld.dark, wood: true);
+    box(4.0, .53, -.05, .74, .16, 2.87, CafeWorld.sage);
+    box(4.43, .91, -.05, .14, .7, 2.9, CafeWorld.sage);
+    box(4.28, .82, -.95, .25, .48, .5, CafeWorld.cream);
+    obstacles.add(const Rect.fromLTWH(3.63, -1.5, .87, 2.9));
     _target = null;
     _writingSurface(
       CafeWorld.tableBounds(CafeSeat.garden),
       target: CafeTarget.gardenDesk,
     );
     _target = CafeTarget.gardenDesk;
-    _book(1.46, .773, .55);
-    box(1.38, .805, .36, .22, .012, .015, CafeWorld.dark);
-    box(1.6, .795, .18, .23, .045, .22, CafeWorld.sage);
+    _book(3.26, .773, .55);
+    box(3.18, .805, .36, .22, .012, .015, CafeWorld.dark);
+    box(3.4, .795, .18, .23, .045, .22, CafeWorld.sage);
     _target = CafeTarget.tea;
-    cylinder(1.42, .82, .93, .07, .11, CafeWorld.cream, sides: 16);
+    cylinder(3.22, .82, .93, .07, .11, CafeWorld.cream, sides: 16);
     _target = null;
-    _pendant(1.48, .62, radius: .17);
-    // Doorway and bell are reachable from the dry path beside the pond.
+    _pendant(3.28, .62, radius: .17);
+    // A glass door shares the cafe's rear-left window bay, with matching jambs.
     _target = CafeTarget.cafeReturn;
-    box(0, 1.2, 2.98, 1.25, 2.4, .03, const Color(0xffb9b599));
-    for (final x in [-.69, .69]) {
-      box(x, 1, 2.9, .09, 2, .15, CafeWorld.dark, wood: true);
+    for (final x in [3.26, 4.34]) {
+      box(x, 1.33, 3.17, .075, 2.66, .12, CafeWorld.dark, wood: true);
     }
-    _arch(0, 1.96, 2.84, .74, .64);
+    box(3.8, 2.66, 3.17, 1.16, .075, .12, CafeWorld.dark, wood: true);
     faces.add(
       CafeFace(
-        [
-          const CafePoint(.52, 1.4, 2.83),
-          const CafePoint(-.52, 1.4, 2.83),
-          const CafePoint(-.52, 1.92, 2.83),
-          const CafePoint(.52, 1.92, 2.83),
+        const [
+          CafePoint(3.3, 0, 3.16),
+          CafePoint(4.3, 0, 3.16),
+          CafePoint(4.3, 2.62, 3.16),
+          CafePoint(3.3, 2.62, 3.16),
         ],
         CafeWorld.cream,
-        sign: true,
-        signRow: 4,
+        garden: true,
         unlit: true,
+        layer: 1,
         target: _target,
       ),
     );
+    box(3.4, 1.12, 3.08, .04, .26, .03, CafeWorld.brass);
     _target = CafeTarget.bell;
-    box(-.8, 1.9, 2.84, .14, .08, .22, CafeWorld.dark, wood: true);
+    box(3.15, 1.9, 3.05, .14, .08, .22, CafeWorld.dark, wood: true);
     cylinder(
-      -.8,
+      3.15,
       1.65,
-      2.8,
+      3.03,
       .075,
       .16,
       CafeWorld.brass,
       topRadius: .025,
       sides: 16,
     );
-    cylinder(-.8, 1.5, 2.8, .008, .21, CafeWorld.dark, sides: 6);
+    cylinder(3.15, 1.5, 3.03, .008, .21, CafeWorld.dark, sides: 6);
     _target = null;
   }
 }
@@ -412,7 +390,7 @@ extension CafeCourtyardMotion on CafeWorld {
       final p = CafePoint(
         -1.25 + math.cos(t) * (.4 + i * .04),
         .13,
-        -.3 + math.sin(t) * (.72 - i * .12),
+        1.0 + math.sin(t) * (.72 - i * .12),
       );
       final yaw = math.atan2(math.cos(t) * .72, -math.sin(t) * .44);
       final color = i == 2 ? const Color(0xffe6dfbb) : const Color(0xffd29648);
@@ -462,7 +440,7 @@ extension CafeCourtyardMotion on CafeWorld {
       }
     }
     if (teaFilled) {
-      final c = const CafePoint(1.42, .88, .93);
+      final c = const CafePoint(3.22, .88, .93);
       for (var i = 0; i < 16; i++) {
         final a = i * math.pi / 8, b = (i + 1) * math.pi / 8;
         result.add(
@@ -501,7 +479,7 @@ extension CafeCourtyardMotion on CafeWorld {
     if (bellAt != null && time - bellAt < 4) {
       final d = time - bellAt;
       _oval(
-        CafePoint(-.8 + math.sin(d * 6) * .035 * math.exp(-d), 1.47, 2.8),
+        CafePoint(3.15 + math.sin(d * 6) * .035 * math.exp(-d), 1.47, 3.03),
         const CafePoint(.013, .018, .013),
         CafeWorld.brass,
         into: result,

@@ -26,15 +26,15 @@ void main() {
         }
 
         final wood = await texture('assets/images/cafe-oak-longgrain.jpg');
-        final garden = await texture(
-          'assets/images/cafe-window-garden-panorama.jpg',
-        );
         final walnut = await texture('assets/images/cafe-walnut-longgrain.jpg');
         final limestone = await texture(
           'assets/images/cafe-limestone-albedo.jpg',
         );
-        final plaster = await CafeMaterials.plaster();
+        final plaster = await texture('assets/images/cafe-lime-plaster.webp');
         final artwork = await CafeMaterials.artwork();
+        final gravel = await CafeMaterials.gravel();
+        final tree = await texture('assets/images/cafe-garden-tree.webp');
+        final flowers = await texture('assets/images/cafe-garden-flowers.webp');
         final world = CafeWorld();
         const size = ui.Size(240, 400);
         try {
@@ -51,11 +51,13 @@ void main() {
                 final painter = CafeRenderer(
                   world: world,
                   wood: wood,
-                  garden: garden,
                   walnut: walnut,
                   limestone: limestone,
                   plaster: plaster,
                   artwork: artwork,
+                  gravel: gravel,
+                  tree: tree,
+                  flowers: flowers,
                   camera: CafeCamera(
                     position: position,
                     yaw: turn * math.pi / 6,
@@ -95,11 +97,13 @@ void main() {
           }
         } finally {
           wood.dispose();
-          garden.dispose();
           walnut.dispose();
           limestone.dispose();
           plaster.dispose();
           artwork.dispose();
+          gravel.dispose();
+          tree.dispose();
+          flowers.dispose();
         }
       });
     },

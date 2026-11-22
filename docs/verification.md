@@ -3094,3 +3094,31 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   [배포 근거](evidence/20261122/voice-unified-deployment.json)에 커밋과 파일 해시를 남겼다.
 - 공유 작업 폴더 분석에는 기존 `artifacts/button-style-release`와 `artifacts/source-footer-publish`의
   임시 캡처 도구 경고 6개가 남는다. 해당 파일은 이번 배포에 포함하지 않았고, 배포 소스의 분석은 통과했다.
+
+
+## 2026-11-22 · 승인 시안과 실제 공간의 불일치 수정
+
+- 사용자는 새 시안이 아니라 실제 등빛/벽 마감과 실내외 정원의 불일치를 지적했다.
+  파노라마 사진을 실행 경로에서 제거하고 창으로 보는 뜰과 방문하는 뜰을 같은 객체로
+  연결했다. 좌표 변환/반대편 실내 보기/출입구 위치를 맞추고 연못을 창 가까이 옮겼다.
+- 기본 조도와 국소 등빛을 분리하고 실제 등 위치의 따뜻한 빛을 계산한다. 회벽 재질,
+  원목 몰딩/패널, 자갈/디딤돌, 연못 바닥 재질을 추가했다. 투명 식물 WebP와 회벽은
+  내장 imagegen으로 만든 실행 재질이다. [전체 프롬프트·경로·해시](../design/cafe/20261122/unified-cafe/materials.json)를 저장했다.
+- 포맷(169개 변경 없음), `flutter analyze --no-pub`(문제 없음), 전체 `flutter test --no-pub`
+  **280개 통과**, 실제 Chrome CanvasKit의 이미지 10개 반복 렌더 수명 검사 **1개 통과**.
+  공유 장면 정체성/카메라 왕복, 두 시간대의 창/직접 연못 픽셀 일치, 디딤돌 픽킹,
+  창에서의 물고기 움직임과 동작 줄이기 중단, 이동 취소/필사·SQLite 재열기를 확인했다.
+- 초기 native/Chrome 동시 실행은 공유 `unit_test_assets` 충돌로 실패해 순차 재실행했다.
+  새 상시 움직임 때문에 기존 무한 idle 대기 대신 이동 완료를 기다리거나 reduced motion을
+  사용했다. 걷기 취소 검사는 일반 움직임 상태에서 따로 유지했다.
+- `tool/capture_unified_cafe_test.dart`의 13개 화면은 빈 라이브러리의 Flutter 합성 렌더다.
+  [실내 조명](../design/cafe/20261122/unified-cafe/actual-cafe-light-wide.jpg),
+  [벽 마감](../design/cafe/20261122/unified-cafe/actual-wall-detail-wide.jpg),
+  [창가](../design/cafe/20261122/unified-cafe/actual-window-390.jpg),
+  [뜰 입구](../design/cafe/20261122/unified-cafe/actual-garden-entry-wide.jpg),
+  [뜰에서 본 실내](../design/cafe/20261122/unified-cafe/actual-garden-to-cafe-wide.jpg)를 보관했다.
+- 생성 시안의 사진 같은 수준을 달성했다고 보고하지 않는다. 식물은 3D 위치의 카메라
+  방향 평면이고, 물 반사/굴절·볼륨 식물·PBR/실시간 그림자 맵은 없다. 평균 깊이 정렬의
+  복잡한 가림과 iPhone Safari 실제 터치·프레임 속도/발열은 미검증이다.
+  본문 입력/저장·사용자 기록·DB·계정과 기존 비공개 Sites 식별자/접근 범위는 바꾸지 않았다.
+  병행 낭독 변경 `594360a`를 보존한 독립 릴리스에서 검사했다.

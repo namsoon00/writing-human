@@ -114,7 +114,8 @@ class _CafeSceneState extends State<CafeScene>
     final animate =
         mounted &&
         appActive &&
-        widget.controller.inCourtyard &&
+        (widget.controller.inCourtyard ||
+            widget.controller.camera.forward.x < -.5) &&
         !MediaQuery.disableAnimationsOf(context) &&
         TickerMode.valuesOf(context).enabled;
     if (animate && !calm.isActive) {
@@ -130,7 +131,16 @@ class _CafeSceneState extends State<CafeScene>
   List<double> lengths = [];
   double total = 0;
   int request = 0;
-  ui.Image? wood, garden, sign, walnut, limestone, woven, plaster, artwork;
+  ui.Image? wood,
+      sign,
+      walnut,
+      limestone,
+      woven,
+      plaster,
+      artwork,
+      gravel,
+      tree,
+      flowers;
 
   @override
   void initState() {
@@ -255,13 +265,17 @@ class _CafeSceneState extends State<CafeScene>
   Future<void> _loadMaterials() async {
     final images = await Future.wait([
       _texture('cafe-oak-longgrain.jpg'),
-      _texture('cafe-window-garden-panorama.jpg', width: 2048),
       _makeSign(),
       _texture('cafe-walnut-longgrain.jpg'),
       _texture('cafe-limestone-albedo.jpg'),
       _makeWovenCord(),
-      CafeMaterials.plaster(),
+      _texture('cafe-lime-plaster.webp', width: 1024).then<ui.Image?>(
+        (image) async => image ?? await CafeMaterials.plaster(),
+      ),
       CafeMaterials.artwork(),
+      CafeMaterials.gravel(),
+      _texture('cafe-garden-tree.webp', width: 1024),
+      _texture('cafe-garden-flowers.webp', width: 768),
     ]);
     if (!mounted) {
       for (final image in images) {
@@ -271,13 +285,15 @@ class _CafeSceneState extends State<CafeScene>
     }
     setState(() {
       wood = images[0];
-      garden = images[1];
-      sign = images[2];
-      walnut = images[3];
-      limestone = images[4];
-      woven = images[5];
-      plaster = images[6];
-      artwork = images[7];
+      sign = images[1];
+      walnut = images[2];
+      limestone = images[3];
+      woven = images[4];
+      plaster = images[5];
+      artwork = images[6];
+      gravel = images[7];
+      tree = images[8];
+      flowers = images[9];
     });
   }
 
@@ -377,13 +393,15 @@ class _CafeSceneState extends State<CafeScene>
     travel.dispose();
     focus.dispose();
     wood?.dispose();
-    garden?.dispose();
     sign?.dispose();
     walnut?.dispose();
     limestone?.dispose();
     woven?.dispose();
     plaster?.dispose();
     artwork?.dispose();
+    gravel?.dispose();
+    tree?.dispose();
+    flowers?.dispose();
     super.dispose();
   }
 
@@ -531,13 +549,15 @@ class _CafeSceneState extends State<CafeScene>
                       world: c.world,
                       camera: camera,
                       wood: wood,
-                      garden: garden,
                       sign: sign,
                       walnut: walnut,
                       limestone: limestone,
                       woven: woven,
                       plaster: plaster,
                       artwork: artwork,
+                      gravel: gravel,
+                      tree: tree,
+                      flowers: flowers,
                       time: sceneTime,
                       teaFilled: c.teaFilled,
                       bellAt: c.bellAt,

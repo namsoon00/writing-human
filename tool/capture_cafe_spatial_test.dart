@@ -16,6 +16,11 @@ void main() {
   testWidgets(
     'Capture the spatial cafe entrance and seated views on phone and desktop',
     (tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
       final shadows = debugDisableShadows;
       debugDisableShadows = false;
       addTearDown(() => debugDisableShadows = shadows);

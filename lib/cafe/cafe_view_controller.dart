@@ -25,7 +25,7 @@ class CafeViewController extends ChangeNotifier {
   }
 
   final _cafe = CafeWorld();
-  late final _courtyard = CafeWorld(courtyard: true);
+  late final _courtyard = _cafe.linkedWorld;
   bool inCourtyard;
   bool resting = false, teaFilled = false;
   double effectTime = 0;
@@ -160,7 +160,7 @@ class CafeViewController extends ChangeNotifier {
       inCourtyard = false;
       camera = CafeCamera(
         position: CafeWorld.approach(CafeTarget.courtyard),
-        yaw: math.pi,
+        yaw: math.pi / 2,
         pitch: -.1,
       );
       seat = null;

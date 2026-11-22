@@ -141,7 +141,19 @@ void main() {
             reason: 'paper hidden at z=$z',
           );
         }
-        expect(brightness(const CafePoint(-.2, .87, .18)), greaterThan(580));
+        // Sample inside the narrow ring; its outside silhouette is antialiased.
+        final rim = brightness(const CafePoint(-.155, .869, .18));
+        final tea = brightness(const CafePoint(-.2, .866, .18));
+        expect(
+          rim,
+          greaterThan(480),
+          reason: 'ceramic rim must remain visible',
+        );
+        expect(
+          tea,
+          lessThan(rim - 90),
+          reason: 'tea must be visible below the hollow rim',
+        );
       } finally {
         image.dispose();
         picture.dispose();

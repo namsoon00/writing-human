@@ -16,6 +16,10 @@ enum CafeSurface {
   brass,
   plaster,
   artwork,
+  gravel,
+  tree,
+  flowers,
+  water,
 }
 
 enum CafeGrain { x, y, z }
@@ -62,9 +66,32 @@ class CafeFace {
       .normalized;
 }
 
+class CafePlant {
+  const CafePlant(
+    this.base,
+    this.width,
+    this.height,
+    this.surface, {
+    this.flip = false,
+  });
+  final CafePoint base;
+  final double width, height;
+  final CafeSurface surface;
+  final bool flip;
+}
+
 /// All geometry is in metres. The viewer stands inside the same room they visit.
 class CafeWorld {
   CafeWorld({this.courtyard = false}) {
+    _buildRoom();
+    linkedWorld = CafeWorld._room(!courtyard);
+    linkedWorld.linkedWorld = this;
+  }
+  CafeWorld._room(this.courtyard) {
+    _buildRoom();
+  }
+  late CafeWorld linkedWorld;
+  void _buildRoom() {
     if (courtyard) {
       _buildCourtyard();
     } else {
@@ -72,11 +99,84 @@ class CafeWorld {
     }
     _subdividePrints();
   }
+
+  CafeCamera linkedCamera(CafeCamera camera) => CafeCamera(
+    position: courtyard
+        ? CafePoint(
+            camera.position.z - 7.4,
+            camera.position.y,
+            -camera.position.x,
+          )
+        : CafePoint(
+            -camera.position.z,
+            camera.position.y,
+            camera.position.x + 7.4,
+          ),
+    yaw: camera.yaw + (courtyard ? -math.pi / 2 : math.pi / 2),
+    pitch: camera.pitch,
+  );
   final bool courtyard;
   Iterable<CafeTarget> get targets =>
       CafeTarget.values.where((t) => t.inCourtyard == courtyard);
   final List<CafeFace> faces = [];
   final List<Rect> obstacles = [];
+  final List<CafePlant> plants = [];
+  final List<CafePoint> pendantLights = [];
+  Iterable<CafeFace> lightFaces(CafeCamera camera) sync* {
+    for (final center in pendantLights) {
+      for (var ring = 0; ring < 3; ring++) {
+        final inner = ring / 3, outer = (ring + 1) / 3;
+        Color color(double radius) =>
+            Color.fromRGBO(255, 218, 163, .16 * (1 - radius) * (1 - radius));
+        CafePoint at(double r, double a) =>
+            center +
+            camera.right * (math.cos(a) * r * .16) +
+            camera.up * (math.sin(a) * r * .16);
+        for (var i = 0; i < 16; i++) {
+          final a = i * math.pi / 8, b = (i + 1) * math.pi / 8;
+          yield CafeFace(
+            [at(inner, a), at(outer, a), at(outer, b), at(inner, b)],
+            color(inner),
+            unlit: true,
+            doubleSided: true,
+            vertexColors: [
+              color(inner),
+              color(outer),
+              color(outer),
+              color(inner),
+            ],
+          );
+        }
+      }
+    }
+  }
+
+  Iterable<CafeFace> plantFaces(CafeCamera camera) sync* {
+    final across = CafePoint(camera.right.x, 0, camera.right.z).normalized;
+    for (final plant in plants) {
+      final nx = plant.surface == CafeSurface.tree ? 6 : 3,
+          ny = plant.surface == CafeSurface.tree ? 8 : 3;
+      CafePoint point(double u, double v) =>
+          plant.base +
+          across * ((u - .5) * plant.width) +
+          CafePoint(0, (1 - v) * plant.height, 0);
+      Offset uv(double u, double v) => Offset(plant.flip ? 1 - u : u, v);
+      for (var x = 0; x < nx; x++) {
+        for (var y = 0; y < ny; y++) {
+          final u = x / nx, v = y / ny, uu = (x + 1) / nx, vv = (y + 1) / ny;
+          yield CafeFace(
+            [point(u, vv), point(uu, vv), point(uu, v), point(u, v)],
+            const Color(0xffffffff),
+            surface: plant.surface,
+            unlit: true,
+            doubleSided: true,
+            textureCoordinates: [uv(u, vv), uv(uu, vv), uv(uu, v), uv(u, v)],
+          );
+        }
+      }
+    }
+  }
+
   static const wall = Color(0xffddd2bd),
       oak = Color(0xffac835b),
       dark = Color(0xff4e392b);
@@ -92,7 +192,7 @@ class CafeWorld {
     CafeSeat.quiet => const CafePoint(-2.25, .77, -4.02),
     CafeSeat.windowMiddle => const CafePoint(-3.72, .77, -.3),
     CafeSeat.windowRear => const CafePoint(-3.72, .77, -2.5),
-    CafeSeat.garden => const CafePoint(1.48, .77, .58),
+    CafeSeat.garden => const CafePoint(3.28, .77, .58),
   };
   static CafePoint anchor(CafeTarget target) => switch (target) {
     CafeTarget.window => desk(CafeSeat.window),
@@ -104,13 +204,13 @@ class CafeWorld {
     CafeTarget.recommendations => const CafePoint(3.92, 1.30, -2.20),
     CafeTarget.stationery => const CafePoint(3.82, .94, 2.45),
     CafeTarget.exit => const CafePoint(0, 1.25, 4.92),
-    CafeTarget.courtyard => const CafePoint(3.15, 1.6, -4.85),
-    CafeTarget.pond => const CafePoint(-1.25, .08, -.3),
-    CafeTarget.bench => const CafePoint(2.2, .65, -.7),
-    CafeTarget.bell => const CafePoint(-.8, 1.62, 2.8),
-    CafeTarget.tea => const CafePoint(1.42, .84, .93),
+    CafeTarget.courtyard => const CafePoint(-4.18, 1.45, -3.8),
+    CafeTarget.pond => const CafePoint(-1.25, .08, 1.0),
+    CafeTarget.bench => const CafePoint(4.0, .65, -.7),
+    CafeTarget.bell => const CafePoint(3.15, 1.62, 3.03),
+    CafeTarget.tea => const CafePoint(3.22, .84, .93),
     CafeTarget.gardenDesk => desk(CafeSeat.garden),
-    CafeTarget.cafeReturn => const CafePoint(0, 1.3, 2.97),
+    CafeTarget.cafeReturn => const CafePoint(3.8, 1.3, 3.16),
   };
   static CafePoint approach(CafeTarget target) => switch (target) {
     CafeTarget.window => const CafePoint(-2.52, 1.62, 1.9),
@@ -122,12 +222,12 @@ class CafeWorld {
     CafeTarget.recommendations => const CafePoint(2.85, 1.62, -2.20),
     CafeTarget.stationery => const CafePoint(2.85, 1.62, 2.45),
     CafeTarget.exit => const CafePoint(0, 1.62, 4.10),
-    CafeTarget.courtyard => const CafePoint(2.95, 1.62, -3.5),
-    CafeTarget.pond => const CafePoint(.3, 1.62, -.3),
-    CafeTarget.bench => const CafePoint(1.15, 1.62, -.7),
-    CafeTarget.bell => const CafePoint(.1, 1.62, 2.15),
-    CafeTarget.tea || CafeTarget.gardenDesk => const CafePoint(.3, 1.62, 1.6),
-    CafeTarget.cafeReturn => const CafePoint(0, 1.62, 2.25),
+    CafeTarget.courtyard => const CafePoint(-4.08, 1.62, -3.8),
+    CafeTarget.pond => const CafePoint(.3, 1.62, 1.0),
+    CafeTarget.bench => const CafePoint(2.95, 1.62, -.7),
+    CafeTarget.bell => const CafePoint(3.15, 1.62, 2.15),
+    CafeTarget.tea || CafeTarget.gardenDesk => const CafePoint(2.1, 1.62, 1.6),
+    CafeTarget.cafeReturn => const CafePoint(3.8, 1.62, 2.35),
   };
   static Rect tableBounds(CafeSeat seat) => switch (seat) {
     CafeSeat.window => const Rect.fromLTWH(-4.12, 1.22, .72, 1.36),
@@ -135,11 +235,11 @@ class CafeWorld {
     CafeSeat.quiet => const Rect.fromLTWH(-2.95, -4.42, 1.4, .8),
     CafeSeat.windowMiddle => const Rect.fromLTWH(-4.12, -.98, .72, 1.36),
     CafeSeat.windowRear => const Rect.fromLTWH(-4.12, -3.18, .72, 1.36),
-    CafeSeat.garden => const Rect.fromLTWH(.88, .08, .9, 1.0),
+    CafeSeat.garden => const Rect.fromLTWH(2.68, .08, .9, 1.0),
   };
   bool canStand(CafePoint p) =>
       p.isFinite &&
-      p.x.abs() < (courtyard ? 2.55 : halfWidth - .25) &&
+      p.x.abs() < (courtyard ? 4.4 : halfWidth - .25) &&
       p.z.abs() < (courtyard ? 2.8 : halfDepth - .25) &&
       !obstacles.any((r) => r.inflate(.22).contains(Offset(p.x, p.z)));
 
@@ -380,6 +480,7 @@ class CafeWorld {
     int sides = 12,
     double? topRadius,
     bool unlit = false,
+    bool topFace = true,
   }) {
     final rt = topRadius ?? radius;
     for (var i = 0; i < sides; i++) {
@@ -415,14 +516,16 @@ class CafeWorld {
         math.sin(b),
       ).normalized;
       quad(p, s, r, q, color, unlit: unlit, normals: [na, na, nb, nb]);
-      faces.add(
-        CafeFace(
-          [CafePoint(x, y + height / 2, z), r, s],
-          color,
-          unlit: unlit,
-          target: _target,
-        ),
-      );
+      if (topFace) {
+        faces.add(
+          CafeFace(
+            [CafePoint(x, y + height / 2, z), r, s],
+            color,
+            unlit: unlit,
+            target: _target,
+          ),
+        );
+      }
     }
   }
 
@@ -768,6 +871,7 @@ class CafeWorld {
   }
 
   void _pendant(double x, double z, {double radius = .25}) {
+    pendantLights.add(CafePoint(x, 2.175, z));
     cylinder(x, 2.65, z, .012, .56, dark, sides: 5);
     cylinder(x, 2.28, z, radius, .20, brass, topRadius: .08, sides: 24);
     cylinder(x, 2.407, z, .042, .055, brass, sides: 16);
@@ -821,18 +925,21 @@ class CafeWorld {
       CafePoint d,
       Color color,
     ) {
-      for (var i = 0; i < 14; i++) {
-        for (var j = 0; j < 5; j++) {
+      final step = color == wall ? .24 : .65;
+      final nx = ((b - a).length / step).ceil(),
+          ny = ((d - a).length / step).ceil();
+      for (var i = 0; i < nx; i++) {
+        for (var j = 0; j < ny; j++) {
           CafePoint at(double u, double v) => CafePoint.lerp(
             CafePoint.lerp(a, b, u),
             CafePoint.lerp(d, c, u),
             v,
           );
           quad(
-            at(i / 14, j / 5),
-            at((i + 1) / 14, j / 5),
-            at((i + 1) / 14, (j + 1) / 5),
-            at(i / 14, (j + 1) / 5),
+            at(i / nx, j / ny),
+            at((i + 1) / nx, j / ny),
+            at((i + 1) / nx, (j + 1) / ny),
+            at(i / nx, (j + 1) / ny),
             color,
             surface: color == wall ? CafeSurface.plaster : null,
             layer: 0,
@@ -975,7 +1082,7 @@ class CafeWorld {
       _target = target;
       _chair(-3.0, z, angle: math.pi / 2);
       _book(-3.72, .773, z, angle: math.pi / 2);
-      cylinder(-3.8, .83, z - .40, .06, .10, cream, sides: 12);
+      _cup(-3.8, .767, z - .40);
       _target = null;
       _pendant(-3.68, z, radius: .19);
     }
@@ -989,7 +1096,7 @@ class CafeWorld {
     _book(.24, .773, .75, angle: math.pi / 2);
     _book(-.23, .773, -.85, angle: -math.pi / 2);
     _pencil(.29, .806, .49);
-    cylinder(-.2, .82, .18, .06, .10, cream, sides: 14);
+    _cup(-.2, .767, .18);
     cylinder(
       0,
       .84,
@@ -1084,28 +1191,31 @@ class CafeWorld {
         unlit: true,
       ),
     );
+    // The garden entrance is on the same left facade as its windows.
     _target = CafeTarget.courtyard;
-    box(3.15, 1.22, -4.94, 1.05, 2.4, .05, const Color(0xff939b77));
-    for (final x in [2.57, 3.73]) {
-      box(x, 1.0, -4.82, .09, 2.0, .16, dark, wood: true);
+    for (final z in [-4.34, -3.26]) {
+      box(-4.15, 1.33, z, .12, 2.66, .075, dark, wood: true);
     }
-    _arch(3.15, 1.95, -4.72, .62, .53);
+    box(-4.15, 2.66, -3.8, .12, .075, 1.16, dark, wood: true);
     faces.add(
       CafeFace(
-        [
-          const CafePoint(2.68, 1.45, -4.73),
-          const CafePoint(3.62, 1.45, -4.73),
-          const CafePoint(3.62, 1.92, -4.73),
-          const CafePoint(2.68, 1.92, -4.73),
+        const [
+          CafePoint(-4.19, 0, -4.3),
+          CafePoint(-4.19, 0, -3.3),
+          CafePoint(-4.19, 2.62, -3.3),
+          CafePoint(-4.19, 2.62, -4.3),
         ],
         cream,
-        sign: true,
-        signRow: 4,
+        garden: true,
         unlit: true,
+        layer: 1,
         target: _target,
       ),
     );
+    box(-4.08, 1.12, -3.4, .03, .26, .04, brass);
+    box(-4.15, .015, -3.8, .25, .025, 1.06, brass);
     _target = null;
+    _framedPrint(3.15, 1.91, -4.91, .84, 1.12, 0);
     // Right wall cabinetry: face-out recommendations, private shelf, pen ledge.
     for (final section in [
       (-2.25, CafeTarget.recommendations),

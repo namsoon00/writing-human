@@ -26,22 +26,26 @@ void main() {
       }
 
       final wood = await texture(),
-          garden = await texture(),
           sign = await texture(),
           walnut = await texture(),
           limestone = await texture(),
           woven = await texture(),
           plaster = await texture(),
-          artwork = await texture();
+          artwork = await texture(),
+          gravel = await texture(),
+          tree = await texture(),
+          flowers = await texture();
       final originals = [
         wood,
-        garden,
         sign,
         walnut,
         limestone,
         woven,
         plaster,
         artwork,
+        gravel,
+        tree,
+        flowers,
       ];
       final world = CafeWorld();
       final courtyard = CafeWorld(courtyard: true);
@@ -53,13 +57,15 @@ void main() {
             time: frame.toDouble(),
             teaFilled: true,
             wood: wood,
-            garden: garden,
             sign: sign,
             walnut: walnut,
             limestone: limestone,
             woven: woven,
             plaster: plaster,
             artwork: artwork,
+            gravel: gravel,
+            tree: tree,
+            flowers: flowers,
             camera: CafeCamera(
               position: frame < 6
                   ? CafeCamera.seated(CafeSeat.window).position

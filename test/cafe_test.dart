@@ -98,6 +98,14 @@ Future<void> _reveal(WidgetTester tester, Finder target) async {
 }
 
 void main() {
+  setUp(() {
+    final dispatcher =
+        TestWidgetsFlutterBinding.ensureInitialized().platformDispatcher;
+    dispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(
+      disableAnimations: true,
+    );
+    addTearDown(dispatcher.clearAccessibilityFeaturesTestValue);
+  });
   testWidgets(
     'A cafe visit preserves the editor, selection and saved writing',
     (tester) async {
@@ -229,10 +237,13 @@ void main() {
     await tester.pumpAndSettle();
     final shelf = find.byKey(const ValueKey('cafe-guide-recommendations'));
     await tester.ensureVisible(shelf);
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures(disableAnimations: false);
+    await tester.pump();
     await tester.tap(shelf);
     await tester.pump(const Duration(milliseconds: 400));
     await tester.dragFrom(const Offset(190, 250), const Offset(-60, 0));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 3));
     expect(find.text('하늘과 바람과 별과 시'), findsNothing);
     expect(store.writes, 0);
     expect(

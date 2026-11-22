@@ -2763,6 +2763,7 @@ void main() {
     const original = RegisteredOriginal(
       'o',
       '$repeated앞쪽 장면이 지나갑니다.\n$repeated$next$last',
+      reflection: OriginalReflection('이전에 남긴 생각'),
     );
     final anchor = original.text.lastIndexOf(repeated);
     const written = '$repeated$next';
@@ -2812,6 +2813,20 @@ void main() {
     expect(savedList.initialOriginalId, isNull);
     expect(savedList.match?.original.id, original.id);
     expect(savedList.match?.start, anchor + repeated.length);
+    await tester.tap(find.byKey(ValueKey(original.id)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('이전에 남긴 생각'));
+    await tester.pumpAndSettle();
+    const note = '다시 읽고 남긴 생각';
+    await tester.enterText(
+      find.byKey(const ValueKey('original-reflection-input')),
+      note,
+    );
+    await tester.pump(const Duration(milliseconds: 450));
+    await tester.pumpAndSettle();
+    final reflection = store.data.activeRecord!.originals.single.reflection;
+    expect(reflection?.text, note);
+    expect(reflection?.mark, isNull);
     await tester.tap(closeIn(reading));
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(bodyField).controller, same(input));

@@ -195,7 +195,9 @@ class _SourceReadingState extends State<SourceReading> {
       failed = false;
       draftMark =
           original.reflection?.mark ??
-          (match == null ? null : PencilMark(match.start, match.end));
+          (match != null && match.end > match.start
+              ? PencilMark(match.start, match.end)
+              : null);
     });
   }
 

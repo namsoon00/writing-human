@@ -1,0 +1,32 @@
+{
+  "url": "https://namsoon00.github.io/writing-human/",
+  "code_commit": "9df292534c95c4d2d4eba4a0b926458d44a29167",
+  "workflow_run": 45029817944,
+  "workflow_url": "https://github.com/namsoon00/writing-human/actions/runs/45029817944",
+  "verified_at": "2026-11-22T13:58:27.734123+00:00",
+  "bootstrap_path": "flutter_bootstrap.js?v=e558168ce97be9ec",
+  "main_path": "main.dart.js?v=23097f401a03f74b",
+  "files": {
+    "main.dart.js": {
+      "bytes": 5123737,
+      "sha256": "23097f401a03f74b5000887c8f9ea362437df51676450844b62641065cbc6477",
+      "matches_local": true
+    },
+    "assets/assets/audio/dsp/voice_worker.mjs": {
+      "bytes": 1733,
+      "sha256": "ef288c3f1b9f9db5b8dc1f2c1e66c34c3a210496ebdb8d80f576c4b602100391",
+      "matches_local": true
+    },
+    "assets/assets/audio/dsp/signalsmith_factory.mjs": {
+      "bytes": 98413,
+      "sha256": "7b821567177096f1e4df05e236366bd2241f0a38e7a601840fd7e30e5d712d77",
+      "matches_local": true
+    },
+    "assets/assets/audio/signalsmith-code-license.txt": {
+      "bytes": 7353,
+      "sha256": "440d14acdcfa78b4dac595c2dd0033d2e92694f1c9fe96cf7e695464e090da40",
+      "matches_local": true
+    }
+  },
+  "scope": "Public HTTP artifact matches the local checked build; real Chrome DSP tests and iOS simulator/Android APK build passed. Physical-device listening and fresh end-to-end ONNX inference were not performed."
+}

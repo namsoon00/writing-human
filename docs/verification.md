@@ -3084,3 +3084,13 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   비공개 Sites project_id/접근 범위는 수정하지 않았다.
 - `flutter build apk --debug`: 성공. arm64-v8a/armeabi-v7a/x86_64에
   `libwriting_voice.so`가 포함됨을 확인했다. 실제 Android 기기 재생은 미검증이다.
+
+- 공개 CI [45029817944](https://github.com/namsoon00/writing-human/actions/runs/45029817944):
+  포맷·분석, 전체 276개 테스트, 실제 Chrome 음성 DSP 6개 검사, CanvasKit 이미지 수명 검사,
+  웹 빌드·게시 모두 성공했다. 로컬 병행 실행의 두 asset 누락은 공개 CI에서도 재현되지 않았다.
+- 공개 주소 `https://namsoon00.github.io/writing-human/`의 앱 JS와 음성 worker/WASM factory/사용 조건을
+  2026-11-22 22:58 KST에 내려받아 로컬 검증 빌드와 바이트 단위로 일치함을 확인했다.
+  앱 JS SHA-256: `23097f401a03f74b5000887c8f9ea362437df51676450844b62641065cbc6477`.
+  [배포 근거](evidence/20261122/voice-unified-deployment.json)에 커밋과 파일 해시를 남겼다.
+- 공유 작업 폴더 분석에는 기존 `artifacts/button-style-release`와 `artifacts/source-footer-publish`의
+  임시 캡처 도구 경고 6개가 남는다. 해당 파일은 이번 배포에 포함하지 않았고, 배포 소스의 분석은 통과했다.

@@ -130,6 +130,27 @@ void main() {
         expect(body, findsOneWidget);
         expect(find.byType(OriginalPhoto), findsOneWidget);
 
+        await tester.tap(find.byTooltip('원문 목록'));
+        await finishPhotoLoad(tester);
+        final preview = find.byType(OriginalPhoto);
+        final thumbnail = tester.widget<OriginalPhoto>(preview);
+        expect(thumbnail.thumbnailSize, const Size(46, 68));
+        final previewImage = tester.widget<Image>(
+          find.descendant(
+            of: preview,
+            matching: find.byKey(const ValueKey('saved-original-photo')),
+          ),
+        );
+        final resized = previewImage.image as ResizeImage;
+        expect(resized.policy, ResizeImagePolicy.fit);
+        expect(
+          (resized.imageProvider as MemoryImage).bytes,
+          orderedEquals(intake.photo.bytes),
+        );
+        await tester.tap(preview);
+        await finishPhotoLoad(tester);
+        expect(body, findsOneWidget);
+
         await tester.tap(find.byTooltip('원문 더 보기'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('원문 담기'));
@@ -195,6 +216,41 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('Returning from a saved original restores a long index scroll', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SourceReading(
+            originals: [
+              for (var i = 0; i < 16; i++)
+                RegisteredOriginal('item-$i', '서랍에 담은 원문 $i'),
+            ],
+            transcribeLabel: '필사하기',
+          ),
+        ),
+      ),
+    );
+    final list = find.byKey(const PageStorageKey('saved-original-list'));
+    final scrollable = find.descendant(
+      of: list,
+      matching: find.byType(Scrollable),
+    );
+    final entry = find.text('서랍에 담은 원문 2');
+    await tester.scrollUntilVisible(entry, 180, scrollable: scrollable);
+    await tester.pumpAndSettle();
+    final offset = tester.state<ScrollableState>(scrollable).position.pixels;
+    expect(offset, greaterThan(200));
+    await tester.tap(entry);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('source-reading-text')), findsOneWidget);
+    await tester.tap(find.byTooltip('원문 목록'));
+    await tester.pumpAndSettle();
+    expect(entry.hitTestable(), findsOneWidget);
+    expect(tester.state<ScrollableState>(scrollable).position.pixels, offset);
+  });
 
   for (final withText in [true, false]) {
     testWidgets('Writing only shows original text (with text: $withText)', (

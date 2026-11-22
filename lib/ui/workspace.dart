@@ -1258,6 +1258,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           listenable: owner,
           builder: (context, _) => SourceReading(
             originals: originals(),
+            bookTitle: selectedBook?.title,
             transcribeLabel: _transcribeLabel(bookId, selectedPage),
             previousCitations: bookDetails == null
                 ? selectedPage.originalCitations

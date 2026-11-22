@@ -12,6 +12,7 @@ import 'package:writing_human/source/page_originals.dart';
 import 'package:writing_human/source/originals.dart';
 import 'package:writing_human/source/transcription_comparison.dart';
 import 'package:writing_human/sync/merge.dart';
+import 'package:writing_human/ui/original_list_item.dart';
 import 'package:writing_human/ui/paper.dart';
 import 'package:writing_human/ui/paper_panel.dart';
 import 'package:writing_human/ui/transcription_reference.dart';
@@ -330,7 +331,10 @@ void main() {
           await tester.pumpAndSettle();
         }
         await tester.tap(
-          find.widgetWithText(ListTile, id == 'a' ? first.text : second.text),
+          find.widgetWithText(
+            OriginalListItem,
+            id == 'a' ? first.text : second.text,
+          ),
         );
         await tester.pumpAndSettle();
       }

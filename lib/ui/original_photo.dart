@@ -40,11 +40,13 @@ class OriginalPhoto extends StatefulWidget {
     this.region,
     this.fitWidth = false,
     this.compact = false,
+    this.thumbnailSize,
   });
 
   final String id;
   final List<double>? region;
   final bool fitWidth, compact;
+  final Size? thumbnailSize;
 
   @override
   State<OriginalPhoto> createState() => _OriginalPhotoState();
@@ -108,16 +110,30 @@ class _OriginalPhotoState extends State<OriginalPhoto> {
           ),
         );
       }
-      final photo = Image.memory(
-        bytes,
+      final thumbnail = widget.thumbnailSize;
+      final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+      final photo = Image(
+        image: thumbnail == null
+            ? MemoryImage(bytes)
+            : ResizeImage(
+                MemoryImage(bytes),
+                width: (thumbnail.width * pixelRatio).ceil(),
+                height: (thumbnail.height * pixelRatio).ceil(),
+                policy: ResizeImagePolicy.fit,
+              ),
         key: const ValueKey('saved-original-photo'),
         width: widget.fitWidth ? double.infinity : null,
         fit: widget.fitWidth ? BoxFit.fitWidth : BoxFit.contain,
         semanticLabel: '저장한 원본 사진',
-        errorBuilder: (_, _, _) => const Text(
-          '사진을 표시할 수 없어요. 원본 파일이 열리는지 확인해 주세요.',
-          textAlign: TextAlign.center,
-        ),
+        errorBuilder: (_, _, _) => thumbnail == null
+            ? const Text(
+                '사진을 표시할 수 없어요. 원본 파일이 열리는지 확인해 주세요.',
+                textAlign: TextAlign.center,
+              )
+            : const Icon(
+                Icons.broken_image_outlined,
+                semanticLabel: '사진을 표시할 수 없어요.',
+              ),
       );
       return widget.fitWidth
           ? SingleChildScrollView(primary: false, child: photo)

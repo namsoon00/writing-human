@@ -793,8 +793,10 @@ void main() {
     final writes = store.writes;
     await tester.tap(place);
     await tester.pumpAndSettle();
-    final search = find.widgetWithText(TextButton, '담은 원문 찾기');
+    final search = find.byKey(const ValueKey('saved-original-search'));
     final register = find.widgetWithText(TextButton, '원문 담기');
+    expect(tester.widget<TextField>(search).decoration!.hintText, '담은 원문 찾기');
+    expect(find.text('새 원문 찾기'), findsNothing);
     expect(
       tester.getTopLeft(search).dy,
       greaterThan(tester.getBottomLeft(register).dy),
@@ -885,7 +887,7 @@ void main() {
     await tester.enterText(input, '없는 원문');
     await tester.pumpAndSettle();
     expect(find.text('일치하는 원문이 없어요.'), findsOneWidget);
-    await tester.tap(find.widgetWithText(TextButton, '검색 닫기'));
+    await tester.tap(find.byTooltip('검색 지우기'));
     await tester.pumpAndSettle();
     expect(find.text('눈 내리는 저녁'), findsOneWidget);
     tester.view.physicalSize = const Size(320, 640);
@@ -895,6 +897,10 @@ void main() {
     expect(search.hitTestable(), findsOneWidget);
     expect(register.hitTestable(), findsOneWidget);
     expect(find.text('밑칠만 보기').hitTestable(), findsOneWidget);
+    await tester.tap(register);
+    await tester.pumpAndSettle();
+    expect(find.byType(SourceImportSheet), findsOneWidget);
+    expect(find.text('새 원문 찾기'), findsOneWidget);
     expect(tester.takeException(), isNull);
     expect(store.writes, writes);
   });
@@ -1929,6 +1935,8 @@ void main() {
         [slip.toJson(), slip.toJson()],
       );
       final sourceCard = tester.widget<SourceSlip>(slips.first);
+      expect(sourceCard.indexCard, isTrue);
+      expect(find.text('책'), findsOneWidget);
       expect(sourceCard.panelColor, panel);
       expect(sourceCard.stockColor, isNot(Colors.white));
       expect(tester.widget<Text>(find.text(first)).style!.color, ink);

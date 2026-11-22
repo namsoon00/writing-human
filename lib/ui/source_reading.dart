@@ -28,6 +28,7 @@ class SourceReading extends StatefulWidget {
     required this.transcribeLabel,
     this.match,
     this.initialOriginalId,
+    this.bookTitle,
     this.previousCitations = const [],
     this.onReadOriginal,
     this.style = const WritingStyle(),
@@ -46,7 +47,7 @@ class SourceReading extends StatefulWidget {
   final List<RegisteredOriginal> originals;
   final String transcribeLabel;
   final OriginalMatch? match;
-  final String? initialOriginalId;
+  final String? initialOriginalId, bookTitle;
   final List<String> previousCitations;
   final ValueChanged<String>? onReadOriginal;
   final WritingStyle style;
@@ -76,12 +77,12 @@ class _SourceReadingState extends State<SourceReading> {
   late String? selectedId = widget.initialOriginalId;
   final searchField = TextEditingController();
   final searchFocus = FocusNode(debugLabel: 'saved original search');
-  bool showSearch = false;
   String query = '';
   final reflectionField = TextEditingController();
   final reflectionFocus = FocusNode();
   final readingItem = GlobalKey();
   String? _readingId;
+  bool _openedFromList = false;
   RegisteredOriginal? _editingOriginal;
   Timer? _autosave;
   Future<void>? _inFlight;
@@ -116,15 +117,26 @@ class _SourceReadingState extends State<SourceReading> {
     }
   }
 
-  void _open(String id) {
+  void _clearSearch() {
+    searchField.clear();
     searchFocus.unfocus();
-    setState(() => selectedId = id);
+    setState(() => query = '');
+  }
+
+  void _open(String id, {bool fromList = false}) {
+    searchFocus.unfocus();
+    setState(() {
+      selectedId = id;
+      _openedFromList = fromList;
+    });
     widget.onReadOriginal?.call(id);
   }
 
   void _showList() {
+    final restoreScrollOffset = _openedFromList;
     setState(() {
       _readingId = selectedId;
+      _openedFromList = false;
       if (markedOnly &&
           !widget.originals.any(
             (item) => item.id == selectedId && _isMarked(item),
@@ -133,27 +145,11 @@ class _SourceReadingState extends State<SourceReading> {
       }
       selectedId = null;
     });
+    if (restoreScrollOffset) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final item = readingItem.currentContext;
       if (item != null) Scrollable.ensureVisible(item, alignment: .35);
     });
-  }
-
-  void _toggleSearch(bool searching) {
-    if (searching) {
-      searchFocus.unfocus();
-      searchField.clear();
-      setState(() {
-        showSearch = false;
-        query = '';
-      });
-    } else {
-      setState(() {
-        selectedId = null;
-        showSearch = true;
-      });
-      searchFocus.requestFocus();
-    }
   }
 
   Future<void> _register({bool find = false}) async {
@@ -500,8 +496,9 @@ class _SourceReadingState extends State<SourceReading> {
         ? previousMatch
         : null;
     final reflection = original?.reflection;
-    final searching = original == null && showSearch;
+    final searching = original == null && widget.originals.isNotEmpty;
     final pattern = searching ? originalSearchPattern(query) : null;
+    final bookTitle = widget.bookTitle?.trim() ?? '';
     final scopedOriginals = markedOnly
         ? widget.originals.where(_isMarked)
         : widget.originals;
@@ -589,7 +586,7 @@ class _SourceReadingState extends State<SourceReading> {
         key: const ValueKey('source-paper'),
         color: panel,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 2, 24, 12),
+          padding: EdgeInsets.fromLTRB(24, original == null ? 12 : 2, 24, 12),
           child: Column(
             children: [
               Row(
@@ -607,7 +604,7 @@ class _SourceReadingState extends State<SourceReading> {
                               original.citation.trim().isNotEmpty
                           ? original.citation
                           : '원문',
-                      fontSize: 22,
+                      fontSize: original == null ? 27 : 22,
                     ),
                   ),
                   if (original == null &&
@@ -639,73 +636,82 @@ class _SourceReadingState extends State<SourceReading> {
                   ),
                 ],
               ),
-              const Divider(),
-              if (original == null &&
-                  widget.originals.isNotEmpty &&
-                  widget.onFind != null)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: _findNewOriginal(),
-                ),
-              if (original == null && widget.originals.isNotEmpty)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Wrap(
-                    spacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      TextButton.icon(
-                        onPressed: saving
-                            ? null
-                            : () => _toggleSearch(searching),
-                        icon: Icon(
-                          searching
-                              ? CupertinoIcons.xmark
-                              : CupertinoIcons.search,
-                          size: 16,
-                        ),
-                        label: Text(searching ? '검색 닫기' : '담은 원문 찾기'),
-                      ),
-                      FilterChip(
-                        label: const Text('밑칠만 보기'),
-                        avatar: markedOnly
-                            ? null
-                            : const Icon(
-                                CupertinoIcons.line_horizontal_3_decrease,
-                                size: 15,
-                              ),
-                        backgroundColor: Colors.transparent,
-                        selectedColor: panelSelectedColor(panel),
-                        selected: markedOnly,
-                        onSelected: (value) =>
-                            setState(() => markedOnly = value),
-                      ),
-                    ],
-                  ),
-                ),
-              if (searching)
-                PaperSearchField(
-                  fieldKey: const ValueKey('saved-original-search'),
-                  controller: searchField,
-                  focusNode: searchFocus,
-                  hint: '원문 내용이나 출처 찾기',
-                  onSubmitted: (_) => searchFocus.unfocus(),
-                  onChanged: (value) => setState(() => query = value),
-                ),
-              if (searching)
-                Flexible(
-                  child: SearchCompletions(
-                    controller: searchField,
-                    focusNode: searchFocus,
-                    options: (query) => searchCompletions(
-                      query.replaceAll(_previewWhitespace, ' '),
-                      _searchFields(scopedOriginals),
+              if (searching) ...[
+                const SizedBox(height: 10),
+                if (bookTitle.isNotEmpty) ...[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      bookTitle,
+                      style: const TextStyle(color: muted, fontSize: 14),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    onSelected: (value) => setState(() => query = value),
                   ),
+                  const SizedBox(height: 8),
+                ],
+                const Divider(color: Color(0xffa58e70), height: 1),
+                const Divider(color: Color(0xffd1bda1), height: 5),
+                const SizedBox(height: 7),
+                LayoutBuilder(
+                  builder: (context, box) {
+                    final scale = MediaQuery.textScalerOf(context).scale(14);
+                    final search = Row(
+                      children: [
+                        Expanded(
+                          child: PaperSearchField(
+                            fieldKey: const ValueKey('saved-original-search'),
+                            controller: searchField,
+                            focusNode: searchFocus,
+                            hint: '담은 원문 찾기',
+                            onSubmitted: (_) => searchFocus.unfocus(),
+                            onChanged: (value) => setState(() => query = value),
+                          ),
+                        ),
+                        if (query.isNotEmpty)
+                          IconButton(
+                            tooltip: '검색 지우기',
+                            onPressed: _clearSearch,
+                            icon: const Icon(
+                              CupertinoIcons.xmark_circle,
+                              size: 17,
+                            ),
+                          ),
+                      ],
+                    );
+                    final marks = FilterChip(
+                      label: const Text('밑칠만 보기'),
+                      avatar: markedOnly
+                          ? null
+                          : const Icon(CupertinoIcons.pencil, size: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      side: BorderSide(
+                        color: markedOnly ? brandInk : const Color(0xffcab89f),
+                      ),
+                      backgroundColor: Colors.transparent,
+                      selectedColor: panelSelectedColor(panel),
+                      selected: markedOnly,
+                      onSelected: (value) => setState(() => markedOnly = value),
+                    );
+                    if (box.maxWidth < 242 || scale > 20) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [search, marks],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(child: search),
+                        const SizedBox(width: 10),
+                        marks,
+                      ],
+                    );
+                  },
                 ),
+              ] else
+                const Divider(),
               if (original == null && widget.originals.isNotEmpty)
-                const SizedBox(height: 4),
+                const SizedBox(height: 14),
               if (widget.onRetry != null && !editing)
                 _saveNotice('원문을 저장하지 못했어요.', widget.onRetry),
               if (original == null && widget.previousCitations.isNotEmpty)
@@ -732,34 +738,63 @@ class _SourceReadingState extends State<SourceReading> {
                       )
                     : widget.originals.isEmpty
                     ? _emptyLibrary()
-                    : visibleOriginals.isEmpty
-                    ? Center(
-                        child: Text(
-                          pattern != null ? '일치하는 원문이 없어요.' : '밑칠한 구절이 없어요.',
-                        ),
-                      )
-                    : SingleChildScrollView(
-                        child: Column(
-                          children: [
-                            for (final (index, (_, item))
-                                in visibleOriginals.indexed)
-                              OriginalListItem(
-                                key: item.id == _readingId
-                                    ? readingItem
-                                    : ValueKey(item.id),
-                                style: style,
-                                title: _originalPreview(item, pattern),
-                                subtitle:
-                                    item.citation.isEmpty ||
-                                        (!item.canTranscribe &&
-                                            item.photoId == null)
-                                    ? null
-                                    : item.citation,
-                                showDivider: index > 0,
-                                onTap: () => _open(item.id),
+                    : CustomScrollView(
+                        key: const PageStorageKey('saved-original-list'),
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxHeight: 48),
+                              child: SearchCompletions(
+                                controller: searchField,
+                                focusNode: searchFocus,
+                                options: (query) => searchCompletions(
+                                  query.replaceAll(_previewWhitespace, ' '),
+                                  _searchFields(scopedOriginals),
+                                ),
+                                onSelected: (value) =>
+                                    setState(() => query = value),
                               ),
-                          ],
-                        ),
+                            ),
+                          ),
+                          if (visibleOriginals.isEmpty)
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: Center(
+                                child: Text(
+                                  pattern != null
+                                      ? '일치하는 원문이 없어요.'
+                                      : '밑칠한 구절이 없어요.',
+                                ),
+                              ),
+                            )
+                          else
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(0, 2, 2, 16),
+                              sliver: SliverList.builder(
+                                itemCount: visibleOriginals.length,
+                                itemBuilder: (context, index) {
+                                  final item = visibleOriginals[index].$2;
+                                  return OriginalListItem(
+                                    key: item.id == _readingId
+                                        ? readingItem
+                                        : ValueKey(item.id),
+                                    style: style,
+                                    title: _originalPreview(item, pattern),
+                                    subtitle:
+                                        item.citation.isEmpty ||
+                                            (!item.canTranscribe &&
+                                                item.photoId == null)
+                                        ? null
+                                        : item.citation,
+                                    indexCard: true,
+                                    photoId: item.photoId,
+                                    showDivider: index > 0,
+                                    onTap: () => _open(item.id, fromList: true),
+                                  );
+                                },
+                              ),
+                            ),
+                        ],
                       ),
               ),
               if (original != null &&
@@ -830,7 +865,9 @@ String _originalPreview(RegisteredOriginal item, RegExp? pattern) {
   }
   final text = item.text.replaceAll(_previewWhitespace, ' ').trim();
   final match = pattern?.firstMatch(text);
-  return match == null ? text : searchExcerpt(text, match.start, match.end);
+  return match == null
+      ? searchExcerpt(text, 0, 50)
+      : searchExcerpt(text, match.start, match.end);
 }
 
 class _OriginalTextState extends State<_OriginalText> {

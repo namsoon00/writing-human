@@ -378,34 +378,37 @@ class SourceSlip extends StatelessWidget {
     required this.child,
     this.compact = false,
     this.showCaption = true,
+    this.indexCard = false,
     this.choice = const BookDetailChoice(),
     this.panelColor,
   });
   final Widget child;
-  final bool compact, showCaption;
+  final bool compact, showCaption, indexCard;
   final BookDetailChoice choice;
   final Color? panelColor;
 
   Color get stockColor {
     final stock = BookDetailDesign.color(BookDetailKind.sourceSlip, choice);
-    final panel = panelColor;
+    final panel = indexCard ? const Color(0xffeee2c9) : panelColor;
     return panel == null ? stock : Color.lerp(panel, stock, .38)!;
   }
 
   @override
   Widget build(BuildContext context) => CustomPaint(
-    painter: choice.enabled ? _SlipPaper(stockColor, choice.variant) : null,
+    painter: choice.enabled
+        ? _SlipPaper(stockColor, choice.variant, indexCard: indexCard)
+        : null,
     foregroundPainter: choice.enabled
         ? _SlipDetail(choice.variant, stockColor)
         : null,
     child: Padding(
       padding: EdgeInsets.fromLTRB(
-        compact ? 12 : 20,
-        compact ? 10 : 20,
+        indexCard ? 19 : (compact ? 12 : 20),
+        indexCard ? 15 : (compact ? 10 : 20),
         choice.enabled && choice.variant != 0
             ? (compact ? 24 : 30)
             : (compact ? 12 : 20),
-        compact ? 11 : 20,
+        indexCard ? 15 : (compact ? 11 : 20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -430,9 +433,10 @@ class SourceSlip extends StatelessWidget {
 }
 
 class _SlipPaper extends CustomPainter {
-  const _SlipPaper(this.color, this.variant);
+  const _SlipPaper(this.color, this.variant, {required this.indexCard});
   final Color color;
   final int variant;
+  final bool indexCard;
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
@@ -453,6 +457,12 @@ class _SlipPaper extends CustomPainter {
       ..lineTo(0, size.height - .4)
       ..close();
     canvas.drawShadow(shape, const Color(0x22614c3b), 1.5, false);
+    if (indexCard) {
+      canvas.drawPath(
+        shape.shift(const Offset(1, 2)),
+        Paint()..color = Color.lerp(color, brandInk, .26)!,
+      );
+    }
     canvas.drawPath(
       shape,
       Paint()
@@ -473,7 +483,20 @@ class _SlipPaper extends CustomPainter {
         fiber,
       );
     }
-    if (variant == 0) {
+    if (indexCard) {
+      final edge = Paint()
+        ..strokeWidth = .7
+        ..style = PaintingStyle.stroke
+        ..color = Color.lerp(color, brandInk, .46)!;
+      canvas.drawPath(shape, edge);
+      if (variant == 0) {
+        canvas.drawRect(
+          Rect.fromLTWH(0, 0, 8, size.height - 1),
+          Paint()..color = Color.lerp(color, brandInk, .19)!,
+        );
+        canvas.drawLine(const Offset(8, 0), Offset(8, size.height - 1), edge);
+      }
+    } else if (variant == 0) {
       canvas.drawLine(
         const Offset(1, 0),
         Offset(1, size.height - 1),
@@ -493,7 +516,9 @@ class _SlipPaper extends CustomPainter {
 
   @override
   bool shouldRepaint(_SlipPaper old) =>
-      old.color != color || old.variant != variant;
+      old.color != color ||
+      old.variant != variant ||
+      old.indexCard != indexCard;
 }
 
 class _SlipDetail extends CustomPainter {

@@ -98,7 +98,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
   SourceScan? _photoBeforeAdjustment;
   ({SourceScan scan, CameraPage? page})? _beforeAdjustment;
   bool _savingPhoto = false;
-  bool _showDetails = false;
   bool _showPhotoText = false;
   late final OriginalPhotoStore _photos = const OriginalPhotoStore();
   String? _error;
@@ -859,114 +858,52 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
 
   Widget _details() {
     final citation = _citation.text.trim();
-    final book = widget.books[_bookId];
-    final stacked = MediaQuery.textScalerOf(context).scale(12) > 16;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Divider(height: 1, thickness: 1, color: line),
-        InkWell(
-          key: const ValueKey('source-details'),
-          onTap: !_editable
-              ? null
-              : () {
-                  if (_showDetails) FocusScope.of(context).unfocus();
-                  setState(() => _showDetails = !_showDetails);
-                },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 2),
-            child: Row(
-              children: [
-                const Icon(CupertinoIcons.book, size: 17, color: muted),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        book == null ? '책 없이 담기' : '$book에 담기',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                      if (citation.isNotEmpty && !_showDetails)
-                        Text(
-                          citation,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12, color: muted),
-                        ),
-                      if (stacked) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          _showDetails ? '접기' : '담을 책·원문 출처',
-                          style: const TextStyle(fontSize: 12, color: muted),
-                        ),
-                      ],
-                    ],
+        if (widget.books.isNotEmpty)
+          _metadataRow(
+            '담을 책',
+            DropdownButtonFormField<String>(
+              initialValue: _bookId ?? '',
+              decoration: _recordDecoration,
+              icon: const Icon(CupertinoIcons.chevron_down, size: 15),
+              dropdownColor: originalPanelColor,
+              isExpanded: true,
+              items: [
+                if (widget.allowUnbound)
+                  const DropdownMenuItem(value: '', child: Text('책 없이 담기')),
+                for (final book in widget.books.entries)
+                  DropdownMenuItem(
+                    value: book.key,
+                    child: Text(book.value, overflow: TextOverflow.ellipsis),
                   ),
-                ),
-                const SizedBox(width: 8),
-                if (!stacked)
-                  Text(
-                    _showDetails ? '접기' : '담을 책·원문 출처',
-                    style: const TextStyle(fontSize: 12, color: muted),
-                  ),
-                const SizedBox(width: 4),
-                Icon(
-                  _showDetails
-                      ? CupertinoIcons.chevron_up
-                      : CupertinoIcons.chevron_down,
-                  size: 12,
-                  color: muted,
-                ),
               ],
+              onChanged: _editable
+                  ? (id) => setState(() => _bookId = id == '' ? null : id)
+                  : null,
+            ),
+          ),
+        _metadataRow(
+          '원문 출처 · 선택',
+          WritingCaret(
+            controller: _citation,
+            color: widget.penColor,
+            builder: (focus, scroll) => TextField(
+              key: const ValueKey('original-citation'),
+              controller: _citation,
+              focusNode: focus,
+              scrollController: scroll,
+              showCursor: false,
+              readOnly: _busy,
+              decoration: _recordDecoration.copyWith(
+                hintText: '작품명, 쪽수 또는 링크',
+                errorText: citation.length > 500 ? '출처를 조금 줄여 주세요.' : null,
+              ),
             ),
           ),
         ),
-        if (_showDetails) ...[
-          if (widget.books.isNotEmpty)
-            _metadataRow(
-              '담을 책',
-              DropdownButtonFormField<String>(
-                initialValue: _bookId ?? '',
-                decoration: _recordDecoration,
-                icon: const Icon(CupertinoIcons.chevron_down, size: 15),
-                dropdownColor: originalPanelColor,
-                isExpanded: true,
-                items: [
-                  if (widget.allowUnbound)
-                    const DropdownMenuItem(value: '', child: Text('책 없이 담기')),
-                  for (final book in widget.books.entries)
-                    DropdownMenuItem(
-                      value: book.key,
-                      child: Text(book.value, overflow: TextOverflow.ellipsis),
-                    ),
-                ],
-                onChanged: _editable
-                    ? (id) => setState(() => _bookId = id == '' ? null : id)
-                    : null,
-              ),
-            ),
-          _metadataRow(
-            '원문 출처 · 선택',
-            WritingCaret(
-              controller: _citation,
-              color: widget.penColor,
-              builder: (focus, scroll) => TextField(
-                key: const ValueKey('original-citation'),
-                controller: _citation,
-                focusNode: focus,
-                scrollController: scroll,
-                showCursor: false,
-                decoration: _recordDecoration.copyWith(
-                  hintText: '작품명, 쪽수 또는 링크',
-                  errorText: citation.length > 500 ? '출처를 조금 줄여 주세요.' : null,
-                ),
-              ),
-            ),
-          ),
-        ],
       ],
     );
   }

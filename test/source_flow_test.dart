@@ -16,8 +16,8 @@ import 'source_intake_test.dart'
         reading,
         readingText,
         settleSourceSheets,
-        sourceField,
-        showSourceDetails;
+        sourceCitation,
+        sourceField;
 import 'widget_test.dart' show MemoryStore;
 
 void main() {
@@ -189,7 +189,7 @@ void main() {
     },
   );
   testWidgets(
-    'Saving to another book opens that original without moving the writing page',
+    'Visible book and citation fields save to another book on a compact screen',
     (tester) async {
       final store = MemoryStore()
         ..data = existing().copy(
@@ -203,16 +203,35 @@ void main() {
         );
       await open(tester, store, FakeIntake());
       final before = store.data.activePage!;
+      tester.view.physicalSize = const Size(320, 640);
       await openRegistration(tester);
-      await tester.enterText(sourceField, '다른 책에 보관할 원문');
-      await showSourceDetails(tester);
       final destination = find.byType(DropdownButtonFormField<String>);
+      expect(destination.hitTestable(), findsOneWidget);
+      expect(sourceCitation.hitTestable(), findsOneWidget);
+      expect(
+        find.descendant(of: destination, matching: find.text('쓰던 책')),
+        findsOneWidget,
+      );
+      await tester.enterText(sourceField, '다른 책에 보관할 원문');
+      await tester.pumpAndSettle();
       await tester.ensureVisible(destination);
       await tester.tap(destination);
       await tester.pumpAndSettle();
       await tester.tap(find.text('담을 책').last);
       await tester.pumpAndSettle();
+
+      await tester.ensureVisible(sourceCitation);
+      await tester.pumpAndSettle();
+      await tester.tap(sourceCitation);
+      await tester.pumpAndSettle();
+      tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+      await tester.pumpAndSettle();
+      expect(sourceCitation.hitTestable(), findsOneWidget);
+      await tester.enterText(sourceCitation, '원문 12쪽');
+      await tester.pumpAndSettle();
+      expect(confirm.hitTestable(), findsOneWidget);
       await tester.tap(confirm);
+      tester.view.resetViewInsets();
       await settleSourceSheets(tester);
       expect(reading, findsOneWidget);
       expect(
@@ -221,6 +240,7 @@ void main() {
       );
       expect(store.data.books.first.originals, isEmpty);
       expect(store.data.books.last.originals.single.text, '다른 책에 보관할 원문');
+      expect(store.data.books.last.originals.single.citation, '원문 12쪽');
       expect(store.data.activePageId, before.id);
       expect(store.data.activePage!.text, before.text);
     },

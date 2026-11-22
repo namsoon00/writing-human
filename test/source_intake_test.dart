@@ -50,6 +50,7 @@ Future<void> correctPhoto(WidgetTester tester, String text) async {
 
 final bodyField = find.byKey(const ValueKey('page-text'), skipOffstage: false);
 final confirm = find.byKey(const ValueKey('source-confirm'));
+final sourceCitation = find.byKey(const ValueKey('original-citation'));
 final place = find.byKey(const ValueKey('writing-originals'));
 final reading = find.byType(SourceReading);
 final readingText = find.byKey(const ValueKey('source-reading-text'));
@@ -266,11 +267,8 @@ Future<void> openSourceSearch(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> showSourceDetails(WidgetTester tester) async {
-  final details = find.byKey(const ValueKey('source-details'));
-  await tester.ensureVisible(details);
-  await tester.pumpAndSettle();
-  await tester.tap(details);
+Future<void> revealSourceCitation(WidgetTester tester) async {
+  await tester.ensureVisible(sourceCitation);
   await tester.pumpAndSettle();
 }
 
@@ -370,7 +368,7 @@ void main() {
       expect(find.text('새 원문 찾기').hitTestable(), findsOneWidget);
       expect(find.text('작품 제목이나 작가'), findsNothing);
       expect(find.byType(OriginalListItem), findsNothing);
-      expect(find.byKey(const ValueKey('original-citation')), findsNothing);
+      expect(sourceCitation.hitTestable(), findsOneWidget);
       expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
 
       await tester.tap(find.text('사진 고르기'));
@@ -1140,7 +1138,7 @@ void main() {
       expect(find.text('원문을 복사하거나 화면을 캡처한 뒤 가져오세요.'), findsOneWidget);
       await tester.tap(find.text('출처만 넣기'));
       await tester.pumpAndSettle();
-      await showSourceDetails(tester);
+      await revealSourceCitation(tester);
       final citation = tester.widget<TextField>(
         find.byKey(const ValueKey('original-citation')),
       );
@@ -1250,7 +1248,7 @@ void main() {
           const oldCitation = '메모해 둔 출처';
           if (fromBrowser) {
             await tester.enterText(sourceField, oldText);
-            await showSourceDetails(tester);
+            await revealSourceCitation(tester);
             await tester.enterText(
               find.byKey(const ValueKey('original-citation')),
               oldCitation,
@@ -1451,7 +1449,7 @@ void main() {
         tester.widget<TextField>(sourceField).controller!.text,
         '첫 연\n둘째 줄\n\n고르지 않은 연\n\n마지막 연\n다음 줄',
       );
-      await showSourceDetails(tester);
+      await revealSourceCitation(tester);
       expect(
         tester
             .widget<TextField>(find.byKey(const ValueKey('original-citation')))
@@ -1779,7 +1777,7 @@ void main() {
     expect(find.text('다음 쪽'), findsNothing);
     Future<void> saveOriginal(String source, String citation) async {
       await tester.enterText(sourceField, source);
-      await showSourceDetails(tester);
+      await revealSourceCitation(tester);
       await tester.enterText(
         find.byKey(const ValueKey('original-citation')),
         citation,
@@ -2234,7 +2232,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(preview, findsOneWidget);
 
-    await showSourceDetails(tester);
+    await revealSourceCitation(tester);
     final citation = find.byKey(const ValueKey('original-citation'));
     await tester.ensureVisible(citation);
     await tester.enterText(citation, '필사 원전 · 2쪽');
@@ -2378,7 +2376,7 @@ void main() {
       expect(find.bySemanticsLabel('인식한 책 사진'), findsOneWidget);
       await tester.tap(find.byTooltip('큰 사진 닫기'));
       await tester.pumpAndSettle();
-      await showSourceDetails(tester);
+      await revealSourceCitation(tester);
       final citation = find.byKey(const ValueKey('original-citation'));
       await tester.ensureVisible(citation);
       await tester.enterText(citation, '12쪽');
@@ -2576,7 +2574,7 @@ void main() {
       final intake = FakeIntake()
         ..shares.add(const IncomingSource('book-share', '책에 남길 구절'));
       await open(tester, store, intake);
-      await showSourceDetails(tester);
+      await revealSourceCitation(tester);
       final destination = find.byType(DropdownButtonFormField<String>);
       await tester.ensureVisible(destination);
       await tester.tap(destination);
@@ -3464,7 +3462,7 @@ void main() {
         ..shares.add(const IncomingSource('image-share', '', hasPhoto: true));
       await open(tester, store, intake);
       expect(photoPaper, findsOneWidget);
-      await showSourceDetails(tester);
+      await revealSourceCitation(tester);
       await tester.enterText(
         find.byKey(const ValueKey('original-citation')),
         '책 72쪽',

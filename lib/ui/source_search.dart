@@ -673,18 +673,16 @@ class _SourceSearchState extends State<_SourceSearch> {
               itemCount: works.length,
               itemBuilder: (_, index) {
                 final work = works[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: OriginalListItem(
-                    key: ValueKey('wikisource-work-${work.pageId}'),
-                    style: widget.style,
-                    title: work.title,
-                    preview: work.catalogInfo?.excerpt,
-                    subtitle: _workDetails(work),
-                    indexCard: true,
-                    onTap: () => _showHit(
-                      _SourceHit(_Collection.works, work.title, work.pageId),
-                    ),
+                return OriginalListItem(
+                  key: ValueKey('wikisource-work-${work.pageId}'),
+                  style: widget.style,
+                  title: work.title,
+                  preview: work.catalogInfo?.excerpt,
+                  subtitle: _workDetails(work),
+                  indexCard: true,
+                  showDivider: index > 0,
+                  onTap: () => _showHit(
+                    _SourceHit(_Collection.works, work.title, work.pageId),
                   ),
                 );
               },

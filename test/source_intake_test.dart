@@ -2075,6 +2075,7 @@ void main() {
       expect(suggestionCard.choice.toJson(), sourceCard.choice.toJson());
       expect(suggestionCard.panelColor, sourceCard.panelColor);
       expect(suggestionCard.compact, sourceCard.compact);
+      expect(suggestionCard.indexCard, sourceCard.indexCard);
       expect(tester.widget<Text>(title).style!.fontFamily, 'NanumGothic');
       expect(
         tester

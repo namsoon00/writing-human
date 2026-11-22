@@ -590,6 +590,31 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             initialSeat: _cafeSeat,
             saveFailed: owner.saveError != null,
             onRetry: _retrySave,
+            onTools: (selectedBookId) async {
+              if (!mounted || c != owner || _accountLocked) return;
+              final toolBookId = selectedBookId ?? book?.id;
+              final toolBook = owner.library.books
+                  .where((item) => item.id == toolBookId)
+                  .firstOrNull;
+              late final MaterialPageRoute<void> toolsRoute;
+              toolsRoute = paperPanelRoute<void>(
+                (_) => ToolsScreen(
+                  controller: owner,
+                  bookId: toolBookId,
+                  paperTool: _toolFor(_paperStyle(toolBook)),
+                  onToolSelected: (tool) {
+                    if (!mounted ||
+                        !toolsRoute.isCurrent ||
+                        c != owner ||
+                        _accountLocked) {
+                      return;
+                    }
+                    setState(() => _paperTool = tool);
+                  },
+                ),
+              );
+              await Navigator.of(context).push(toolsRoute);
+            },
             onLeave: () {
               if (c != owner || _accountLocked) return;
               setState(() => _cafeSeat = null);

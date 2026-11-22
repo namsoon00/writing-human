@@ -13,134 +13,201 @@ import 'package:writing_human/ui/cafe_screen.dart';
 
 import 'widget_test.dart' show MemoryStore;
 
+Future<void> _enter(WidgetTester tester) async {
+  await tester.pumpWidget(WritingHumanApp(store: MemoryStore()));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('open-cafe')));
+  await tester.pumpAndSettle();
+}
+
 void main() {
+  test('Eye-height cameras have orthonormal axes and valid seated poses', () {
+    for (final c in [
+      CafeCamera.entrance,
+      ...CafeSeat.values.map(CafeCamera.seated),
+    ]) {
+      expect(c.isFinite, isTrue);
+      expect(c.forward.length, closeTo(1, 1e-10));
+      expect(c.up.length, closeTo(1, 1e-10));
+      expect(c.forward.dot(c.up), closeTo(0, 1e-10));
+      expect(c.right.dot(c.forward), closeTo(0, 1e-10));
+    }
+    expect(CafeCamera.entrance.position.y, 1.62);
+    for (final seat in CafeSeat.values) {
+      expect(CafeCamera.seated(seat).position.y, 1.18);
+    }
+  });
+
+  test('Invalid pointer and camera values cannot poison the view', () {
+    final view = CafeViewController();
+    addTearDown(view.dispose);
+    final before = view.camera;
+    view.look(double.nan, 0);
+    view.look(0, double.infinity);
+    view.step(double.infinity, 0);
+    view.updateCamera(const CafeCamera(position: CafePoint(double.nan, 1, 0)));
+    expect(view.camera, same(before));
+    view.look(20000, 200);
+    expect(view.camera.pitch, .65);
+    expect(view.camera.yaw.abs(), lessThanOrEqualTo(math.pi));
+    view.look(0, -200);
+    expect(view.camera.pitch, -.72);
+    expect(view.world.canStand(const CafePoint(double.nan, 1, 0)), isFalse);
+  });
+
   test(
-    'The first-person camera has an orthonormal view and real eye height',
+    'Projection rejects geometry behind the camera and shrinks distant objects',
     () {
-      const entry = CafeCamera.entrance;
-      expect(entry.position.y, 1.62);
-      expect(entry.forward.length, closeTo(1, 1e-10));
-      expect(entry.up.length, closeTo(1, 1e-10));
-      expect(entry.forward.dot(entry.up), closeTo(0, 1e-10));
-      expect(entry.right.dot(entry.forward), closeTo(0, 1e-10));
-      for (final seat in CafeSeat.values) {
-        final camera = CafeCamera.seated(seat);
-        expect(camera.position.y, 1.18);
-        expect(camera.pitch, lessThan(0));
+      const c = CafeCamera(position: CafePoint(0, 1.62, 0), pitch: 0);
+      const size = Size(390, 844);
+      expect(
+        CafeRenderer.project(const CafePoint(0, 1.62, 1), c, size),
+        isNull,
+      );
+      expect(
+        CafeRenderer.project(const CafePoint(0, 1.62, -.01), c, size),
+        isNull,
+      );
+      expect(
+        CafeRenderer.project(const CafePoint(0, 1.62, -2), c, size),
+        const Offset(195, 422),
+      );
+      final a = CafeRenderer.project(const CafePoint(1, 1.62, -2), c, size)!;
+      final b = CafeRenderer.project(const CafePoint(1, 1.62, -4), c, size)!;
+      expect(a.dx - 195, closeTo((b.dx - 195) * 2, 1e-9));
+    },
+  );
+
+  test(
+    'Nearest physical object owns a click; a desk hides the floor beneath it',
+    () {
+      final world = CafeWorld();
+      const c = CafeCamera.entrance, size = Size(1200, 800);
+      final table = CafeRenderer.project(
+        CafeWorld.anchor(CafeTarget.shared),
+        c,
+        size,
+      )!;
+      final hit = CafeRenderer.pick(table, c, size, world)!;
+      expect(hit.target, CafeTarget.shared);
+      expect(hit.floor, isFalse);
+      final blank = CafeRenderer.project(const CafePoint(2, 0, .5), c, size)!;
+      expect(CafeRenderer.pick(blank, c, size, world)!.floor, isTrue);
+      // A distant bookcase cannot be selected through the central table.
+      final down = CafeCamera.seated(CafeSeat.shared);
+      final notebook = CafeRenderer.project(
+        CafeWorld.desk(CafeSeat.shared),
+        down,
+        size,
+      )!;
+      expect(
+        CafeRenderer.pick(notebook, down, size, world)!.target,
+        CafeTarget.shared,
+      );
+    },
+  );
+
+  test('Every visible fixture can be hit by its own physical surface', () {
+    final world = CafeWorld();
+    const size = Size(390, 844);
+    for (final target in CafeTarget.values) {
+      final origin = CafeWorld.approach(target);
+      final delta = CafeWorld.anchor(target) - origin;
+      final camera = CafeCamera(
+        position: origin,
+        yaw: math.atan2(delta.x, -delta.z),
+        pitch: math.atan2(
+          delta.y,
+          math.sqrt(delta.x * delta.x + delta.z * delta.z),
+        ),
+      );
+      final hit = CafeRenderer.pick(
+        const Offset(195, 422),
+        camera,
+        size,
+        world,
+      );
+      expect(hit?.target, target, reason: target.name);
+    }
+  });
+
+  test('Floor routes go around the table with no wall or corner cutting', () {
+    final world = CafeWorld();
+    const from = CafePoint(-2.0, 1.62, 0), to = CafePoint(2.0, 1.62, 0);
+    expect(world.clearSegment(from, to), isFalse);
+    final path = world.path(from, to);
+    expect(path, isNotEmpty);
+    expect(path.length, greaterThan(1));
+    var current = from;
+    for (final p in path) {
+      expect(world.canStand(p), isTrue);
+      expect(world.clearSegment(current, p), isTrue);
+      current = p;
+    }
+    expect(current.x, to.x);
+    expect(world.path(from, const CafePoint(0, 1.62, 0)), isEmpty);
+    expect(world.clearSegment(from, const CafePoint(100, 1.62, 0)), isFalse);
+  });
+
+  test(
+    'Every object has a walkable reachable approach, including the quiet desk',
+    () {
+      final world = CafeWorld();
+      for (final target in CafeTarget.values) {
+        final approach = CafeWorld.approach(target);
+        expect(world.canStand(approach), isTrue, reason: target.name);
+        final path = world.path(CafeCamera.entrance.position, approach);
+        expect(path, isNotEmpty, reason: target.name);
+        var current = CafeCamera.entrance.position;
+        for (final point in path) {
+          expect(
+            world.clearSegment(current, point),
+            isTrue,
+            reason: target.name,
+          );
+          current = point;
+        }
       }
     },
   );
 
-  test('Looking around preserves position and limits vertical rotation', () {
-    final view = CafeViewController();
-    addTearDown(view.dispose);
-    final before = view.camera.position;
-    view.look(2, 200);
-    expect(view.camera.position, same(before));
-    expect(view.camera.pitch, .65);
-    view.look(0, -200);
-    expect(view.camera.pitch, -.72);
-    expect(view.camera.forward.length, closeTo(1, 1e-10));
-  });
-
   test(
-    'Projection hides points behind the eye and narrows distant geometry',
+    'Standing returns beside the current chair and walking never tunnels',
     () {
-      const camera = CafeCamera(position: CafePoint(0, 1.62, 0), pitch: 0);
-      const size = Size(390, 844);
-      expect(
-        CafeRenderer.project(const CafePoint(0, 1.62, 1), camera, size),
-        isNull,
-      );
-      expect(
-        CafeRenderer.project(const CafePoint(0, 1.62, -.01), camera, size),
-        isNull,
-      );
-      expect(
-        CafeRenderer.project(const CafePoint(0, 1.62, -2), camera, size),
-        const Offset(195, 422),
-      );
-      final near = CafeRenderer.project(
-        const CafePoint(1, 1.62, -2),
-        camera,
-        size,
-      )!;
-      final far = CafeRenderer.project(
-        const CafePoint(1, 1.62, -4),
-        camera,
-        size,
-      )!;
-      expect(near.dx - 195, closeTo((far.dx - 195) * 2, 1e-9));
+      final c = CafeViewController();
+      addTearDown(c.dispose);
+      c.sit(CafeSeat.quiet);
+      expect(c.destination!.position.y, 1.18);
+      c.updateCamera(c.destination!);
+      c.finishTravel();
+      c.stand();
+      expect(c.destination!.position.z, CafeWorld.approach(CafeTarget.quiet).z);
+      c.updateCamera(c.destination!);
+      c.finishTravel();
+      final before = c.camera;
+      c.step(100, 0);
+      expect(c.camera, same(before));
     },
   );
 
-  test('Touch picking follows the camera ray to each real desk', () {
-    const camera = CafeCamera.entrance;
-    const size = Size(1200, 800);
-    final world = CafeViewController();
-    addTearDown(world.dispose);
-    for (final seat in CafeSeat.values) {
-      final point = CafeRenderer.project(CafeWorld.desk(seat), camera, size)!;
-      expect(CafeRenderer.pickSeat(point, camera, size), seat);
-    }
-    expect(CafeRenderer.pickSeat(const Offset(600, 0), camera, size), isNull);
-  });
-
-  test('Walking respects walls, furniture and seated posture', () {
-    final view = CafeViewController();
-    addTearDown(view.dispose);
-    expect(view.world.canStand(const CafePoint(.2, 1.62, -1.32)), isFalse);
-    expect(view.world.canStand(const CafePoint(4, 1.62, 0)), isFalse);
-    expect(view.world.canStand(const CafePoint(1.4, 1.62, -4.9)), isFalse);
-    for (var i = 0; i < 200; i++) {
-      view.step(.24, 0);
-    }
-    expect(view.camera.position.x, lessThan(3.65));
-    expect(view.world.canStand(view.camera.position), isTrue);
-    final point = view.camera.position;
-    view.sit(CafeSeat.quiet);
-    view.step(0, .24);
-    expect(view.camera.position, same(point));
-    expect(view.destination!.position.y, 1.18);
-    view.stand();
-    expect(view.seat, isNull);
-    expect(view.destination, same(CafeCamera.entrance));
-  });
-
   test('Seat travel takes the short turn across the angle boundary', () {
-    const from = CafeCamera(position: CafePoint(0, 1.62, 1), yaw: math.pi - .1);
-    const to = CafeCamera(position: CafePoint(1, 1.18, 0), yaw: -math.pi + .1);
-    final halfway = CafeCamera.interpolate(from, to, .5);
+    const a = CafeCamera(position: CafePoint(0, 1.62, 1), yaw: math.pi - .1);
+    const b = CafeCamera(position: CafePoint(1, 1.18, 0), yaw: -math.pi + .1);
+    final halfway = CafeCamera.interpolate(a, b, .5);
     expect(halfway.yaw, closeTo(math.pi, 1e-9));
     expect(halfway.position.x, .5);
-    expect(halfway.position.y, 1.40);
   });
 
-  Future<void> enter(WidgetTester tester) async {
-    await tester.pumpWidget(WritingHumanApp(store: MemoryStore()));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('open-cafe')));
-    await tester.pumpAndSettle();
-  }
-
   testWidgets(
-    'An untouched entrance can close without starting a camera ticker',
+    'Entrance keeps the room clear of bottom controls and can close',
     (tester) async {
-      await enter(tester);
-      final scene = tester.widget<CafeScene>(find.byType(CafeScene));
-      expect(scene.controller.seat, isNull);
-      expect(scene.controller.camera.position.y, 1.62);
-      expect(
-        tester
-            .widget<FilledButton>(
-              find.byKey(const ValueKey('cafe-start-writing')),
-            )
-            .onPressed,
-        isNull,
-      );
-      expect(find.byTooltip('빗소리 켜기'), findsOneWidget);
+      await _enter(tester);
+      expect(find.byType(ChoiceChip), findsNothing);
+      expect(find.byTooltip('앞으로 걷기'), findsNothing);
+      expect(find.byKey(const ValueKey('cafe-start-writing')), findsNothing);
+      expect(find.byTooltip('공간 안내'), findsOneWidget);
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       expect(find.byType(CafeScreen), findsNothing);
@@ -149,70 +216,80 @@ void main() {
   );
 
   testWidgets(
-    'Dragging changes the first-person view and walking moves within the room',
+    'Clicking empty floor walks there; dragging only turns the view',
     (tester) async {
-      await enter(tester);
-      final controller = tester
-          .widget<CafeScene>(find.byType(CafeScene))
-          .controller;
-      final yaw = controller.camera.yaw;
-      final origin = controller.camera.position;
-      await tester.dragFrom(const Offset(400, 220), const Offset(-90, 30));
-      await tester.pump();
-      expect(controller.camera.yaw, isNot(yaw));
-      expect(controller.camera.position, same(origin));
-      await tester.tap(find.byTooltip('앞으로 걷기'));
-      await tester.pump();
-      expect(controller.camera.position.z, isNot(origin.z));
-      expect(controller.world.canStand(controller.camera.position), isTrue);
-      await tester.tap(find.byKey(const ValueKey('cafe-seat-window')));
+      await _enter(tester);
+      final scene = find.byKey(const ValueKey('cafe-first-person-view'));
+      final c = tester.widget<CafeScene>(find.byType(CafeScene)).controller;
+      final point = CafeRenderer.project(
+        const CafePoint(1.8, 0, 1.6),
+        c.camera,
+        tester.getSize(scene),
+      )!;
+      await tester.tapAt(tester.getTopLeft(scene) + point);
       await tester.pumpAndSettle();
-      expect(controller.camera.position.y, 1.18);
-      expect(find.byTooltip('앞으로 걷기'), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('cafe-stand')));
+      expect(c.camera.position.x, closeTo(1.8, .02));
+      expect(c.camera.position.z, closeTo(1.6, .02));
+      final origin = c.camera.position, yaw = c.camera.yaw;
+      await tester.dragFrom(const Offset(380, 250), const Offset(-70, 30));
       await tester.pumpAndSettle();
-      expect(controller.camera.position.y, 1.62);
+      expect(c.camera.position, same(origin));
+      expect(c.camera.yaw, isNot(yaw));
+      expect(c.seat, isNull);
     },
   );
 
-  testWidgets('Tapping a visible 3D desk sits in that actual seat', (
-    tester,
-  ) async {
-    await enter(tester);
-    final scene = find.byKey(const ValueKey('cafe-first-person-view'));
-    final controller = tester
-        .widget<CafeScene>(find.byType(CafeScene))
-        .controller;
-    final local = CafeRenderer.project(
-      CafeWorld.desk(CafeSeat.shared),
-      controller.camera,
-      tester.getSize(scene),
-    )!;
-    await tester.tapAt(tester.getTopLeft(scene) + local);
-    await tester.pumpAndSettle();
-    expect(controller.seat, CafeSeat.shared);
-    expect(controller.camera.position.y, 1.18);
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'A real table click sits, and a second notebook click opens writing',
+    (tester) async {
+      await _enter(tester);
+      final scene = find.byKey(const ValueKey('cafe-first-person-view'));
+      final c = tester.widget<CafeScene>(find.byType(CafeScene)).controller;
+      final local = CafeRenderer.project(
+        CafeWorld.anchor(CafeTarget.shared),
+        c.camera,
+        tester.getSize(scene),
+      )!;
+      await tester.tapAt(tester.getTopLeft(scene) + local);
+      await tester.pumpAndSettle();
+      expect(c.seat, CafeSeat.shared);
+      expect(c.camera.position.y, 1.18);
+      expect(
+        find.byKey(const ValueKey('cafe-start-writing')).hitTestable(),
+        findsOneWidget,
+      );
+      // Hit the actual notebook surface away from its small attached label.
+      final book = CafeRenderer.project(
+        const CafePoint(.22, .81, .65),
+        c.camera,
+        tester.getSize(scene),
+      )!;
+      await tester.tapAt(tester.getTopLeft(scene) + book);
+      await tester.pumpAndSettle();
+      expect(find.byType(CafeScreen), findsNothing);
+      expect(find.byKey(const ValueKey('page-text')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('Reduced motion goes straight to the seated view', (
-    tester,
-  ) async {
-    tester.platformDispatcher.accessibilityFeaturesTestValue =
-        const FakeAccessibilityFeatures(disableAnimations: true);
-    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
-    await enter(tester);
-    await tester.tap(find.byKey(const ValueKey('cafe-seat-quiet')));
-    await tester.pump();
-    final controller = tester
-        .widget<CafeScene>(find.byType(CafeScene))
-        .controller;
-    expect(controller.camera.position.y, 1.18);
-    expect(
-      controller.camera.position.z,
-      CafeCamera.seated(CafeSeat.quiet).position.z,
-    );
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'Reduced motion finishes the full route without a walking ticker',
+    (tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await _enter(tester);
+      await tester.tap(find.byTooltip('공간 안내'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('cafe-seat-quiet')));
+      await tester.pumpAndSettle();
+      final c = tester.widget<CafeScene>(find.byType(CafeScene)).controller;
+      expect(c.camera.position.y, 1.18);
+      expect(c.travelling, isFalse);
+      expect(c.camera.position.z, CafeCamera.seated(CafeSeat.quiet).position.z);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

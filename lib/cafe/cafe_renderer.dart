@@ -41,32 +41,88 @@ class CafeRenderer extends CustomPainter {
   static const near = .075;
   static final _daylightDirection = const CafePoint(-.78, .58, .22).normalized;
 
+  // Keep useful horizontal context on a phone without changing camera position.
+  static double focalLength(Size size) =>
+      math.min(size.height * .75, size.width * .95);
+
   static Offset? project(CafePoint point, CafeCamera camera, Size size) {
+    if (!camera.isFinite ||
+        !point.isFinite ||
+        size.isEmpty ||
+        !size.width.isFinite ||
+        !size.height.isFinite) {
+      return null;
+    }
     final view = camera.toView(point);
     if (view.z < near) return null;
-    final f = size.height / (2 * math.tan(74 * math.pi / 360));
+    final f = focalLength(size);
     return Offset(
       size.width / 2 + view.x * f / view.z,
       size.height / 2 - view.y * f / view.z,
     );
   }
 
-  /// Cast the touch ray onto the desks' actual 3D writing surfaces.
+  static CafePoint ray(Offset point, CafeCamera camera, Size size) {
+    final f = focalLength(size);
+    return (camera.forward +
+            camera.right * ((point.dx - size.width / 2) / f) +
+            camera.up * ((size.height / 2 - point.dy) / f))
+        .normalized;
+  }
+
+  /// Nearest physical surface wins: objects behind shelves or a table cannot
+  /// be selected through them. The same geometry drives rendering and picking.
+  static CafeHit? pick(
+    Offset point,
+    CafeCamera camera,
+    Size size,
+    CafeWorld world,
+  ) {
+    if (!camera.isFinite ||
+        size.isEmpty ||
+        !point.dx.isFinite ||
+        !point.dy.isFinite) {
+      return null;
+    }
+    final direction = ray(point, camera, size);
+    var closest = double.infinity;
+    CafeHit? result;
+    for (final face in world.faces) {
+      // Floor light/shadow decals do not obstruct the physical surface.
+      if (face.color.a < .99) continue;
+      for (var i = 1; i + 1 < face.points.length; i++) {
+        final a = face.points[0], b = face.points[i], c = face.points[i + 1];
+        final edge1 = b - a, edge2 = c - a;
+        final h = direction.cross(edge2), det = edge1.dot(h);
+        if (det.abs() < 1e-9) continue;
+        final delta = camera.position - a;
+        final u = delta.dot(h) / det;
+        if (u < 0 || u > 1) continue;
+        final q = delta.cross(edge1), v = direction.dot(q) / det;
+        if (v < 0 || u + v > 1) continue;
+        final distance = edge2.dot(q) / det;
+        if (distance < near || distance >= closest) continue;
+        closest = distance;
+        final hit = camera.position + direction * distance;
+        result = CafeHit(
+          hit,
+          face.target,
+          hit.y.abs() < .025 && face.normal.y > .9,
+        );
+      }
+    }
+    return result;
+  }
+
   static CafeSeat? pickSeat(Offset point, CafeCamera camera, Size size) {
     if (size.isEmpty) return null;
-    final f = size.height / (2 * math.tan(74 * math.pi / 360));
-    final direction =
-        camera.forward +
-        camera.right * ((point.dx - size.width / 2) / f) +
-        camera.up * ((size.height / 2 - point.dy) / f);
+    final direction = ray(point, camera, size);
     if (direction.y.abs() < .00001) return null;
     final distance = (.77 - camera.position.y) / direction.y;
     if (distance < near) return null;
     final hit = camera.position + direction * distance;
     for (final seat in CafeSeat.values) {
-      final desk = CafeWorld.desk(seat);
-      final halfWidth = seat == CafeSeat.shared ? .95 : .725;
-      if ((hit.x - desk.x).abs() <= halfWidth && (hit.z - desk.z).abs() <= .4) {
+      if (CafeWorld.tableBounds(seat).contains(Offset(hit.x, hit.z))) {
         return seat;
       }
     }
@@ -94,11 +150,11 @@ class CafeRenderer extends CustomPainter {
     // Broad window light plus warm ceiling fill, baked onto real mesh normals.
     final daylight = math.max(0, n.dot(_daylightDirection));
     final ceiling = math.max(0, n.y);
-    final windowFalloff = (1 - (face.center.x + 4) / 14).clamp(.35, 1.0);
+    final windowFalloff = (1 - (face.center.x + 4.4) / 15).clamp(.35, 1.0);
     final brightness = (.70 + .23 * daylight * windowFalloff + .11 * ceiling)
         .clamp(.25, 1.05);
     final base = face.wood && wood != null
-        ? Color.lerp(face.color, Colors.white, .66)!
+        ? Color.lerp(face.color, Colors.white, .40)!
         : face.color;
     int c(double channel, double warmth) =>
         (channel * 255 * brightness * warmth).round().clamp(0, 255);
@@ -112,7 +168,7 @@ class CafeRenderer extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (size.isEmpty) return;
+    if (size.isEmpty || !camera.isFinite) return;
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     canvas.drawColor(const Color(0xffc9bca5), BlendMode.srcOver);
@@ -157,16 +213,27 @@ class CafeRenderer extends CustomPainter {
             u = face.textureCoordinates![i].dx * (image.width - 1);
             v = face.textureCoordinates![i].dy * (image.height - 1);
           } else {
-            final a = face.points[0], b = face.points[1], d = face.points[3];
-            u = (p.x - a.x) / (b.x - a.x) * (image.width - 1);
-            v = (d.y - p.y) / (d.y - a.y) * (image.height - 1);
+            final a = face.points[0],
+                edgeU = face.points[1] - a,
+                edgeV = face.points[3] - a;
+            final delta = p - a;
+            u = delta.dot(edgeU) / edgeU.dot(edgeU) * (image.width - 1);
+            v = (1 - delta.dot(edgeV) / edgeV.dot(edgeV)) * (image.height - 1);
+            if (face.sign) {
+              v = (face.signRow + v / (image.height - 1)) * image.height / 4;
+            }
           }
         }
         vertices.add(_Vertex(toView(p), u, v));
       }
       if (vertices.every((p) => p.point.z < near)) continue;
       if (vertices.any((p) => p.point.z < near)) vertices = _clip(vertices);
-      if (vertices.length < 3) continue;
+      if (vertices.length < 3 ||
+          vertices.any(
+            (v) => !v.point.isFinite || !v.u.isFinite || !v.v.isFinite,
+          )) {
+        continue;
+      }
       final depth =
           vertices.fold<double>(0, (sum, v) => sum + v.point.z) /
           vertices.length;
@@ -177,8 +244,8 @@ class CafeRenderer extends CustomPainter {
           ? b.depth.compareTo(a.depth)
           : a.face.layer.compareTo(b.face.layer),
     );
-    final f = size.height / (2 * math.tan(74 * math.pi / 360));
-    final paint = Paint()..isAntiAlias = false;
+    final f = focalLength(size);
+    final paint = Paint()..isAntiAlias = true;
     final shaders = <ui.Image, ui.ImageShader>{};
     for (final image in [wood, garden, sign]) {
       if (image == null) continue;
@@ -262,4 +329,11 @@ class CafeRenderer extends CustomPainter {
       oldDelegate.garden != garden ||
       oldDelegate.sign != sign ||
       oldDelegate.world != world;
+}
+
+class CafeHit {
+  const CafeHit(this.position, this.target, this.floor);
+  final CafePoint position;
+  final CafeTarget? target;
+  final bool floor;
 }

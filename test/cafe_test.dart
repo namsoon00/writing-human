@@ -9,6 +9,9 @@ import 'package:writing_human/data/model.dart';
 import 'package:writing_human/data/sqlite_store.dart';
 import 'package:writing_human/main.dart';
 import 'package:writing_human/ui/cafe_screen.dart';
+import 'package:writing_human/cafe/cafe_visit.dart';
+import 'package:writing_human/ui/cafe_scene.dart';
+import 'package:writing_human/ui/tools_screen.dart';
 import 'package:writing_human/ui/workspace.dart';
 
 import 'widget_test.dart' show MemoryStore;
@@ -67,14 +70,27 @@ Future<void> _enterCafe(
     await tester.pumpAndSettle();
   }
   expect(find.byType(CafeScreen), findsOneWidget);
-  await tester.ensureVisible(find.byKey(const ValueKey('cafe-seat-window')));
-  await tester.tap(find.byKey(const ValueKey('cafe-seat-window')));
+  await _sit(tester, CafeSeat.window);
+}
+
+Future<void> _sit(WidgetTester tester, CafeSeat seat) async {
+  final view = tester.widget<CafeScene>(find.byType(CafeScene)).controller;
+  if (view.seat == seat) return;
+  await tester.tap(find.byTooltip('공간 안내'));
+  await tester.pumpAndSettle();
+  final choice = find.byKey(ValueKey('cafe-seat-${seat.name}'));
+  await tester.ensureVisible(choice);
+  await tester.tap(choice);
   await tester.pumpAndSettle();
 }
 
 Future<void> _reveal(WidgetTester tester, Finder target) async {
   if (target.evaluate().isEmpty) {
-    await tester.tap(find.byKey(const ValueKey('cafe-choose-book')));
+    await tester.tap(find.byTooltip('공간 안내'));
+    await tester.pumpAndSettle();
+    final shelf = find.byKey(const ValueKey('cafe-guide-bookshelf'));
+    await tester.ensureVisible(shelf);
+    await tester.tap(shelf);
     await tester.pumpAndSettle();
   }
   await tester.ensureVisible(target);
@@ -92,9 +108,7 @@ void main() {
       final snapshot = store.data.encode();
       final writes = store.writes;
       await _enterCafe(tester);
-      expect(find.textContaining('혼자 머무는'), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('cafe-seat-quiet')));
-      await tester.pump();
+      await _sit(tester, CafeSeat.quiet);
       await tester.tap(_start);
       await tester.pumpAndSettle();
       expect(find.byType(CafeScreen), findsNothing);
@@ -105,9 +119,11 @@ void main() {
       expect(find.text('안쪽 자리'), findsOneWidget);
       await tester.tap(_return);
       await tester.pumpAndSettle();
-      expect(find.text('안쪽 자리에서 쓰기'), findsOneWidget);
-      final leave = find.byKey(const ValueKey('leave-cafe'));
-      await _reveal(tester, leave);
+      expect(find.text('노트 펼치기'), findsOneWidget);
+      await tester.tap(find.byTooltip('공간 안내'));
+      await tester.pumpAndSettle();
+      final leave = find.byKey(const ValueKey('cafe-guide-exit'));
+      await tester.ensureVisible(leave);
       await tester.tap(leave);
       await tester.pumpAndSettle();
       expect(_return, findsNothing);
@@ -148,6 +164,7 @@ void main() {
       await tester.tap(book);
       await tester.tap(find.text('고르기'));
       await tester.pumpAndSettle();
+      await _sit(tester, CafeSeat.window);
       await tester.tap(_start);
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(_field).controller!.text, '저녁에 읽는 문장');
@@ -157,6 +174,72 @@ void main() {
       expect(store.data.pages.first.extent, 5);
     },
   );
+
+  testWidgets('Recommendation browsing creates no writing or personal books', (
+    tester,
+  ) async {
+    final store = MemoryStore()..data = _library;
+    await _open(tester, store);
+    await _enterCafe(tester);
+    final before = store.data.encode(), writes = store.writes;
+    await tester.tap(find.byTooltip('공간 안내'));
+    await tester.pumpAndSettle();
+    final shelf = find.byKey(const ValueKey('cafe-guide-recommendations'));
+    await tester.ensureVisible(shelf);
+    await tester.tap(shelf);
+    await tester.pumpAndSettle();
+    expect(find.text('하늘과 바람과 별과 시'), findsOneWidget);
+    expect(find.text('김소월'), findsOneWidget);
+    await tester.tap(find.text('서가에 놓기'));
+    await tester.pumpAndSettle();
+    expect(store.data.encode(), before);
+    expect(store.writes, writes);
+  });
+
+  testWidgets(
+    'The stationery ledge opens existing tools without changing writing',
+    (tester) async {
+      final store = MemoryStore()..data = _library;
+      await _open(tester, store);
+      await _enterCafe(tester);
+      final before = store.data.encode(), writes = store.writes;
+      await tester.tap(find.byTooltip('공간 안내'));
+      await tester.pumpAndSettle();
+      final ledge = find.byKey(const ValueKey('cafe-guide-stationery'));
+      await tester.ensureVisible(ledge);
+      await tester.tap(ledge);
+      await tester.pumpAndSettle();
+      expect(find.byType(ToolsScreen), findsOneWidget);
+      await tester.tap(find.byTooltip('닫기'));
+      await tester.pumpAndSettle();
+      expect(find.byType(CafeScreen), findsOneWidget);
+      expect(store.data.encode(), before);
+      expect(store.writes, writes);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('Turning during a walk cancels the pending shelf interaction', (
+    tester,
+  ) async {
+    final store = MemoryStore();
+    await _open(tester, store);
+    await _enterCafe(tester);
+    await tester.tap(find.byTooltip('공간 안내'));
+    await tester.pumpAndSettle();
+    final shelf = find.byKey(const ValueKey('cafe-guide-recommendations'));
+    await tester.ensureVisible(shelf);
+    await tester.tap(shelf);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.dragFrom(const Offset(190, 250), const Offset(-60, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('하늘과 바람과 별과 시'), findsNothing);
+    expect(store.writes, 0);
+    expect(
+      tester.widget<CafeScene>(find.byType(CafeScene)).controller.travelling,
+      isFalse,
+    );
+  });
 
   testWidgets('Composition cannot be interrupted by returning to the cafe', (
     tester,
@@ -194,13 +277,14 @@ void main() {
       await tester.tap(book);
       await tester.tap(find.text('고르기'));
       await tester.pumpAndSettle();
+      await _sit(tester, CafeSeat.window);
       store.fail = true;
       await tester.tap(_start);
       await tester.pumpAndSettle();
       expect(find.byType(CafeScreen), findsOneWidget);
       expect(find.textContaining('글을 저장하지 못했어요.'), findsOneWidget);
       expect(store.data.activePageId, 'pa');
-      expect(tester.widget<FilledButton>(_start).onPressed, isNull);
+      expect(_start, findsNothing);
       store.fail = false;
       await tester.tap(find.text('다시 저장'));
       await tester.pumpAndSettle();
@@ -221,10 +305,7 @@ void main() {
       await _open(tester, store, size: const Size(320, 640));
       await _enterCafe(tester);
       expect(MediaQuery.textScalerOf(tester.element(_start)).scale(20), 40);
-      final seat = find.byKey(const ValueKey('cafe-seat-quiet'));
-      await _reveal(tester, seat);
-      await tester.tap(seat);
-      await tester.pumpAndSettle();
+      await _sit(tester, CafeSeat.quiet);
       expect(_start.hitTestable(), findsOneWidget);
       await tester.tap(_start);
       await tester.pumpAndSettle();

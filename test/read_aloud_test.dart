@@ -15,7 +15,7 @@ class _Speech implements BrandReadAloud {
 
   @override
   Future<void> speak(String text, {String? next}) async {
-    if (!voiceAvailable) throw const KoreanVoiceUnavailable();
+    if (!voiceAvailable) throw StateError('voice unavailable');
     spoken.add(text);
     following.add(next);
     final utterance = pending = Completer<void>();
@@ -45,8 +45,7 @@ Future<void> _open(
               MaterialPageRoute<void>(
                 builder: (_) => Scaffold(
                   body: ReadAloudScreen(
-                    speech: speech,
-                    brandSpeech: brandSpeech,
+                    createSpeech: brandSpeech ?? ((_) => speech),
                     color: paper,
                     bookTitle: '검수용 책',
                     current: (number: 3, text: '셋째 쪽입니다.\n다음 문장입니다.'),
@@ -116,7 +115,7 @@ void main() {
     await tester.tap(find.text('재생'));
     await tester.pump();
     expect(speech.spoken, ['셋째 쪽입니다.\n다음 문장입니다.']);
-    expect(find.text('3쪽 재생 중'), findsOneWidget);
+    expect(find.text('3쪽 낭독 중'), findsOneWidget);
     speech.finish();
     await tester.pumpAndSettle();
     expect(find.text('낭독을 마쳤어요.'), findsOneWidget);
@@ -126,14 +125,14 @@ void main() {
     await tester.tap(find.text('재생'));
     await tester.pump();
     expect(speech.spoken, ['셋째 쪽입니다.\n다음 문장입니다.', '첫 쪽입니다.']);
-    expect(find.text('1쪽 재생 중'), findsOneWidget);
+    expect(find.text('1쪽 낭독 중'), findsOneWidget);
 
     speech.finish();
     await tester.pump();
     expect(speech.spoken, ['셋째 쪽입니다.\n다음 문장입니다.', '첫 쪽입니다.']);
     await tester.pump(readAloudPagePause);
     expect(speech.spoken, ['셋째 쪽입니다.\n다음 문장입니다.', '첫 쪽입니다.', '셋째 쪽입니다.']);
-    expect(find.text('3쪽 재생 중'), findsOneWidget);
+    expect(find.text('3쪽 낭독 중'), findsOneWidget);
     speech.finish();
     await tester.pumpAndSettle();
   });
@@ -178,12 +177,12 @@ void main() {
     expect(speech.stops, 1);
   });
 
-  testWidgets('설치된 한국어 음성이 없으면 안내하고 재시도할 수 있다', (tester) async {
+  testWidgets('음성 준비에 실패하면 다른 음색 없이 재시도할 수 있다', (tester) async {
     final speech = _Speech()..voiceAvailable = false;
     await _open(tester, speech);
     await tester.tap(find.text('재생'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('한국어 음성이 없어요'), findsOneWidget);
+    expect(find.textContaining('낭독을 재생하지 못했어요'), findsOneWidget);
     speech.voiceAvailable = true;
     await tester.tap(find.text('재생'));
     await tester.pump();
@@ -192,53 +191,45 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('여성 F3가 기본이고 남성 M2로 책 전체를 읽을 수 있다', (tester) async {
-    final device = _Speech();
+  testWidgets('선택한 여성 목소리 하나로 쪽과 책을 읽고 음색 선택은 제공하지 않는다', (tester) async {
     final female = _Speech();
-    final male = _Speech();
     late ValueChanged<double?> reportProgress;
+    var creations = 0;
     await _open(
       tester,
-      device,
-      brandSpeech: (voice, progress) {
+      female,
+      brandSpeech: (progress) {
+        creations++;
         reportProgress = progress;
-        return voice == NarrationVoice.f3 ? female : male;
+        return female;
       },
     );
-
-    expect(
-      tester
-          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, '여성 F3'))
-          .selected,
-      isTrue,
-    );
+    expect(find.text('여성 F3'), findsNothing);
+    expect(find.text('남성 M2'), findsNothing);
+    expect(find.text('기기 음성'), findsNothing);
+    expect(find.text('따뜻한 여성 목소리로 읽어요.'), findsOneWidget);
     expect(find.textContaining('약 106MB'), findsOneWidget);
     expect(female.spoken, isEmpty);
     await tester.tap(find.text('재생'));
     await tester.pump();
     expect(female.spoken, ['셋째 쪽입니다.\n다음 문장입니다.']);
-    expect(female.following, [null]);
-    expect(device.spoken, isEmpty);
     reportProgress(.43);
     await tester.pump();
     expect(find.text('음성 모델 준비 중 · 43%'), findsOneWidget);
-
     await tester.tap(find.text('정지'));
     await tester.pumpAndSettle();
     female.finish();
     await tester.pumpAndSettle();
     expect(female.stops, 1);
-    expect(device.stops, 0);
-
-    await tester.tap(find.text('남성 M2'));
     await tester.tap(find.text('책 전체'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('재생'));
     await tester.pump();
-    expect(male.spoken, ['첫 쪽입니다.']);
-    expect(male.following, ['셋째 쪽입니다.']);
+    expect(female.spoken.last, '첫 쪽입니다.');
+    expect(female.following.last, '셋째 쪽입니다.');
+    expect(creations, 2);
     await tester.tap(find.text('정지'));
     await tester.pumpAndSettle();
-    male.finish();
+    female.finish();
   });
 }

@@ -169,13 +169,20 @@ Web Audio를 활성화하고, 설치형은 글씨용 플레이어 한 개와 넘
 닫는 따옴표·문장부호·문단 내부 줄바꿈을 음성 엔진에 넘긴다.
 정지, 닫기, 백그라운드 진입 시
 진행 중인 낭독과 다음 구절까지의 대기를 취소한다.
-Supertonic 3의 F3를 기본으로 사용하며 M2와 기기 음성을 선택할 수 있다. 음색은
-기기 설정에 저장한다. 설치형 앱은 ONNX Runtime으로 합성하고
-`audioplayers`로 WAV를 재생한다. iOS용 ONNX 플러그인은 iOS 16 이상을 요구한다.
-웹은 ONNX Runtime Web과 Web Audio를 사용한다. 기기 음성 선택 시 설치형 앱은
-`flutter_tts`, 웹은 Web Speech API를 사용한다.
+선택한 여성 F1 하나를 사용한다. 음색 선택·저장·기기 TTS 경로는 제거하고 이전 설정은
+읽지 않는다. 준비나 재생 실패 시 다른 음색으로 전환하지 않고 재시도를 안내한다.
+설치형 앱은 ONNX Runtime으로 합성하고 `audioplayers`로 WAV를 재생한다.
+iOS용 ONNX 플러그인은 iOS 16 이상을 요구한다. 웹은 ONNX Runtime Web과 Web Audio를 사용한다.
 
-두 음색 프리셋과 길이 예측 모델은 원본 Supertonic 3의 고정 리비전에서 가져온다.
+합성 속도 .90, 후처리 속도 .78, 음높이 -2반음으로 고정한다. MIT Signalsmith Stretch로
+포먼트를 보존하며 속도와 음높이를 독립 처리한다. 설치형은 Dart 빌드 훅의 C++ 라이브러리를
+isolate에서, 웹은 번들 WASM을 module worker에서 실행한다. 웹 모듈은 Flutter asset bundle에서
+읽으며 worker와 blob URL은 정지·닫기 시 해제한다. 180Hz +1.2dB/3800Hz -2dB 선반 필터와
+음량 제한을 적용하고, 마지막 유성 구간 약 1초를 .88 속도로 늘려 -3.5dB까지 부드럽게 줄인다.
+자연스러운 문장 내 쉼은 유지하고 가장자리의 과도한 무음만 제한한다. 미리보기 제작의
+Rubber Band는 앱에 포함하지 않는다. 두 처리 엔진의 파형이 동일하다고 간주하지 않는다.
+
+F1 프리셋과 길이 예측 모델은 원본 Supertonic 3의 고정 리비전에서 가져온다.
 새 다운로드에서는 나머지 세 모델에 가중치만 INT8로 줄인
 [호환 모델](https://huggingface.co/askurios8/supertonic-3-int8)을 사용한다.
 이전 캐시에 있는 정상 크기의 원본 파일도 사용할 수 있다. 설치형 앱과 웹은 새

@@ -48,10 +48,12 @@ dependencies:
   file_picker: ^10.3.10
   pdf: ^3.12.0
   image: 4.8.0
-  flutter_tts: ^4.2.5
   flutter_onnxruntime: 1.7.1
-  shared_preferences: ^2.5.5
   unorm_dart: ^0.3.2
+  ffi: ^2.1.4
+  hooks: 2.0.2
+  code_assets: 1.2.1
+  native_toolchain_c: 0.19.2
 
 dev_dependencies:
   flutter_test:
@@ -121,6 +123,8 @@ flutter:
     - assets/audio/cafe-water.wav
     - assets/audio/supertonic-license.txt
     - assets/audio/supertonic-code-license.txt
+    - assets/audio/signalsmith-code-license.txt
+    - assets/audio/dsp/
     - assets/fonts/WritingHumanDevelopment-info.json
     - assets/fonts/NanumPenScript-OFL.txt
 

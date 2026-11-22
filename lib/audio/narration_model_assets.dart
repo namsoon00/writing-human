@@ -35,14 +35,9 @@ const narrationAssets = <ModelAsset>[
     sha256: '9bf7346e43883a81f8645c81224f786d43c5b57f3641f6e7671a7d6c493cb24f',
   ),
   (
-    path: 'voice_styles/F3.json',
-    size: 290794,
-    sha256: '12f6ef2573baa2defa1128069cb59f203e3ab67c92af77b42df8a0e3a2f7c6ab',
-  ),
-  (
-    path: 'voice_styles/M2.json',
-    size: 292055,
-    sha256: 'b76cbf62bac707c710cf0ae5aba5e31eea1a6339a9734bfae33ab98499534a50',
+    path: 'voice_styles/F1.json',
+    size: 292046,
+    sha256: 'bbdec6ee00231c2c742ad05483df5334cab3b52fda3ba38e6a07059c4563dbc2',
   ),
   (
     path: 'onnx/duration_predictor.onnx',

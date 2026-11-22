@@ -10,19 +10,6 @@ abstract interface class BrandReadAloud implements ReadAloud {
   Future<void> speak(String text, {String? next});
 }
 
-enum NarrationVoice {
-  f3('여성 F3'),
-  m2('남성 M2'),
-  device('기기 음성');
-
-  const NarrationVoice(this.label);
-  final String label;
-}
-
-class KoreanVoiceUnavailable implements Exception {
-  const KoreanVoiceUnavailable();
-}
-
 const readAloudRate = 0.92;
 const readAloudPagePause = Duration(milliseconds: 420);
 

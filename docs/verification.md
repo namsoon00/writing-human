@@ -3054,3 +3054,33 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   [HTTP 증거](../design/cafe/20261122/window-garden/deployment-proof.json)를 보관했다.
   창밖은 정지 파노라마이고 별도 3D 뜰의 기존 움직임과 구분한다. iPhone Safari의
   실제 터치·프레임 속도/발열 검증은 남아 있다.
+
+
+## 여성 낭독 한 목소리로 통일 · 2026-11-22
+
+- 사용자 선택: 따뜻한 여성 F1 저음, 느린 호흡, 부드러운 말끝. 남성·기기 음성 선택과
+  선택값 저장/복원을 제거했다. 이전 선택값은 읽지 않으며 실패하면 같은 목소리로 재시도한다.
+- 합성 .90 / 후처리 .78 / -2반음, 저역 +1.2dB·고역 -2dB, 마지막 유성 구간 약 1초의
+  .88 속도와 -3.5dB 감쇠를 설치형 C++/웹 WASM의 Signalsmith Stretch로 처리한다.
+  본문은 기존 로컬 경로로 처리하고 F1 프리셋도 고정 리비전·SHA-256으로 검증한다.
+- `dart format`, `flutter analyze --no-pub`: 완료, 분석 이슈 없음.
+- `flutter test`: 274개 통과, 병행한 브라우저 검사에서 테스트 asset bundle이 교체되어
+  두 UI 검사에서 `shaders/ink_sparkle.frag` 누락 발생. 브라우저 검사 종료 뒤
+  `flutter test --no-pub test/sync/sync_ui_test.dart test/tools_screen_test.dart
+  test/read_aloud_test.dart test/narration_voice_profile_test.dart`는 21개 모두 통과했다.
+- `node tool/test_narration_web.mjs`: 실제 Chrome에서 6개 통과. 두 번의 실제 DSP 처리 후
+  잔음 없음, 처리 중 정지/닫기, PCM 오류, 음높이·길이 독립 처리, 부드러운 말끝을 검사했다.
+  브라우저 테스트의 asset messenger에는 허용한 실제 번들 모듈만 로컬 HTTP로 공급한다.
+  앱은 Flutter asset bundle을 사용한다. 공개 CI에도 브라우저 DSP 검사를 추가했다.
+- `flutter build ios --simulator --no-codesign`: 성공. 앱에 `writing_voice.framework`와
+  `writing_voice_stretch` 심벌이 포함됨을 확인했다. 물리 iPhone 청음은 수행하지 않았다.
+- `node tool/build_github_pages.mjs`: 성공. 기존 공개 경로와 로컬 기록 저장 방식을 유지했다.
+- 실제 앱의 Dart 음성 처리기로 앞서 만든 자체 검수 F1 WAV를 변환했다: 44.1kHz,
+  492751샘플, 11.173초. WAV SHA-256은
+  `47c7ab10987ad5da35d039b0b5d248abe7c9a5acfc635e2627e6576c521d6480`이다.
+  승인한 미리보기는 Rubber Band, 앱은 MIT Signalsmith이므로 파형이 같지는 않다.
+  새 본문의 전체 ONNX 합성·실제 기기 청음·장시간 낭독 품질을 이번 신호 검사와 혼동하지 않는다.
+- 네 역할의 판단을 `docs/brand-personas.md`에 갱신했다. 기존 사용자 기록·입력·저장 구조와
+  비공개 Sites project_id/접근 범위는 수정하지 않았다.
+- `flutter build apk --debug`: 성공. arm64-v8a/armeabi-v7a/x86_64에
+  `libwriting_voice.so`가 포함됨을 확인했다. 실제 Android 기기 재생은 미검증이다.

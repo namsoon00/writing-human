@@ -6,6 +6,8 @@ import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 import 'package:unorm_dart/unorm_dart.dart' as unicode;
 
 import 'narration_model_assets.dart';
+import 'narration_voice_profile.dart'
+    show narrationVoiceId, narrationSynthesisSpeed;
 import 'narration_model_platform.dart'
     if (dart.library.js_interop) 'narration_model_platform_web.dart';
 
@@ -55,7 +57,7 @@ class NarrationModel {
         sessions,
         json['onnx/unicode_indexer.json'] as List<dynamic>,
         {
-          for (final id in ['F3', 'M2'])
+          for (final id in [narrationVoiceId])
             id: json['voice_styles/$id.json'] as Map<String, dynamic>,
         },
         json['onnx/tts.json'] as Map<String, dynamic>,
@@ -69,12 +71,8 @@ class NarrationModel {
   Future<void> close() =>
       Future.wait(_sessions.map((session) => session.close()));
 
-  Future<Uint8List> synthesize(
-    String text,
-    String voice,
-    void Function() check,
-  ) async {
-    final style = _styles[voice]!;
+  Future<Uint8List> synthesize(String text, void Function() check) async {
+    final style = _styles[narrationVoiceId]!;
     final ids = _encode(text);
     final rate = _config['ae']['sample_rate'] as int;
     final chunk =
@@ -106,7 +104,9 @@ class NarrationModel {
           'text_mask': textMask,
         }),
       );
-      final seconds = ((await predicted.asFlattenedList()).single as num) / .96;
+      final seconds =
+          ((await predicted.asFlattenedList()).single as num) /
+          narrationSynthesisSpeed;
       if (!seconds.isFinite || seconds <= 0 || seconds > 90) {
         throw const FormatException('Invalid narration duration');
       }

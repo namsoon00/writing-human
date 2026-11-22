@@ -5,11 +5,12 @@ import 'narration_model.dart';
 import 'narration_output.dart'
     if (dart.library.js_interop) 'narration_output_web.dart';
 import 'read_aloud.dart';
+import 'narration_voice_profile.dart';
 
 class ModelReadAloud implements BrandReadAloud {
-  ModelReadAloud(this.voice, this.onProgress);
+  ModelReadAloud(this.onProgress);
 
-  final NarrationVoice voice;
+  final _profile = NarrationVoiceProfile();
   final void Function(double?) onProgress;
   final _stopped = Completer<void>();
   final _output = NarrationOutput();
@@ -30,7 +31,9 @@ class ModelReadAloud implements BrandReadAloud {
       },
     ));
     _check();
-    return model.synthesize(text, voice.name.toUpperCase(), _check);
+    final wav = await model.synthesize(text, _check);
+    _check();
+    return _profile.process(wav, _check);
   }
 
   @override
@@ -59,7 +62,7 @@ class ModelReadAloud implements BrandReadAloud {
     if (_stopped.isCompleted) return;
     _stopped.complete();
     try {
-      await _output.close();
+      await Future.wait([_output.close(), _profile.close()]);
     } finally {
       // Native inference calls are not interrupted in the middle of a step.
       // Release the sessions when the outstanding step or download unwinds.

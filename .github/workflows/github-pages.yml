@@ -30,6 +30,8 @@ jobs:
       - run: dart format --output=none --set-exit-if-changed lib test tool/capture_preview_test.dart
       - run: flutter analyze --no-pub
       - run: flutter test --no-pub
+      - name: Check the single narration voice DSP in Chrome
+        run: node tool/test_narration_web.mjs
       - name: Check cafe repaint image lifetime in CanvasKit
         run: flutter test --no-pub --platform chrome test/cafe_image_lifetime_test.dart
       - name: Build Flutter preview

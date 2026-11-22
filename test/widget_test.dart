@@ -915,6 +915,8 @@ void main() {
     expect(store.data.books.single.originals.single.text, source);
     await tester.tap(find.byKey(const ValueKey('writing-originals')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('o')));
+    await tester.pumpAndSettle();
     final original = find.byKey(const ValueKey('source-reading-text'));
     expect(tester.widget<Text>(original).textSpan!.toPlainText(), source);
     expect(tester.takeException(), isNull);

@@ -51,6 +51,63 @@ void main() {
     },
   );
 
+  testWidgets('The footer opens the list even during guided writing', (
+    tester,
+  ) async {
+    const first = RegisteredOriginal('guided', '햇빛이 책장에 내려앉았다.');
+    const second = RegisteredOriginal('other', '정오에 종소리가 울렸다.');
+    final store = MemoryStore()
+      ..data = const Library(
+        books: [
+          Book(id: 'book', title: '필사 노트', originals: [first, second]),
+        ],
+        records: [WritingRecord(id: 'r', bookId: 'book', title: '필사')],
+        pages: [
+          WritingPage(
+            id: 'p',
+            recordId: 'r',
+            number: 1,
+            text: '햇빛이',
+            base: 3,
+            extent: 3,
+            guidedOriginalId: 'guided',
+          ),
+        ],
+        activePageId: 'p',
+        writing: true,
+      );
+    await open(tester, store, FakeIntake());
+    final input = tester.widget<TextField>(bodyField).controller!;
+    final before = input.value;
+    final writes = store.writes;
+
+    await tester.tap(place);
+    await tester.pumpAndSettle();
+    expect(readingText, findsNothing);
+    expect(find.byKey(const ValueKey('guided')).hitTestable(), findsOneWidget);
+    expect(find.byKey(const ValueKey('other')).hitTestable(), findsOneWidget);
+    expect(find.text('원문 담기').hitTestable(), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('other')));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<Text>(readingText).textSpan!.toPlainText(),
+      second.text,
+    );
+    await tester.tap(closeIn(reading));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(bodyField).controller, same(input));
+    expect(input.value, before);
+
+    await tester.tap(place);
+    await tester.pumpAndSettle();
+    expect(readingText, findsNothing);
+    await tester.tap(find.text('원문 담기'));
+    await tester.pumpAndSettle();
+    expect(sourceField.hitTestable(), findsOneWidget);
+    expect(store.data.activePage!.guidedOriginalId, first.id);
+    expect(store.writes, writes);
+  });
+
   testWidgets('Close and system back protect an edited original draft', (
     tester,
   ) async {

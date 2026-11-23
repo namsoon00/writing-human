@@ -574,7 +574,7 @@ class CafeWorld {
     double top = .7525,
     double thickness = .035,
     double radius = .065,
-    CafeSurface surface = CafeSurface.oak,
+    CafeSurface? surface = CafeSurface.oak,
     Color color = oak,
   }) {
     final axis = depth >= width ? CafeGrain.z : CafeGrain.x;
@@ -672,7 +672,7 @@ class CafeWorld {
     }
   }
 
-  void _chair(double x, double z, {double angle = 0}) {
+  void _chair(double x, double z, {double angle = 0, bool padded = false}) {
     CafePoint rot(double dx, double y, double dz) => CafePoint(
       x + dx * math.cos(angle) - dz * math.sin(angle),
       y,
@@ -711,6 +711,22 @@ class CafeWorld {
       const Color(0xffd8c095),
       surface: CafeSurface.cord,
     );
+    if (padded) {
+      _roundedSlab(
+        x,
+        z,
+        .425,
+        .395,
+        top: .498,
+        thickness: .044,
+        radius: .055,
+        surface: null,
+        color: const Color(0xff858a6b),
+      );
+      for (final dx in [-.183, .183]) {
+        box(x + dx, .493, z, .006, .006, .29, const Color(0xffa5aa87));
+      }
+    }
     for (final dx in [-.18, .18]) {
       for (final dz in [-.16, .16]) {
         part(dx, .21, dz, .035, .42, .035, dark);
@@ -1080,7 +1096,7 @@ class CafeWorld {
         target: target,
       );
       _target = target;
-      _chair(-3.0, z, angle: math.pi / 2);
+      _chair(-3.0, z, angle: math.pi / 2, padded: seat == CafeSeat.window);
       _book(-3.72, .773, z, angle: math.pi / 2);
       _cup(-3.8, .767, z - .40);
       _target = null;
@@ -1151,8 +1167,12 @@ class CafeWorld {
     }
     _writingSurface(tableBounds(CafeSeat.quiet), target: CafeTarget.quiet);
     _target = CafeTarget.quiet;
-    _chair(-2.25, -3.3);
+    _chair(-2.25, -3.3, padded: true);
     _book(-2.25, .773, -4.02);
+    _pencil(-1.92, .806, -3.94);
+    _cup(-2.78, .767, -4.02);
+    // A quiet cloth bookmark stays on the real book, with no sample user text.
+    box(-2.29, .805, -3.91, .023, .005, .16, const Color(0xff9a7058));
     _target = null;
     _pendant(-2.25, -3.95, radius: .18);
     // Coffee counter with narrow walnut ribs and an ivory stone top.
@@ -1241,16 +1261,34 @@ class CafeWorld {
             const Color(0xffa78167),
             const Color(0xffc2b493),
           ];
+          final featured =
+              section.$2 == CafeTarget.recommendations &&
+              row == 1 &&
+              i > 0 &&
+              i < 4;
+          final coverZ = z - .86 + i * .41;
           box(
-            3.91,
+            featured ? 3.83 : 3.91,
             y + .23,
-            z - .86 + i * .41,
-            .065,
-            .36,
-            .25,
+            coverZ,
+            featured ? .085 : .065,
+            featured ? .41 : .36,
+            featured ? .34 : .25,
             colors[(row + i) % 4],
           );
-          box(3.87, y + .19, z - .86 + i * .41, .005, .006, .13, brass);
+          box(
+            featured ? 3.783 : 3.87,
+            y + .19,
+            coverZ,
+            .005,
+            .006,
+            featured ? .19 : .13,
+            brass,
+          );
+          if (featured) {
+            box(3.781, y + .31, coverZ, .006, .09, .17, cream);
+            box(3.777, y + .02, coverZ + .10, .008, .08, .018, sage);
+          }
         }
       }
       final row = section.$2 == CafeTarget.recommendations ? 1 : 2;

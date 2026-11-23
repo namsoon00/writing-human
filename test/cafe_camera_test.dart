@@ -225,14 +225,15 @@ void main() {
       final scene = find.byKey(const ValueKey('cafe-first-person-view'));
       final c = tester.widget<CafeScene>(find.byType(CafeScene)).controller;
       final point = CafeRenderer.project(
-        const CafePoint(1.8, 0, 1.6),
+        const CafePoint(1.6, 0, 1.2),
         c.camera,
         tester.getSize(scene),
       )!;
+      expect((Offset.zero & tester.getSize(scene)).contains(point), isTrue);
       await tester.tapAt(tester.getTopLeft(scene) + point);
       await tester.pumpAndSettle();
-      expect(c.camera.position.x, closeTo(1.8, .02));
-      expect(c.camera.position.z, closeTo(1.6, .02));
+      expect(c.camera.position.x, closeTo(1.6, .02));
+      expect(c.camera.position.z, closeTo(1.2, .02));
       final origin = c.camera.position, yaw = c.camera.yaw;
       await tester.dragFrom(const Offset(380, 250), const Offset(-70, 30));
       await tester.pumpAndSettle();
@@ -262,7 +263,7 @@ void main() {
       }
       expect(c.travelling, isFalse);
       expect(c.seat, CafeSeat.shared);
-      expect(c.camera.position.y, 1.18);
+      expect(c.camera.position.y, closeTo(1.18, 1e-9));
       expect(
         find.byKey(const ValueKey('cafe-start-writing')).hitTestable(),
         findsOneWidget,
@@ -295,7 +296,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('cafe-seat-quiet')));
       await tester.pumpAndSettle();
       final c = tester.widget<CafeScene>(find.byType(CafeScene)).controller;
-      expect(c.camera.position.y, 1.18);
+      expect(c.camera.position.y, closeTo(1.18, 1e-9));
       expect(c.travelling, isFalse);
       expect(c.camera.position.z, CafeCamera.seated(CafeSeat.quiet).position.z);
       expect(tester.takeException(), isNull);

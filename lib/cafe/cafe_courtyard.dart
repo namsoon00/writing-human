@@ -158,6 +158,41 @@ extension _CourtyardGeometry on CafeWorld {
       const CafePoint(-4.65, 2.15, 3),
       CafeWorld.wall,
     );
+    // Limestone coping and a low gravel margin give the plaster wall scale.
+    box(
+      0,
+      2.17,
+      -3,
+      9.3,
+      .07,
+      .18,
+      const Color(0xffddd2bc),
+      surface: CafeSurface.limestone,
+    );
+    for (final x in [-4.65, 4.65]) {
+      box(
+        x,
+        2.17,
+        0,
+        .18,
+        .07,
+        6.0,
+        const Color(0xffddd2bc),
+        surface: CafeSurface.limestone,
+      );
+    }
+    for (var i = 0; i < 16; i++) {
+      final x = -4.5 + i * .56;
+      quad(
+        CafePoint(x, .006, -2.98),
+        CafePoint(x, .006, -2.52),
+        CafePoint(x + .56, .006, -2.52),
+        CafePoint(x + .56, .006, -2.98),
+        const Color(0xffa99e88),
+        surface: CafeSurface.gravel,
+        layer: 0,
+      );
+    }
     // Same glazed facade as the cafe, viewed from the garden side.
     wall(
       const CafePoint(-4.65, 0, 3.165),
@@ -193,7 +228,7 @@ extension _CourtyardGeometry on CafeWorld {
       const CafePoint(-4.65, 4, 3),
       const CafePoint(4.65, 4, 3),
       const CafePoint(4.65, 4, -3),
-      const Color(0xffdce5de),
+      const Color(0xffc5bfbd),
       unlit: true,
       layer: -1,
     );
@@ -301,18 +336,25 @@ extension _CourtyardGeometry on CafeWorld {
       );
       _flower(x + .07, z + .04, const Color(0xfff0eee0));
     }
-    for (final p in [
-      (-3.8, -1.5),
-      (-2.2, -2.6),
-      (.2, -2.65),
-      (2.2, -2.6),
-      (3.9, -1.7),
-    ]) {
+    // Low overlapping clumps connect the existing two trees without filling the path.
+    for (var i = 0; i < 10; i++) {
+      final x = -4.0 + i * .84;
+      plants.add(
+        CafePlant(
+          CafePoint(x, .025, -2.63 + (i % 3) * .07),
+          1.02 + (i % 3) * .09,
+          .43 + (i % 3) * .065,
+          CafeSurface.flowers,
+          flip: i.isEven,
+        ),
+      );
+    }
+    for (final p in [(-3.8, -1.5), (3.9, -1.7)]) {
       plants.add(
         CafePlant(
           CafePoint(p.$1, .025, p.$2),
           1.10,
-          .72,
+          .63,
           CafeSurface.flowers,
           flip: p.$1 < 0,
         ),

@@ -227,15 +227,15 @@ class CafeRenderer extends CustomPainter {
         final p = face.points[i], n = face.vertexNormals?[i] ?? face.normal;
         if (world.courtyard) {
           final fill =
-              .76 +
-              .23 * math.max(0, n.dot(_daylightDirection)) +
+              .70 +
+              .18 * math.max(0, n.dot(_daylightDirection)) +
               .08 * math.max(0, n.y);
-          return CafePoint(fill, fill * .985, fill * .94);
+          return CafePoint(fill, fill * .978, fill * .925);
         }
         final window = math.exp(-(p.x + 4.4).clamp(0, 12) / 4.5);
         final fill =
-            .64 +
-            .13 * math.max(0, n.dot(_daylightDirection)) * window +
+            .53 +
+            .11 * math.max(0, n.dot(_daylightDirection)) * window +
             .035 * math.max(0, n.y);
         var warm = 0.0;
         for (final lamp in world.pendantLights) {
@@ -244,7 +244,7 @@ class CafeRenderer extends CustomPainter {
           final radial = math.sqrt(delta.x * delta.x + delta.z * delta.z);
           final cone = (1 - radial / (.40 + down * .75)).clamp(0.0, 1.0);
           warm +=
-              1.55 *
+              1.90 *
               cone *
               cone *
               math.max(0, n.dot(delta.normalized)) /
@@ -328,7 +328,7 @@ class CafeRenderer extends CustomPainter {
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     canvas.drawColor(
-      world.courtyard ? const Color(0xffdce5df) : const Color(0xfff3eadb),
+      world.courtyard ? const Color(0xffc5bfbd) : const Color(0xfff3eadb),
       BlendMode.srcOver,
     );
     final faces = <_ProjectedFace>[];

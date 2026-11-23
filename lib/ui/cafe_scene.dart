@@ -451,31 +451,54 @@ class _CafeSceneState extends State<CafeScene>
         final camera = c.camera;
         final markers = <Widget>[];
         if (widget.interactive && !c.travelling && !c.resting) {
+          CafeTarget? nearest;
+          Offset? nearestPoint;
+          var best = double.infinity;
           for (final target in c.world.targets) {
             if (c.seat != null && target.seat != c.seat && !c.inCourtyard) {
               continue;
             }
-            final anchor = target.seat == c.seat && c.seat != null
+            final writing = target.seat == c.seat && c.seat != null;
+            final anchor = writing
                 ? CafeWorld.desk(c.seat!)
                 : CafeWorld.anchor(target);
             final point = CafeRenderer.project(anchor, camera, size);
+            final distance = (anchor - camera.position).length;
             if (point == null ||
                 point.dx < 35 ||
                 point.dx > size.width - 35 ||
                 point.dy < 130 ||
                 point.dy > size.height - 56 ||
-                (anchor - c.camera.position).length > 6.5) {
+                (!writing &&
+                    (distance > 3.5 ||
+                        (point.dx / size.width - .5).abs() > .32))) {
               continue;
             }
-            final hit = CafeRenderer.pick(point, camera, size, c.world);
-            if (hit?.target != target) continue;
+            if (CafeRenderer.pick(point, camera, size, c.world)?.target !=
+                target) {
+              continue;
+            }
+            final score = writing
+                ? -1.0
+                : (point.dx / size.width - .5).abs() * 3 + distance / 10;
+            if (score < best) {
+              best = score;
+              nearest = target;
+              nearestPoint = point;
+            }
+          }
+          if (nearest != null && nearestPoint != null) {
+            final target = nearest, point = nearestPoint;
             final writing = target.seat != null && c.seat == target.seat;
             final label = writing ? '노트 펼치기' : target.label;
             final width = math.min(172.0, size.width - 32);
             markers.add(
               Positioned(
                 left: (point.dx - width / 2).clamp(8, size.width - width - 8),
-                top: point.dy - 18,
+                top: (point.dy + (writing ? 46 : 18)).clamp(
+                  130.0,
+                  size.height - 62,
+                ),
                 width: width,
                 child: Center(
                   child: Tooltip(
@@ -487,7 +510,7 @@ class _CafeSceneState extends State<CafeScene>
                       onPressed: () => _activate(target),
                       style: TextButton.styleFrom(
                         foregroundColor: const Color(0xfffff6e8),
-                        backgroundColor: const Color(0xbb3d3026),
+                        backgroundColor: const Color(0x993d3026),
                         minimumSize: const Size(48, 48),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,

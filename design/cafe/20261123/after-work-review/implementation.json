@@ -1,0 +1,19 @@
+{
+  "status": "Implemented after user approval; actual captures are Flutter empty-library fixture renders, not generated concepts or iPhone screenshots.",
+  "approved_concept": "design/cafe/20261123/after-work-review/after-work-concept.png",
+  "production_assets": "No new generated runtime assets. Existing texture handles and shared garden retained.",
+  "source_scope": [
+    "entrance camera",
+    "quiet and window seat pads",
+    "quiet desk tea, pencil and bookmark",
+    "three face-out recommendation covers",
+    "local light balance",
+    "low connected garden planting and wall coping",
+    "one nearby context marker and permanent full guide"
+  ],
+  "limitations": [
+    "Simple lighting and painter depth sorting, not a photoreal renderer",
+    "Plant cutouts remain camera-facing planes",
+    "No real-device comfort, touch, sound or frame-rate verification performed"
+  ]
+}

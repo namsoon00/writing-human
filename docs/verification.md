@@ -3135,3 +3135,44 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - 실행 JS에는 새 나무·꽃·회벽 재질을 참조하고 이전 숲/정원 파노라마 파일명은 없다.
   [HTTP 비교 증거](../design/cafe/20261122/unified-cafe/deployment-proof.json)를 보관했다.
   이 검사는 iPhone Safari 실제 터치·프레임 속도/발열·사진 같은 광원/식물 표현의 검증은 아니다.
+
+
+## 2026-11-23 · 퇴근 후 필사 공간의 시각 평가 · 구현 변경 없음
+
+- 기존 실제 Flutter 캡처의 입구·창가·뜰을 브랜드 기준과 함께 검토했다. 편안함/설렘,
+  시선의 초점, 중앙 테이블과 개인 자리, 빈 담장과 바닥, 물체 이름표를 평가했다.
+  사용자 관찰 조사·새 브라우저 조작·소리 청취·iPhone 실기기 검증을 수행하지 않았다.
+- 내장 imagegen의 [보완 시안](../design/cafe/20261123/after-work-review/after-work-concept.png)은
+  기존 구조를 참조한 미구현 제안이다. 실제 앱 캡처와 구분한다. 네 역할의 다음 판단을
+  브랜드 페르소나에 남겼다. 앱 코드·설정·기록·배포는 변경하지 않았다.
+- 문서와 이미지 작업만 수행해 dart format/flutter analyze/flutter test를 재실행하지
+  않았다. 이전 280개 통과 기록을 이번 평가의 새 실행이나 편안함 검증으로 보고하지 않는다.
+
+
+## 2026-11-23 · 하루 끝에 머무는 카페 구현
+
+- 사용자가 공간 평가와 보완 시안을 보고 구현을 지시했다. 중앙 테이블·가구 수·통로와
+  접근점은 유지하고 입구 위치/시선, 주변 빛과 종이/서가의 등빛 대비를 조정했다.
+  안쪽 자리/앞 창가 방석, 안쪽 책상의 차·펜·책갈피, 추천 서가 표지 세 권을 더했다.
+- 이름표는 3.5m 안에서 바라보는 실제 물체 후보 중 하나로 줄이고 앉은 노트의 동작은
+  종이 아래로 옮겼다. 공간 안내의 전체 목적지·직접 픽킹·키보드 조작을 유지했다.
+  첫 안내는 조작 후 물러나고 이동/쓰기/쉬기/실패 상태는 그대로 보여 준다.
+- 공유 정원의 낮은 식재를 연결하고 담장 덮개/자갈 경계를 더했다. 두 나무·연못·물고기,
+  반대편 실내 보기·좌표 변환·쉬기/쓰기 흐름을 유지했다. 새 실행 이미지는 만들지 않았다.
+- `dart format --output=none --set-exit-if-changed lib test tool/capture_preview_test.dart`,
+  `flutter analyze --no-pub`, 전체 `flutter test --no-pub` **281개 통과**를 확인했다.
+  실제 Chrome CanvasKit 이미지 10개 반복 렌더 수명 검사도 **1개 통과**했다.
+  새 문맥 안내 검사는 시선에 따른 표지 변경/한 개 제한, 안내의 모든 목적지, 앉은 노트
+  실행 가능성을 검사한다. 기존 걷기·한글 조합·저장 실패·실제 SQLite 재열기도 통과했다.
+- 초기 고정 바닥 클릭 좌표는 새 카메라에서 화면 밖으로 나가 실패했다. 새 화면 안의
+  빈 바닥을 확인한 뒤 직접 눌러 목적지 도착을 검사하도록 고쳤다. 새 안내 테스트의
+  스크롤 밖 닫기 선택과 보간 눈높이의 부동소수점 동등 비교도 보완한 뒤 전체 재실행했다.
+- [승인 시안](../design/cafe/20261123/after-work-review/after-work-concept.png)과
+  [실제 입구](../design/cafe/20261123/after-work-review/actual-entrance-wide.jpg),
+  [안쪽 자리](../design/cafe/20261123/after-work-review/actual-quiet-wide.jpg),
+  [창가](../design/cafe/20261123/after-work-review/actual-window-390.jpg),
+  [정원](../design/cafe/20261123/after-work-review/actual-garden-entry-wide.jpg)을 구분한다.
+  실행 캡처는 `capture_after_work_cafe_test.dart`의 빈 라이브러리 Flutter 합성 렌더다.
+- 사진 같은 광원·물 반사·볼륨 식물은 구현하지 않았고 현재 렌더러/식물 평면의 한계는
+  남는다. iPhone Safari 실제 터치·소리·속도·발열과 사용자의 편안함/설렘은 검증하지 않았다.
+  입력/사용자 기록·DB·계정과 비공개 Sites 프로젝트/접근 범위는 바꾸지 않았다.

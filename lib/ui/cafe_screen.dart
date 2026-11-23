@@ -40,6 +40,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
   final ambience = CafeAmbience();
   final calmAudio = CafeCalmAudio();
   bool lastCourtyard = false;
+  bool showIntro = true;
   String? calmHint;
   bool sound = false, soundBusy = false;
   int soundGeneration = 0;
@@ -112,6 +113,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
 
   void _viewChanged() {
     if (!mounted) return;
+    showIntro = false;
     if (lastCourtyard != view.inCourtyard) {
       lastCourtyard = view.inCourtyard;
       soundGeneration++;
@@ -406,7 +408,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
             top: 0,
             left: 0,
             right: 0,
-            height: 150,
+            height: 112,
             child: IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -474,26 +476,32 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                         ),
                       ],
                     ),
-                    IgnorePointer(
-                      child: Text(
-                        opening
-                            ? '글 여는 중'
-                            : view.travelling
-                            ? '천천히 걸어가는 중'
-                            : calmHint != null
-                            ? calmHint!
-                            : view.resting
-                            ? '잠시 머물러도 좋아요.'
-                            : view.seat != null
-                            ? '${view.seat!.label} · 노트를 눌러 써요'
-                            : '바닥을 눌러 걷고, 끌어 둘러봐요',
-                        style: const TextStyle(
-                          color: Color(0xff62503f),
-                          fontSize: 14,
-                          height: 1.5,
+                    if (showIntro ||
+                        opening ||
+                        view.travelling ||
+                        calmHint != null ||
+                        view.resting ||
+                        view.seat != null)
+                      IgnorePointer(
+                        child: Text(
+                          opening
+                              ? '글 여는 중'
+                              : view.travelling
+                              ? '천천히 걸어가는 중'
+                              : calmHint != null
+                              ? calmHint!
+                              : view.resting
+                              ? '잠시 머물러도 좋아요.'
+                              : view.seat != null
+                              ? '${view.seat!.label} · 노트를 눌러 써요'
+                              : '바닥을 눌러 걷고, 끌어 둘러봐요',
+                          style: const TextStyle(
+                            color: Color(0xff62503f),
+                            fontSize: 14,
+                            height: 1.5,
+                          ),
                         ),
                       ),
-                    ),
                     if ((view.seat != null || view.resting) && !view.travelling)
                       TextButton(
                         key: const ValueKey('cafe-stand'),

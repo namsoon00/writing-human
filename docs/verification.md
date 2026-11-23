@@ -3396,3 +3396,20 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 픽셀 검사로 수정 전 실패를 재현했고, 수정 후 관련 네이티브 검사 13개·Chrome 7개와
 최종 캡처 9개를 다시 통과했다. 이 추가 수정 후 로컬 전체 291개를 반복하지 않았으며
 배포 서버의 전체 검사 결과는 아래 배포 기록에서 확인한다.
+
+
+## 2026-11-24 · 선명도/정문 수정 웹 배포 확인
+
+- 최종 소스 `c758694303982c871107f426951cd02f860d9abc`의
+  [Actions 45199193077](https://github.com/namsoon00/writing-human/actions/runs/45199193077)
+  build/deploy가 모두 success다. 하부 레일 수정까지 포함한 서버 전체 검사·음성 DSP·
+  Chrome 일곱 검사와 release 빌드가 통과했다. 최종 로컬 release 빌드는 44.3초에 성공했다.
+- [공개 미리보기](https://namsoon00.github.io/writing-human/?v=c758694)의 index →
+  versioned bootstrap → main.dart.js를 HTTP로 따라 확인했다. main SHA-256은
+  `6edcbeb127b83ebb9415e4d6d01a0ecc9ba1d43d9de36e183f768435006afaee`로
+  검증한 로컬 빌드와 동일하다. 기존 수채화 재질 세 개와 아이콘 글꼴도 200 응답·
+  바이트/해시 동일이며 재질 파일명을 앱이 참조한다.
+- [HTTP 확인 원문](../design/cafe/20261123/clear-entrance/deployment.json)을 남겼다.
+  공개 파일 배포 확인이며 공개 페이지 UI 직접 조작·실제 iPhone/Android 검증은 아니다.
+  필사 기록/공간 설정의 저장 키나 초기화 정책을 바꾸지 않았고 공유 작업공간의 다른
+  미완성 변경은 배포하지 않았다. 기존 비공개 Sites 식별자/접근 범위도 그대로다.

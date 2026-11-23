@@ -1,0 +1,64 @@
+{
+  "source_commit": "2eb51720960a5e41351bf59cecfba3c421b7c392",
+  "checked_at": "2026-11-23T13:44:03.627904+00:00",
+  "index": {
+    "url": "https://namsoon00.github.io/writing-human/?v=2eb5172",
+    "status": 200,
+    "bytes": 8150,
+    "sha256": "d93223a3ebc22b8d2497c8ed2d36094a98d9f5961e38faddcdf6038ff2846cba"
+  },
+  "bootstrap": {
+    "url": "https://namsoon00.github.io/writing-human/flutter_bootstrap.js?v=e88b3eb3889ccd02",
+    "status": 200,
+    "bytes": 10016,
+    "sha256": "e88b3eb3889ccd02d4fb186f4dc7cfdf1997cd3c3d6c243f279ba61d82e2eab0"
+  },
+  "main": {
+    "url": "https://namsoon00.github.io/writing-human/main.dart.js?v=22868287dd7b799e",
+    "status": 200,
+    "bytes": 5173270,
+    "sha256": "22868287dd7b799e299f0f012a572ab3337670789cb8ffdf24418acc1ff4b75d",
+    "matches_local": true,
+    "static_garden_removed": true
+  },
+  "assets": [
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-art-botanical.webp?v=2eb5172",
+      "status": 200,
+      "bytes": 325838,
+      "sha256": "791b660cf6a7ed2f0dd838f19649b607828eb54b4ac0027a2554405dbc515ed8",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-art-pond.webp?v=2eb5172",
+      "status": 200,
+      "bytes": 433952,
+      "sha256": "1bdcc3da3c9dc0881b6299b62a1cc94af146eb4e9875a4b52ef31f9ed079540d",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-art-book.webp?v=2eb5172",
+      "status": 200,
+      "bytes": 344250,
+      "sha256": "9867e014642863d9bf585da15aafe51dfc5598347adc0a8c21f75b4612cec5e0",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/fonts/MaterialIcons-Regular.otf?v=2eb5172",
+      "status": 200,
+      "bytes": 9332,
+      "sha256": "20d3a3d65a7dbce3ab4af51c992e514e54fcdbed5779bb6e5c2276f4e11c509c",
+      "matches_local": true
+    }
+  ],
+  "runtime_scope": "Personal room poses and object state stored independently from manuscripts, detailed mitred frames and three original artworks, brighter adjustable warm lighting and wide connected garden door. Automated SQLite, Chrome localStorage and CanvasKit verified; direct public-page UI and real iPhone touch/performance not tested.",
+  "workflow": {
+    "id": 45185897974,
+    "url": "https://github.com/namsoon00/writing-human/actions/runs/45185897974",
+    "build": "success",
+    "deploy": "success"
+  }
+}

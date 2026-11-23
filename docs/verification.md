@@ -3265,3 +3265,20 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - CUA가 `Local browser access is unavailable for this chat`을 반환해 공개 페이지의 직접
   UI 조작은 검수하지 못했다. 실제 iPhone/Android 터치·프레임률·오디오, 실기기 디스크
   복원도 미검증이다. 헤드리스 Chrome/SQLite/fixture 결과를 실기기 검증으로 보고하지 않는다.
+
+
+## 2026-11-23 · 개인 공간 웹 배포 확인
+
+- 구현 소스 `2eb51720960a5e41351bf59cecfba3c421b7c392`를 기존 Pages 흐름으로 배포했다.
+  [Actions 45185897974](https://github.com/namsoon00/writing-human/actions/runs/45185897974)의
+  build/deploy 모두 success다. 서버의 전체 테스트·음성 DSP·Chrome 두 검사·release 빌드가
+  통과했다. 로컬 검사는 이 작업만 담은 분리 작업공간에서 실행했고 공유 작업공간의
+  다른 미완성 변경을 배포하지 않았다.
+- [공개 미리보기](https://namsoon00.github.io/writing-human/?v=2eb5172)의 index →
+  versioned bootstrap → main.dart.js를 HTTP로 따라 확인했다. main의 SHA-256은
+  `22868287dd7b799e299f0f012a572ab3337670789cb8ffdf24418acc1ff4b75d`로
+  로컬 빌드와 동일하다. 원화 WebP 세 개와 MaterialIcons(9,332바이트)도 200 응답,
+  바이트/해시 동일이며 원화 파일명은 실행 JS가 참조한다.
+- [HTTP 확인 원문](../design/cafe/20261123/personal-room-implementation/deployment.json)을
+  저장했다. 이는 파일 배포 확인이며 공개 페이지의 직접 터치·새로고침 UI 검사나
+  iPhone의 실제 렌더링/성능 검증은 아니다. 공간의 기기 간 동기화는 지원하지 않는다.

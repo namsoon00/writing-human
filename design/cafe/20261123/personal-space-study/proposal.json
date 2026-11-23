@@ -1,0 +1,51 @@
+{
+  "mode": "built-in image_gen",
+  "status": "Personal-space design and persistence proposal only; no app implementation or deployment in this turn.",
+  "saved_path": "design/cafe/20261123/personal-space-study/personal-space-concept.png",
+  "user_confirmed": "User likes the wide, open-feeling garden/cafe door direction.",
+  "prompt": "Use case: precise-object-edit\nAsset type: first-person PERSONAL WRITING SPACE customization concept for \"쓰는 인간\", not a runtime screenshot.\nEdit target image 1: the actual cafe entrance render, authoritative layout and camera.\nReference image 2: the user-liked wide garden-side glass doorway and brighter warm-white lighting, authoritative material/lighting direction. It is a SIDE-WALL garden door, not a new front entrance.\n\nPrimary request:\nShow how this existing cafe can feel like a personal space whose furniture positions, decorative choices and object states can be saved and restored. The user likes the openness of the wide garden/cafe door and wants elements to decorate their own place. Produce ONE cohesive large landscape first-person interior concept, not a collage, not a floorplan, not a furniture shop.\n\nKeep:\nRecognizable same mid-size rectangular room and camera of image 1. Central large six-seat longitudinal oak table, walnut chairs, LEFT garden window wall, existing arched quiet writing alcove at rear-left, coffee counter on rear wall, recommendation/private bookshelves on RIGHT wall. Retain the broad aisles. Do not remove the central table or turn it into a living room or public coworking crowd.\nAt the rear end of the LEFT window wall retain the accepted widened sliding garden door, about 1.8m clear opening at 2.6m height; leaf parked against adjoining glazing, no central mullion in passage, clear approach. Door remains side-wall connection. Never put the garden in a new room or alter the whole floorplan.\n\nPersonal details, restrained:\nExisting writing tables hold a personal plain open notebook, pen, a ceramic mug and one small simple vase with a few stems; no private readable manuscript content.\nOne warm olive seat cushion and a muted clay cloth cushion make existing chairs look chosen by their owner. A modest botanical print in the existing wall frame, a small plant in an existing perimeter position, three cloth-covered books face-out in the existing private shelf. No piles of props, no candles, no new large furniture or objects in the doorway.\nThe garden remains modest flowers and two trees with the off-to-the-side small goldfish pond.\nThe environment should read as \"my familiar place waiting for me\" with a clear writing purpose, not a collectible game.\n\nIllustrate the customization interaction ONLY in editing mode:\nSmall upper-left ivory label exactly \"개인 공간 시안 · 앱 미반영\".\nSmall upper-right discreet ivory text button exactly \"꾸미기 완료\".\nA small ceramic mug on the near part of the existing central table is the only selected object, indicated by a very fine warm brass outline. Beside it, show ONE compact paper-colored contextual popover attached visually to the mug without covering the open notebook.\nPopover text exactly:\n\"찻잔\"\n\"옮기기   돌리기   바꾸기\"\n\"빈 잔   차가 담긴 잔\"\nThe current mug contains tea. A subtle underline marks \"차가 담긴 잔\". No giant bottom toolbar, no full-screen settings panel, no colored physics gizmos, no game grid, no shop, no prices, currency, coins, rewards, avatars or people. No broad floating labels over every object. The only visual editing UI is this one popover and the finish button.\nDo not display \"saved\" or claim successful restoration: persistence is a planned feature, not an implemented fact.\n\nLight and rendering:\nUse the brighter, soft warm-white light of reference 2: wood grain, ivory plaster, corners, ceiling and walking floor readable, bright paper with gentle local light, matte mocha stone flooring. No dark amber haze, no cinematic vignette. A calm personal writing evening, not a dark bar. Clean stylized architectural 3D concept with practical furniture scale. No miraculous photoreal promise.\nPreserve reference floorplan and free door approach above all.",
+  "proposed_scope": {
+    "placement": [
+      "Stable object ID, room/zone, position and rotation",
+      "Parent/support ID plus relative offset for tabletop props",
+      "One coherent transform for visible mesh, picking, collision and approach targets",
+      "Reserved clear door approach and walking routes"
+    ],
+    "states": [
+      "Supported door open/closed state",
+      "Light brightness and warm-white tone",
+      "Cup variant and empty/full state",
+      "Selected notebook/book reference; use existing record position",
+      "Cushion, frame, vase and plant variants"
+    ],
+    "persistence": [
+      "Save confirmed edits rather than each animation frame",
+      "Retain last valid save and expose retry on failure",
+      "Separate space settings from manuscript text and writing tools",
+      "First release: same browser/device restoration",
+      "Account-scoped cross-device sync requires separate implementation and verification"
+    ],
+    "editing": [
+      "Edit mode separate from walking/look gestures",
+      "Select object for contextual controls, no bottom store UI",
+      "Confirm or cancel preview changes",
+      "Re-enter after successful save to restore confirmed space"
+    ],
+    "excluded": [
+      "Shopping, prices, game currency or avatar",
+      "Writing sample records into the user's library",
+      "Saving live fish animation positions",
+      "Automatic sound playback on reload"
+    ]
+  },
+  "implementation_checks": [
+    "Actual storage close/reopen",
+    "Web page reload in same browser origin",
+    "Save error preserves previous saved configuration and writing",
+    "Collision/door-clearance validation and reachable approach points",
+    "Cancel/undo affects only space settings",
+    "Legacy data migration does not reset Library on room-setting errors"
+  ],
+  "repository_preview_path": "design/cafe/20261123/personal-space-study/personal-space-concept.jpg",
+  "source_png_retained_locally": true
+}

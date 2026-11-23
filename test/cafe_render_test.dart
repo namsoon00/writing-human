@@ -35,6 +35,11 @@ void main() {
         final gravel = await CafeMaterials.gravel();
         final tree = await texture('assets/images/cafe-garden-tree.webp');
         final flowers = await texture('assets/images/cafe-garden-flowers.webp');
+        final framedArt = [
+          await texture('assets/images/cafe-art-botanical.webp'),
+          await texture('assets/images/cafe-art-pond.webp'),
+          await texture('assets/images/cafe-art-book.webp'),
+        ];
         final world = CafeWorld();
         const size = ui.Size(240, 400);
         try {
@@ -58,6 +63,7 @@ void main() {
                   gravel: gravel,
                   tree: tree,
                   flowers: flowers,
+                  framedArt: framedArt,
                   camera: CafeCamera(
                     position: position,
                     yaw: turn * math.pi / 6,
@@ -104,6 +110,9 @@ void main() {
           gravel.dispose();
           tree.dispose();
           flowers.dispose();
+          for (final image in framedArt) {
+            image.dispose();
+          }
         }
       });
     },

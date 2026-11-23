@@ -44,6 +44,7 @@ class CafeRenderer extends CustomPainter {
     this.gravel,
     this.tree,
     this.flowers,
+    this.framedArt = const [],
     this.time = 0,
     this.teaFilled = false,
     this.bellAt,
@@ -62,6 +63,7 @@ class CafeRenderer extends CustomPainter {
       gravel,
       tree,
       flowers;
+  final List<ui.Image?> framedArt;
   final bool allowPortal;
   final double time;
   final bool teaFilled;
@@ -139,6 +141,7 @@ class CafeRenderer extends CustomPainter {
               hit.y < .065 &&
               face.normal.y > .9 &&
               world.canStand(CafePoint(hit.x, 1.62, hit.z)),
+          face.objectId,
         );
       }
     }
@@ -183,7 +186,10 @@ class CafeRenderer extends CustomPainter {
       CafeSurface.limestone => limestone,
       CafeSurface.cord => woven,
       CafeSurface.plaster => plaster,
-      CafeSurface.artwork => artwork,
+      CafeSurface.artwork =>
+        face.artIndex != null && framedArt.length > face.artIndex!
+            ? framedArt[face.artIndex!] ?? artwork
+            : artwork,
       CafeSurface.gravel => gravel,
       CafeSurface.tree => tree,
       CafeSurface.flowers => flowers,
@@ -234,7 +240,7 @@ class CafeRenderer extends CustomPainter {
         }
         final window = math.exp(-(p.x + 4.4).clamp(0, 12) / 4.5);
         final fill =
-            .53 +
+            .64 +
             .11 * math.max(0, n.dot(_daylightDirection)) * window +
             .035 * math.max(0, n.y);
         var warm = 0.0;
@@ -268,9 +274,13 @@ class CafeRenderer extends CustomPainter {
           contact -= .05 * math.exp(-(2.95 - p.y).abs() * 5);
         }
         return CafePoint(
-          (fill + warm) * contact,
-          (fill * .94 + warm * .82) * contact,
-          (fill * .84 + warm * .58) * contact,
+          (fill + warm) * contact * world.space.brightness,
+          (fill * .96 + warm * (.86 - world.space.warmth * .08)) *
+              contact *
+              world.space.brightness,
+          (fill * .89 + warm * (.69 - world.space.warmth * .16)) *
+              contact *
+              world.space.brightness,
         );
       });
 
@@ -405,6 +415,14 @@ class CafeRenderer extends CustomPainter {
         if (image != null && face.textureCoordinates != null) {
           u = face.textureCoordinates![i].dx * (image.width - 1);
           v = face.textureCoordinates![i].dy * (image.height - 1);
+          if (face.artIndex != null &&
+              (framedArt.length <= face.artIndex! ||
+                  framedArt[face.artIndex!] == null)) {
+            v =
+                (face.textureCoordinates![i].dy + face.artIndex!) /
+                3 *
+                (image.height - 1);
+          }
         } else if ((face.garden || face.sign) && image != null) {
           final a = face.points[0],
               edgeU = face.points[1] - a,
@@ -455,6 +473,7 @@ class CafeRenderer extends CustomPainter {
       tree,
       flowers,
       sign,
+      ...framedArt,
     }) {
       if (image == null) continue;
       // Flutter 3.41.2 CanvasKit's CkImageShader.dispose() also disposes the
@@ -463,10 +482,18 @@ class CafeRenderer extends CustomPainter {
       // Native dart:ui borrows the image and keeps its own underlying reference.
       shaders[image] = ui.ImageShader(
         kIsWeb ? image.clone() : image,
-        image == sign || image == artwork || image == tree || image == flowers
+        image == sign ||
+                image == artwork ||
+                image == tree ||
+                image == flowers ||
+                framedArt.contains(image)
             ? TileMode.clamp
             : TileMode.repeated,
-        image == sign || image == artwork || image == tree || image == flowers
+        image == sign ||
+                image == artwork ||
+                image == tree ||
+                image == flowers ||
+                framedArt.contains(image)
             ? TileMode.clamp
             : TileMode.repeated,
         Float64List.fromList([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
@@ -516,6 +543,7 @@ class CafeRenderer extends CustomPainter {
         gravel: gravel,
         tree: tree,
         flowers: flowers,
+        framedArt: framedArt,
         sign: sign,
         time: time,
         teaFilled: teaFilled,
@@ -602,8 +630,9 @@ class CafeRenderer extends CustomPainter {
 }
 
 class CafeHit {
-  const CafeHit(this.position, this.target, this.floor);
+  const CafeHit(this.position, this.target, this.floor, [this.objectId]);
   final CafePoint position;
   final CafeTarget? target;
   final bool floor;
+  final String? objectId;
 }

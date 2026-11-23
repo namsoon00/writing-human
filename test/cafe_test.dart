@@ -68,6 +68,13 @@ Future<void> _enterCafe(
   if (controller != null) {
     await tester.runAsync(() => controller.settled);
     await tester.pumpAndSettle();
+    final scene = find.byType(CafeScene);
+    if (scene.evaluate().isNotEmpty) {
+      await tester.runAsync(
+        () => tester.widget<CafeScene>(scene).controller.roomReady,
+      );
+    }
+    await tester.pumpAndSettle();
   }
   expect(find.byType(CafeScreen), findsOneWidget);
   await _sit(tester, CafeSeat.window);

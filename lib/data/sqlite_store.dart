@@ -3,14 +3,20 @@ import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
 import 'model.dart';
 import 'store.dart';
+import '../cafe/cafe_space.dart';
 
 Future<LibraryStore> openStore() async => SqliteLibraryStore.open(
   path.join(await getDatabasesPath(), 'writing-human-v1.db'),
 );
 
-class SqliteLibraryStore implements LibraryStore {
+class SqliteLibraryStore implements LibraryStore, CafeSpaceStoreProvider {
   SqliteLibraryStore._(this.db);
   final Database db;
+  @override
+  Future<CafeSpaceStore> openSpaceStore(String scope) async {
+    return SqliteCafeSpaceStore(db, scope);
+  }
+
   static Future<SqliteLibraryStore> open(
     String file, {
     DatabaseFactory? factory,
@@ -115,6 +121,9 @@ class SqliteLibraryStore implements LibraryStore {
           );
         },
       ),
+    );
+    await db.execute(
+      'CREATE TABLE IF NOT EXISTS cafe_space (scope TEXT PRIMARY KEY, payload TEXT NOT NULL)',
     );
     return SqliteLibraryStore._(db);
   }
@@ -310,4 +319,32 @@ class SqliteLibraryStore implements LibraryStore {
 
   @override
   Future<void> close() => db.close();
+}
+
+class SqliteCafeSpaceStore implements CafeSpaceStore {
+  SqliteCafeSpaceStore(this.db, this.scope);
+  final Database db;
+  final String scope;
+  @override
+  Future<CafeSpace> load() async {
+    final rows = await db.query(
+      'cafe_space',
+      where: 'scope = ?',
+      whereArgs: [scope],
+    );
+    return rows.isEmpty
+        ? const CafeSpace()
+        : CafeSpace.decode(rows.single['payload'] as String);
+  }
+
+  @override
+  Future<void> save(CafeSpace value) async {
+    final payload = CafeSpace.decode(value.encode()).encode();
+    await db.transaction(
+      (tx) => tx.insert('cafe_space', {
+        'scope': scope,
+        'payload': payload,
+      }, conflictAlgorithm: ConflictAlgorithm.replace),
+    );
+  }
 }

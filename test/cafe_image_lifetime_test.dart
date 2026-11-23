@@ -47,6 +47,8 @@ void main() {
         tree,
         flowers,
       ];
+      final artOriginals = [for (var i = 0; i < 3; i++) await texture()];
+      originals.addAll(artOriginals);
       final world = CafeWorld();
       final courtyard = CafeWorld(courtyard: true);
       try {
@@ -66,6 +68,7 @@ void main() {
             gravel: gravel,
             tree: tree,
             flowers: flowers,
+            framedArt: artOriginals,
             camera: CafeCamera(
               position: frame < 6
                   ? CafeCamera.seated(CafeSeat.window).position

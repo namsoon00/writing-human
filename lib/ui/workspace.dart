@@ -35,6 +35,7 @@ import 'book_details.dart';
 import 'page_read_preview.dart';
 import 'archive_sheet.dart';
 import '../cafe/cafe_visit.dart';
+import '../cafe/cafe_space.dart';
 import 'cafe_screen.dart';
 
 typedef _SavedOriginal = ({
@@ -584,11 +585,21 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         return;
       }
       _blur();
+      final store = owner.store;
+      final roomStore = store is CafeSpaceStoreProvider
+          ? await (store as CafeSpaceStoreProvider).openSpaceStore(
+              widget.sync?.context.account?.userId ??
+                  owner.library.sync.accountId ??
+                  'local',
+            )
+          : MemoryCafeSpaceStore();
+      if (!mounted || c != owner || _accountLocked) return;
       final route = paperPanelRoute<void>(
         (context) => AnimatedBuilder(
           animation: owner,
           builder: (context, _) => CafeScreen(
             books: owner.library.books,
+            spaceStore: roomStore,
             currentWritingLabel: book?.title == null
                 ? (page.text.isEmpty ? '지금 펼친 빈 쪽' : '지금 쓰던 글')
                 : '${book!.title} · 지금 펼친 쪽',

@@ -203,9 +203,12 @@ extension _CourtyardGeometry on CafeWorld {
     );
     for (final x in [3.35, 1.05, -1.25, -3.55]) {
       for (final dx in [-1.08, 1.08]) {
+        if (x == 3.35 && dx > 0) continue;
         box(x + dx, 1.72, 3.165, .07, 2.25, .12, CafeWorld.dark, wood: true);
       }
-      box(x, .61, 3.165, 2.20, .07, .12, CafeWorld.dark, wood: true);
+      if (x != 3.35) {
+        box(x, .61, 3.165, 2.20, .07, .12, CafeWorld.dark, wood: true);
+      }
       box(x, 2.83, 3.165, 2.20, .07, .12, CafeWorld.dark, wood: true);
       faces.add(
         CafeFace(
@@ -221,7 +224,9 @@ extension _CourtyardGeometry on CafeWorld {
           layer: 1,
         ),
       );
-      box(x, 1.70, 3.16, .04, 2.2, .12, CafeWorld.dark, wood: true);
+      if (x != 3.35) {
+        box(x, 1.70, 3.16, .04, 2.2, .12, CafeWorld.dark, wood: true);
+      }
     }
     quad(
       const CafePoint(-4.65, 4, -3),
@@ -381,17 +386,17 @@ extension _CourtyardGeometry on CafeWorld {
     _pendant(3.28, .62, radius: .17);
     // A glass door shares the cafe's rear-left window bay, with matching jambs.
     _target = CafeTarget.cafeReturn;
-    for (final x in [3.26, 4.34]) {
+    for (final x in [2.62, 4.48]) {
       box(x, 1.33, 3.17, .075, 2.66, .12, CafeWorld.dark, wood: true);
     }
-    box(3.8, 2.66, 3.17, 1.16, .075, .12, CafeWorld.dark, wood: true);
+    box(3.55, 2.66, 3.17, 1.94, .075, .12, CafeWorld.dark, wood: true);
     faces.add(
       CafeFace(
         const [
-          CafePoint(3.3, 0, 3.16),
-          CafePoint(4.3, 0, 3.16),
-          CafePoint(4.3, 2.62, 3.16),
-          CafePoint(3.3, 2.62, 3.16),
+          CafePoint(2.65, 0, 3.16),
+          CafePoint(4.45, 0, 3.16),
+          CafePoint(4.45, 2.62, 3.16),
+          CafePoint(2.65, 2.62, 3.16),
         ],
         CafeWorld.cream,
         garden: true,
@@ -400,11 +405,27 @@ extension _CourtyardGeometry on CafeWorld {
         target: _target,
       ),
     );
-    box(3.4, 1.12, 3.08, .04, .26, .03, CafeWorld.brass);
+    final leaf = space.doorOpen ? 1.73 : 3.55;
+    quad(
+      CafePoint(leaf - .875, .03, 3.115),
+      CafePoint(leaf + .875, .03, 3.115),
+      CafePoint(leaf + .875, 2.57, 3.115),
+      CafePoint(leaf - .875, 2.57, 3.115),
+      const Color(0x109bc1b3),
+      unlit: true,
+    );
+
+    for (final x in [leaf - .9, leaf + .9]) {
+      box(x, 1.31, 3.12, .045, 2.62, .055, CafeWorld.dark, wood: true);
+    }
+    for (final y in [.025, 2.60]) {
+      box(leaf, y, 3.12, 1.80, .045, .055, CafeWorld.dark, wood: true);
+    }
+    box(leaf - .79, 1.12, 3.06, .03, .26, .035, CafeWorld.brass);
     _target = CafeTarget.bell;
-    box(3.15, 1.9, 3.05, .14, .08, .22, CafeWorld.dark, wood: true);
+    box(2.53, 1.9, 3.05, .30, .08, .22, CafeWorld.dark, wood: true);
     cylinder(
-      3.15,
+      2.48,
       1.65,
       3.03,
       .075,
@@ -413,7 +434,8 @@ extension _CourtyardGeometry on CafeWorld {
       topRadius: .025,
       sides: 16,
     );
-    cylinder(3.15, 1.5, 3.03, .008, .21, CafeWorld.dark, sides: 6);
+    cylinder(2.48, 1.5, 3.03, .008, .21, CafeWorld.dark, sides: 6);
+    cylinder(2.48, 1.835, 2.99, .006, .09, CafeWorld.brass, sides: 6);
     _target = null;
   }
 }
@@ -521,7 +543,7 @@ extension CafeCourtyardMotion on CafeWorld {
     if (bellAt != null && time - bellAt < 4) {
       final d = time - bellAt;
       _oval(
-        CafePoint(3.15 + math.sin(d * 6) * .035 * math.exp(-d), 1.47, 3.03),
+        CafePoint(2.48 + math.sin(d * 6) * .035 * math.exp(-d), 1.47, 3.03),
         const CafePoint(.013, .018, .013),
         CafeWorld.brass,
         into: result,

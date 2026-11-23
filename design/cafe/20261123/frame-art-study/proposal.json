@@ -1,0 +1,36 @@
+{
+  "mode": "built-in image_gen",
+  "status": "Frame and artwork design proposal only, not an implemented runtime asset or screenshot.",
+  "saved_path": "design/cafe/20261123/frame-art-study/frame-art-detail-concept.png",
+  "prompt": "Use case: precise-object-edit\nAsset type: portrait-oriented frame and art DETAIL STUDY for the Korean personal writing cafe \"쓰는 인간\"; design proposal only.\nReference image 1: actual wall with walnut wainscot, ivory plaster, brass sconce and a simple existing frame; use the wall proportions/material locations.\nReference image 2: personal-space concept; use its brighter gentle warm-white light, oak/walnut material palette and calm personal ownership feeling. Do not reproduce its customization UI.\n\nUser request:\nPay much more attention to PICTURE FRAMES AND THE ARTWORK ITSELF. Show detailed, believable crafted frames and quiet original pictures that reward approaching them, not flat icons stuck on a wall. Retain the writing cafe's brand of paper, ink, wood and unhurried personal taste.\n\nComposition:\nONE refined PORTRAIT design board, large enough to inspect on a phone. Upper roughly two thirds: a close, human-eye-level view of the existing ivory plaster wall above the walnut wainscot, showing a curated group with generous breathing room:\n- one primary vertical botanical picture in a walnut frame, approx 50x70cm overall;\n- one smaller horizontal watercolor in a lighter oak frame, approx 40x30cm, adjacent with quiet spacing;\n- one small pencil drawing, approx 20x25cm, resting against the wall on the existing narrow wood wainscot ledge, its base safely on the ledge, not floating.\nKeep the existing brass wall lamp at the side; no new shelving, furniture, clutter, gallery signage, tags or shopping.\nLower roughly one third: TWO generously sized macro detail panels. First macro of the actual primary frame's corner, inner reveal and paper mat. Second macro of the original botanical drawing on textured paper, showing subtle pencil lines and leaf detail. The macro details must match the main view's actual frame and artwork. Do not make many tiny thumbnail panels.\n\nMain frame craft:\nReal four-piece oiled walnut frame with correct 45-degree mitred corner join; the grain naturally follows EACH frame piece and changes direction across the joint. Front rail about 18-22mm, frame depth about 28-32mm; clearly visible side return without chunky rustic bulk. Fine inner rebate/reveal, an ivory paper mat with a subtle bevel-cut opening and slightly wider bottom margin, then genuine textured cotton-like paper carrying the art. Small stand-off from the plaster makes a soft, shallow contact shadow. Optional very subtle anti-reflective-glass edge glint; the artwork itself remains completely readable. No large reflections, fake sunbeams, plastic gloss, gilding, huge bevels or picture-like wood texture pasted flat.\nSecondary oak frame lighter and slimmer but same quality. Small leaning drawing uses a modest walnut frame.\n\nOriginal artwork directions, all freshly invented, not copies or imitations of named artists:\n1. Primary: intimate botanical study of one gently irregular branch with about six to eight leaves. Fine graphite construction lines, tiny believable secondary veins, restrained transparent olive/sage watercolor washes, slight pigment granulation and an occasional delicate dry-brush edge. Lots of quiet ivory paper around the branch. NO simplified app-icon leaves, no repeated cloned leaf shapes, no glossy foliage photograph, no fake old handwriting.\n2. Smaller horizontal: pale watercolor study of light rippling over the cafe garden pond, muted sage/gray-blue with a few warm reflected light marks and one hint of reed at the edge. Quiet open paper, NOT a dense forest, mountain poster or full garden landscape.\n3. Small leaning frame: subtle graphite/pencil observation drawing of an open book and one wooden pencil, lightly suggesting paper edges and binding with a few confident lines, no readable invented personal manuscript.\n\nLight:\nWarm-white and comfortably BRIGHT like image 2. Paper fibers, walnut grain, plaster texture and mat bevels are visible. Local brass sconce provides soft modeling without turning the whole wall dark orange. Gentle daylight bounce, no dark vignette or showroom glare.\n\nBoard type and wording:\nWarm ivory margins, understated dark brown Korean type. Main title exactly \"액자와 그림 · 디테일 시안\". Small status exactly \"앱 미반영\".\nOnly short captions:\n\"벽면 배치\" above the main scene\n\"원목 짜임\" above the corner macro\n\"종이와 그림\" above the paper macro\nNo other text in artworks; no signatures, artist names, edition numbers, quotes, certificates, fake provenance, prices or brand logos in every picture.\nTreat these as frame size/material and artwork options for a future personal-room customization feature. No controls need to be shown. Never imply that the existing app already renders these details.\nVisual style: refined architectural/material concept with tactile craft detail, same calm writing cafe identity; original art is delicate and realistic, not a miracle new luxury room. No people or avatars.",
+  "proposed_details": {
+    "frame": [
+      "Walnut or light oak chosen independently from artwork",
+      "Four-piece 45-degree mitre with grain direction per rail",
+      "18–22mm front rail and about 28–32mm depth as design targets",
+      "Recessed inner reveal, bevel-cut ivory mat and slightly wider bottom paper margin",
+      "Shallow wall standoff shadow; restrained optional glass edge reflection"
+    ],
+    "original_artworks": [
+      "Graphite and muted olive watercolor botanical branch with leaf veins and varied shapes",
+      "Quiet pond-light watercolor in sage and gray-blue",
+      "Small graphite observation drawing of an open book and wooden pencil"
+    ],
+    "placement": [
+      "One primary frame, one smaller horizontal frame and a small ledge drawing",
+      "Generous wall breathing room, preserve door and walking clearances"
+    ],
+    "future_customization": [
+      "Frame style ID, artwork ID and mat style ID as separate values",
+      "Wall anchor/pose belongs to the planned personal space settings"
+    ]
+  },
+  "implementation_notes": [
+    "Separate frame/mat geometry from original-art image resources",
+    "Produce independent art-only source images if approved, not crops of this perspective board",
+    "Verify normal and oblique close views, paper readability, depth ordering and image ownership on native/CanvasKit",
+    "Current app and storage behavior unchanged"
+  ],
+  "repository_preview_path": "design/cafe/20261123/frame-art-study/frame-art-detail-concept.jpg",
+  "source_png_retained_locally": true
+}

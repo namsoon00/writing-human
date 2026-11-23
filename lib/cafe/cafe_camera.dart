@@ -67,7 +67,7 @@ class CafeCamera {
   }
 
   static const courtyardEntrance = CafeCamera(
-    position: CafePoint(3.8, 1.62, 2.35),
+    position: CafePoint(3.55, 1.62, 2.35),
     yaw: -.55,
     pitch: -.17,
   );
@@ -88,7 +88,7 @@ class CafeCamera {
       pitch: -.52,
     ),
     CafeSeat.quiet => const CafeCamera(
-      position: CafePoint(-2.25, 1.18, -3.30),
+      position: CafePoint(-1.70, 1.18, -3.30),
       pitch: -.48,
     ),
     CafeSeat.windowMiddle => const CafeCamera(
@@ -102,7 +102,7 @@ class CafeCamera {
       pitch: -.40,
     ),
     CafeSeat.windowRear => const CafeCamera(
-      position: CafePoint(-3.0, 1.18, -2.5),
+      position: CafePoint(-3.0, 1.18, -1.85),
       yaw: -math.pi / 2,
       pitch: -.50,
     ),

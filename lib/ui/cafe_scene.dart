@@ -23,9 +23,17 @@ class CafeScene extends StatefulWidget {
     this.onSeatSelected,
     this.onTargetSelected,
     this.onWrite,
+    this.editing = false,
+    this.placingId,
+    this.onObjectSelected,
+    this.onObjectPlaced,
   });
   final CafeViewController controller;
   final bool interactive;
+  final bool editing;
+  final String? placingId;
+  final ValueChanged<String>? onObjectSelected;
+  final ValueChanged<CafePoint>? onObjectPlaced;
   final ValueChanged<CafeSeat>? onSeatSelected;
   final ValueChanged<CafeTarget>? onTargetSelected;
   final VoidCallback? onWrite;
@@ -58,7 +66,10 @@ class _CafeSceneState extends State<CafeScene>
   }
 
   void _keyFrame(Duration elapsed) {
-    if (!widget.interactive || !appActive || heldKeys.isEmpty) {
+    if (!widget.interactive ||
+        widget.editing ||
+        !appActive ||
+        heldKeys.isEmpty) {
       _stopKeys();
       return;
     }
@@ -131,6 +142,7 @@ class _CafeSceneState extends State<CafeScene>
   List<double> lengths = [];
   double total = 0;
   int request = 0;
+  List<ui.Image?> framedArt = [];
   ui.Image? wood,
       sign,
       walnut,
@@ -276,6 +288,9 @@ class _CafeSceneState extends State<CafeScene>
       CafeMaterials.gravel(),
       _texture('cafe-garden-tree.webp', width: 1024),
       _texture('cafe-garden-flowers.webp', width: 768),
+      _texture('cafe-art-botanical.webp', width: 1024),
+      _texture('cafe-art-pond.webp', width: 1024),
+      _texture('cafe-art-book.webp', width: 1024),
     ]);
     if (!mounted) {
       for (final image in images) {
@@ -294,6 +309,7 @@ class _CafeSceneState extends State<CafeScene>
       gravel = images[7];
       tree = images[8];
       flowers = images[9];
+      framedArt = images.skip(10).toList();
     });
   }
 
@@ -402,6 +418,9 @@ class _CafeSceneState extends State<CafeScene>
     gravel?.dispose();
     tree?.dispose();
     flowers?.dispose();
+    for (final image in framedArt) {
+      image?.dispose();
+    }
     super.dispose();
   }
 
@@ -420,6 +439,7 @@ class _CafeSceneState extends State<CafeScene>
               LogicalKeyboardKey.arrowDown,
             };
             if (walkingKeys.contains(key)) {
+              if (widget.editing) return;
               if (event is KeyUpEvent) {
                 heldKeys.remove(key);
                 if (heldKeys.isEmpty) _stopKeys();
@@ -450,7 +470,10 @@ class _CafeSceneState extends State<CafeScene>
         final size = constraints.biggest, c = widget.controller;
         final camera = c.camera;
         final markers = <Widget>[];
-        if (widget.interactive && !c.travelling && !c.resting) {
+        if (widget.interactive &&
+            !widget.editing &&
+            !c.travelling &&
+            !c.resting) {
           CafeTarget? nearest;
           Offset? nearestPoint;
           var best = double.infinity;
@@ -460,8 +483,8 @@ class _CafeSceneState extends State<CafeScene>
             }
             final writing = target.seat == c.seat && c.seat != null;
             final anchor = writing
-                ? CafeWorld.desk(c.seat!)
-                : CafeWorld.anchor(target);
+                ? c.world.targetDesk(c.seat!)
+                : c.world.targetAnchor(target);
             final point = CafeRenderer.project(anchor, camera, size);
             final distance = (anchor - camera.position).length;
             if (point == null ||
@@ -553,10 +576,53 @@ class _CafeSceneState extends State<CafeScene>
                           size,
                           c.world,
                         );
+                        if (widget.editing) {
+                          final selected = c.world.objects[widget.placingId];
+                          if (selected != null) {
+                            final dir = CafeRenderer.ray(
+                              details.localPosition,
+                              camera,
+                              size,
+                            );
+                            final frame = selected.kind == CafeObjectKind.frame;
+                            final divisor = frame ? dir.z : dir.y;
+                            if (divisor.abs() > .00001) {
+                              final distance = frame
+                                  ? (selected.pivot.z - camera.position.z) /
+                                        divisor
+                                  : ((selected.kind == CafeObjectKind.floor
+                                                ? 0
+                                                : selected.pivot.y) -
+                                            camera.position.y) /
+                                        divisor;
+                              if (distance > .075 && distance < 15) {
+                                widget.onObjectPlaced?.call(
+                                  camera.position + dir * distance,
+                                );
+                              }
+                            }
+                          } else if (hit?.objectId != null) {
+                            widget.onObjectSelected?.call(hit!.objectId!);
+                          }
+                          return;
+                        }
                         if (hit?.target != null) {
                           _activate(hit!.target!);
                         } else if (hit?.floor == true) {
                           c.walkTo(hit!.position);
+                        }
+                      }
+                    : null,
+                onLongPressStart: widget.interactive && !widget.editing
+                    ? (details) {
+                        final hit = CafeRenderer.pick(
+                          details.localPosition,
+                          camera,
+                          size,
+                          c.world,
+                        );
+                        if (hit?.objectId != null) {
+                          widget.onObjectSelected?.call(hit!.objectId!);
                         }
                       }
                     : null,
@@ -581,6 +647,7 @@ class _CafeSceneState extends State<CafeScene>
                       gravel: gravel,
                       tree: tree,
                       flowers: flowers,
+                      framedArt: framedArt,
                       time: sceneTime,
                       teaFilled: c.teaFilled,
                       bellAt: c.bellAt,

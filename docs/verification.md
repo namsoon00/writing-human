@@ -3190,3 +3190,78 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - [HTTP 증거](../design/cafe/20261123/after-work-review/deployment-proof.json)를 남겼다.
   캡처 15개는 Flutter 합성 실행 화면이다. iPhone Safari의 실제 조작/속도/발열과
   편안함/설렘에 대한 체험 검증은 수행하지 않았다. 비공개 Sites 범위는 그대로다.
+
+
+## 2026-11-23 · 정원 연결 유리문 확장·밝기 재시안 · 앱 미반영
+
+- 사용자가 좁게 보이는 출입구를 정원 ↔ 카페 유리문으로 확인했고 조명이 어둡다는
+  의견을 더했다. 실제 소스의 약 1m 창 포털과 기존 실행 캡처를 확인하고, 약 1.8m 문 폭과
+  문 앞 약 1.5m 여유·한쪽으로 미는 유리문·더 밝은 따뜻한 기본 빛을 이미지로 제안했다.
+- 초기 2개 시안의 전면 출입구처럼 바뀐 배치와 문 높이/폭의 비례를 수정했다.
+  [최종 재시안](../design/cafe/20261123/garden-door-study/wide-door-brighter-concept.jpg)은
+  카운터가 왼쪽, 서가가 맞은편, 중앙 테이블의 긴 면이 오른쪽에 보이는 정원 쪽 시점이다.
+  [전체 생성 프롬프트](../design/cafe/20261123/garden-door-study/proposal.json)를 남겼다.
+- 생성 그림이며 치수는 설계 목표다. 실제 3D 메시/통로 치수·광량이나 실행 화면의 검증은
+  아니다. 앱 코드·배포·저장 데이터는 변경하지 않았고 네 역할의 검토 기준만 갱신했다.
+  문서/이미지 작업이므로 dart format/flutter analyze/flutter test는 재실행하지 않았다.
+
+
+## 2026-11-23 · 개인 공간 꾸미기·상태 저장 제안 · 앱 미반영
+
+- 사용자는 넓은 유리문 방향을 선호한다고 확인하고 개인 공간의 물건 배치/상태 저장과
+  꾸미기 요소를 요청했다. 기존 고정 CafeWorld/방문 상태, LibraryStore 저장 큐와 오류
+  보존 원칙, 공개 Pages의 local-only 범위를 확인했다.
+- 내장 imagegen으로 [개인 공간 시안](../design/cafe/20261123/personal-space-study/personal-space-concept.jpg)을
+  만들고 선택 물건 하나의 옮기기/돌리기/바꾸기·잔 상태 선택을 예시로 보여 준다.
+  [전체 프롬프트·기능 계획](../design/cafe/20261123/personal-space-study/proposal.json)을 저장했다.
+- 생성 디자인 제안이며 새 동작·저장 모델·DB/백업/동기화·공간 배치·문·조명 코드를
+  구현하거나 배포하지 않았다. 자동 저장·재접속 복원·기기 간 동일 공간은 미검증이다.
+  문서와 시안 작업이므로 dart format/flutter analyze/flutter test는 재실행하지 않았다.
+
+
+## 2026-11-23 · 액자/그림 디테일 시안 · 앱 미반영
+
+- 기존 프레임 원목 테두리/매트와 절차적 그림을 확인하고 가까운 디테일을 별도 이미지로 제안했다.
+- 내장 imagegen의 [시안](../design/cafe/20261123/frame-art-study/frame-art-detail-concept.jpg)은
+  벽면 배치와 프레임 코너/종이·식물화의 두 확대를 함께 보여 준다.
+  [전체 프롬프트·세부 기준](../design/cafe/20261123/frame-art-study/proposal.json)을 저장했다.
+- 원목 이음·매트 단면·종이 결·그림의 필선은 생성 시안의 표현이다. 실제 런타임 원화
+  재질·프레임 메시·선택/저장·배포는 바꾸지 않았다. 실기기/광학 효과 검증을 수행하지
+  않았고 문서/이미지 작업으로 dart format/flutter analyze/flutter test도 재실행하지 않았다.
+
+
+## 2026-11-23 · 개인 공간·원화·넓은 유리문 구현 검증
+
+- 승인된 방향을 Flutter 런타임에 구현했다. 정원 쪽 약 1.8m 통로와 약 1.5m 접근 영역,
+  밝기/온기 조절, 원목 프레임의 45도 모서리·측면·매트 단면과 식물/연못/책 원화 3종을
+  실제 연결된 카페/정원에 적용했다. 치수는 모델 기준이며 건축 규격 실측은 아니다.
+- 물건 선택·이동·회전, 액자별 원화/매트/테두리 선택, 일부 소품과 문/잔/책 상태를
+  별도 CafeSpace로 저장한다. 큰 테이블과 의자는 묶음으로 움직이고 개별 의자 이동은
+  지원하지 않는다. 기존 필사 기록의 입력/선택/composing 처리와 백업 형식은 바꾸지 않았다.
+- 최종 검사: `dart format --output=none --set-exit-if-changed lib test tool` 175파일 변경 0,
+  `flutter analyze --no-pub` 문제 0, `flutter test --no-pub` 286개 통과.
+- `flutter test --no-pub --platform chrome test/cafe_image_lifetime_test.dart
+  test/cafe_space_web_test.dart` 2개 통과. CanvasKit 이미지 13개의 반복 렌더링/해제와
+  실제 browser localStorage의 새 저장 객체 복원·계정 범위 분리·잘못된 쓰기/손상 데이터
+  보존을 검사했다. 전체 웹페이지를 직접 새로고침한 수동 검수와 구분한다. CI에도 추가했다.
+- 네이티브 테스트는 실제 SQLite 파일을 닫고 다시 열어 복원과 계정 범위 분리를 확인한다.
+  SQLite trigger로 저장 실패를 유도해 마지막 정상 설정/필사 기록이 남는지 확인한다.
+  위젯에서는 저장 실패 후 재시도·취소·재입장, 읽기 실패 중 편집/쓰기 차단을 검사했다.
+  배치 검사는 지지면·겹침·벽·문 앞 통로·경로 도달 가능성을 포함한다.
+- `flutter test --no-pub tool/capture_personal_cafe_test.dart` 통과. 고정 카메라 실행 캡처
+  20개를 생성하고 액자 확대/모서리, 이동 통로와 종의 지지대, 조명과 편집 패널을 확인했다.
+  [실제 액자 화면](../design/cafe/20261123/personal-room-implementation/botanical-close-wide.jpg),
+  [문 통로](../design/cafe/20261123/personal-room-implementation/wide-garden-door.jpg),
+  [편집 화면](../design/cafe/20261123/personal-room-implementation/personal-controls-wide.jpg)은
+  합성 시안이 아닌 Flutter fixture 실행 캡처다. 사용자 기록은 사용하지 않았다.
+- 원화는 내장 imagegen으로 생성한 자체 이미지다. [전체 프롬프트·자산 해시](../design/cafe/20261123/personal-room-implementation/materials.json)를 남겼다.
+  실제 렌더러는 단순 광원/면 정렬 방식이며 시안 같은 실사 광학 효과, 액자 유리의
+  반사/굴절은 구현하지 않았다. 식물은 기존 사진 cutout 표현을 유지한다.
+- `node tool/build_github_pages.mjs` release 빌드 성공. main.dart.js SHA-256:
+  `22868287dd7b799e299f0f012a572ab3337670789cb8ffdf24418acc1ff4b75d`.
+  `.openai/hosting.json`의 기존 project_id와 비공개 범위는 변경하지 않았다.
+- 설정은 네이티브 DB 또는 해당 브라우저/계정 범위의 로컬 저장이다. 기기 간 동기화와
+  기존 책 백업에 공간 설정 포함은 지원하지 않는다. 브라우저 저장 삭제 시 보존되지 않는다.
+- CUA가 `Local browser access is unavailable for this chat`을 반환해 공개 페이지의 직접
+  UI 조작은 검수하지 못했다. 실제 iPhone/Android 터치·프레임률·오디오, 실기기 디스크
+  복원도 미검증이다. 헤드리스 Chrome/SQLite/fixture 결과를 실기기 검증으로 보고하지 않는다.

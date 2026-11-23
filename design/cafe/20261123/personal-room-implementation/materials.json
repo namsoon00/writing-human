@@ -1,0 +1,38 @@
+{
+  "mode": "built-in image_gen",
+  "purpose": "Runtime artwork textures from the approved frame/art direction, separate from the 3D frame and mat.",
+  "prompts": [
+    {
+      "key": "botanical",
+      "prompt": "Original botanical graphite and delicate olive/sage watercolor study of one gently irregular branch with six to eight detailed varied leaves, fine secondary leaf veins, restrained pigment granulation and soft drybrush edges on warm ivory cotton watercolor paper. Portrait 3:4 composition with generous quiet paper margin. A calm intimate study for a personal Korean writing room. ARTWORK ONLY, flat evenly lit scan, absolutely no frame, mat, wall, shadow, glass, text, signature or artist name. Do not imitate any named artist. Match a crafted quiet paper/ink/wood cafe; not an app icon, not a photo of leaves. High fine detail, pale muted natural colors."
+    },
+    {
+      "key": "pond",
+      "prompt": "Original quiet watercolor painting of light rippling over a small garden pond, muted sage and gray-blue with a few pale warm reflected highlights and one delicate hint of reed at an edge. Landscape 4:3 composition on warm ivory textured watercolor paper, generous subtle margins, refined transparent washes and soft granulation. ARTWORK ONLY, flat evenly lit scan, no frame, mat, wall, shadow, text, signature, artist name, forest, mountains or people. Calm personal writing room artwork; no named-artist imitation. Soft readable details, not a glossy pond photograph."
+    },
+    {
+      "key": "book",
+      "prompt": "Original delicate graphite observational drawing of a small open book and one wooden pencil on warm ivory textured drawing paper. Portrait 4:5 composition with generous quiet margins. Light confident pencil construction lines, subtle graphite hatching, believable binding and fine paper edge layers, no readable manuscript content. ARTWORK ONLY, flat evenly lit scan, no frame, mat, wall, cast shadow outside drawing, text, signature, artist name, hand or person. Quiet crafted artwork for a personal writing cafe. No named-artist imitation; not an app icon or book photo."
+    }
+  ],
+  "assets": [
+    {
+      "name": "botanical",
+      "saved_path": "assets/images/cafe-art-botanical.webp",
+      "sha256": "791b660cf6a7ed2f0dd838f19649b607828eb54b4ac0027a2554405dbc515ed8",
+      "bytes": 325838
+    },
+    {
+      "name": "pond",
+      "saved_path": "assets/images/cafe-art-pond.webp",
+      "sha256": "1bdcc3da3c9dc0881b6299b62a1cc94af146eb4e9875a4b52ef31f9ed079540d",
+      "bytes": 433952
+    },
+    {
+      "name": "book",
+      "saved_path": "assets/images/cafe-art-book.webp",
+      "sha256": "9867e014642863d9bf585da15aafe51dfc5598347adc0a8c21f75b4612cec5e0",
+      "bytes": 344250
+    }
+  ]
+}

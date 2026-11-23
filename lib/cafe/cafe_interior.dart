@@ -45,6 +45,8 @@ extension _CafeInterior on CafeWorld {
               sign: face.sign,
               surface: face.surface,
               signRow: face.signRow,
+              objectId: face.objectId,
+              artIndex: face.artIndex,
               target: face.target,
               unlit: face.unlit,
               layer: face.layer,
@@ -69,9 +71,10 @@ extension _CafeInterior on CafeWorld {
     _wallFinishes();
     _counterDetails();
     _entranceDetails();
-    _tableDetails();
+
     // Window hardware, recessed seals and a narrow rail above the glazing.
     for (final z in [-3.35, -1.05, 1.25, 3.55]) {
+      if (z == -3.35) continue;
       box(-4.185, 1.37, z + .07, .025, .14, .018, CafeWorld.brass);
       box(-4.17, 1.43, z + .105, .025, .025, .08, CafeWorld.brass);
       box(-4.31, 2.90, z, .15, .07, 2.26, CafeWorld.dark, wood: true);
@@ -122,6 +125,7 @@ extension _CafeInterior on CafeWorld {
     // Inset panels below the glazing: real shadow gaps and oak rails at the
     // junctions, rather than a single flat strip painted the same wall colour.
     for (final z in [-3.35, -1.05, 1.25, 3.55]) {
+      if (z == -3.35) continue;
       for (final dz in [-.53, .53]) {
         box(
           -4.32,
@@ -207,39 +211,161 @@ extension _CafeInterior on CafeWorld {
     int row, {
     bool front = true,
   }) {
-    final s = front ? 1.0 : -1.0;
-    for (final xx in [x - w / 2 - .014, x + w / 2 + .014]) {
-      box(xx, y, z, .028, h + .055, .045, CafeWorld.dark, wood: true);
-    }
-    for (final yy in [y - h / 2 - .014, y + h / 2 + .014]) {
-      box(x, yy, z, w, .028, .045, CafeWorld.dark, wood: true);
-    }
-    // The mat is a true border with an opening; no opaque backing overlaps art.
-    for (final xx in [x - w * .45, x + w * .45]) {
-      box(xx, y, z + s * .013, w * .10, h, .012, CafeWorld.cream);
-    }
-    for (final yy in [y - h * .45, y + h * .45]) {
-      box(x, yy, z + s * .013, w * .80, h * .10, .012, CafeWorld.cream);
-    }
-    final l = x - w * .40, r = x + w * .40;
-    final b = y - h * .40, t = y + h * .40;
-    faces.add(
-      CafeFace(
-        [
-          CafePoint(front ? l : r, b, z + s * .021),
-          CafePoint(front ? r : l, b, z + s * .021),
-          CafePoint(front ? r : l, t, z + s * .021),
-          CafePoint(front ? l : r, t, z + s * .021),
-        ],
-        CafeWorld.cream,
-        surface: CafeSurface.artwork,
-        textureCoordinates: [
-          Offset(0, (row + 1) / 3),
-          Offset(1, (row + 1) / 3),
-          Offset(1, row / 3),
-          Offset(0, row / 3),
-        ],
-      ),
+    final id = 'frame.${x}_$z';
+    _object(
+      id,
+      '${front ? '\uC548\uCABD \uC561\uC790' : '\uCD9C\uC785\uAD6C \uC561\uC790'} \u00B7 ${['\uC78E\uACFC \uAC00\uC9C0', '\uBB3C\uACB0\uACFC \uBE5B', '\uCC45\uACFC \uC5F0\uD544'][space.art[id] ?? row]}',
+      CafeObjectKind.frame,
+      CafePoint(x, y, z),
+      () {
+        final s = front ? 1.0 : -1.0,
+            style = space.frames[id] ?? 0,
+            matStyle = space.mats[id] ?? 0;
+        final index = space.art[id] ?? row,
+            aspect = [.75, 4.0 / 3.0, .8][index];
+        final rim = .022,
+            outer = Rect.fromCenter(center: Offset(x, y), width: w, height: h);
+        final inner = outer.deflate(rim);
+        final maxW = w * (matStyle == 2 ? .82 : .72),
+            maxH = h * (matStyle == 2 ? .82 : .72);
+        final aw = math.min(maxW, maxH * aspect), ah = aw / aspect;
+        final opening = Rect.fromCenter(
+          center: Offset(x, y + .008),
+          width: aw,
+          height: ah,
+        );
+        List<Offset> corners(Rect r) => [
+          r.topLeft,
+          r.topRight,
+          r.bottomRight,
+          r.bottomLeft,
+        ];
+        CafePoint point(Offset p, double depth) =>
+            CafePoint(p.dx, p.dy, z + s * depth);
+        void strip(
+          List<CafePoint> p,
+          Color color, {
+          bool wood = false,
+          CafeGrain grain = CafeGrain.x,
+          CafeSurface? surface,
+        }) {
+          faces.add(
+            CafeFace(
+              front ? p : p.reversed.toList(),
+              color,
+              wood: wood,
+              surface: surface,
+              grain: grain,
+            ),
+          );
+        }
+
+        final a = corners(outer), b = corners(inner), c = corners(opening);
+        final woodColor = style == 1
+            ? CafeWorld.oak
+            : style == 2
+            ? const Color(0xff483f35)
+            : CafeWorld.dark;
+        final mat = matStyle == 1
+            ? const Color(0xfff2eee4)
+            : const Color(0xffe7decc);
+        for (var i = 0; i < 4; i++) {
+          final j = (i + 1) % 4, grain = i.isEven ? CafeGrain.x : CafeGrain.y;
+          // Mitred trapezoids meet exactly at each corner; side returns supply depth.
+          strip(
+            [
+              point(a[i], .034),
+              point(a[j], .034),
+              point(b[j], .034),
+              point(b[i], .034),
+            ],
+            woodColor,
+            wood: style != 2,
+            grain: grain,
+          );
+          strip(
+            [
+              point(a[i], -.008),
+              point(a[j], -.008),
+              point(a[j], .034),
+              point(a[i], .034),
+            ],
+            woodColor,
+            wood: style != 2,
+            grain: grain,
+          );
+          strip(
+            [
+              point(b[i], .034),
+              point(b[j], .034),
+              point(b[j], .023),
+              point(b[i], .023),
+            ],
+            woodColor,
+            wood: style != 2,
+            grain: grain,
+          );
+          strip([
+            point(b[i], .022),
+            point(b[j], .022),
+            point(c[j], .022),
+            point(c[i], .022),
+          ], mat);
+          final inset = corners(opening.deflate(.004));
+          strip([
+            point(c[i], .022),
+            point(c[j], .022),
+            point(inset[j], .012),
+            point(inset[i], .012),
+          ], const Color(0xffc9bca5));
+        }
+        final art = opening.deflate(.004), p = corners(art);
+        faces.add(
+          CafeFace(
+            front
+                ? [
+                    point(p[0], .011),
+                    point(p[1], .011),
+                    point(p[2], .011),
+                    point(p[3], .011),
+                  ]
+                : [
+                    point(p[1], .011),
+                    point(p[0], .011),
+                    point(p[3], .011),
+                    point(p[2], .011),
+                  ],
+            CafeWorld.cream,
+            surface: CafeSurface.artwork,
+            artIndex: index,
+            textureCoordinates: const [
+              Offset(0, 1),
+              Offset(1, 1),
+              Offset(1, 0),
+              Offset(0, 0),
+            ],
+          ),
+        );
+        // Narrow rear shadow strips avoid an opaque backing that could hide the art.
+        for (final xx in [x - w / 2 - .009, x + w / 2 + .009]) {
+          box(
+            xx,
+            y - .006,
+            z - s * .014,
+            .016,
+            h + .024,
+            .002,
+            const Color(0x20453626),
+          );
+        }
+      },
+    );
+    final pose = space.pose(id);
+    objects[id]!.defaultArtwork = row;
+    objects[id]!.frameBounds = Rect.fromCenter(
+      center: Offset(x + pose.x, y + pose.y),
+      width: w,
+      height: h,
     );
   }
 
@@ -366,7 +492,7 @@ extension _CafeInterior on CafeWorld {
       z,
       radius * 1.40,
       .012,
-      CafeWorld.cream,
+      [CafeWorld.cream, const Color(0xffb18a70), CafeWorld.sage][space.mug],
       sides: 20,
     );
     cylinder(
@@ -382,7 +508,7 @@ extension _CafeInterior on CafeWorld {
     );
     cylinder(
       x,
-      bottom + .099,
+      bottom + (filled ? .099 : .034),
       z,
       radius * .87,
       .004,
@@ -398,6 +524,21 @@ extension _CafeInterior on CafeWorld {
         edge(a, radius * .87),
         edge(b, radius * .87),
         edge(b, radius),
+        CafeWorld.cream,
+      );
+    }
+    for (var i = 0; i < 20; i++) {
+      final a = i * math.pi / 10, b = (i + 1) * math.pi / 10;
+      CafePoint inner(double t, double h, double r) => CafePoint(
+        x + math.cos(t) * radius * r,
+        bottom + h,
+        z + math.sin(t) * radius * r,
+      );
+      quad(
+        inner(a, .102, .87),
+        inner(a, .035, .65),
+        inner(b, .035, .65),
+        inner(b, .102, .87),
         CafeWorld.cream,
       );
     }
@@ -468,31 +609,24 @@ extension _CafeInterior on CafeWorld {
     box(x - .085, y + .007, z, .027, .002, .012, CafeWorld.brass);
   }
 
-  void _tableDetails() {
-    for (final seat in [
-      CafeSeat.windowRear,
-      CafeSeat.windowMiddle,
-      CafeSeat.window,
-    ]) {
-      final z = CafeWorld.desk(seat).z;
-      _target = CafeTarget.forSeat(seat);
-      cylinder(
-        -3.80,
-        .760,
-        z - .40,
-        .10,
-        .014,
-        const Color(0xffa18c65),
-        sides: 18,
-      );
+  void _windowDeskDetails(CafeSeat seat) {
+    final z = CafeWorld.desk(seat).z;
+    _target = CafeTarget.forSeat(seat);
+    cylinder(
+      -3.80,
+      .760,
+      z - .40,
+      .10,
+      .014,
+      const Color(0xffa18c65),
+      sides: 18,
+    );
+    box(-3.46, .765, z + .33, .015, .012, .22, CafeWorld.dark);
+    box(-3.46, .772, z + .25, .019, .008, .035, CafeWorld.brass);
+  }
 
-      box(-3.46, .765, z + .33, .015, .012, .22, CafeWorld.dark);
-      box(-3.46, .772, z + .25, .019, .008, .035, CafeWorld.brass);
-    }
+  void _sharedDetails() {
     _target = CafeTarget.shared;
-    cylinder(-.2, .759, .18, .093, .01, const Color(0xff9b805a), sides: 20);
-    cylinder(-.2, .873, .18, .049, .004, const Color(0xff796345), sides: 18);
-    // Two cloth books and bookmarks at the unused end of the communal table.
     for (var i = 0; i < 2; i++) {
       box(
         .21,
@@ -506,7 +640,6 @@ extension _CafeInterior on CafeWorld {
       box(.21, .767 + i * .032, -1.151, .275, .016, .004, CafeWorld.cream);
     }
     box(.29, .799, -1.13, .017, .002, .08, CafeWorld.brass);
-    // Thin warm linen runner beneath the vase, with no collision or UI layer.
     for (var i = 0; i < 9; i++) {
       quad(
         CafePoint(-.16, .754, -.53 + i * .052),
@@ -517,7 +650,19 @@ extension _CafeInterior on CafeWorld {
         surface: CafeSurface.cord,
       );
     }
-    // The small vase now contains restrained branches rather than an empty cone.
+  }
+
+  void _vase() {
+    cylinder(
+      0,
+      .84,
+      -.30,
+      .065,
+      .19,
+      const Color(0xffbdad89),
+      sides: 12,
+      topRadius: .04,
+    );
     for (var i = 0; i < 3; i++) {
       final x = (i - 1) * .025;
       box(x, 1.02 + i * .023, -.30, .006, .23 + i * .045, .006, CafeWorld.sage);
@@ -532,7 +677,6 @@ extension _CafeInterior on CafeWorld {
         );
       }
     }
-    _target = null;
   }
 
   void _entranceDetails() {

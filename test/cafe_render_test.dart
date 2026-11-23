@@ -5,13 +5,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/cafe/cafe_camera.dart';
 import 'package:writing_human/cafe/cafe_materials.dart';
+import 'package:writing_human/cafe/cafe_watercolor.dart';
 import 'package:writing_human/cafe/cafe_renderer.dart';
 import 'package:writing_human/cafe/cafe_world.dart';
 import 'package:writing_human/cafe/cafe_visit.dart';
 
 void main() {
   testWidgets(
-    'Bundled textures render through repeated phone-sized rotations',
+    'Watercolor materials render through repeated phone-sized rotations',
     (tester) async {
       await tester.runAsync(() async {
         Future<ui.Image> texture(String path) async {
@@ -25,16 +26,27 @@ void main() {
           return image;
         }
 
-        final wood = await texture('assets/images/cafe-oak-longgrain.jpg');
-        final walnut = await texture('assets/images/cafe-walnut-longgrain.jpg');
-        final limestone = await texture(
-          'assets/images/cafe-limestone-albedo.jpg',
-        );
-        final plaster = await texture('assets/images/cafe-lime-plaster.webp');
+        Future<ui.Image> timber({bool walnut = false}) async {
+          final source = await texture(
+            'assets/images/cafe-watercolor-oak.webp',
+          );
+          try {
+            return await CafeWatercolor.timber(source, walnut: walnut);
+          } finally {
+            source.dispose();
+          }
+        }
+
+        final wood = await timber();
+        final walnut = await timber(walnut: true);
+        final limestone = await CafeWatercolor.stone();
+        final plaster = await CafeWatercolor.plaster();
         final artwork = await CafeMaterials.artwork();
-        final gravel = await CafeMaterials.gravel();
-        final tree = await texture('assets/images/cafe-garden-tree.webp');
-        final flowers = await texture('assets/images/cafe-garden-flowers.webp');
+        final gravel = await CafeWatercolor.gravel();
+        final tree = await texture('assets/images/cafe-watercolor-tree.webp');
+        final flowers = await texture(
+          'assets/images/cafe-watercolor-flowers.webp',
+        );
         final framedArt = [
           await texture('assets/images/cafe-art-botanical.webp'),
           await texture('assets/images/cafe-art-pond.webp'),

@@ -52,6 +52,18 @@ extension _CourtyardGeometry on CafeWorld {
             surface: surface,
             target: target ?? _target,
             vertexNormals: points.map((p) => (p - center).normalized).toList(),
+            textureCoordinates: points.map((p) {
+              final delta = p - center;
+              final local = CafePoint(
+                delta.x * math.cos(yaw) + delta.z * math.sin(yaw),
+                delta.y,
+                -delta.x * math.sin(yaw) + delta.z * math.cos(yaw),
+              );
+              return Offset(
+                (local.x + local.z * .37) / .45,
+                (local.y + local.z * .29) / .45,
+              );
+            }).toList(),
           ),
         );
       }

@@ -76,16 +76,25 @@ void main() {
             final pixels = (await image.toByteData(
               format: ui.ImageByteFormat.rawRgba,
             ))!.buffer.asUint8List();
+            final matPoint = CafeRenderer.project(
+              const CafePoint(2.02, 1.86, 4.818),
+              camera,
+              size,
+            )!;
+            final m = (matPoint.dy.round() * 800 + matPoint.dx.round()) * 4;
+            final matBrightness = pixels[m] + pixels[m + 1] + pixels[m + 2];
+            // Sample painted terrain, above the blank paper margin. Compare
+            // against the nearby mat so the check survives brighter lighting.
             for (final x in [2.32, 2.44, 2.56]) {
               final point = CafeRenderer.project(
-                CafePoint(x, 1.77, 4.819),
+                CafePoint(x, 1.86, 4.819),
                 camera,
                 size,
               )!;
               final i = (point.dy.round() * 800 + point.dx.round()) * 4;
               expect(
                 pixels[i] + pixels[i + 1] + pixels[i + 2],
-                lessThan(460),
+                lessThan(matBrightness - 85),
                 reason: 'walnut/mat backing must not hide landscape at $x',
               );
             }

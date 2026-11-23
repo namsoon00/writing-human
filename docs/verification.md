@@ -3282,3 +3282,55 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - [HTTP 확인 원문](../design/cafe/20261123/personal-room-implementation/deployment.json)을
   저장했다. 이는 파일 배포 확인이며 공개 페이지의 직접 터치·새로고침 UI 검사나
   iPhone의 실제 렌더링/성능 검증은 아니다. 공간의 기기 간 동기화는 지원하지 않는다.
+
+
+## 2026-11-23 · 수채화 카페 방향 시안 · 앱 미반영
+
+- 사용자가 각진 물체를 지적하고 요소마다 수채화 감성을 적용하길 요청했다.
+  프로젝트의 시안 우선 지침에 따라 기존 실제 입구 캡처를 참고한 이미지 제안을 만들었다.
+- 내장 image_gen으로 [전체 공간/소품 시안](../design/cafe/20261123/watercolor-study/watercolor-cafe-concept-v1.jpg)을
+  생성했다. 중앙 테이블·창가·서가·안쪽 자리, 따뜻한 원목 조명을 유지하면서 둥근 가구와
+  안료 농담, 종이 결, 부드러운 그림자 및 잔/노트·의자/조명·정원/연못 확대를 확인했다.
+  [정확한 전체 프롬프트·참고 이미지·해시](../design/cafe/20261123/watercolor-study/proposal.json)를 저장했다.
+- 이는 생성 디자인 시안이며 실제 렌더러 출력/수채화 재질 파일/실시간 조작 검증이 아니다.
+  메시·재질·셰이더·입력·저장·배포를 수정하지 않았다. 문서와 시안 작업이므로
+  dart format/flutter analyze/flutter test는 재실행하지 않았다. 이전 검사 결과를 이번
+  수채화 구현의 통과 결과로 보고하지 않는다. 네 역할의 후속 판단과 요소별 표현 기준을 남겼다.
+
+
+## 2026-11-23 · 수채화 1인칭 공간 구현 검증
+
+- 생성 시안의 방향을 실제 3D 메시/재질에 적용했다. 둥근 좌판·다리, 곡면 등갓/찻잔,
+  입체 손잡이와 잎을 추가하고 원목·벽·석재·천·소품/식재/연못의 색·음영을 맞췄다.
+  전체 화면 필터나 생성 시안 배경을 사용하지 않는다. 같은 실내/정원 객체와 기존
+  보행/선택·장애물·배치 저장 ID를 유지한다. 입력/선택/composing·기록 DB는 수정하지 않았다.
+- `dart format --output=none --set-exit-if-changed lib test tool/capture_preview_test.dart
+  tool/capture_watercolor_cafe_test.dart`: 179파일 변경 0. `flutter analyze --no-pub`: 문제 0.
+  분리 작업공간에서 `flutter test --no-pub` 289개 통과. 테스트의 브라우저 파일 I/O를
+  분리한 뒤 `flutter test --no-pub test/cafe_watercolor_test.dart` 3개를 다시 통과했다.
+- `flutter test --no-pub --platform chrome test/cafe_image_lifetime_test.dart
+  test/cafe_space_web_test.dart test/cafe_watercolor_test.dart` 5개 통과. CanvasKit 이미지
+  13개의 반복 렌더 수명, 브라우저 저장 범위/복원/실패 보존, 파생 목재의 원본 해제 후
+  생존과 색 구분, 이동한 소품의 동일 UV, 재입장 시 같은 안료와 식재의 투명 간격을 검사했다.
+  CI에도 같은 명령을 연결했다. Chrome의 목재 수명 검사는 절차적 ui.Image를 원본으로
+  사용하며, 실제 WebP 자산을 사용하는 회전 검사는 네이티브 테스트다.
+- 초기 Chrome 목재 검사는 rootBundle 파일 I/O를 포함해 30초 timeout이었다. 해당 검사의
+  원본을 절차적으로 생성해 이미지 수명 검사와 파일 읽기를 분리했다. 실제 WebP를 쓰는
+  CafeScene/CafeRenderer의 경로와 픽셀 회전 검사는 유지했다. 이전 조명의 어두운 절대값에
+  의존하던 액자 검사는 그림의 실제 안료 영역과 인접 매트 대비를 비교하도록 보완했다.
+- `flutter test --no-pub tool/capture_watercolor_cafe_test.dart` 통과, 고정 카메라 캡처
+  20개를 생성했다. 초기의 강한 벽 얼룩과 곡면의 재질 경계를 보완하고 최종 화면의
+  원목/좌판/등갓, 가까운 잔/노트, 같은 정원과 잎/꽃의 투명 마스크를 확인했다.
+  [실제 입구](../design/cafe/20261123/watercolor-implementation/actual-entrance-wide.jpg),
+  [가까운 책상](../design/cafe/20261123/watercolor-implementation/actual-quiet-wide.jpg),
+  [정원](../design/cafe/20261123/watercolor-implementation/actual-garden-pond-wide.jpg)은
+  사용자 기록을 쓰지 않은 Flutter fixture 캡처다. 브라우저/실기기 캡처로 소개하지 않는다.
+- 내장 image_gen의 창작 원목/나무/꽃 WebP 세 개와 절차적 512px 재질을 사용한다.
+  [전체 프롬프트·선택 자산·해시](../design/cafe/20261123/watercolor-implementation/materials.json)를
+  저장했다. 원화의 희미한 배경 번짐은 식재 재질의 soft alpha mask에서 줄이며 다른
+  물체와 비네트에는 이 필터를 남기지 않는다. 매 프레임 안료 이미지를 재생성하지 않는다.
+- 실제 렌더러는 단순 광원/면 정렬이며 식물은 카메라를 향하는 평면이다. 수채화 유체
+  시뮬레이션·깊이 버퍼·PBR/반사/굴절·다중 접속은 구현하지 않았다. 생성 시안과
+  같은 완성도를 달성했다고 보고하지 않는다. 공개 UI 직접 조작은 이 채팅의 CUA가
+  불가한 상태라 수행하지 못했고 실제 iPhone/Android의 터치·성능·발열·오디오도 미검증이다.
+  기존 hosting project_id/비공개 범위를 바꾸지 않았으며 공개 웹은 기존 Pages 흐름이다.

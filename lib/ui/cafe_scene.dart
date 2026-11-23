@@ -7,6 +7,7 @@ import 'package:flutter/scheduler.dart';
 
 import '../cafe/cafe_camera.dart';
 import '../cafe/cafe_materials.dart';
+import '../cafe/cafe_watercolor.dart';
 import '../cafe/cafe_renderer.dart';
 import '../cafe/cafe_view_controller.dart';
 import '../cafe/cafe_visit.dart';
@@ -193,6 +194,16 @@ class _CafeSceneState extends State<CafeScene>
     }
   }
 
+  Future<ui.Image> _paintedWood({bool walnut = false}) async {
+    final source = await _texture('cafe-watercolor-oak.webp', width: 768);
+    if (source == null) return CafeWatercolor.wood(walnut: walnut);
+    try {
+      return await CafeWatercolor.timber(source, walnut: walnut);
+    } finally {
+      source.dispose();
+    }
+  }
+
   Future<ui.Image?> _makeSign() async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
@@ -243,51 +254,23 @@ class _CafeSceneState extends State<CafeScene>
     return image;
   }
 
-  Future<ui.Image?> _makeWovenCord() async {
-    final recorder = ui.PictureRecorder(), canvasSize = 256;
-    final canvas = Canvas(recorder);
-    canvas.drawColor(const Color(0xffc9ab7c), BlendMode.src);
-    final paint = Paint()..strokeWidth = 3;
-    // A repeatable cord weave, at a 0.62 m physical scale in the renderer.
-    for (var i = 0; i < canvasSize; i += 4) {
-      paint.color = const Color(0xffab8d60);
-      canvas.drawLine(
-        Offset(i.toDouble(), 0),
-        Offset(i.toDouble(), 256),
-        paint,
-      );
-      paint.color = const Color(0xffe0c698);
-      canvas.drawLine(Offset(i + 1.0, 0), Offset(i + 1.0, 256), paint);
-      for (var j = 0; j < canvasSize; j += 8) {
-        final y = j + ((i ~/ 4).isEven ? 0 : 4);
-        paint.color = const Color(0xffdbc092);
-        canvas.drawLine(
-          Offset(i - 1.0, y.toDouble()),
-          Offset(i + 3.0, y.toDouble()),
-          paint,
-        );
-      }
-    }
-    final picture = recorder.endRecording();
-    final image = await picture.toImage(256, 256);
-    picture.dispose();
-    return image;
-  }
-
   Future<void> _loadMaterials() async {
     final images = await Future.wait([
-      _texture('cafe-oak-longgrain.jpg'),
+      _paintedWood(),
       _makeSign(),
-      _texture('cafe-walnut-longgrain.jpg'),
-      _texture('cafe-limestone-albedo.jpg'),
-      _makeWovenCord(),
-      _texture('cafe-lime-plaster.webp', width: 1024).then<ui.Image?>(
-        (image) async => image ?? await CafeMaterials.plaster(),
-      ),
+      _paintedWood(walnut: true),
+      CafeWatercolor.stone(),
+      CafeWatercolor.linen(),
+      CafeWatercolor.plaster(),
       CafeMaterials.artwork(),
-      CafeMaterials.gravel(),
-      _texture('cafe-garden-tree.webp', width: 1024),
-      _texture('cafe-garden-flowers.webp', width: 768),
+      CafeWatercolor.gravel(),
+      _texture(
+        'cafe-watercolor-tree.webp',
+        width: 768,
+      ).then<ui.Image?>((image) async => image ?? await CafeWatercolor.tree()),
+      _texture('cafe-watercolor-flowers.webp', width: 768).then<ui.Image?>(
+        (image) async => image ?? await CafeWatercolor.flowers(),
+      ),
       _texture('cafe-art-botanical.webp', width: 1024),
       _texture('cafe-art-pond.webp', width: 1024),
       _texture('cafe-art-book.webp', width: 1024),

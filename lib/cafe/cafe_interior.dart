@@ -493,19 +493,20 @@ extension _CafeInterior on CafeWorld {
       radius * 1.40,
       .012,
       [CafeWorld.cream, const Color(0xffb18a70), CafeWorld.sage][space.mug],
-      sides: 20,
+      sides: 28,
     );
-    cylinder(
-      x,
-      bottom + .054,
-      z,
-      radius * .78,
-      .086,
+    final ceramic = [
       CafeWorld.cream,
-      topRadius: radius,
-      topFace: false,
-      sides: 20,
-    );
+      const Color(0xffb18a70),
+      CafeWorld.sage,
+    ][space.mug];
+    _turned(x, z, [
+      (bottom + .011, radius * .70),
+      (bottom + .022, radius * .80),
+      (bottom + .055, radius * .94),
+      (bottom + .089, radius),
+      (bottom + .102, radius),
+    ], ceramic);
     cylinder(
       x,
       bottom + (filled ? .099 : .034),
@@ -513,10 +514,10 @@ extension _CafeInterior on CafeWorld {
       radius * .87,
       .004,
       filled ? const Color(0xff684b32) : const Color(0xffc6bba6),
-      sides: 20,
+      sides: 28,
     );
-    for (var i = 0; i < 20; i++) {
-      final a = i * math.pi / 10, b = (i + 1) * math.pi / 10;
+    for (var i = 0; i < 28; i++) {
+      final a = i * math.pi / 14, b = (i + 1) * math.pi / 14;
       CafePoint edge(double t, double r) =>
           CafePoint(x + math.cos(t) * r, bottom + .102, z + math.sin(t) * r);
       quad(
@@ -524,11 +525,11 @@ extension _CafeInterior on CafeWorld {
         edge(a, radius * .87),
         edge(b, radius * .87),
         edge(b, radius),
-        CafeWorld.cream,
+        ceramic,
       );
     }
-    for (var i = 0; i < 20; i++) {
-      final a = i * math.pi / 10, b = (i + 1) * math.pi / 10;
+    for (var i = 0; i < 28; i++) {
+      final a = i * math.pi / 14, b = (i + 1) * math.pi / 14;
       CafePoint inner(double t, double h, double r) => CafePoint(
         x + math.cos(t) * radius * r,
         bottom + h,
@@ -539,34 +540,22 @@ extension _CafeInterior on CafeWorld {
         inner(a, .035, .65),
         inner(b, .035, .65),
         inner(b, .102, .87),
-        CafeWorld.cream,
+        ceramic,
       );
     }
-    // A vertical elliptical handle, aligned away from the writing page.
-    for (var i = 0; i < 12; i++) {
-      final a = i * math.pi / 6, b = (i + 1) * math.pi / 6;
-      quad(
-        CafePoint(
-          x + radius + math.cos(a) * .026,
-          bottom + .055 + math.sin(a) * .032,
-          z,
-        ),
-        CafePoint(
-          x + radius + math.cos(b) * .026,
-          bottom + .055 + math.sin(b) * .032,
-          z,
-        ),
-        CafePoint(
-          x + radius + math.cos(b) * .018,
-          bottom + .055 + math.sin(b) * .023,
-          z,
-        ),
-        CafePoint(
-          x + radius + math.cos(a) * .018,
-          bottom + .055 + math.sin(a) * .023,
-          z,
-        ),
-        CafeWorld.cream,
+    // A round ceramic handle with real depth and smooth vertex normals.
+    for (var i = 0; i < 20; i++) {
+      CafePoint handle(double a) => CafePoint(
+        x + radius + math.cos(a) * .025,
+        bottom + .055 + math.sin(a) * .030,
+        z,
+      );
+      _rod(
+        handle(i * math.pi / 10),
+        handle((i + 1) * math.pi / 10),
+        .0048,
+        ceramic,
+        sides: 6,
       );
     }
   }

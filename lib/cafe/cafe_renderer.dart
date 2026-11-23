@@ -193,33 +193,15 @@ class CafeRenderer extends CustomPainter {
       CafeSurface.gravel => gravel,
       CafeSurface.tree => tree,
       CafeSurface.flowers => flowers,
-      CafeSurface.water => gravel,
-      _ => null,
+      CafeSurface.water => plaster,
+      CafeSurface.plain ||
+      CafeSurface.brass => face.color.a >= .99 ? plaster : null,
     };
   }
 
   /// Physical repeat lengths keep long grain aligned with each timber member.
   /// End faces use two cross-grain axes instead of a collapsed UV coordinate.
-  static Offset materialUv(CafeFace face, CafePoint p) {
-    final n = face.normal;
-    if (face.surface == CafeSurface.water) return Offset(p.x / 2.8, p.z / 2.8);
-    if (face.surface == CafeSurface.gravel) return Offset(p.x / .6, p.z / .6);
-    if (face.surface == CafeSurface.plaster) {
-      if (n.y.abs() > .8) return Offset(p.x / .72, p.z / .72);
-      return Offset((n.x.abs() > .8 ? p.z : p.x) / .72, -p.y / .72);
-    }
-    switch (face.grain) {
-      case CafeGrain.x:
-        if (n.x.abs() > .8) return Offset(p.z / .6, -p.y / .6);
-        return Offset((n.y.abs() > .6 ? p.z : p.y) / .62, -p.x / 2.4);
-      case CafeGrain.y:
-        if (n.y.abs() > .8) return Offset(p.x / .6, -p.z / .6);
-        return Offset((n.x.abs() > .6 ? p.z : p.x) / .62, -p.y / 2.4);
-      case CafeGrain.z:
-        if (n.z.abs() > .8) return Offset(p.x / .6, -p.y / .6);
-        return Offset((n.y.abs() > .6 ? p.x : p.y) / .62, -p.z / 2.4);
-    }
-  }
+  static Offset materialUv(CafeFace face, CafePoint p) => face.materialUv(p);
 
   static const _wallLights = [
     CafePoint(-3.60, 2.10, -4.68),
@@ -233,14 +215,14 @@ class CafeRenderer extends CustomPainter {
         final p = face.points[i], n = face.vertexNormals?[i] ?? face.normal;
         if (world.courtyard) {
           final fill =
-              .70 +
+              .80 +
               .18 * math.max(0, n.dot(_daylightDirection)) +
               .08 * math.max(0, n.y);
           return CafePoint(fill, fill * .978, fill * .925);
         }
         final window = math.exp(-(p.x + 4.4).clamp(0, 12) / 4.5);
         final fill =
-            .64 +
+            .76 +
             .11 * math.max(0, n.dot(_daylightDirection)) * window +
             .035 * math.max(0, n.y);
         var warm = 0.0;
@@ -250,7 +232,7 @@ class CafeRenderer extends CustomPainter {
           final radial = math.sqrt(delta.x * delta.x + delta.z * delta.z);
           final cone = (1 - radial / (.40 + down * .75)).clamp(0.0, 1.0);
           warm +=
-              1.90 *
+              1.45 *
               cone *
               cone *
               math.max(0, n.dot(delta.normalized)) /
@@ -285,29 +267,11 @@ class CafeRenderer extends CustomPainter {
       });
 
   double _specular(CafeFace face) {
-    final metal = face.surface == CafeSurface.brass;
-    final stone = face.surface == CafeSurface.limestone;
-    if (!metal &&
-        !stone &&
-        face.surface != CafeSurface.oak &&
-        face.surface != CafeSurface.walnut) {
-      return 0;
-    }
+    if (face.surface != CafeSurface.brass) return 0;
     final view = (camera.position - face.center).normalized;
     final halfVector = (view + _daylightDirection).normalized;
-    return math.pow(
-          math.max(0, face.normal.dot(halfVector)),
-          metal
-              ? 22
-              : stone
-              ? 48
-              : 35,
-        ) *
-        (metal
-            ? .26
-            : stone
-            ? .024
-            : .055);
+    // Broad restrained glints, without view-dependent shiny polygon patches.
+    return math.pow(math.max(0, face.normal.dot(halfVector)), 8) * .035;
   }
 
   Color _light(CafeFace face, int i, bool textured, double specular) {
@@ -319,7 +283,9 @@ class CafeRenderer extends CustomPainter {
         textured &&
             face.surface != CafeSurface.limestone &&
             face.surface != CafeSurface.plaster &&
-            face.surface != CafeSurface.water
+            face.surface != CafeSurface.water &&
+            face.surface != CafeSurface.plain &&
+            face.surface != CafeSurface.brass
         ? Colors.white
         : face.color;
     int channel(double value, double factor) =>
@@ -505,10 +471,40 @@ class CafeRenderer extends CustomPainter {
     final colors = <Color>[];
     ui.ImageShader? batchShader;
     bool batchAA = false;
+    // Foliage uses a soft alpha mask: retain painted stems/petals, but prevent
+    // the very faint wash around a cutout from becoming a floating rectangle.
+    final plantMask = ColorFilter.matrix([
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      2.8,
+      -240,
+    ]);
     void flush() {
       if (positions.isEmpty) return;
       paint
         ..shader = batchShader
+        ..colorFilter =
+            batchShader != null &&
+                (batchShader == shaders[tree] ||
+                    batchShader == shaders[flowers])
+            ? plantMask
+            : null
         ..color = Colors.white
         ..isAntiAlias = batchAA;
       final mesh = ui.Vertices(
@@ -588,7 +584,9 @@ class CafeRenderer extends CustomPainter {
     }
     flush();
     paintLinked();
-    paint.shader = null;
+    paint
+      ..shader = null
+      ..colorFilter = null;
     for (final shader in shaders.values) {
       shader.dispose();
     }

@@ -24,21 +24,6 @@ class CafeObject {
 }
 
 extension CafePersonalObjects on CafeWorld {
-  Offset _woodCoordinates(CafeFace face, CafePoint p) {
-    final n = face.normal;
-    switch (face.grain) {
-      case CafeGrain.x:
-        if (n.x.abs() > .8) return Offset(p.z / .6, -p.y / .6);
-        return Offset((n.y.abs() > .6 ? p.z : p.y) / .62, -p.x / 2.4);
-      case CafeGrain.y:
-        if (n.y.abs() > .8) return Offset(p.x / .6, -p.z / .6);
-        return Offset((n.x.abs() > .6 ? p.z : p.x) / .62, -p.y / 2.4);
-      case CafeGrain.z:
-        if (n.z.abs() > .8) return Offset(p.x / .6, -p.y / .6);
-        return Offset((n.y.abs() > .6 ? p.x : p.y) / .62, -p.z / 2.4);
-    }
-  }
-
   CafePoint _transform(CafePoint p, CafePoint pivot, CafePose pose) {
     final d = p - pivot, c = math.cos(pose.turn), s = math.sin(pose.turn);
     return CafePoint(
@@ -83,9 +68,7 @@ extension CafePersonalObjects on CafeWorld {
         layer: f.layer,
         textureCoordinates:
             f.textureCoordinates ??
-            ((f.surface == CafeSurface.oak || f.surface == CafeSurface.walnut)
-                ? f.points.map((p) => _woodCoordinates(f, p)).toList()
-                : null),
+            (!f.sign && !f.garden ? f.points.map(f.materialUv).toList() : null),
         target: f.target,
         signRow: f.signRow,
         surface: f.surface,

@@ -1,0 +1,65 @@
+{
+  "mode": "built-in image_gen",
+  "purpose": "Runtime material maps and alpha-masked painted foliage, separate from the room geometry and original framed artworks.",
+  "prompts": [
+    {
+      "key": "oak",
+      "transparent": false,
+      "prompt": "Create a seamless tileable hand-painted watercolor oak wood albedo texture for a quiet warm Korean writing cafe 3D interior. Square 1:1, flat orthographic evenly lit scan of the MATERIAL ONLY, full bleed, vertical long grain continuous across top and bottom, no planks, seams, perspective, objects, frame, labels or text. Golden honey and warm light tan oak with delicate irregular brown grain, translucent broad drybrush and wet-on-wet strokes, gentle pigment pooling and subtle cotton paper granulation. Clearly an artist-painted watercolor surface, not a photograph, no sharp digital stripes, no dark knots, no burn marks. Restrained soft light tonal variations, enough medium-scale brush marks to read from two meters away, warm luminous inviting tactile material. No named artist imitation. Edges should repeat smoothly without borders. Do not render a tabletop or room, only the flat paint texture."
+    },
+    {
+      "key": "tree",
+      "transparent": true,
+      "prompt": "One complete small graceful garden tree painted in delicate traditional watercolor on a genuinely transparent background, isolated alpha cutout, portrait 3:4. Full tree including crown and exposed trunk, centered with a small transparent margin, no clipping. A gently branching light warm gray-brown trunk, natural irregular open crown of small olive and sage green pointed leaves, varied leaf clusters with visible transparent air gaps and fine branches, a few pale highlights. Soft translucent wet-on-wet washes, pigment granulation and restrained graphite botanical details. Calm handcrafted watercolor aesthetic for the garden of a personal writing cafe, natural believable plant rather than a cartoon icon or photorealistic cutout. Moderate foliage, not dense forest, not an oversized old tree. No pot, roots, ground, soil, scenery, sky, paper rectangle, cast shadow, frame, text or watermark. NO background of any color; retain alpha transparency between all branches and leaf clusters. Do not imitate a named artist."
+    },
+    {
+      "key": "flowers",
+      "transparent": true,
+      "prompt": "A modest low garden planting clump painted in delicate traditional watercolor, isolated on a genuinely transparent background, landscape 3:2. Small irregular groups of ivory daisies, a very few pale blush and lavender flowers, soft sage green small leaves and fine gently curved stems, varying natural heights, perhaps 20 to 30 blossoms, relaxed scattered composition with transparent air gaps, lower organic leafy base. Complete plants, no clipping, small clear margin. Soft translucent washes and fine pigment granulation, quiet botanical detail, restrained warm muted colors. Designed as a painted alpha cutout for a small serene writing cafe garden, not a photorealistic photo, not an app icon, not a dense meadow or a row of identical stems. No pot, ground plane, rectangular grass lawn, dirt, sky, wall, paper background, frame, text, watermark or cast shadow. Transparent alpha around and between the flowers and stems. No named artist imitation."
+    }
+  ],
+  "assets": [
+    {
+      "name": "oak",
+      "source_png": "/Users/namsoon00/.codex/generated_images/01a1fdaa-35b5-77d1-b955-5853571b0be5/exec-5b4c82a2-0192-476a-9bea-400e76756980.png",
+      "saved_path": "assets/images/cafe-watercolor-oak.webp",
+      "size": [
+        1254,
+        1254
+      ],
+      "mode": "RGB",
+      "bytes": 373234,
+      "sha256": "09e57d12c41a0c46e7ab91f03b873161daecf23fa79be9f9d1fabbad6c41c63b"
+    },
+    {
+      "name": "tree",
+      "source_png": "/Users/namsoon00/.codex/generated_images/01a1fdaa-35b5-77d1-b955-5853571b0be5/exec-60f299a9-58a8-44af-b2ea-87ecbaa5fa12.png",
+      "saved_path": "assets/images/cafe-watercolor-tree.webp",
+      "size": [
+        1086,
+        1448
+      ],
+      "mode": "RGBA",
+      "bytes": 624236,
+      "sha256": "bdc15a907213570558e2fb1887899c1143968a406ac05da95297ce1836319086"
+    },
+    {
+      "name": "flowers",
+      "source_png": "/Users/namsoon00/.codex/generated_images/01a1fdaa-35b5-77d1-b955-5853571b0be5/exec-24674950-39a2-4908-9ff2-4fb651a2d335.png",
+      "saved_path": "assets/images/cafe-watercolor-flowers.webp",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "bytes": 471514,
+      "sha256": "f836315971ced6f0cd79e6cb5c58289cec843f26db75fcf1ca141700ca98e961"
+    }
+  ],
+  "additional_edit": {
+    "prompt": "Edit target: this watercolor garden flower cutout. Keep the existing flowers, leaves, stems, watercolor pigment texture, composition and colors. Remove ALL of the diffuse pale green, gray, pink and purple background mist/wash surrounding the plants and lying between the stems. The output must contain ONLY individual plant shapes and their precise softly antialiased edges on genuinely clear alpha transparency. No colored halo or fog around the clump, no semi-transparent background blobs, no paper rectangle, no ground. Preserve the delicate watercolor character inside petals and leaves; do not cut off thin stems or recolor the plants. Full plant clump with no clipping. Transparent background.",
+    "result_used": false,
+    "note": "The edit retained a faint background wash. The original is used with a soft opacity mask in the foliage material. No global screen filter is used."
+  },
+  "procedural_materials": "lib/cafe/cafe_watercolor.dart supplies deterministic 512px plaster, stone, linen, gravel and missing-image fallbacks; the oak is toned into two independently owned timber images once per room entry."
+}

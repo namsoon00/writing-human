@@ -3334,3 +3334,21 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   같은 완성도를 달성했다고 보고하지 않는다. 공개 UI 직접 조작은 이 채팅의 CUA가
   불가한 상태라 수행하지 못했고 실제 iPhone/Android의 터치·성능·발열·오디오도 미검증이다.
   기존 hosting project_id/비공개 범위를 바꾸지 않았으며 공개 웹은 기존 Pages 흐름이다.
+
+
+## 2026-11-23 · 수채화 공간 웹 배포 확인
+
+- 소스 `aa1996e33ed94646067113d62d12b7cc87a78728`의
+  [Actions 45191983136](https://github.com/namsoon00/writing-human/actions/runs/45191983136)
+  build/deploy가 모두 success다. 서버의 전체 검사·음성 DSP·Chrome 다섯 검사와 release
+  빌드가 통과했다. 로컬 release 빌드도 62.5초에 성공했다.
+- [공개 미리보기](https://namsoon00.github.io/writing-human/?v=aa1996e)의 index → versioned
+  bootstrap → main.dart.js를 HTTP로 따라 확인했다. main SHA-256은
+  `4f16eeff4446c6416d33e28c1c32c4e97c8d78b5673aac37af56bae1a743c178`로
+  검증한 로컬 빌드와 일치한다. 새 수채화 WebP 세 개와 아이콘 글꼴도 HTTP 200·바이트/해시
+  동일, 새 재질 파일명은 실행 JS에서 참조한다.
+- [HTTP 확인 원문](../design/cafe/20261123/watercolor-implementation/deployment.json)을 남겼다.
+  공개 파일 배포 확인이며 브라우저 직접 조작이나 실제 iPhone/Android 검증은 아니다.
+  현재 평균 깊이 정렬 방식으로 가까운 잔과 받침의 맞닿는 면에 작은 가림 오차가 남는다.
+  수채화 시안의 표현과 실제 실행 캡처를 구분한다. 공유 작업공간의 다른 미완성 변경은
+  배포하지 않았고 기존 개인 공간 저장 범위/계정 분리와 비공개 Sites 설정을 유지했다.

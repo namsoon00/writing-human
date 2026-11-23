@@ -1,0 +1,73 @@
+{
+  "source_commit": "aa1996e33ed94646067113d62d12b7cc87a78728",
+  "checked_at": "2026-11-23T14:19:27.597411+00:00",
+  "index": {
+    "url": "https://namsoon00.github.io/writing-human/?v=aa1996e",
+    "status": 200,
+    "bytes": 8150,
+    "sha256": "8978041f28a3520d4aeefcadeb1080b992b5a955baca67cabf83a11550279f5d"
+  },
+  "bootstrap": {
+    "url": "https://namsoon00.github.io/writing-human/flutter_bootstrap.js?v=92b97102b11b657e",
+    "status": 200,
+    "bytes": 10016,
+    "sha256": "92b97102b11b657e313085985001ea44a08f0f4874492790b0334b8e5e96940b"
+  },
+  "main": {
+    "url": "https://namsoon00.github.io/writing-human/main.dart.js?v=4f16eeff4446c641",
+    "status": 200,
+    "bytes": 5182695,
+    "sha256": "4f16eeff4446c6416d33e28c1c32c4e97c8d78b5673aac37af56bae1a743c178",
+    "matches_local": true,
+    "static_garden_removed": true
+  },
+  "assets": [
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-watercolor-oak.webp?v=aa1996e",
+      "status": 200,
+      "bytes": 373234,
+      "sha256": "09e57d12c41a0c46e7ab91f03b873161daecf23fa79be9f9d1fabbad6c41c63b",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-watercolor-tree.webp?v=aa1996e",
+      "status": 200,
+      "bytes": 624236,
+      "sha256": "bdc15a907213570558e2fb1887899c1143968a406ac05da95297ce1836319086",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-watercolor-flowers.webp?v=aa1996e",
+      "status": 200,
+      "bytes": 471514,
+      "sha256": "f836315971ced6f0cd79e6cb5c58289cec843f26db75fcf1ca141700ca98e961",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/fonts/MaterialIcons-Regular.otf?v=aa1996e",
+      "status": 200,
+      "bytes": 9332,
+      "sha256": "20d3a3d65a7dbce3ab4af51c992e514e54fcdbed5779bb6e5c2276f4e11c509c",
+      "matches_local": true
+    }
+  ],
+  "runtime_scope": "Soft 3D furniture forms with watercolor timber, deterministic painted surfaces and alpha-masked watercolor foliage in the shared cafe and garden. Existing first-person navigation and stored layouts retained. Native checks 289 plus targeted 3 and Chrome checks 5 passed; direct public-page UI and real iPhone touch/performance not tested.",
+  "workflow": {
+    "id": 45191983136,
+    "url": "https://github.com/namsoon00/writing-human/actions/runs/45191983136",
+    "build": "success",
+    "deploy": "success"
+  },
+  "local_checks": {
+    "format_files": 179,
+    "analyze_issues": 0,
+    "native_full": 289,
+    "native_targeted_after_test_io_change": 3,
+    "chrome": 5,
+    "fixture_views": 20,
+    "release_build_seconds": 62.5
+  }
+}

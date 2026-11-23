@@ -9,6 +9,7 @@ part 'cafe_courtyard.dart';
 part 'cafe_interior.dart';
 part 'cafe_objects.dart';
 part 'cafe_soft_geometry.dart';
+part 'cafe_entrance.dart';
 
 enum CafeSurface {
   plain,
@@ -23,6 +24,7 @@ enum CafeSurface {
   tree,
   flowers,
   water,
+  glass,
 }
 
 enum CafeGrain { x, y, z }
@@ -1127,11 +1129,21 @@ class CafeWorld {
       const CafePoint(w, h, -d),
       wall,
     );
+    // A real entrance opening, with only side piers and a lintel above it.
+    for (final range in [(-w, -1.22), (1.22, w)]) {
+      wallGrid(
+        CafePoint(range.$2, 0, d),
+        CafePoint(range.$1, 0, d),
+        CafePoint(range.$1, h, d),
+        CafePoint(range.$2, h, d),
+        wall,
+      );
+    }
     wallGrid(
-      const CafePoint(w, 0, d),
-      const CafePoint(-w, 0, d),
-      const CafePoint(-w, h, d),
-      const CafePoint(w, h, d),
+      const CafePoint(1.22, 2.765, d),
+      const CafePoint(-1.22, 2.765, d),
+      const CafePoint(-1.22, h, d),
+      const CafePoint(1.22, h, d),
       wall,
     );
     wallGrid(
@@ -1539,13 +1551,6 @@ class CafeWorld {
     // A few plants at the perimeter rather than obstacles in the aisles.
     _plant(3.77, -3.90, height: .9);
     _plant(-3.90, 3.75, height: .85);
-    // Entrance, visible when turning around; it is also the in-room exit.
-    _target = CafeTarget.exit;
-    box(0, 1.31, 4.94, 1.5, 2.62, .09, dark, wood: true);
-    box(0, 1.53, 4.87, 1.26, 1.92, .025, const Color(0xff9baa92));
-    box(0, .32, 4.85, 1.26, .48, .05, oak, wood: true);
-    cylinder(.5, 1.12, 4.80, .024, .25, brass, sides: 8);
-    _target = null;
     _interiorDetails();
   }
 }

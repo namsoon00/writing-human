@@ -205,6 +205,9 @@ extension CafePersonalObjects on CafeWorld {
       if (b.overlaps(const Rect.fromLTWH(-4.35, -4.5, 1.8, 1.85))) {
         return 'door';
       }
+      if (b.overlaps(const Rect.fromLTWH(-1.30, 3.70, 2.60, 1.30))) {
+        return 'door';
+      }
       final owned = objects.values
           .where((o) => o.kind == CafeObjectKind.floor)
           .expand((o) => o.ownedObstacles)

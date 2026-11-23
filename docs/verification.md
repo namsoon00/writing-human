@@ -3352,3 +3352,47 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   현재 평균 깊이 정렬 방식으로 가까운 잔과 받침의 맞닿는 면에 작은 가림 오차가 남는다.
   수채화 시안의 표현과 실제 실행 캡처를 구분한다. 공유 작업공간의 다른 미완성 변경은
   배포하지 않았고 기존 개인 공간 저장 범위/계정 분리와 비공개 Sites 설정을 유지했다.
+
+
+## 2026-11-23 · 화면 선명도/카페 정문 격자 깨짐 수정 검증
+
+- 사용자 iPhone 사진과 같은 문 격자/글자판 깨짐을 기존 코드의 휴대폰 크기 캡처에서
+  재현했다. [수정 전](../design/cafe/20261123/clear-entrance/before-exit-photo.jpg)은 같은
+  앱 코드의 fixture다. 사용자 사진이나 기록을 공개 저장소에 복사하지 않았다.
+- 수채화 방향의 범위 안에서 직접 수정했다. 정문의 불투명 backing·올리브 판·큰
+  글자판을 제거하고 벽에 실제 개구부를 냈다. 두 유리 면·얇은 프레임과 약 2.2m 유리 폭,
+  손잡이·낮은 문턱과 주변 벽 마감을 맞췄다. 정원 연결문과 구분하며, 유리 클릭은 기존
+  카페 종료 동작이다. 문 앞 배치 여유도 넓히고 본문·IME/선택·저장 스키마는 바꾸지 않았다.
+- 112px 상단 광막과 렌즈 비네트를 없애고 조작 영역만 종이색으로 받쳤다. 목재의 밝은
+  채널 오프셋을 낮추고 대비/768px 해상도로 결을 선명하게 했다. 기본 광량과 사용자가
+  고른 조명/개인 배치 값을 초기화하지 않았다. 화면 전체의 블러/샤프닝을 쓰지 않는다.
+- 최종 `dart format --output=none --set-exit-if-changed lib test
+  tool/capture_preview_test.dart tool/capture_cafe_entry_test.dart`: 181파일 변경 0.
+  `flutter analyze --no-pub` 문제 0. `flutter test --no-pub` 291개 통과.
+- `flutter test --no-pub --platform chrome test/cafe_image_lifetime_test.dart
+  test/cafe_space_web_test.dart test/cafe_watercolor_test.dart test/cafe_entry_test.dart`
+  7개 통과. 정면/좌우/근접의 문 너머에 대비색을 놓은 픽셀 검사로 backing/벽 조각이
+  덮이지 않는지 확인하며 실제 가까운 조명/가구의 가림은 구분한다. 같은 지점의 ray
+  picking이 출입문으로 연결되고 접근 경로와 넓은 유리 폭이 유지되는지 검사한다.
+  기존 CanvasKit 이미지 수명·안료 좌표·저장 범위/복원/실패 검사도 통과했다. CI에 추가했다.
+- `flutter test --no-pub tool/capture_cafe_entry_test.dart` 수정 전/후 모두 통과.
+  최초 수정 전 캡처의 debug 변수 복원 누락을 도구에서 수정한 뒤 다시 실행했다.
+  최종 수정 후 9개 고정 시점에서 문/글자판의 격자 깨짐과 상단 광막이 사라진 것을
+  확인했다. [정면](../design/cafe/20261123/clear-entrance/after-exit-front.jpg),
+  [제보와 가까운 시점](../design/cafe/20261123/clear-entrance/after-exit-photo.jpg),
+  [실내](../design/cafe/20261123/clear-entrance/after-entrance-wide.jpg),
+  [파일/해시 기록](../design/cafe/20261123/clear-entrance/verification.json)을 남겼다.
+- 검사는 이 변경만 담은 분리 작업공간에서 실행했다. 기존 평균 깊이 정렬 렌더러 자체를
+  교체하지 않았으며 다른 모든 물체/각도의 가림 오차가 사라졌다고 보고하지 않는다.
+  기존 CUA 연결이 없는 채팅이므로 공개 페이지 UI 직접 조작, 실제 iPhone/Android의
+  터치·프레임률·발열·오디오·새로고침 복원은 미검증이다. Chrome 자동 검사를 실기기
+  검증으로 확대하지 않는다. 기존 hosting project_id/비공개 범위를 유지했다.
+
+
+### 하부 레일의 추가 검증
+
+전체 291개 검사 뒤 사선 캡처에서 하부 레일과 문턱 사이의 틈을 확인했다. 문턱 뒤쪽이
+레일 밑으로 겹치지 않게 줄이고 레일 하단을 문턱 상면에 맞췄다. 낮은 지점의 대비색
+픽셀 검사로 수정 전 실패를 재현했고, 수정 후 관련 네이티브 검사 13개·Chrome 7개와
+최종 캡처 9개를 다시 통과했다. 이 추가 수정 후 로컬 전체 291개를 반복하지 않았으며
+배포 서버의 전체 검사 결과는 아래 배포 기록에서 확인한다.

@@ -12,22 +12,22 @@ abstract final class CafeWatercolor {
       _image((canvas) {
         final paint = ui.Paint()
           ..filterQuality = ui.FilterQuality.medium
-          ..colorFilter = ui.ColorFilter.matrix([
-            .85,
-            .15,
+          ..colorFilter = const ui.ColorFilter.matrix([
+            .972,
+            .108,
             0,
             0,
+            -10,
+            .0216,
+            1.0368,
+            .0216,
             0,
-            .05,
-            .90,
-            .05,
+            -10,
+            .0216,
+            .0864,
+            .972,
             0,
-            6,
-            .05,
-            .15,
-            .80,
-            0,
-            18,
+            -4,
             0,
             0,
             0,
@@ -48,14 +48,17 @@ abstract final class CafeWatercolor {
         if (walnut) {
           canvas.drawColor(const ui.Color(0xffbaae9e), ui.BlendMode.modulate);
         }
-      });
+      }, resolution: 768);
 
-  static Future<ui.Image> _image(void Function(ui.Canvas) draw) async {
+  static Future<ui.Image> _image(
+    void Function(ui.Canvas) draw, {
+    int resolution = 512,
+  }) async {
     final recorder = ui.PictureRecorder();
-    draw(ui.Canvas(recorder));
+    draw(ui.Canvas(recorder)..scale(resolution / _size));
     final picture = recorder.endRecording();
     try {
-      return await picture.toImage(512, 512);
+      return await picture.toImage(resolution, resolution);
     } finally {
       picture.dispose();
     }

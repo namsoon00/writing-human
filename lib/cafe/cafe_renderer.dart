@@ -119,7 +119,7 @@ class CafeRenderer extends CustomPainter {
     CafeHit? result;
     for (final face in world.faces) {
       // Floor light/shadow decals do not obstruct the physical surface.
-      if (face.color.a < .99) continue;
+      if (face.color.a < .99 && face.surface != CafeSurface.glass) continue;
       for (var i = 1; i + 1 < face.points.length; i++) {
         final a = face.points[0], b = face.points[i], c = face.points[i + 1];
         final edge1 = b - a, edge2 = c - a;
@@ -194,6 +194,7 @@ class CafeRenderer extends CustomPainter {
       CafeSurface.tree => tree,
       CafeSurface.flowers => flowers,
       CafeSurface.water => plaster,
+      CafeSurface.glass => null,
       CafeSurface.plain ||
       CafeSurface.brass => face.color.a >= .99 ? plaster : null,
     };
@@ -589,19 +590,6 @@ class CafeRenderer extends CustomPainter {
       ..colorFilter = null;
     for (final shader in shaders.values) {
       shader.dispose();
-    }
-    if (allowPortal) {
-      // A subtle lens vignette, independent of camera input and mesh lighting.
-      final vignette = const RadialGradient(
-        colors: [Color(0x00000000), Color(0x080f100b)],
-        stops: [.35, 1],
-        radius: .86,
-      ).createShader(Offset.zero & size);
-      paint
-        ..shader = vignette
-        ..color = Colors.white;
-      canvas.drawRect(Offset.zero & size, paint);
-      vignette.dispose();
     }
     canvas.restore();
   }

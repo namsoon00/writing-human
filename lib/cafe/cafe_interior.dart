@@ -142,14 +142,14 @@ extension _CafeInterior on CafeWorld {
       }
     }
     // The entrance wall has solid walnut wainscot rather than an empty plane.
-    for (final x in [-2.65, 2.65]) {
-      box(x, .46, 4.94, 3.35, .90, .07, CafeWorld.dark, wood: true);
-      box(x, .94, 4.90, 3.38, .065, .12, CafeWorld.oak, wood: true);
+    for (final x in [-2.82, 2.82]) {
+      box(x, .46, 4.94, 2.98, .90, .07, CafeWorld.dark, wood: true);
+      box(x, .94, 4.90, 3.05, .065, .12, CafeWorld.oak, wood: true);
       for (var i = 0; i < 5; i++) {
-        final xx = x - 1.34 + i * .67;
-        box(xx, .46, 4.893, .59, .68, .022, CafeWorld.dark, wood: true);
-        box(xx, .80, 4.874, .59, .018, .014, CafeWorld.oak, wood: true);
-        box(xx, .12, 4.874, .59, .018, .014, CafeWorld.oak, wood: true);
+        final xx = x - 1.19 + i * .595;
+        box(xx, .46, 4.893, .51, .68, .022, CafeWorld.dark, wood: true);
+        box(xx, .80, 4.874, .51, .018, .014, CafeWorld.oak, wood: true);
+        box(xx, .12, 4.874, .51, .018, .014, CafeWorld.oak, wood: true);
       }
     }
     _framedPrint(-2.83, 1.94, 4.84, .69, .91, 0, front: false);
@@ -668,30 +668,5 @@ extension _CafeInterior on CafeWorld {
     }
   }
 
-  void _entranceDetails() {
-    _target = CafeTarget.exit;
-    for (final x in [-.80, .80]) {
-      box(x, 1.32, 4.87, .08, 2.65, .11, CafeWorld.dark, wood: true);
-    }
-    box(0, 2.67, 4.87, 1.68, .08, .11, CafeWorld.dark, wood: true);
-    box(0, .015, 4.80, 1.52, .025, .19, CafeWorld.brass);
-    box(.52, 1.13, 4.785, .06, .23, .015, CafeWorld.brass);
-    box(-.48, 2.54, 4.80, .23, .06, .06, const Color(0xff86755a));
-    // An inset plaque uses the existing brand font atlas rather than a UI card.
-    faces.add(
-      CafeFace(
-        const [
-          CafePoint(.48, 1.67, 4.84),
-          CafePoint(-.48, 1.67, 4.84),
-          CafePoint(-.48, 2.09, 4.84),
-          CafePoint(.48, 2.09, 4.84),
-        ],
-        CafeWorld.cream,
-        sign: true,
-        unlit: true,
-        target: _target,
-      ),
-    );
-    _target = null;
-  }
+  void _entranceDetails() => _clearEntrance();
 }

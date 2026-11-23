@@ -1,0 +1,98 @@
+{
+  "mode": "Flutter fixture captures, not generated concepts or device screenshots",
+  "baseline_source": "1f22a907271f971e08c7451d9d235088ce618980",
+  "before": "Same rendering code reproduced the user-reported checkerboard door; user photo is not included in published artifacts.",
+  "after": "Nine fixed first-person views, a genuine wall opening, two narrow-framed transparent panes and no opaque door backing; no broad header gradient or lens vignette.",
+  "checks": {
+    "format_files": 181,
+    "analyze_issues": 0,
+    "native_tests": 291,
+    "chrome_tests": 7,
+    "after_fixture_views": 9,
+    "native_targeted_after_threshold_adjustment": 13
+  },
+  "images": [
+    {
+      "path": "design/cafe/20261123/clear-entrance/after-exit-left.jpg",
+      "sha256": "ebb81a4994f83462720de57eb79536654315cc9684cd5870209484811bd6ce16",
+      "pixels": [
+        596,
+        1100
+      ]
+    },
+    {
+      "path": "design/cafe/20261123/clear-entrance/after-entrance-390.jpg",
+      "sha256": "decf97931fb18aff962dcffca6cce98b8cff98afb064ded75f75bc83c4f5d4a0",
+      "pixels": [
+        508,
+        1100
+      ]
+    },
+    {
+      "path": "design/cafe/20261123/clear-entrance/after-exit-near.jpg",
+      "sha256": "942eecf40871ac689a1d9f6eaf496bb621936a266d7ebb15c98160d30ce29742",
+      "pixels": [
+        596,
+        1100
+      ]
+    },
+    {
+      "path": "design/cafe/20261123/clear-entrance/after-quiet-wide.jpg",
+      "sha256": "ca72a7c80ffdbc69ff76225b991f549fb36bf4fb6a95a0ead4edb32ee5ce55d2",
+      "pixels": [
+        1280,
+        853
+      ]
+    },
+    {
+      "path": "design/cafe/20261123/clear-entrance/after-exit-right.jpg",
+      "sha256": "32d6bad683aad2d50ca9239fccdf02adb3bf3705375580090f93a6f0857f99bb",
+      "pixels": [
+        596,
+        1100
+      ]
+    },
+    {
+      "path": "design/cafe/20261123/clear-entrance/after-exit-front.jpg",
+      "sha256": "634baf9e71b1454707e29e577b007522cec1173d50fb626b4947a7fd88a25260",
+      "pixels": [
+        596,
+        1100
+      ]
+    },
+    {
+      "path": "design/cafe/20261123/clear-entrance/after-entrance-wide.jpg",
+      "sha256": "94230d9fcf43cf83604e0467541b949db5b5ed7db5ea262c13215f70f04b6cb5",
+      "pixels": [
+        1280,
+        853
+      ]
+    },
+    {
+      "path": "design/cafe/20261123/clear-entrance/after-exit-wide.jpg",
+      "sha256": "24533b5d47091e3ad3e54eb2163a0da4bef8d011128494e3a046bcfd2d5e835f",
+      "pixels": [
+        1280,
+        853
+      ]
+    },
+    {
+      "path": "design/cafe/20261123/clear-entrance/after-exit-photo.jpg",
+      "sha256": "723cf1c03d897207b63f524e1ef188160f961d5dfd2a61d14e393032ee665315",
+      "pixels": [
+        596,
+        1100
+      ]
+    },
+    {
+      "path": "design/cafe/20261123/clear-entrance/before-exit-photo.jpg",
+      "sha256": "c5c5c05c5703924fd3dba312ef6d4bc97e10a88c6a6b606cbfa4dbb6c4668529",
+      "pixels": [
+        596,
+        1100
+      ]
+    }
+  ],
+  "limits": "No direct public-page UI automation or real iPhone/Android touch/performance QA. Painter-order renderer retained; verification targets the reported entrance defect and existing navigation/storage regressions.",
+  "threshold_regression": "The lower rail had a 35mm gap above the sill; a lower-band pixel check reproduced it. The rail now meets the sill, and the sill does not extend behind the rail."
+}

@@ -987,23 +987,6 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
             onTargetSelected: _activate,
             onWrite: _write,
           ),
-          const Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 112,
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0xf2faf5eb), Color(0x00faf5eb)],
-                  ),
-                ),
-              ),
-            ),
-          ),
           Positioned(
             top: 0,
             left: 0,
@@ -1015,68 +998,79 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            MediaQuery.textScalerOf(context).scale(16) > 22
-                                ? (view.inCourtyard ? '고요한 뜰' : '필사 카페')
-                                : view.inCourtyard
-                                ? '쓰는 인간 · 고요한 뜰'
-                                : '쓰는 인간 · 필사 카페',
-                            style: TextStyle(color: brandInk, fontSize: 16),
-                          ),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: const Color(0xeefaf5eb),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                MediaQuery.textScalerOf(context).scale(16) > 22
+                                    ? (view.inCourtyard ? '고요한 뜰' : '필사 카페')
+                                    : view.inCourtyard
+                                    ? '쓰는 인간 · 고요한 뜰'
+                                    : '쓰는 인간 · 필사 카페',
+                                style: TextStyle(color: brandInk, fontSize: 16),
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: editing
+                                  ? '\uAFB8\uBBF8\uAE30 \uC644\uB8CC'
+                                  : '\uACF5\uAC04 \uAFB8\uBBF8\uAE30',
+                              key: const ValueKey('room-edit'),
+                              onPressed:
+                                  roomLoading ||
+                                      roomLoadFailed ||
+                                      roomSaving ||
+                                      view.travelling
+                                  ? null
+                                  : editing
+                                  ? _finishRoom
+                                  : _editRoom,
+                              icon: Icon(
+                                editing ? Icons.check : Icons.brush_outlined,
+                                color: brandInk,
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: view.inCourtyard
+                                  ? (sound ? '물소리 끄기' : '물소리 켜기')
+                                  : (sound ? '빗소리 끄기' : '빗소리 켜기'),
+                              onPressed: soundBusy ? null : _toggleSound,
+                              icon: Icon(
+                                sound
+                                    ? Icons.volume_up_outlined
+                                    : Icons.volume_off_outlined,
+                                color: brandInk,
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: '공간 안내',
+                              onPressed:
+                                  opening ||
+                                      widget.saveFailed ||
+                                      view.travelling
+                                  ? null
+                                  : _guide,
+                              icon: const Icon(
+                                Icons.explore_outlined,
+                                color: brandInk,
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: '닫기',
+                              onPressed: opening || widget.saveFailed
+                                  ? null
+                                  : _requestClose,
+                              icon: const Icon(Icons.close, color: brandInk),
+                            ),
+                          ],
                         ),
-                        IconButton(
-                          tooltip: editing
-                              ? '\uAFB8\uBBF8\uAE30 \uC644\uB8CC'
-                              : '\uACF5\uAC04 \uAFB8\uBBF8\uAE30',
-                          key: const ValueKey('room-edit'),
-                          onPressed:
-                              roomLoading ||
-                                  roomLoadFailed ||
-                                  roomSaving ||
-                                  view.travelling
-                              ? null
-                              : editing
-                              ? _finishRoom
-                              : _editRoom,
-                          icon: Icon(
-                            editing ? Icons.check : Icons.brush_outlined,
-                            color: brandInk,
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: view.inCourtyard
-                              ? (sound ? '물소리 끄기' : '물소리 켜기')
-                              : (sound ? '빗소리 끄기' : '빗소리 켜기'),
-                          onPressed: soundBusy ? null : _toggleSound,
-                          icon: Icon(
-                            sound
-                                ? Icons.volume_up_outlined
-                                : Icons.volume_off_outlined,
-                            color: brandInk,
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: '공간 안내',
-                          onPressed:
-                              opening || widget.saveFailed || view.travelling
-                              ? null
-                              : _guide,
-                          icon: const Icon(
-                            Icons.explore_outlined,
-                            color: brandInk,
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: '닫기',
-                          onPressed: opening || widget.saveFailed
-                              ? null
-                              : _requestClose,
-                          icon: const Icon(Icons.close, color: brandInk),
-                        ),
-                      ],
+                      ),
                     ),
                     if (showIntro ||
                         opening ||

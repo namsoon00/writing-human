@@ -1,0 +1,53 @@
+{
+  "source_commit": "8a19d42dd3617613c3fa943c29535634f944641d",
+  "checked_at": "2026-11-23T10:14:10.976910+00:00",
+  "index": {
+    "url": "https://namsoon00.github.io/writing-human/?v=8a19d42",
+    "status": 200,
+    "bytes": 8150,
+    "sha256": "0f70c24d7adf082a98c0d4eb60dad6da0306a6f00086735f662671b582ca8c5e"
+  },
+  "bootstrap": {
+    "url": "https://namsoon00.github.io/writing-human/flutter_bootstrap.js?v=3511a19443c446e4",
+    "status": 200,
+    "bytes": 10016,
+    "sha256": "3511a19443c446e439faf98c690569eea4fa6fe36434bf31155494ac6f77035f"
+  },
+  "main": {
+    "url": "https://namsoon00.github.io/writing-human/main.dart.js?v=6f1eca9d6f8bb77c",
+    "status": 200,
+    "bytes": 5131557,
+    "sha256": "6f1eca9d6f8bb77c5f46db20e0b8d82aeb40817addd00a54e6be9623dbc814d4",
+    "matches_local": true,
+    "static_garden_removed": true
+  },
+  "assets": [
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-garden-tree.webp?v=8a19d42",
+      "status": 200,
+      "bytes": 601182,
+      "sha256": "e87b6abb1cc0ff80da31aa5a9b235719e7a8a379e3b6a92e1d578136628b8675",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-garden-flowers.webp?v=8a19d42",
+      "status": 200,
+      "bytes": 606608,
+      "sha256": "33ec55a2443679740f922054713d2e8a1c25d5ba5bf69533de6eacd0afc26195",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-lime-plaster.webp?v=8a19d42",
+      "status": 200,
+      "bytes": 346502,
+      "sha256": "405f6efbdf1ce97de15ff4644d0173ec57c77bad0e2cb0fa2cf6f1e74b2ccebc",
+      "matches_local": true,
+      "referenced_by_app": true
+    }
+  ],
+  "runtime_scope": "After-work arrival camera, focused warm writing light, padded private seats, connected courtyard planting, one nearby context marker and permanent full guide. Shared 3D garden retained. Actual iPhone touch/performance not tested.",
+  "actions_run": 45153366609,
+  "actions_conclusion": "build and deploy success"
+}

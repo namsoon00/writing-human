@@ -3176,3 +3176,17 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - 사진 같은 광원·물 반사·볼륨 식물은 구현하지 않았고 현재 렌더러/식물 평면의 한계는
   남는다. iPhone Safari 실제 터치·소리·속도·발열과 사용자의 편안함/설렘은 검증하지 않았다.
   입력/사용자 기록·DB·계정과 비공개 Sites 프로젝트/접근 범위는 바꾸지 않았다.
+
+
+## 2026-11-23 · 하루 끝의 카페 공개 배포 확인
+
+- 소스 `8a19d42dd3617613c3fa943c29535634f944641d`의
+  [배포 45153366609](https://github.com/namsoon00/writing-human/actions/runs/45153366609)가
+  포맷·분석·전체 테스트·낭독 DSP/카페 Chrome 검사·웹 빌드·게시를 통과했다.
+- [공개 앱](https://namsoon00.github.io/writing-human/?v=8a19d42)의 HTML·bootstrap·
+  main JS·유지한 식물/회벽 재질이 HTTP 200이며 JS와 재질이 로컬 검증 빌드와
+  바이트 단위로 같다. main JS SHA-256:
+  `6f1eca9d6f8bb77c5f46db20e0b8d82aeb40817addd00a54e6be9623dbc814d4`.
+- [HTTP 증거](../design/cafe/20261123/after-work-review/deployment-proof.json)를 남겼다.
+  캡처 15개는 Flutter 합성 실행 화면이다. iPhone Safari의 실제 조작/속도/발열과
+  편안함/설렘에 대한 체험 검증은 수행하지 않았다. 비공개 Sites 범위는 그대로다.

@@ -3648,3 +3648,29 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - iPhone/Android 실기기 터치·FPS·발열·오디오와 직접 공개 UI 조작은 미검증이다.
   재방문하고 싶은 마음이나 휴식 효과가 좋아졌다는 사용자 실험 결과는 없다.
   기존 필사/저장 키·계정 범위·폰트와 비공개 Sites project_id/접근 설정은 유지했다.
+
+
+## 2026-11-24 · 돌아갈 자리의 배포 회귀 보완
+
+- 첫 서버 전체 회귀는 319개 통과·1개 실패로 배포되지 않았다. 기존 실제 SQLite
+  필사 재열기 검사가 새 자리 저장 I/O보다 먼저 controller의 빈 대기열을 기다려
+  입력 화면이 열리기 전에 입력하려 했다. 앱 코드를 바꾸지 않고, 실제 I/O와 프레임을
+  진행하며 카페 화면이 닫히는 결과를 기다리도록 고쳤다. 로컬에서 실패를 재현한 뒤
+  같은 실제 파일 저장·닫기·재열기 검사가 통과한 것을 확인했다.
+- 공유 폴더의 기존 전체 조명 설정을 보존해 합친 뒤 14개 카페 검사가 통과했다.
+  변경 Dart 19개 포맷은 수정 없음이며 앱 소스 `flutter analyze --no-pub lib test tool hook`는
+  통과했다. 공유 폴더 전체 분석은 `artifacts/`의 복제 소스에서만 273개 문제를 보고했다.
+  해당 생성물, 기존 인덱스, 로컬 폰트, 실행 중 웹/기기 세션은 변경하지 않았다.
+
+- 보완 소스 `eee7a157a23d54e09d1fb6c856ae5cc6bb21f467`의
+  [Actions 45382826020](https://github.com/namsoon00/writing-human/actions/runs/45382826020)는
+  build/deploy 모두 success다. 포맷·정적 분석·네이티브 전체 320개·음성 DSP 6개·Chrome
+  36개·최종 Pages release 빌드가 통과했다.
+- [공개 웹 미리보기](https://namsoon00.github.io/writing-human/?v=eee7a15)의 index →
+  versioned bootstrap → main.dart.js를 HTTP로 대조했다. main SHA-256
+  `3b8c354417e33a2f62121a09b13b84155fecb2e1fc75ab347c61536a70ba66ba`는 로컬 release와
+  바이트가 같다. 기존 재질 3개·동작 음원 4개·아이콘/쓰는 인간체 0.009·FontManifest도
+  모두 같고 새 문장/공간 동작 키가 배포 파일에 포함됐다.
+  [파일 대조 기록](../design/cafe/20261124/homecoming/deployment.json)을 남겼다.
+- 이 검증은 직접 공개 UI 조작이나 iPhone/Android 실기기 검수가 아니다.
+  저장 키·로컬 계정 범위·비공개 Sites project_id/접근 설정은 변경하지 않았다.

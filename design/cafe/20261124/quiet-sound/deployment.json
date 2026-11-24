@@ -1,0 +1,159 @@
+{
+  "source_commit": "9a9ff70a1e947cc3888ad3e09d199c803af2d134",
+  "checked_at": "2026-11-24T14:49:40.714285+00:00",
+  "index": {
+    "url": "https://namsoon00.github.io/writing-human/?v=9a9ff70&check=1795531770",
+    "status": 200,
+    "bytes": 8150,
+    "sha256": "ab43fafe984515f74356a7ba97eed1890bbc231def8ec1c776cf362c89aa625c"
+  },
+  "bootstrap": {
+    "url": "https://namsoon00.github.io/writing-human/flutter_bootstrap.js?v=f7a1666830febcc0",
+    "status": 200,
+    "bytes": 10016,
+    "sha256": "f7a1666830febcc0bc7a09c8106ce8b9d0eebe7750ebae5649c99cda36cb70fa"
+  },
+  "main": {
+    "url": "https://namsoon00.github.io/writing-human/main.dart.js?v=c51d9e85ac984da6",
+    "status": 200,
+    "bytes": 5299921,
+    "sha256": "c51d9e85ac984da6ef753b88f0eef68ee7610208a8e5a487cab751983cabf006",
+    "matches_local": true,
+    "static_garden_removed": true
+  },
+  "assets": [
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-watercolor-oak.webp?v=9a9ff70",
+      "status": 200,
+      "bytes": 373234,
+      "sha256": "09e57d12c41a0c46e7ab91f03b873161daecf23fa79be9f9d1fabbad6c41c63b",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-watercolor-tree.webp?v=9a9ff70",
+      "status": 200,
+      "bytes": 624236,
+      "sha256": "bdc15a907213570558e2fb1887899c1143968a406ac05da95297ce1836319086",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-watercolor-flowers.webp?v=9a9ff70",
+      "status": 200,
+      "bytes": 471514,
+      "sha256": "f836315971ced6f0cd79e6cb5c58289cec843f26db75fcf1ca141700ca98e961",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/fonts/MaterialIcons-Regular.otf?v=9a9ff70",
+      "status": 200,
+      "bytes": 9548,
+      "sha256": "dbcde9d9032bba0a34344f9e1c2b5ff9f8e16befd0e9489e7095a3d6036178f3",
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/fonts/WritingHumanDevelopment-Regular.ttf?v=9a9ff70",
+      "status": 200,
+      "bytes": 895652,
+      "sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+      "matches_local": true,
+      "matches_integrated_font": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/FontManifest.json?v=9a9ff70",
+      "status": 200,
+      "bytes": 639,
+      "sha256": "59d2bbd28f1068364d4e0054b81dcde0da04cacf3e19f403efe8697edacc451e",
+      "matches_local": true,
+      "registered_font": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-touch.wav?v=9a9ff70",
+      "status": 200,
+      "bytes": 5336,
+      "sha256": "6de5a8ed938aa69dfb63292736f277e3dc9894e1f533f55edffd2411af5843ec",
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-place.wav?v=9a9ff70",
+      "status": 200,
+      "bytes": 9746,
+      "sha256": "75fd0af97a7d510fca9bfd909a3a61a625533b08b9afeee846c98420b41353ac",
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-sip.wav?v=9a9ff70",
+      "status": 200,
+      "bytes": 26504,
+      "sha256": "140161a2a3b38c5ac28a3277e83a0c05100842f882687617ca626025b7b0605d",
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-page.wav?v=9a9ff70",
+      "status": 200,
+      "bytes": 15478,
+      "sha256": "5d3a3887cb6a3d3d9ce9d216433bb38311666d1cf132b37e969d8d934e21c133",
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-rain.wav?v=9a9ff70",
+      "status": 200,
+      "bytes": 352844,
+      "sha256": "f6593f9d061151c8ceee7701d25a8d0109439380906f57479c0a48887d81e833",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-water.wav?v=9a9ff70",
+      "status": 200,
+      "bytes": 352844,
+      "sha256": "9b148e80814d29e49ff850cfd17d6add0f414c34938d4dd258d3c819bdb4cd48",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-leaves.wav?v=9a9ff70",
+      "status": 200,
+      "bytes": 346230,
+      "sha256": "c6b9d20b6129a4519bfc256e1dfd0cd2bea03ebfaea769f29806981551efe993",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-music.wav?v=9a9ff70",
+      "status": 200,
+      "bytes": 1058444,
+      "sha256": "484820eb3500a54134c1f0a45f7169a5caaa66e3097f6b2f7d744fed3f60fc0b",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/pencil-on-paper-original.wav?v=9a9ff70",
+      "status": 200,
+      "bytes": 643464,
+      "sha256": "10f5de0304ddfe461a19e57a5963bd7f1c973deadc3db1d5d7e632d18bb18360",
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/pencil-on-paper-original-info.json?v=9a9ff70",
+      "status": 200,
+      "bytes": 1318,
+      "sha256": "794a10dd647aef989a1e105cf9950191c2cea1b028c25c4968dcab9903cc6165",
+      "matches_local": true
+    }
+  ],
+  "runtime_scope": "Quiet master volume, legacy mix preservation and trimmed spatial soundscape. Exact local release JS and existing four action WAVs, three materials, fonts and manifest compared with public HTTP. Flutter fixture and native/Chrome automated tests; physical devices and direct public UI use unverified.",
+  "ci": {
+    "run_id": 45415650094,
+    "url": "https://github.com/namsoon00/writing-human/actions/runs/45415650094",
+    "build": "success",
+    "deploy": "success",
+    "native": 335,
+    "chrome": 49,
+    "voice_dsp": 6
+  },
+  "local_build": "flutter clean then sequential GitHub Pages release build; exact public JS and 16 assets match",
+  "browser_ui": "verification.json and browser-volume.jpg (earlier local UI build; scope documented)"
+}

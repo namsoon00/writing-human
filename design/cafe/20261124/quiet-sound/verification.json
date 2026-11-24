@@ -1,0 +1,42 @@
+{
+  "source_commit": "9a9ff70a1e947cc3888ad3e09d199c803af2d134",
+  "defaults": {
+    "volume": 0.2,
+    "rain": 0.35,
+    "water": 0.15,
+    "leaves": 0,
+    "music": 0
+  },
+  "legacy_v5": "Preserves flow and all four saved mix levels; adds master .20. Strict v6 volume validation.",
+  "actions": "All cafe one-shots use .20 times master volume, including explicitly tapped garden bell/tea. Existing writing pencil audio is unchanged.",
+  "local_checks": {
+    "format": "198 files, no changes",
+    "analyze": "No issues found",
+    "native_selected": 29,
+    "native_final_sound_and_garden": 15,
+    "chrome_selected": 16,
+    "root_merge_analyze": "lib test tool hook: no issues found",
+    "root_merge_selected": 14,
+    "web_release": "success"
+  },
+  "browser": {
+    "url": "http://127.0.0.1:59282/writing-human/",
+    "screenshot": "browser-volume.jpg",
+    "screenshot_sha256": "6f852b8137ed8b658c2d6077cd0bfa8c7062726d7d1793360a51d92248136422",
+    "observed": [
+      "Fresh cafe entry muted",
+      "Master default 20%; rain35%, water15%, leaves0%, music0%",
+      "Dragged master20% to10%; closed and reopened mixer:10% retained",
+      "Settings changes did not activate sound"
+    ],
+    "not_verified": [
+      "Physical iPhone/Android loudness",
+      "Speaker sound pressure or subjective comfort",
+      "Live public UI interactions"
+    ],
+    "build_main_sha256": "16e516c9a7e5291ab7b7a371ecf448509f4a6ce9a28b9fe619aff023728192d9",
+    "scope_note": "Local browser UI build predates the final in-flight one-shot volume cancellation refinement. UI controls and saved values are unchanged; final source is covered by CI and the clean-build HTTP comparison."
+  },
+  "signal_measurement": "signal-levels.json",
+  "saved_at": "2026-11-24T14:37:17.087670+00:00"
+}

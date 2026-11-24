@@ -1,0 +1,16 @@
+{
+  "run_id": 45415650094,
+  "run_url": "https://github.com/namsoon00/writing-human/actions/runs/45415650094",
+  "source_commit": "9a9ff70a1e947cc3888ad3e09d199c803af2d134",
+  "native_tests": 335,
+  "chrome_tests": 49,
+  "voice_dsp_tests": 6,
+  "build": "success",
+  "proof_lines": [
+    "2026-11-24T14:36:09.3524196Z No issues found! (ran in 21.4s)",
+    "2026-11-24T14:40:07.5665324Z 🎉 335 tests passed.",
+    "2026-11-24T14:40:40.1872622Z 🎉 6 tests passed.",
+    "2026-11-24T14:44:31.8788668Z 🎉 49 tests passed.",
+    "2026-11-24T14:45:14.1312355Z ✓ Built build/github-pages"
+  ]
+}

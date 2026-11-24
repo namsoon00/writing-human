@@ -3867,3 +3867,22 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   `flutter analyze --no-pub` 문제 없음. 관련 네이티브 29개 통과(디스크 SQLite 포함),
   동작음 보완 후 카페 음량/정원 15개 재검사 통과. Chrome 음량/실제 localStorage/정원
   16개 통과. 이후 접근성 이름 보완의 최종 검사는 배포 CI에서 확인한다.
+- 공개 배포 CI [45415650094](https://github.com/namsoon00/writing-human/actions/runs/45415650094):
+  최종 소스의 format/analyze, 네이티브335·Chrome49·음성 DSP6개 및 웹 빌드 통과.
+- 루트의 기존 전체 조명 편집 작업을 보존한 3-way 반영 후 `flutter analyze --no-pub
+  lib test tool hook` 문제 없음, 음량/개별 물건 조작14개 통과. 루트 인덱스는 건드리지 않았다.
+- 별도 빈 로컬 브라우저에서 초기 음소거, 기본 전체 음량20%, 두 소리만 켠 상태,
+  10%로 낮춘 뒤 닫기/재열기 때 보존 및 자동 재생 없음 확인.
+  `design/cafe/20261124/quiet-sound/browser-volume.jpg`는 그때의 실제 브라우저 캡처다.
+  공개 UI 조작·휴대폰 청음·음압 측정과 구분한다.
+- 최종 HTTP 대조에서 초기 로컬 증분 빌드가 마지막 동작음 로딩 중 음량 변경/취소
+  보완 전 캐시를 남긴 것이 확인됐다. 공개 CI 빌드에는 해당 보완이 들어 있었다.
+  로컬 `flutter clean` 후 순차 재빌드해 다시 대조한다. 브라우저 캡처는 변경되지 않은
+  음량 UI/저장 동작의 확인이며, 마지막 취소 보완의 직접 청음 근거로 쓰지 않는다.
+- clean 재빌드 후 공개 HTTP200 앱 JS가 로컬과 바이트 단위로 일치했다. SHA256:
+  `c51d9e85ac984da6ef753b88f0eef68ee7610208a8e5a487cab751983cabf006`.
+  음원·재질·폰트 등16개 자산도 모두 일치했다. 빌드/배포 모두 성공했으며
+  `design/cafe/20261124/quiet-sound/deployment.json`에 URL·해시·범위를 기록했다.
+  휴대폰 실기기 청음과 공개 UI 직접 조작은 미검증이다.
+- 최종 근거는 design 경로와 루트 `output/cafe-quiet-evidence-9a9ff70/`에 보관한다.
+  이번 작업의 임시 빌드·미리보기 서버·작업 폴더는 원격 보관 확인 후 정리한다.

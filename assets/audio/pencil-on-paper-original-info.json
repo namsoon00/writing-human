@@ -1,0 +1,27 @@
+{
+  "title": "사각사각 연필 ASMR #연필asmr #글씨쓰는소리",
+  "creator": "기억창고",
+  "source_url": "https://www.youtube.com/watch?v=KxVtZQxxA1s",
+  "source_video_id": "KxVtZQxxA1s",
+  "source_file_sha256": "7b21871ac969ec553884fe5fe97df5b7ab580475b72f1541db638fbd0de741f6",
+  "use_basis": "User explicitly selected original audio after the reuse-rights clarification on 2026-11-24. No independent public reuse license is asserted.",
+  "processing": {
+    "source_url": "https://www.youtube.com/watch?v=KxVtZQxxA1s",
+    "source_sha256": "7b21871ac969ec553884fe5fe97df5b7ab580475b72f1541db638fbd0de741f6",
+    "source_decoded_seconds": 7.40718820861678,
+    "sample_rate": 44100,
+    "channels": 1,
+    "bits": 16,
+    "trim_start_seconds": 0.054988662131519275,
+    "trim_end_seconds": 7.39,
+    "loop_overlap_ms": 40,
+    "gain_db": 24.63024874078593,
+    "pcm_samples": 321710,
+    "duration_seconds": 7.29501133786848,
+    "rms": 0.025,
+    "peak": 0.324099252365134,
+    "seam_delta": 0.000335693359375,
+    "asset_sha256": "10f5de0304ddfe461a19e57a5963bd7f1c973deadc3db1d5d7e632d18bb18360",
+    "processing": "Actual source recording. Float decode, mono conversion, edge trim, constant gain and linear boundary overlap only; no generated replacement, EQ, denoise, pitch or speed change."
+  }
+}

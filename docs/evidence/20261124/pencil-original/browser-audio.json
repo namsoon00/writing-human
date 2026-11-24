@@ -1,0 +1,11 @@
+{
+  "channels": 1,
+  "rate": 44100,
+  "samples": 321710,
+  "duration": 7.29501133786848,
+  "loop_error": 0,
+  "peak": 0.3241065740585327,
+  "rms": 0.02387530691384942,
+  "after_stop_peak": 0,
+  "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.0.0 Safari/537.36"
+}

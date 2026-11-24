@@ -5,7 +5,7 @@ const writingRhythmExitFade = Duration(milliseconds: 320);
 const writingRhythmResumeFade = Duration(milliseconds: 280);
 
 enum PaperSoundEffect {
-  writingRhythm('writing-human-low-rhythm.wav', 1, Duration.zero),
+  writingRhythm('pencil-on-paper-original.wav', 1, Duration.zero),
   pageTurn('page-turn.mp3', .42, Duration(milliseconds: 105));
 
   const PaperSoundEffect(this.file, this.volume, this.minimumInterval);

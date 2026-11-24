@@ -3717,3 +3717,30 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   재질 3개·기존 동작 음원 4개·아이콘/쓰는 인간체 0.009·FontManifest도 동일하다.
   [공개 파일 대조 기록](../design/cafe/20261124/occlusion-fix/deployment.json)을 남겼다.
   HTTP 파일 대조를 공개 UI 조작이나 실기기 검수로 표현하지 않는다.
+
+
+## 2026-11-24 · 선택한 연필 원음으로 글씨 쓰는 소리 교체
+
+- 사용자는 [기억창고의 사각사각 연필 ASMR](https://www.youtube.com/watch?v=KxVtZQxxA1s)을
+  골랐고 재사용 조건 확인 질문 뒤 원음 적용을 명시했다. 외부 채널의 실제 녹음을 사용하며
+  자체 합성이나 자유 이용 음원으로 표시하지 않는다. 공개 재사용 라이선스를 별도로 입증했다고
+  주장하지 않는다. 영상 ID·제작자·원본/결과 해시·처리값은 번들 info JSON에 남겼다.
+- 원본 Opus 스트림 SHA-256은 `7b21871ac969ec553884fe5fe97df5b7ab580475b72f1541db638fbd0de741f6`.
+  부동소수점 디코드 후 모노 44.1kHz PCM16으로 준비했다. 앞 0.055초·뒤 약 0.017초를
+  정리하고 40ms 선형 경계 겹침 및 고정 음량 +24.630dB만 적용했다. 음높이·속도·EQ·
+  노이즈 제거·합성 대체는 적용하지 않았다.
+- 새 파일 `pencil-on-paper-original.wav`: 321710샘플, 7.295011초, RMS 0.025,
+  peak 0.3241. SHA-256 `10f5de0304ddfe461a19e57a5963bd7f1c973deadc3db1d5d7e632d18bb18360`.
+  옛 두 음 리듬은 과거 검증 자료를 위해 보존하고 현재 앱 번들에서는 제외한다.
+- 기존 글씨 쓰는 소리 설정, 한 재생 흐름, 3초 대기, 850ms 페이드, 재개·화면 종료·
+  앱 비활성화 경로와 한글 입력 감지는 바꾸지 않았다. 입력·선택·composing·저장 필드는
+  수정하지 않았다. 다섯 역할에서 다음 작업에 사용할 판단을 페르소나에 반영했다.
+- `dart format`: 관련 Dart 2개 정리. `flutter analyze --no-pub`: 이슈 없음.
+  전체 `flutter test --no-pub --concurrency=2` 실행 중이며 새 원음 번들/해시/길이/PCM 검사와
+  글자·한글 조합 감지 2개는 이미 통과했다. 전체 및 배포 결과는 완료 후 덧붙인다.
+- 실제 Chrome의 Web Audio OfflineAudioContext에서 번들 WAV를 디코드해 16초 출력으로
+  두 번 이상 반복하고 15초에 정지했다. 반복 오차 0, 정지 이후 peak 0,
+  peak 0.32411로 확인했다. [결과](evidence/20261124/pencil-original/browser-audio.json)는
+  실제 음성 디코더/렌더 검사이며 스피커 청음·앱 UI의 신뢰된 입력 활성화·실기기 전체 검증은 아니다.
+- 작업 전 여유 공간을 확인했고 도구 다운로드·디코드·Chrome 임시 폴더는 try/finally로
+  정리했다. 격리 release worktree는 검증 자료 보관과 원격 반영 확인 후 정리한다.

@@ -116,7 +116,8 @@ flutter:
   assets:
     - assets/images/
     - assets/audio/page-turn.mp3
-    - assets/audio/writing-human-low-rhythm.wav
+    - assets/audio/pencil-on-paper-original.wav
+    - assets/audio/pencil-on-paper-original-info.json
     - assets/audio/cafe-rain.wav
     - assets/audio/cafe-bell.wav
     - assets/audio/cafe-tea.wav

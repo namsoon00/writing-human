@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/ui/paper_sound_effect.dart';
@@ -17,16 +19,40 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test(
-    'Writing loads the approved 13-second rhythm and page turns stay one-shot',
+    'Writing loads the selected original pencil recording and page turns stay one-shot',
     () async {
       final effect = PaperSoundEffect.writingRhythm;
+      final info =
+          jsonDecode(
+                await rootBundle.loadString(
+                  'assets/audio/pencil-on-paper-original-info.json',
+                ),
+              )
+              as Map<String, dynamic>;
+      expect(info['source_video_id'], 'KxVtZQxxA1s');
+      final processing = info['processing'] as Map<String, dynamic>;
       final wav = await rootBundle.load('assets/${effect.asset}');
       // The bundled PCM file uses a standard 44-byte WAV header.
       final byteRate = wav.getUint32(28, .little);
       final pcmLength = wav.getUint32(40, .little);
       expect(pcmLength, wav.lengthInBytes - 44);
       final duration = Duration(microseconds: pcmLength * 1000000 ~/ byteRate);
-      expect(duration, const Duration(milliseconds: 13050));
+      expect(
+        duration.inMicroseconds,
+        closeTo((processing['duration_seconds'] as num) * 1000000, 1),
+      );
+      expect(
+        sha256
+            .convert(
+              wav.buffer.asUint8List(wav.offsetInBytes, wav.lengthInBytes),
+            )
+            .toString(),
+        processing['asset_sha256'],
+      );
+      expect(wav.getUint16(20, .little), 1);
+      expect(wav.getUint16(22, .little), 1);
+      expect(wav.getUint32(24, .little), 44100);
+      expect(wav.getUint16(34, .little), 16);
       expect(effect.loops, isTrue);
       expect(effect.volume, 1);
       expect(PaperSoundEffect.pageTurn.loops, isFalse);

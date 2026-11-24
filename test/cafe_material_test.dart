@@ -136,15 +136,33 @@ void main() {
           return pixels[i] + pixels[i + 1] + pixels[i + 2];
         }
 
-        // Check both ends as well as the middle, where long painter-sorted
-        // tabletop triangles previously hid part of the small resting objects.
-        for (final x in [.20, .25, .29, .34, .38]) {
+        // Check both ends as well as the middle of the dark shaft. The brass
+        // ferrule at x=.1915..2185 is deliberately brighter than the lacquer.
+        for (final x in [.23, .25, .29, .34, .38]) {
+          final spot = CafeRenderer.project(
+            CafePoint(x, .811, .49),
+            camera,
+            size,
+          )!;
+          final hit = CafeRenderer.pick(
+            ui.Offset(spot.dx.roundToDouble(), spot.dy.roundToDouble()),
+            camera,
+            size,
+            world,
+          );
+          expect(hit?.objectId, 'shared.pen');
           expect(
             brightness(CafePoint(x, .811, .49)),
             lessThan(350),
             reason: 'pencil hidden at x=$x',
           );
         }
+        expect(
+          brightness(const CafePoint(.205, .814, .49)),
+          greaterThan(brightness(const CafePoint(.25, .811, .49)) + 90),
+          reason:
+              'the visible brass ferrule must not be covered by dark lacquer',
+        );
         for (final z in [.64, .67, .83]) {
           expect(
             brightness(CafePoint(.32, .8005, z)),

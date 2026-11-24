@@ -1,0 +1,111 @@
+{
+  "source_commit": "29ba6ab2e2d05ca8b21a8569ad018776c64bc9b8",
+  "checked_at": "2026-11-24T03:05:17.955263+00:00",
+  "index": {
+    "url": "https://namsoon00.github.io/writing-human/?v=29ba6ab",
+    "status": 200,
+    "bytes": 8150,
+    "sha256": "426869e4e27aac899a4a723698e0b4b56bbd0be04262ac9e87f0acefa6590b58"
+  },
+  "bootstrap": {
+    "url": "https://namsoon00.github.io/writing-human/flutter_bootstrap.js?v=0b522ab795f7dfbe",
+    "status": 200,
+    "bytes": 10015,
+    "sha256": "0b522ab795f7dfbeb4cc47d30d0ed98bf3e2bf210f948bb949f91af45e033f0f"
+  },
+  "main": {
+    "url": "https://namsoon00.github.io/writing-human/main.dart.js?v=6c44e8cea962ca4b",
+    "status": 200,
+    "bytes": 5243201,
+    "sha256": "6c44e8cea962ca4be7a03258cadc4fe93aa99da167623caea86351c137a9aaff",
+    "matches_local": true,
+    "static_garden_removed": true
+  },
+  "assets": [
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-watercolor-oak.webp?v=29ba6ab",
+      "status": 200,
+      "bytes": 373234,
+      "sha256": "09e57d12c41a0c46e7ab91f03b873161daecf23fa79be9f9d1fabbad6c41c63b",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-watercolor-tree.webp?v=29ba6ab",
+      "status": 200,
+      "bytes": 624236,
+      "sha256": "bdc15a907213570558e2fb1887899c1143968a406ac05da95297ce1836319086",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-watercolor-flowers.webp?v=29ba6ab",
+      "status": 200,
+      "bytes": 471514,
+      "sha256": "f836315971ced6f0cd79e6cb5c58289cec843f26db75fcf1ca141700ca98e961",
+      "matches_local": true,
+      "referenced_by_app": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/fonts/MaterialIcons-Regular.otf?v=29ba6ab",
+      "status": 200,
+      "bytes": 9332,
+      "sha256": "20d3a3d65a7dbce3ab4af51c992e514e54fcdbed5779bb6e5c2276f4e11c509c",
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/fonts/WritingHumanDevelopment-Regular.ttf?v=29ba6ab",
+      "status": 200,
+      "bytes": 895652,
+      "sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+      "matches_local": true,
+      "matches_integrated_font": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/FontManifest.json?v=29ba6ab",
+      "status": 200,
+      "bytes": 639,
+      "sha256": "59d2bbd28f1068364d4e0054b81dcde0da04cacf3e19f403efe8697edacc451e",
+      "matches_local": true,
+      "registered_font": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-touch.wav?v=29ba6ab",
+      "status": 200,
+      "bytes": 5336,
+      "sha256": "6de5a8ed938aa69dfb63292736f277e3dc9894e1f533f55edffd2411af5843ec",
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-place.wav?v=29ba6ab",
+      "status": 200,
+      "bytes": 9746,
+      "sha256": "75fd0af97a7d510fca9bfd909a3a61a625533b08b9afeee846c98420b41353ac",
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-sip.wav?v=29ba6ab",
+      "status": 200,
+      "bytes": 26504,
+      "sha256": "140161a2a3b38c5ac28a3277e83a0c05100842f882687617ca626025b7b0605d",
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-page.wav?v=29ba6ab",
+      "status": 200,
+      "bytes": 15478,
+      "sha256": "5d3a3887cb6a3d3d9ce9d216433bb38311666d1cf132b37e969d8d934e21c133",
+      "matches_local": true
+    }
+  ],
+  "runtime_scope": "First-person item use. Exact local release JS and four opt-in action WAVs, three materials, fonts and manifest compared with public HTTP. Flutter fixture and automatic native/Chrome tests; physical devices and direct public UI use unverified.",
+  "workflow": {
+    "run_id": 45316005092,
+    "url": "https://github.com/namsoon00/writing-human/actions/runs/45316005092",
+    "build": "success",
+    "deploy": "success",
+    "native_tests": 308,
+    "voice_dsp_tests": 6,
+    "chrome_tests": 25
+  }
+}

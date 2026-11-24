@@ -3597,3 +3597,22 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - iPhone/Android 실기기의 터치 감각·FPS·발열·스피커 소리와 직접 공개 UI 조작은 미검증이다.
   음원 네 개는 자체 합성 WAV이고 opt-in 동작을 유지했다. 저장된 필사/폰트/배치의 기존
   키와 계정 범위를 보존하며 .openai/hosting.json과 비공개 Sites 접근 설정은 변경하지 않았다.
+
+
+## 2026-11-24 · 물건 사용 동작의 웹 배포 확인
+
+- 소스 `29ba6ab2e2d05ca8b21a8569ad018776c64bc9b8`의
+  [Actions 45316005092](https://github.com/namsoon00/writing-human/actions/runs/45316005092)는
+  build/deploy 모두 success다. 서버 네이티브 전체 308개·음성 DSP 6개·Chrome 25개,
+  포맷·정적 분석·release 빌드가 통과했다. 로컬 Pages release 빌드도 통과했다.
+- [공개 미리보기](https://namsoon00.github.io/writing-human/?v=29ba6ab)의 index →
+  versioned bootstrap → main.dart.js를 HTTP로 확인했다. main SHA-256
+  `6c44e8cea962ca4be7a03258cadc4fe93aa99da167623caea86351c137a9aaff`는 로컬 빌드와
+  바이트가 같다. 새 동작 음원 4개·재질 3개·아이콘/쓰는 인간체·FontManifest도 같은 파일이다.
+  [공개 파일 대조 기록](../design/cafe/20261124/actions/deployment.json)을 남겼다.
+- 공유 작업 폴더의 기존 전체 조명 설정 개선을 보존해 합쳤다. 합친 카페/아이템/실제 저장소
+  검사 17개와 `flutter analyze --no-pub lib test tool hook`는 통과했다. 공유 폴더 전체 분석의
+  6개 경고는 artifacts/button-style-release 및 artifacts/source-footer-publish에 있던
+  복제 캡처 파일의 미사용 import/선언이다. 해당 생성물과 기존 인덱스는 변경하지 않았다.
+- 직접 공개 UI 조작과 실기기 터치·FPS·스피커 검수는 수행하지 않았다. 새 저장 결과는
+  기존 로컬 계정 범위를 사용하며 글과 공간의 저장 실패/재시도, 서체 0.009를 유지한다.

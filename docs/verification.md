@@ -3840,3 +3840,16 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - 게시 확인 후의 별도 필사 소리 변경 `760c053`을 덮어쓰지 않고 이 검증 기록의
   기반으로 보존했다. 위 공개 대조는 명시한 카페 소스의 게시 시점 결과이며 이후 별도
   필사 소리 버전의 검증 결과를 대신하지 않는다. 실제 휴대폰 청음·FPS는 여전히 미검증이다.
+
+- 최종 공개 CI [45411740708](https://github.com/namsoon00/writing-human/actions/runs/45411740708)에서
+  최신 main의 다른 변경을 포함한 전체 333개, Chrome 음성 6개·공간 47개, 포맷·분석·
+  웹 빌드·게시가 모두 통과했다. 로컬 마지막 관련 검사 4개와 분석도 통과했다.
+- 2026-11-24 23:28 KST 공개 JS·원음 WAV·출처 JSON이 통합 검증 빌드와 바이트 단위로
+  일치했다. 앱 JS SHA-256은 `717e1ca12538832115f6827aca41ab3939bd1a821944d43a0cd65228845716f3`다.
+  원음 WAV SHA-256 `10f5de0304ddfe461a19e57a5963bd7f1c973deadc3db1d5d7e632d18bb18360`는
+  이전과 같아 음원/음량 교체가 아닌 입력 제어 보정임을 확인했다.
+  [게시 근거](evidence/20261124/pencil-timing/deployment.json)를 남겼다.
+- 원격 트리·최종 자료 보관·로컬 변경 없음 확인 후 관리하던 release worktree와 빌드 캐시를
+  `git worktree remove`로 정리했다. Chrome 프로필·전송용 JSON도 정리했고, 코드·검사 로그·
+  프로브 결과·게시 근거는 보존했다. 정리 뒤 남은 공간은 약 82.0GiB다.
+  실제 iOS/Android의 청음·전체 제품 UI 입력 검수는 이 결과와 구분한다.

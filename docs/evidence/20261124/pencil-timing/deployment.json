@@ -1,0 +1,27 @@
+{
+  "url": "https://namsoon00.github.io/writing-human/",
+  "code_commit": "760c053dc0f7d03ee24cee50d575c613f313da15",
+  "workflow_run": 45411740708,
+  "workflow_url": "https://github.com/namsoon00/writing-human/actions/runs/45411740708",
+  "verified_at": "2026-11-24T14:28:17.857896+00:00",
+  "main_path": "main.dart.js?v=717e1ca125388321",
+  "files": {
+    "main.dart.js": {
+      "bytes": 5298118,
+      "sha256": "717e1ca12538832115f6827aca41ab3939bd1a821944d43a0cd65228845716f3",
+      "matches_local": true
+    },
+    "assets/assets/audio/pencil-on-paper-original.wav": {
+      "bytes": 643464,
+      "sha256": "10f5de0304ddfe461a19e57a5963bd7f1c973deadc3db1d5d7e632d18bb18360",
+      "matches_local": true
+    },
+    "assets/assets/audio/pencil-on-paper-original-info.json": {
+      "bytes": 1318,
+      "sha256": "794a10dd647aef989a1e105cf9950191c2cea1b028c25c4968dcab9903cc6165",
+      "matches_local": true
+    }
+  },
+  "old_rhythm_in_local_bundle": false,
+  "scope": "Public artifact matches the merged checked build. The actual Dart controller/web output in a separate Chrome fixture stopped a single input after about 182ms, retained the audio cursor and avoided overlapping sources. Physical-device listening and full product UI activation were not performed."
+}

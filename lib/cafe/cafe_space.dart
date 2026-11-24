@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'cafe_home.dart';
 import 'dart:math' as math;
 
 class CafePose {
@@ -38,6 +39,7 @@ class CafePose {
 
 class CafeSpace {
   const CafeSpace({
+    this.home = const CafeHome(),
     this.poses = const {},
     this.amounts = const {},
     this.uses = const {},
@@ -59,6 +61,7 @@ class CafeSpace {
     this.gardenTea = false,
     this.doorOpen = true,
   });
+  final CafeHome home;
   final Map<String, CafePose> poses;
   final Map<String, int> amounts;
   final Map<String, bool> uses;
@@ -97,6 +100,7 @@ class CafeSpace {
   CafeSpace withLight(String id, double value) =>
       copy(lights: {...lights, id: value});
   CafeSpace resetItem(String id) => copy(
+    home: id == 'ritual.memory' ? home.copy(clearPinned: true) : null,
     poses: {...poses}..remove(id),
     amounts: {...amounts}..remove(id),
     uses: {...uses}..remove(id),
@@ -118,6 +122,7 @@ class CafeSpace {
   final bool bookOpen, cupFull, gardenTea, doorOpen;
   CafePose pose(String id) => poses[id] ?? const CafePose();
   CafeSpace copy({
+    CafeHome? home,
     Map<String, CafePose>? poses,
     Map<String, int>? amounts,
     Map<String, bool>? uses,
@@ -140,6 +145,7 @@ class CafeSpace {
     bool? gardenTea,
     bool? doorOpen,
   }) => CafeSpace(
+    home: home ?? this.home,
     poses: poses ?? this.poses,
     amounts: amounts ?? this.amounts,
     uses: uses ?? this.uses,
@@ -162,7 +168,8 @@ class CafeSpace {
     doorOpen: doorOpen ?? this.doorOpen,
   );
   Map<String, dynamic> toJson() => {
-    'version': 3,
+    'version': 4,
+    'home': home.toJson(),
     'amounts': amounts,
     'uses': uses,
     'finishes': finishes,
@@ -187,7 +194,7 @@ class CafeSpace {
   String encode() => jsonEncode(toJson());
   factory CafeSpace.decode(String raw) {
     final j = jsonDecode(raw);
-    if (j is! Map<String, dynamic> || ![1, 2, 3].contains(j['version'])) {
+    if (j is! Map<String, dynamic> || ![1, 2, 3, 4].contains(j['version'])) {
       throw const FormatException('Invalid room data');
     }
     final selected = j['selectedBookId'];
@@ -241,6 +248,7 @@ class CafeSpace {
     }
 
     return CafeSpace(
+      home: j['version'] < 4 ? const CafeHome() : CafeHome.read(j['home']),
       amounts: map('amounts', (v) {
         if (v is! int || v < 0 || v > 3) {
           throw const FormatException('Invalid drink amount');

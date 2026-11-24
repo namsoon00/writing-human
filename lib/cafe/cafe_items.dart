@@ -282,6 +282,7 @@ extension _IndividualCafeItems on CafeWorld {
         props(bounds.deflate(.015));
         _target = null;
       },
+      defaultFinish: seat == CafeSeat.window ? 1 : 0,
     );
   }
 

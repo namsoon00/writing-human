@@ -122,12 +122,17 @@ class CafeViewController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _travelDone?.complete(false);
+    _travelDone = null;
     final done = _useDone;
     _useDone = null;
     if (done != null && !done.isCompleted) done.complete(false);
     super.dispose();
   }
 
+  Completer<bool>? _travelDone;
+  Future<bool> get travelFinished =>
+      _travelDone?.future ?? Future.value(!travelling);
   Future<void> roomReady = Future<void>.value();
   double walkSpeed = 0;
   CafeSeat? _pendingSeat;
@@ -307,6 +312,8 @@ class CafeViewController extends ChangeNotifier {
   }
 
   void _begin() {
+    _travelDone?.complete(false);
+    _travelDone = Completer<bool>();
     destination = journey.last;
     travelling = true;
     request++;
@@ -314,6 +321,8 @@ class CafeViewController extends ChangeNotifier {
   }
 
   void finishTravel() {
+    final done = _travelDone;
+    _travelDone = null;
     seat = _pendingSeat;
     activeChairId = _pendingChairId;
     _pendingSeat = null;
@@ -338,11 +347,14 @@ class CafeViewController extends ChangeNotifier {
     travelling = false;
     destination = null;
     journey = [];
+    done?.complete(true);
     notifyListeners();
   }
 
   void look(double dx, double dy) {
     if (using || !dx.isFinite || !dy.isFinite) return;
+    _travelDone?.complete(false);
+    _travelDone = null;
     if (travelling && !world.canStand(camera.position) && _departure != null) {
       camera = CafeCamera(
         position: world.targetApproach(_departure!),

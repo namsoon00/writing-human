@@ -12,6 +12,7 @@ part 'cafe_soft_geometry.dart';
 part 'cafe_entrance.dart';
 part 'cafe_items.dart';
 part 'cafe_use.dart';
+part 'cafe_home_geometry.dart';
 
 enum CafeSurface {
   plain,
@@ -1084,7 +1085,11 @@ class CafeWorld {
     _target = target;
     obstacles.add(bounds);
     final x = bounds.center.dx, z = bounds.center.dy;
-    final finish = space.finish(_buildingObject ?? '');
+    final finish = space.finish(
+      _buildingObject ?? '',
+      fallback: _buildingObject == 'desk.window.table' ? 1 : 0,
+    );
+    final timberStart = faces.length;
     _roundedSlab(
       x,
       z,
@@ -1093,6 +1098,11 @@ class CafeWorld {
       surface: finish == 1 ? CafeSurface.walnut : CafeSurface.oak,
       color: finish == 1 ? dark : oak,
     );
+    if (finish == 1 && _buildingObject == 'desk.window.table') {
+      for (final face in faces.skip(timberStart)) {
+        face.materialTint = const Color(0xffbca98f);
+      }
+    }
     box(
       x,
       .682,
@@ -1295,6 +1305,19 @@ class CafeWorld {
         CafePoint(-3.4, 0, z),
         () {
           _tableItem('$group.table', '${seat.label} 책상', seat, (support) {
+            _sentenceCard(
+              'ritual.${seat.name}.today',
+              -4.01,
+              .770,
+              z - .05,
+              support,
+            );
+            _deskLamp(
+              'lamp.desk.${seat.name}',
+              -4.035,
+              z + (seat == CafeSeat.window ? -.26 : .24),
+              support,
+            );
             _noteItem(
               '$group.book',
               '${seat.label} 노트',
@@ -1351,6 +1374,7 @@ class CafeWorld {
       const CafePoint(0, 0, 0),
       () {
         _tableItem('shared.table', '큰 책상', CafeSeat.shared, (support) {
+          _sentenceCard('ritual.letter', -.30, .770, 1.12, support, row: 1);
           _noteItem(
             'shared.book',
             '중앙 노트',
@@ -1570,6 +1594,7 @@ class CafeWorld {
     box(-4.15, .008, -3.55, .28, .012, 1.85, brass);
     _target = null;
     _framedPrint(3.15, 1.91, -4.91, .84, 1.12, 0);
+    _framedPrint(-3.23, 1.85, -4.91, .48, .64, 0, personal: true);
     // Right wall cabinetry: face-out recommendations, private shelf, pen ledge.
     for (final section in [
       (-2.25, CafeTarget.recommendations),

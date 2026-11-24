@@ -1,0 +1,35 @@
+{
+  "checked_at": "2026-11-24T11:05:57.533494+00:00",
+  "capture_kind": "Synthetic empty-library Flutter fixture with actual bundled fonts and textures; not a physical device or live public UI capture",
+  "viewport": [
+    390,
+    844
+  ],
+  "extra_wide_viewport": [
+    1200,
+    800
+  ],
+  "views": [
+    "rain-window-390",
+    "rain-window-wide",
+    "dusk-window-wide",
+    "today-sentence-390",
+    "my-sentence-frame"
+  ],
+  "original_material_images": 13,
+  "text_atlas_images": 1,
+  "native_regression_and_capture_tests": 46,
+  "separate_native_full_app_flows": 2,
+  "chrome_tests": 12,
+  "static_analysis": "flutter analyze --no-pub: no issues",
+  "format": "193 files; no changes required",
+  "local_release_build": "node tool/build_github_pages.mjs: passed",
+  "font_sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+  "actual_view_sha256": "ca12bc2cca6ff2b039ff40b24891f55f2d7fdfb9c8ec73412d4623af0c3fd3f4",
+  "main_js_sha256": "3b8c354417e33a2f62121a09b13b84155fecb2e1fc75ab347c61536a70ba66ba",
+  "unverified": [
+    "Physical iPhone/Android touch, performance, thermals and speaker quality",
+    "Direct public-page UI use",
+    "Whether this experience improves visit intention or emotional rest"
+  ]
+}

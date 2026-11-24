@@ -6,6 +6,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:writing_human/cafe/cafe_camera.dart';
 import 'package:writing_human/cafe/cafe_visit.dart';
 import 'package:writing_human/cafe/cafe_space.dart';
+import 'package:writing_human/cafe/cafe_home.dart';
 import 'package:writing_human/cafe/cafe_world.dart';
 import 'package:writing_human/cafe/cafe_view_controller.dart';
 import 'package:writing_human/data/model.dart';
@@ -90,6 +91,13 @@ void main() {
         final a = await db.openSpaceStore('account-a');
         final config = const CafeSpace().copy(
           brightness: 1.15,
+          home: const CafeHome(
+            mood: 2,
+            topic: 1,
+            seat: 'windowMiddle',
+            chair: 'desk.windowMiddle.chair',
+            pinned: '지금의 한 문장.',
+          ),
           amounts: const {'desk.window.cup': 1},
           uses: const {'plant.3.77_-3.9': true},
           finishes: const {'shared.cup': 1, 'desk.window.cup': 2},

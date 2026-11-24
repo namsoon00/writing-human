@@ -256,8 +256,9 @@ extension CafePersonalObjects on CafeWorld {
     if (chair?.type == CafeItemType.chair) {
       return CafeCamera(
         position: chair!.pivot + const CafePoint(0, 1.18, 0),
-        yaw: chair.yaw,
-        pitch: -.50,
+        yaw:
+            chair.yaw + (s == CafeSeat.window && space.home.mood > 0 ? .18 : 0),
+        pitch: s == CafeSeat.window && space.home.mood > 0 ? -.32 : -.50,
       );
     }
     final base = CafeCamera.seated(s), t = CafeTarget.forSeat(s);

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../cafe/cafe_camera.dart';
+import '../cafe/cafe_home.dart';
 import '../cafe/cafe_materials.dart';
 import '../cafe/cafe_watercolor.dart';
 import '../cafe/cafe_renderer.dart';
@@ -31,7 +32,9 @@ class CafeScene extends StatefulWidget {
     this.onItemActivated,
     this.onWalk,
     this.onPutDown,
+    this.moment,
   });
+  final DateTime? moment;
   final CafeViewController controller;
   final bool interactive;
   final bool editing;
@@ -156,6 +159,10 @@ class _CafeSceneState extends State<CafeScene>
   double total = 0;
   int request = 0;
   List<ui.Image?> framedArt = [];
+  ui.Image? letterAtlas;
+  String? atlasKey;
+  int atlasGeneration = 0;
+  late final defaultMoment = DateTime.now();
   ui.Image? wood,
       sign,
       walnut,
@@ -204,6 +211,93 @@ class _CafeSceneState extends State<CafeScene>
     request = widget.controller.request;
     widget.controller.addListener(_changed);
     _loadMaterials();
+    _refreshAtlas();
+  }
+
+  Future<void> _refreshAtlas() async {
+    final home = widget.controller.space.home,
+        date = widget.moment ?? defaultMoment;
+    final key = '${CafeEditorial.day(date)}|${home.topic}|${home.pinned}';
+    if (key == atlasKey) return;
+    atlasKey = key;
+    final generation = ++atlasGeneration;
+    final sentence = CafeEditorial.today(date, home.topic);
+    final recorder = ui.PictureRecorder();
+    // All copies of a card share one small atlas. No manuscript is uploaded.
+    final drawing = Canvas(recorder);
+    drawing.drawColor(const Color(0xfff5ecd8), BlendMode.src);
+    final titles = ['오늘의 문장', '쓰는 인간의 쪽지', '내가 남긴 문장'];
+    final bodies = [
+      sentence.text,
+      '잠시 쉬어 가도 좋아요.\n이번 주의 쪽지를 펼쳐 보세요.',
+      home.pinned ?? '마음에 남은 한 줄을\n이곳에 놓아두세요.',
+    ];
+    for (var row = 0; row < 3; row++) {
+      final y = row * 512.0;
+      drawing.drawRect(
+        Rect.fromLTWH(row == 2 ? 196 : 30, y + 30, row == 2 ? 376 : 708, 452),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2
+          ..color = const Color(0xffc7b596),
+      );
+      void text(
+        String value,
+        double top,
+        double size,
+        Color color, {
+        int lines = 4,
+      }) {
+        final painter =
+            TextPainter(
+              text: TextSpan(
+                text: value,
+                style: TextStyle(
+                  fontFamily: appFontFamily,
+                  fontFamilyFallback: appFontFallback,
+                  fontSize: size,
+                  height: 1.7,
+                  color: color,
+                ),
+              ),
+              textAlign: TextAlign.center,
+              textDirection: TextDirection.ltr,
+              maxLines: lines,
+              ellipsis: '…',
+            )..layout(
+              minWidth: row == 2 ? 330 : 650,
+              maxWidth: row == 2 ? 330 : 650,
+            );
+        painter.paint(drawing, Offset(row == 2 ? 219 : 59, y + top));
+        painter.dispose();
+      }
+
+      text(titles[row], 60, row == 2 ? 29 : 38, brandInk, lines: 1);
+      text(bodies[row], 155, row == 2 ? 29 : 39, brandInk);
+      text(
+        row == 0
+            ? '쓰는 인간 · ${sentence.topic}'
+            : row == 1
+            ? '아무것도 쓰지 않고 머물러도 좋아요.'
+            : '나의 자리, 나의 문장',
+        415,
+        23,
+        muted,
+        lines: 1,
+      );
+    }
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(768, 1536);
+    picture.dispose();
+    if (!mounted || generation != atlasGeneration) {
+      image.dispose();
+      return;
+    }
+    final previous = letterAtlas;
+    setState(() => letterAtlas = image);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      previous?.dispose();
+    });
   }
 
   Future<ui.Image?> _texture(String name, {int width = 768}) async {
@@ -340,6 +434,7 @@ class _CafeSceneState extends State<CafeScene>
 
   void _changed() {
     final c = widget.controller;
+    _refreshAtlas();
     if (useRequest != c.useRequest) {
       useRequest = c.useRequest;
       _stopKeys();
@@ -438,6 +533,8 @@ class _CafeSceneState extends State<CafeScene>
     keyboard.dispose();
     focus.removeListener(_focusChanged);
     widget.controller.removeListener(_changed);
+    atlasGeneration++;
+    letterAtlas?.dispose();
     travel.dispose();
     useAnimation.dispose();
     focus.dispose();
@@ -690,6 +787,7 @@ class _CafeSceneState extends State<CafeScene>
                 child: RepaintBoundary(
                   child: CustomPaint(
                     painter: CafeRenderer(
+                      letterAtlas: letterAtlas,
                       world: c.world,
                       use: c.useFrame,
                       camera: camera,

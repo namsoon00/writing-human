@@ -4,6 +4,7 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:web/web.dart' as web;
 import 'package:writing_human/cafe/cafe_space.dart';
+import 'package:writing_human/cafe/cafe_home.dart';
 import 'package:writing_human/cafe/cafe_space_store_web.dart';
 
 void main() {
@@ -16,6 +17,13 @@ void main() {
       try {
         const expected = CafeSpace(
           brightness: 1.15,
+          home: CafeHome(
+            mood: 2,
+            topic: 1,
+            seat: 'windowMiddle',
+            chair: 'desk.windowMiddle.chair',
+            pinned: '지금의 한 문장.',
+          ),
           amounts: {'desk.window.cup': 1},
           uses: {'plant.3.77_-3.9': true},
           finishes: {'shared.cup': 1, 'desk.window.cup': 2},

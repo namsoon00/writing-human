@@ -398,7 +398,7 @@ extension _CourtyardGeometry on CafeWorld {
       const CafePoint(-4.65, 4, 3),
       const CafePoint(4.65, 4, 3),
       const CafePoint(4.65, 4, -3),
-      const Color(0xffc5bfbd),
+      space.home.mood == 0 ? const Color(0xffc5bfbd) : const Color(0xff677f8c),
       unlit: true,
       layer: -1,
     );
@@ -437,6 +437,67 @@ extension _CourtyardGeometry on CafeWorld {
         surface: CafeSurface.limestone,
         color: const Color(0xffe9dfca),
       );
+    }
+    // A restrained climbing branch gives the far plaster wall a human scale.
+    for (var i = 0; i < 5; i++) {
+      final x = -2.1 + i * .58;
+      _rod(
+        CafePoint(x, .35, -2.87),
+        CafePoint(x + .15, 1.75, -2.87),
+        .005,
+        CafeWorld.dark,
+        sides: 6,
+      );
+      for (var j = 0; j < 4; j++) {
+        final base = CafePoint(x + .03 + j * .025, .55 + j * .29, -2.86);
+        _leaf(
+          base,
+          base + CafePoint(j.isEven ? .22 : -.22, .10, .035),
+          .045,
+          i.isEven ? const Color(0xff74856b) : const Color(0xff8c997a),
+        );
+      }
+    }
+    for (final p in [
+      const CafePoint(-2.45, 0, 1.9),
+      const CafePoint(.35, 0, -2.45),
+    ]) {
+      final id = 'lamp.garden.${p.x}_${p.z}',
+          gain = space.light('lamp.garden.${p.x}_${p.z}');
+      _object(id, '정원의 작은 등', CafeObjectKind.floor, p, () {
+        obstacles.add(
+          Rect.fromCenter(center: Offset(p.x, p.z), width: .24, height: .24),
+        );
+        cylinder(p.x, .06, p.z, .12, .12, CafeWorld.dark, sides: 16);
+        for (final x in [-.075, .075]) {
+          for (final z in [-.075, .075]) {
+            _rod(
+              p + CafePoint(x, .12, z),
+              p + CafePoint(x, .37, z),
+              .009,
+              CafeWorld.dark,
+              sides: 6,
+            );
+          }
+        }
+        cylinder(
+          p.x,
+          .245,
+          p.z,
+          .065,
+          .23,
+          gain > 0 ? const Color(0xffffd596) : const Color(0xffa99776),
+          unlit: gain > 0,
+          sides: 16,
+        );
+        _turned(p.x, p.z, [
+          (.365, .15),
+          (.38, .15),
+          (.43, .025),
+        ], CafeWorld.dark);
+        pendantLights.add(p + const CafePoint(0, .28, 0));
+        pendantGains.add(gain * (space.home.mood == 0 ? .18 : .8));
+      }, type: CafeItemType.lamp);
     }
     // A planted bank and pond are a single blocked region, never a walking tile.
     obstacles.add(const Rect.fromLTWH(-2.65, -.9, 2.55, 3.35));

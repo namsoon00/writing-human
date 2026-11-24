@@ -7,6 +7,8 @@ import '../cafe/cafe_visit.dart';
 import '../cafe/cafe_world.dart';
 import '../cafe/cafe_camera.dart';
 import '../cafe/cafe_space.dart';
+import '../cafe/cafe_home.dart';
+import 'cafe_ritual.dart';
 import '../cafe/cafe_view_controller.dart';
 import '../data/model.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -27,9 +29,20 @@ class CafeScreen extends StatefulWidget {
     this.onTools,
     this.playCalmSound,
     this.spaceStore,
+    this.moment,
+    this.lastSentence = '',
+    this.onTranscribe,
   });
   final Future<void> Function(String name)? playCalmSound;
   final CafeSpaceStore? spaceStore;
+  final DateTime? moment;
+  final String lastSentence;
+  final Future<bool> Function(
+    CafeSeat seat,
+    String? bookId,
+    CafeSentence sentence,
+  )?
+  onTranscribe;
   final List<Book> books;
   final String currentWritingLabel;
   final CafeSeat? initialSeat;
@@ -46,6 +59,9 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
   final calmAudio = CafeCalmAudio();
   bool lastCourtyard = false;
   bool showIntro = true;
+  bool ritualOpening = false;
+  CafeSentence? retrySentence;
+  late final moment = widget.moment ?? DateTime.now();
   String? calmHint;
   bool sound = false, soundBusy = false;
   int soundGeneration = 0;
@@ -381,6 +397,188 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _openRitual(String page) async {
+    if (roomLoading ||
+        roomSaving ||
+        roomLoadFailed ||
+        opening ||
+        dialogOpen ||
+        view.travelling ||
+        view.using ||
+        ritualOpening) {
+      return;
+    }
+    if (!await _putDown() || !mounted) return;
+    view.inspect(null);
+    setState(() => dialogOpen = true);
+    final result = await showDialog<Object>(
+      context: context,
+      builder: (context) => CafeRitualSheet(
+        page: page,
+        home: view.space.home,
+        moment: moment,
+        currentSeat: view.seat,
+        chair: view.activeChairId,
+        lastSentence: widget.lastSentence,
+        canTranscribe: widget.onTranscribe != null,
+        onSave: (home) => _storeUse(view.space.copy(home: home)),
+      ),
+    );
+    if (!mounted) return;
+    setState(() => dialogOpen = false);
+    if (result is CafeSentence) {
+      await _startSentence(result);
+    } else if (result == CafeRitualAction.rainWindow) {
+      if (await _storeUse(
+            view.space.copy(home: view.space.home.copy(mood: 2)),
+          ) &&
+          mounted) {
+        await _goToSeat(CafeSeat.window);
+      }
+    } else if (result == CafeRitualAction.returnSeat) {
+      final seat =
+          CafeSeat.values
+              .where((s) => s.name == view.space.home.seat)
+              .firstOrNull ??
+          CafeSeat.window;
+      await _goToSeat(seat, chair: view.space.home.chair);
+    }
+  }
+
+  Future<bool> _goToSeat(CafeSeat seat, {String? chair}) async {
+    if (view.using || view.travelling || !await _putDown() || !mounted) {
+      return false;
+    }
+    Future<bool> travel(CafeTarget target) async {
+      if (!view.visit(target)) return false;
+      return view.travelFinished;
+    }
+
+    if ((seat == CafeSeat.garden) != view.inCourtyard) {
+      if (!view.space.doorOpen &&
+          !await _storeUse(view.space.copy(doorOpen: true))) {
+        return false;
+      }
+      if (!await travel(
+            view.inCourtyard ? CafeTarget.cafeReturn : CafeTarget.courtyard,
+          ) ||
+          !mounted) {
+        return false;
+      }
+    }
+    final defaultChair = seat.name.startsWith('window')
+        ? 'desk.${seat.name}.chair'
+        : seat == CafeSeat.quiet
+        ? 'quiet.chair'
+        : null;
+    final chairId = chair ?? defaultChair;
+    final saved = view.world.objects[chairId];
+    final okay = saved?.seat == seat
+        ? view.visitChair(chairId!)
+        : view.visit(CafeTarget.forSeat(seat));
+    if (!okay) {
+      setState(() => calmHint = '그 자리까지 걸어갈 수 없어요. 가까운 빈 바닥을 눌러 주세요.');
+      return false;
+    }
+    final complete = await view.travelFinished;
+    if (mounted && complete) setState(() => calmHint = '아무것도 쓰지 않고 머물러도 좋아요.');
+    return mounted && complete;
+  }
+
+  Future<void> _startSentence(CafeSentence sentence) async {
+    if (ritualOpening ||
+        opening ||
+        widget.saveFailed ||
+        widget.onTranscribe == null) {
+      return;
+    }
+    ritualOpening = true;
+    try {
+      if (view.seat == null &&
+          !await _goToSeat(
+            CafeSeat.values
+                    .where((s) => s.name == view.space.home.seat)
+                    .firstOrNull ??
+                CafeSeat.window,
+            chair: view.space.home.chair,
+          )) {
+        return;
+      }
+      if (!mounted || view.seat == null) return;
+      setState(() => opening = true);
+      if (view.space.home.seat == null) {
+        view.applySpace(
+          view.space.copy(
+            home: view.space.home.copy(
+              seat: view.seat!.name,
+              chair: view.activeChairId,
+            ),
+          ),
+          validate: false,
+        );
+      }
+      if (roomDirty && !await _saveRoom()) return;
+      final okay = await widget.onTranscribe!(view.seat!, bookId, sentence);
+      if (okay) {
+        retrySentence = null;
+      } else if (mounted) {
+        setState(() {
+          retrySentence = sentence;
+          error = '글을 열지 못했어요. 다시 눌러 주세요.';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          retrySentence = sentence;
+          error = '글을 열지 못했어요. 다시 눌러 주세요.';
+        });
+      }
+    } finally {
+      ritualOpening = false;
+      if (mounted) setState(() => opening = false);
+    }
+  }
+
+  Widget _arrivalNote() {
+    if (editing ||
+        opening ||
+        dialogOpen ||
+        view.travelling ||
+        view.using ||
+        view.heldId != null ||
+        view.contextId != null ||
+        view.seat != null ||
+        !showIntro) {
+      return const SizedBox.shrink();
+    }
+    final favorite = CafeSeat.values
+        .where((s) => s.name == view.space.home.seat)
+        .firstOrNull;
+    return Wrap(
+      children: [
+        TextButton(
+          key: const ValueKey('cafe-homecoming'),
+          onPressed: roomLoading || roomLoadFailed || roomSaving
+              ? null
+              : () => _openRitual('arrival'),
+          child: Text(
+            favorite == null
+                ? '오늘은 한 줄만 남겨도 좋아요.'
+                : '${favorite.label}에 다시 앉아봐요.',
+          ),
+        ),
+        TextButton(
+          key: const ValueKey('cafe-today'),
+          onPressed: roomLoading || roomLoadFailed || roomSaving
+              ? null
+              : () => _openRitual('today'),
+          child: const Text('오늘의 문장'),
+        ),
+      ],
+    );
+  }
+
   bool _activateItem(String id) {
     if (editing ||
         roomLoading ||
@@ -395,6 +593,22 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     }
     final object = view.world.objects[id];
     if (object == null) return false;
+    if (id.startsWith('ritual.')) {
+      if ((object.pivot - view.camera.position).length > 2) {
+        setState(() => calmHint = '가까이 다가와 쪽지를 눌러 보세요.');
+        return true;
+      }
+      unawaited(
+        _openRitual(
+          id == 'ritual.memory'
+              ? 'memory'
+              : id == 'ritual.letter'
+              ? 'letter'
+              : 'today',
+        ),
+      );
+      return true;
+    }
     if (object.type == CafeItemType.chair) {
       unawaited(_useItem(id));
       return true;
@@ -477,6 +691,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     if (view.using || roomSaving || roomLoadFailed || editing) return;
     final obj = view.world.objects[id];
     if (obj == null) return;
+    if (view.contextId != id) calmHint = null;
     if (view.heldId != null && view.heldId != id && !await _putDown()) return;
     if (!mounted) return;
     switch (obj.type) {
@@ -957,18 +1172,19 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                         space.copy(frames: {...space.frames, object.id: v}),
                       ),
                     ),
-                    options(
-                      '\uADF8\uB9BC',
-                      space.art[object.id] ?? object.defaultArtwork ?? 0,
-                      [
-                        '\uC78E\uACFC \uAC00\uC9C0',
-                        '\uBB3C\uACB0\uACFC \uBE5B',
-                        '\uCC45\uACFC \uC5F0\uD544',
-                      ],
-                      (v) => _changeRoom(
-                        space.copy(art: {...space.art, object.id: v}),
+                    if (object.id != 'ritual.memory')
+                      options(
+                        '\uADF8\uB9BC',
+                        space.art[object.id] ?? object.defaultArtwork ?? 0,
+                        [
+                          '\uC78E\uACFC \uAC00\uC9C0',
+                          '\uBB3C\uACB0\uACFC \uBE5B',
+                          '\uCC45\uACFC \uC5F0\uD544',
+                        ],
+                        (v) => _changeRoom(
+                          space.copy(art: {...space.art, object.id: v}),
+                        ),
                       ),
-                    ),
                     options(
                       '\uC885\uC774 \uC5EC\uBC31',
                       space.mats[object.id] ?? 0,
@@ -1217,12 +1433,22 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
   @override
   void didUpdateWidget(CafeScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.saveFailed && !widget.saveFailed) error = null;
+    if (oldWidget.saveFailed && !widget.saveFailed) {
+      error = null;
+      final sentence = retrySentence;
+      if (sentence != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && !opening && !ritualOpening) {
+            unawaited(_startSentence(sentence));
+          }
+        });
+      }
+    }
   }
 
   void _viewChanged() {
     if (!mounted) return;
-    showIntro = false;
+    if (!roomLoading) showIntro = false;
     if (lastCourtyard != view.inCourtyard) {
       lastCourtyard = view.inCourtyard;
       soundGeneration++;
@@ -1337,6 +1563,17 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
       error = null;
     });
     try {
+      if (view.space.home.seat == null) {
+        view.applySpace(
+          view.space.copy(
+            home: view.space.home.copy(
+              seat: seat.name,
+              chair: view.activeChairId,
+            ),
+          ),
+          validate: false,
+        );
+      }
       if (roomDirty && !await _saveRoom()) return;
       final opened = await widget.onWrite(seat, bookId);
       if (mounted && !opened) setState(() => error = '글을 열지 못했어요. 다시 눌러 주세요.');
@@ -1526,6 +1763,27 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
               style: TextStyle(height: 1.6),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Wrap(
+              spacing: 4,
+              children: [
+                for (final entry in const {
+                  'arrival': '나의 자리',
+                  'mood': '공간의 시간',
+                  'today': '오늘의 문장',
+                  'memory': '내가 남긴 문장',
+                  'letter': '쓰는 인간의 쪽지',
+                }.entries)
+                  TextButton(
+                    key: ValueKey('cafe-ritual-${entry.key}'),
+                    onPressed: () =>
+                        Navigator.pop(context, 'home:${entry.key}'),
+                    child: Text(entry.value),
+                  ),
+              ],
+            ),
+          ),
           for (final obj in view.world.objects.values.where(
             (o) =>
                 const {
@@ -1566,7 +1824,11 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
       if (target is CafeTarget) {
         _activate(target);
       } else if (target is String) {
-        _activateItem(target);
+        if (target.startsWith('home:')) {
+          await _openRitual(target.substring(5));
+        } else {
+          _activateItem(target);
+        }
       }
     }
   }
@@ -1584,6 +1846,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
         children: [
           CafeScene(
             controller: view,
+            moment: moment,
             interactive:
                 !opening && !widget.saveFailed && !roomLoading && !roomSaving,
             editing: editing,
@@ -1700,25 +1963,37 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                         view.resting ||
                         view.seat != null)
                       IgnorePointer(
-                        child: Text(
-                          opening
-                              ? '글 여는 중'
-                              : view.travelling
-                              ? '천천히 걸어가는 중'
-                              : calmHint != null
-                              ? calmHint!
-                              : view.resting
-                              ? '잠시 머물러도 좋아요.'
-                              : view.seat != null
-                              ? '${view.seat!.label} · 노트를 눌러 써요'
-                              : '바닥을 눌러 걷고, 끌어 둘러봐요',
-                          style: const TextStyle(
-                            color: Color(0xff62503f),
-                            fontSize: 14,
-                            height: 1.5,
+                        child: ColoredBox(
+                          color: const Color(0xccfaf5eb),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 2,
+                            ),
+                            child: Text(
+                              opening
+                                  ? '글 여는 중'
+                                  : view.travelling
+                                  ? '천천히 걸어가는 중'
+                                  : calmHint != null
+                                  ? calmHint!
+                                  : view.resting
+                                  ? '잠시 머물러도 좋아요.'
+                                  : view.seat != null
+                                  ? (view.space.home.mood > 0
+                                        ? '${view.space.home.mood == 2 ? '비 오는 저녁' : '해 질 무렵'} · 잠시 머물러도 좋아요.'
+                                        : '${view.seat!.label} · 노트를 눌러 써요')
+                                  : '바닥을 눌러 걷고, 끌어 둘러봐요',
+                              style: const TextStyle(
+                                color: Color(0xff62503f),
+                                fontSize: 14,
+                                height: 1.5,
+                              ),
+                            ),
                           ),
                         ),
                       ),
+                    _arrivalNote(),
                     _useControls(),
                     if ((view.seat != null || view.resting) &&
                         !view.travelling &&
@@ -1732,7 +2007,10 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                                 pending = null;
                                 view.stand();
                               },
-                        style: TextButton.styleFrom(foregroundColor: brandInk),
+                        style: TextButton.styleFrom(
+                          foregroundColor: brandInk,
+                          backgroundColor: const Color(0xccfaf5eb),
+                        ),
                         child: const Text('일어나 둘러보기'),
                       ),
                   ],
@@ -1795,7 +2073,10 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                       TextButton(
                         onPressed: widget.saveFailed
                             ? widget.onRetry
-                            : () => setState(() => error = null),
+                            : () => setState(() {
+                                error = null;
+                                retrySentence = null;
+                              }),
                         child: Text(widget.saveFailed ? '다시 저장' : '둘러보기'),
                       ),
                     ],

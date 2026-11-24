@@ -235,11 +235,14 @@ extension _CafeInterior on CafeWorld {
     double h,
     int row, {
     bool front = true,
+    bool personal = false,
   }) {
-    final id = 'frame.${x}_$z';
+    final id = personal ? 'ritual.memory' : 'frame.${x}_$z';
     _object(
       id,
-      '${front ? '\uC548\uCABD \uC561\uC790' : '\uCD9C\uC785\uAD6C \uC561\uC790'} \u00B7 ${['\uC78E\uACFC \uAC00\uC9C0', '\uBB3C\uACB0\uACFC \uBE5B', '\uCC45\uACFC \uC5F0\uD544'][space.art[id] ?? row]}',
+      personal
+          ? '내가 남긴 문장'
+          : '${front ? '\uC548\uCABD \uC561\uC790' : '\uCD9C\uC785\uAD6C \uC561\uC790'} \u00B7 ${['\uC78E\uACFC \uAC00\uC9C0', '\uBB3C\uACB0\uACFC \uBE5B', '\uCC45\uACFC \uC5F0\uD544'][space.art[id] ?? row]}',
       CafeObjectKind.frame,
       CafePoint(x, y, z),
       () {
@@ -362,13 +365,21 @@ extension _CafeInterior on CafeWorld {
                   ],
             CafeWorld.cream,
             surface: CafeSurface.artwork,
-            artIndex: index,
-            textureCoordinates: const [
-              Offset(0, 1),
-              Offset(1, 1),
-              Offset(1, 0),
-              Offset(0, 0),
-            ],
+            artIndex: personal ? null : index,
+            part: personal ? 'ritual.print' : null,
+            textureCoordinates: personal
+                ? const [
+                    Offset(.25, 1),
+                    Offset(.75, 1),
+                    Offset(.75, 2 / 3),
+                    Offset(.25, 2 / 3),
+                  ]
+                : const [
+                    Offset(0, 1),
+                    Offset(1, 1),
+                    Offset(1, 0),
+                    Offset(0, 0),
+                  ],
           ),
         );
         // Narrow rear shadow strips avoid an opaque backing that could hide the art.

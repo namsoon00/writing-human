@@ -594,6 +594,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             )
           : MemoryCafeSpaceStore();
       if (!mounted || c != owner || _accountLocked) return;
+      final sentenceDrafts =
+          <String, ({WritingPage page, RegisteredOriginal original})>{};
       final route = paperPanelRoute<void>(
         (context) => AnimatedBuilder(
           animation: owner,
@@ -604,6 +606,77 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 ? (page.text.isEmpty ? '지금 펼친 빈 쪽' : '지금 쓰던 글')
                 : '${book!.title} · 지금 펼친 쪽',
             initialSeat: _cafeSeat,
+            lastSentence: page.text.trim().characters.take(120).toString(),
+            onTranscribe: (seat, selectedBookId, sentence) async {
+              final route = ModalRoute.of(context);
+              if (route?.isCurrent != true ||
+                  c != owner ||
+                  _accountLocked ||
+                  _pageNavigationBusy ||
+                  _editorComposing ||
+                  c.composing) {
+                return false;
+              }
+              await owner.settled;
+              if (!mounted ||
+                  c != owner ||
+                  _accountLocked ||
+                  owner.saveError != null ||
+                  route?.isCurrent != true) {
+                return false;
+              }
+              final targetBookId = selectedBookId ?? book?.id;
+              final key = '${targetBookId ?? ''}|${sentence.id}';
+              final candidate = sentenceDrafts.putIfAbsent(
+                key,
+                () => (
+                  page: _blank(),
+                  original: RegisteredOriginal(
+                    const Uuid().v4(),
+                    sentence.text,
+                    citation: sentence.citation,
+                    registeredAt: DateTime.now().millisecondsSinceEpoch,
+                  ),
+                ),
+              );
+              final origin = page;
+              var saved = false;
+              await _navigatePage(() async {
+                // Retrying a failed atomic save reuses its candidate. A completed
+                // retry must not create a second record or replace existing text.
+                if (owner.library.pages.any((p) => p.id == candidate.page.id)) {
+                  saved = owner.library.activePageId == candidate.page.id;
+                } else {
+                  saved = await owner.saveImportedTranscription(
+                    draft: candidate.page,
+                    bookId: targetBookId,
+                    looseRecordId: origin.recordId,
+                    original: candidate.original,
+                  );
+                }
+                if (saved && mounted) {
+                  setState(() {
+                    _bookLeaf = null;
+                    fresh = false;
+                    userFresh = false;
+                    draft = candidate.page;
+                    _cafeSeat = seat;
+                  });
+                }
+              }, paperTurn: false);
+              await owner.settled;
+              if (!saved ||
+                  !mounted ||
+                  c != owner ||
+                  _accountLocked ||
+                  owner.saveError != null ||
+                  route?.isCurrent != true) {
+                return false;
+              }
+              route!.navigator!.pop();
+              _focusTranscription(owner, candidate.page.id);
+              return true;
+            },
             saveFailed: owner.saveError != null,
             onRetry: _retrySave,
             onTools: (selectedBookId) async {

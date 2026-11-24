@@ -46,12 +46,14 @@ class CafeRenderer extends CustomPainter {
     this.flowers,
     this.framedArt = const [],
     this.use,
+    this.letterAtlas,
     this.time = 0,
     this.teaFilled = false,
     this.bellAt,
     this.teaAt,
     this.allowPortal = true,
   });
+  final ui.Image? letterAtlas;
   final CafeUseFrame? use;
   final CafeWorld world;
   final CafeCamera camera;
@@ -187,6 +189,7 @@ class CafeRenderer extends CustomPainter {
   }
 
   ui.Image? _texture(CafeFace face) {
+    if (face.part == 'ritual.print') return letterAtlas;
     if (face.sign) return sign;
     return switch (face.surface) {
       CafeSurface.oak => wood,
@@ -218,14 +221,31 @@ class CafeRenderer extends CustomPainter {
         final p = face.points[i], n = face.vertexNormals?[i] ?? face.normal;
         if (world.courtyard) {
           final fill =
-              .80 +
+              (world.space.home.mood == 0 ? .80 : .49) +
               .18 * math.max(0, n.dot(_daylightDirection)) +
               .08 * math.max(0, n.y);
-          return CafePoint(fill, fill * .978, fill * .925);
+          var glow = 0.0;
+          for (var i = 0; i < world.pendantLights.length; i++) {
+            final delta = world.pendantLights[i] - p;
+            glow +=
+                world.pendantGains[i] *
+                .65 *
+                math.max(0, n.dot(delta.normalized)) /
+                (1 + delta.dot(delta) * 2.4);
+          }
+          return CafePoint(
+            fill * (world.space.home.mood == 0 ? 1 : .93) + glow,
+            fill * .978 + glow * .76,
+            fill * (world.space.home.mood == 0 ? .925 : 1.08) + glow * .43,
+          );
         }
         final window = math.exp(-(p.x + 4.4).clamp(0, 12) / 4.5);
         final fill =
-            .76 +
+            (world.space.home.mood == 0
+                ? .76
+                : world.space.home.mood == 1
+                ? .58
+                : .52) +
             .11 * math.max(0, n.dot(_daylightDirection)) * window +
             .035 * math.max(0, n.y);
         var warm = 0.0;
@@ -238,6 +258,7 @@ class CafeRenderer extends CustomPainter {
           warm +=
               1.45 *
               world.pendantGains[i] *
+              (world.space.home.mood == 0 || lamp.y < 1.8 ? 1 : .45) *
               cone *
               cone *
               math.max(0, n.dot(delta.normalized)) /
@@ -311,7 +332,11 @@ class CafeRenderer extends CustomPainter {
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     canvas.drawColor(
-      world.courtyard ? const Color(0xffc5bfbd) : const Color(0xfff3eadb),
+      world.courtyard
+          ? (world.space.home.mood == 0
+                ? const Color(0xffc5bfbd)
+                : const Color(0xff617a89))
+          : const Color(0xfff3eadb),
       BlendMode.srcOver,
     );
     final faces = <_ProjectedFace>[];
@@ -332,6 +357,7 @@ class CafeRenderer extends CustomPainter {
 
     for (final face in [
       ...world.presentedFaces(camera, use),
+      ...world.weatherFaces(camera, time),
       ...world.plantFaces(camera),
       ...world.lightFaces(camera),
       ...world.animatedFaces(
@@ -447,6 +473,7 @@ class CafeRenderer extends CustomPainter {
       flowers,
       sign,
       ...framedArt,
+      letterAtlas,
     }) {
       if (image == null) continue;
       // Flutter 3.41.2 CanvasKit's CkImageShader.dispose() also disposes the
@@ -455,14 +482,16 @@ class CafeRenderer extends CustomPainter {
       // Native dart:ui borrows the image and keeps its own underlying reference.
       shaders[image] = ui.ImageShader(
         kIsWeb ? image.clone() : image,
-        image == sign ||
+        image == letterAtlas ||
+                image == sign ||
                 image == artwork ||
                 image == tree ||
                 image == flowers ||
                 framedArt.contains(image)
             ? TileMode.clamp
             : TileMode.repeated,
-        image == sign ||
+        image == letterAtlas ||
+                image == sign ||
                 image == artwork ||
                 image == tree ||
                 image == flowers ||
@@ -536,6 +565,7 @@ class CafeRenderer extends CustomPainter {
       canvas.clipPath(portal, doAntiAlias: false);
       CafeRenderer(
         world: world.linkedWorld,
+        letterAtlas: letterAtlas,
         camera: world.linkedCamera(camera),
         wood: wood,
         walnut: walnut,
@@ -602,6 +632,7 @@ class CafeRenderer extends CustomPainter {
 
   @override
   bool shouldRepaint(CafeRenderer oldDelegate) =>
+      oldDelegate.letterAtlas != letterAtlas ||
       oldDelegate.use != use ||
       oldDelegate.allowPortal != allowPortal ||
       oldDelegate.time != time ||

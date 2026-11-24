@@ -85,42 +85,60 @@ void main() {
     );
   });
 
-  testWidgets(
-    'Removed ambient assets cannot replay even with an old maximum mix',
-    (tester) async {
-      await tester.runAsync(() async {
-        final action = await rootBundle.load('assets/audio/cafe-touch.wav');
-        expect(action.lengthInBytes, greaterThan(44));
-        for (final name in ['rain', 'water', 'leaves', 'music']) {
-          await expectLater(
-            () => rootBundle.load('assets/audio/cafe-$name.wav'),
-            throwsA(isA<FlutterError>()),
-          );
-        }
-        final errors = <Object>[];
-        final output = createCafeSoundscape(errors.add);
-        final frame = CafeSoundFrame.at(
-          mix: const CafeAtmosphere(
-            volume: 1,
-            rain: 1,
-            water: 1,
-            leaves: 1,
-            music: 1,
-          ),
-          camera: const CafeCamera(position: CafePoint(-7.4, 1.62, 0)),
-          courtyard: true,
-          doorOpen: true,
-        );
-        for (var visit = 0; visit < 2; visit++) {
-          output.update(frame);
-          await output.start();
-          await output.stop();
-        }
-        await output.dispose();
-        expect(errors, isEmpty);
-      });
-    },
-  );
+  testWidgets('Old maximum mixes open no audio resources or ambient assets', (
+    tester,
+  ) async {
+    final calls = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMessageHandler(
+      'flutter/assets',
+      (_) async {
+        calls.add('asset');
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMessageHandler(
+        'flutter/assets',
+        null,
+      ),
+    );
+    const audioChannel = MethodChannel('xyz.luan/audioplayers');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      audioChannel,
+      (call) async {
+        calls.add(call.method);
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        audioChannel,
+        null,
+      ),
+    );
+    final errors = <Object>[];
+    final output = createCafeSoundscape(errors.add);
+    final frame = CafeSoundFrame.at(
+      mix: const CafeAtmosphere(
+        volume: 1,
+        rain: 1,
+        water: 1,
+        leaves: 1,
+        music: 1,
+      ),
+      camera: const CafeCamera(position: CafePoint(-7.4, 1.62, 0)),
+      courtyard: true,
+      doorOpen: true,
+    );
+    for (var visit = 0; visit < 2; visit++) {
+      output.update(frame);
+      await output.start();
+      await output.stop();
+    }
+    await output.dispose();
+    expect(errors, isEmpty);
+    expect(calls, isEmpty);
+  });
 
   testWidgets('Leaf shadows remain visible and move under a bright desk lamp', (
     tester,

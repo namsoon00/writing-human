@@ -3900,3 +3900,15 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   동작을 검사했다. 초기 테스트의 동기 자산 오류 처리 방식을 보완한 뒤 전부 재실행했다.
   `dart format --output=none --set-exit-if-changed lib test`와 `flutter analyze --no-pub`를
   실행하며 최종 공개 CI 및 HTTP 대조 결과는 아래에 남긴다.
+- 로컬 최종 format:196개 파일 변경 없음, analyze 문제 없음. 웹 빌드 통과.
+  빌드 JS/AssetManifest 및 실제 자산 폴더에서 네 WAV가 모두 빠진 것을 확인했다.
+  로컬 JS SHA256은 `c65cdb221764a615c4776d9b49ba7bfa9088bdd667134e6f8f467c9b4694f01a`다.
+- 기존 루트의 조명 편집 등 미발행 작업을 보존해 반영했다. 루트 인덱스 전후 동일 확인,
+  `flutter analyze --no-pub lib test tool hook` 문제 없음, 개별 물건 조작3개 통과.
+  실행 로그는 `output/cafe-silence-evidence-558c43a/`에 보관한다.
+- 첫 공개 검사45493155473은 새 음원 부재 테스트가 Chrome의 자산 로딩을 기다리며
+  정체됐다. 제품의 제거 코드가 아니라 테스트 방식의 문제로, 직접 누락 파일을 로드하는
+  대신 생산 output의 자산/플랫폼 호출0회를 검사하도록 바꿨다. 실제 번들 부재는 별도
+  release JS/AssetManifest/파일 검사로 확인한다. 수정한 Chrome 단일 검사1개 통과.
+  정체된 이번 검사만 교체하기 위해 다음 run의 concurrency 취소를 일시 허용하며,
+  최종 검증 기록 커밋에서 기존 cancel-in-progress:false를 복원한다.

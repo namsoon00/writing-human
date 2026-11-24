@@ -1,0 +1,56 @@
+{
+  "single_input_ms": 182.2000000178814,
+  "single_input_upper_bound_ms": 320,
+  "initial_offset_seconds": 0.6,
+  "resumed_offset_seconds": 0.7393197278911564,
+  "fast_inputs": 3,
+  "fast_input_sources": 1,
+  "fade_resume_sources": 1,
+  "starts": [
+    {
+      "wall": 1835.0999999940395,
+      "audio": 0.005804988662131519,
+      "offset": 0.6
+    },
+    {
+      "wall": 2188.699999988079,
+      "audio": 0.313469387755102,
+      "offset": 0.7393197278911564
+    },
+    {
+      "wall": 2541.199999988079,
+      "audio": 0.6675736961451247,
+      "offset": 0.925079365079365
+    },
+    {
+      "wall": 3039.5,
+      "audio": 1.1668027210884353,
+      "offset": 1.2501587301587302
+    },
+    {
+      "wall": 3538.0999999940395,
+      "audio": 1.666031746031746,
+      "offset": 1.5752380952380953
+    }
+  ],
+  "stops": [
+    {
+      "wall": 2017.300000011921,
+      "audio": 0.14512471655328799
+    },
+    {
+      "wall": 2369.199999988079,
+      "audio": 0.4992290249433107
+    },
+    {
+      "wall": 2868.0999999940395,
+      "audio": 0.9926530612244898
+    },
+    {
+      "wall": 3365,
+      "audio": 1.4918820861678004
+    }
+  ],
+  "after_close": "closed",
+  "scope": "Actual compiled Dart controller and web output with a trusted CDP key event. Not production app UI or physical-device listening."
+}

@@ -6,14 +6,16 @@ import 'paper_sound_effect.dart';
 import 'writing_sound_native.dart'
     if (dart.library.js_interop) 'writing_sound_web.dart';
 
-/// Keep one writing rhythm active across brief pauses, or play page samples.
+/// Gate one pencil source to current input, or play page-turn samples.
 class PaperSound {
-  PaperSound.writing() : this._(PaperSoundEffect.writingRhythm);
+  PaperSound.writing({PaperSoundPlayback? playback})
+    : this._(PaperSoundEffect.writingRhythm, playback: playback);
   PaperSound.pageTurn() : this._(PaperSoundEffect.pageTurn);
-  PaperSound._(this._effect) : _output = PaperSoundOutput(_effect);
+  PaperSound._(this._effect, {PaperSoundPlayback? playback})
+    : _output = playback ?? PaperSoundOutput(_effect);
 
   final PaperSoundEffect _effect;
-  final PaperSoundOutput _output;
+  final PaperSoundPlayback _output;
   PaperSoundRequest? _pending;
   Timer? _timer;
   bool _closed = false;

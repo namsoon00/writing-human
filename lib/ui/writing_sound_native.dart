@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import 'paper_sound_effect.dart';
 
-class PaperSoundOutput {
+class PaperSoundOutput implements PaperSoundPlayback {
   PaperSoundOutput(this.effect)
     : _rhythm = effect.loops ? _NativeRhythm(effect) : null {
     if (_rhythm == null) _pool = _preload();
@@ -32,6 +32,7 @@ class PaperSoundOutput {
     }
   }
 
+  @override
   void play(PaperSoundRequest request) {
     if (_closed) return;
     final rhythm = _rhythm;
@@ -64,8 +65,10 @@ class PaperSoundOutput {
     }
   }
 
+  @override
   void pause() => _rhythm?.pause();
 
+  @override
   Future<void> dispose() async {
     _closed = true;
     final rhythm = _rhythm;
@@ -109,6 +112,7 @@ class _NativeRhythm {
       await player.setAudioContext(_audioContext());
       await player.setReleaseMode(ReleaseMode.loop);
       await player.setSource(AssetSource(effect.asset));
+      await player.seek(writingPencilLeadIn);
       return player;
     } catch (error) {
       if (!_closed) debugPrint('Could not prepare writing rhythm: $error');
@@ -143,10 +147,11 @@ class _NativeRhythm {
       if (_playing) {
         await _ramp(player, effect.volume, writingRhythmResumeFade, revision);
       } else {
-        await _setVolume(player, effect.volume);
+        await _setVolume(player, 0);
         if (revision != _revision) return;
         await player.resume();
         _playing = true;
+        await _ramp(player, effect.volume, writingRhythmResumeFade, revision);
       }
     });
   }
@@ -161,7 +166,8 @@ class _NativeRhythm {
       if (player == null || !_playing || revision != _revision) return;
       await _ramp(player, 0, writingRhythmFade, revision);
       if (revision != _revision) return;
-      await player.stop();
+      // Pause retains the recording position between short writing gestures.
+      await player.pause();
       _playing = false;
     });
   }

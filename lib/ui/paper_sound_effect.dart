@@ -1,8 +1,9 @@
 const _requestLifetime = Duration(milliseconds: 240);
-const writingRhythmIdle = Duration(seconds: 3);
-const writingRhythmFade = Duration(milliseconds: 850);
-const writingRhythmExitFade = Duration(milliseconds: 320);
-const writingRhythmResumeFade = Duration(milliseconds: 280);
+const writingPencilLeadIn = Duration(milliseconds: 600);
+const writingRhythmIdle = Duration(milliseconds: 120);
+const writingRhythmFade = Duration(milliseconds: 60);
+const writingRhythmExitFade = Duration(milliseconds: 60);
+const writingRhythmResumeFade = Duration(milliseconds: 25);
 
 enum PaperSoundEffect {
   writingRhythm('pencil-on-paper-original.wav', 1, Duration.zero),
@@ -25,4 +26,11 @@ class PaperSoundRequest {
   final Stopwatch _age;
 
   bool get canPlay => _age.elapsed < _requestLifetime && isCurrent();
+}
+
+/// A shared playback boundary lets activity timing be tested without a device.
+abstract interface class PaperSoundPlayback {
+  void play(PaperSoundRequest request);
+  void pause();
+  Future<void> dispose();
 }

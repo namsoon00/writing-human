@@ -15,6 +15,25 @@ TextEditingValue input(
   composing: range,
 );
 
+class _Playback implements PaperSoundPlayback {
+  int plays = 0, pauses = 0, closes = 0;
+
+  @override
+  void play(PaperSoundRequest request) {
+    if (request.canPlay) plays++;
+  }
+
+  @override
+  void pause() {
+    pauses++;
+  }
+
+  @override
+  Future<void> dispose() async {
+    closes++;
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -53,9 +72,61 @@ void main() {
       expect(wav.getUint16(22, .little), 1);
       expect(wav.getUint32(24, .little), 44100);
       expect(wav.getUint16(34, .little), 16);
+      // A short gesture must reach an actual pencil stroke, not the quiet lead-in.
+      final firstSample = writingPencilLeadIn.inMicroseconds * 44100 ~/ 1000000;
+      final sampleCount = writingRhythmIdle.inMicroseconds * 44100 ~/ 1000000;
+      var energy = 0.0;
+      for (var i = firstSample; i < firstSample + sampleCount; i++) {
+        final value = wav.getInt16(44 + i * 2, .little) / 32768;
+        energy += value * value;
+      }
+      expect(energy / sampleCount, greaterThan(.0001));
       expect(effect.loops, isTrue);
       expect(effect.volume, 1);
       expect(PaperSoundEffect.pageTurn.loops, isFalse);
+    },
+  );
+
+  testWidgets(
+    'One letter ends its writing activity within 120ms, without a later replay',
+    (tester) async {
+      final playback = _Playback();
+      final sound = PaperSound.writing(playback: playback);
+      sound.play(() => true);
+      expect(playback.plays, 1);
+      await tester.pump(const Duration(milliseconds: 119));
+      expect(playback.pauses, 0);
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(playback.pauses, 1);
+      await tester.pump(const Duration(seconds: 4));
+      expect(playback.plays, 1);
+      expect(playback.pauses, 1);
+      await sound.dispose();
+      expect(playback.closes, 1);
+    },
+  );
+
+  testWidgets(
+    'Only actual new input extends the short gesture; exit cancels it',
+    (tester) async {
+      final playback = _Playback();
+      final sound = PaperSound.writing(playback: playback);
+      sound.play(() => false);
+      expect(playback.plays, 0);
+      sound.play(() => true);
+      await tester.pump(const Duration(milliseconds: 80));
+      sound.play(() => true);
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(playback.pauses, 0);
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(playback.plays, 2);
+      expect(playback.pauses, 1);
+      sound.play(() => true);
+      await sound.dispose();
+      await tester.pump(const Duration(seconds: 4));
+      expect(playback.plays, 3);
+      expect(playback.pauses, 1);
+      expect(playback.closes, 1);
     },
   );
 

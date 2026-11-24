@@ -7,7 +7,7 @@ import 'package:web/web.dart' as web;
 
 import 'paper_sound_effect.dart';
 
-class PaperSoundOutput {
+class PaperSoundOutput implements PaperSoundPlayback {
   PaperSoundOutput(this.effect) {
     _bytes = _readAsset();
     for (final event in _activationEvents) {
@@ -39,6 +39,8 @@ class PaperSoundOutput {
   web.AudioBufferSourceNode? _rhythm;
   Timer? _fadeStop;
   bool _resuming = false, _closed = false;
+  double _offset = writingPencilLeadIn.inMicroseconds / 1000000;
+  double _startedAt = 0;
   PaperSoundRequest? _pending;
 
   Future<ByteData?> _readAsset() async {
@@ -101,6 +103,7 @@ class PaperSoundOutput {
     }
   }
 
+  @override
   void play(PaperSoundRequest request) {
     if (_closed) return;
     if (_rhythm != null) {
@@ -132,15 +135,22 @@ class PaperSoundOutput {
       source.buffer = buffer;
       if (effect.loops) {
         source.loop = true;
-        _gain!.gain.value = effect.volume;
+        _gain!.gain.cancelScheduledValues(context.currentTime);
+        _gain!.gain.setValueAtTime(0, context.currentTime);
       }
       source.connect(_gain!);
       source.onended = ((web.Event _) {
         source.disconnect();
         if (_rhythm == source) _rhythm = null;
       }).toJS;
-      source.start();
-      if (effect.loops) _rhythm = source;
+      if (effect.loops) {
+        _startedAt = context.currentTime;
+        source.start(0, _offset);
+        _rhythm = source;
+        _rampRhythm(effect.volume, writingRhythmResumeFade);
+      } else {
+        source.start();
+      }
     } catch (error) {
       debugPrint('Paper sound unavailable: $error');
     }
@@ -157,6 +167,7 @@ class PaperSoundOutput {
     gain.linearRampToValueAtTime(volume, at + duration.inMilliseconds / 1000);
   }
 
+  @override
   void pause() {
     _pending = null;
     final source = _rhythm;
@@ -164,11 +175,18 @@ class PaperSoundOutput {
     _rampRhythm(0, writingRhythmFade);
     _fadeStop = Timer(writingRhythmFade, () {
       _fadeStop = null;
+      final context = _context;
+      final buffer = _buffer;
+      if (context != null && buffer != null) {
+        _offset =
+            (_offset + context.currentTime - _startedAt) % buffer.duration;
+      }
       _rhythm = null;
       source.stop();
     });
   }
 
+  @override
   Future<void> dispose() async {
     _closed = true;
     _pending = null;

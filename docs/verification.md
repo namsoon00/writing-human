@@ -3413,3 +3413,42 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   공개 파일 배포 확인이며 공개 페이지 UI 직접 조작·실제 iPhone/Android 검증은 아니다.
   필사 기록/공간 설정의 저장 키나 초기화 정책을 바꾸지 않았고 공유 작업공간의 다른
   미완성 변경은 배포하지 않았다. 기존 비공개 Sites 식별자/접근 범위도 그대로다.
+
+
+## 2026-11-24 · 카페 개별 아이템 구현
+
+- 공유 작업공간의 다른 변경을 포함하지 않은 분리 작업공간에서 Flutter/Dart 카페와
+  공간 저장만 수정했다. 중앙·창가·안쪽 가구/소품, 서가의 세워 둔 책 34권과 책 묶음,
+  카운터 물건과 잔, 펜던트/벽등, 정원 나무/꽃을 독립 선택·배치/상태 대상으로 연결했다.
+  건축 구조와 벤치, 물건 내부의 다리·잎 같은 부품은 독립 꾸미기 항목이 아니다.
+- `dart format --output=none --set-exit-if-changed lib test
+  tool/capture_preview_test.dart tool/capture_cafe_items_test.dart` 변경 0,
+  최종 `flutter analyze --no-pub` 문제 0. 네이티브 44개 파일 전체를 8개 이하의 여섯 묶음,
+  `flutter test --no-pub --concurrency=2 <files>`로 실행해 298개를 모두 통과했다.
+  처음의 단일 전체 실행은 디스크 공간 부족으로 중단됐으며 통과로 집계하지 않았다.
+  중단한 실행의 남은 프로세스와 재생성 가능한 빌드 중간 파일을 정리한 뒤 재실행했다.
+- 새 검사는 v1 이행/필수 필드 손상 거부, 형제 물건의 상태 독립성, 책상과 자손 이동,
+  의자 위치/방향의 실제 앉기·일어서기, 조상 회전 뒤 배치 역변환, 상판 끝·겹침과
+  출입 경로, 개별 등 광량, 정원 식재의 입체 메시/배치 제한을 확인한다. 실제 ray hit로
+  잔 하나만 바꾸고 편집·저장·선택 초기화/취소가 다른 물건을 바꾸지 않는지 확인했다.
+- 기존 실제 SQLite 파일 재열기/계정 범위 분리/쓰기 실패/원본 필사 보존 검사에 새
+  인스턴스 맵을 추가해 통과했다. 새 지지 범위에 걸리는 이전 배치를 그대로 불러와
+  사용자가 고칠 수 있는지도 검사했다. 메모리 위젯 테스트를 디스크 검증으로 부르지 않는다.
+- Chrome은 `cafe_image_lifetime_test`, `cafe_space_web_test`, `cafe_watercolor_test`,
+  `cafe_entry_test`, `cafe_items_test`의 12개를 통과했다. 실제 localStorage 새 인스턴스
+  복원·범위 분리·손상 보존, 이미지 수명/안료 좌표, 출입문 깨짐 회귀와 새 아이템의
+  변환/상태 검사를 포함한다. 서버 CI에도 추가했다. 설치형/웹 저장 키와 Library/백업
+  구조, 기존 hosting project_id/비공개 범위는 유지했다.
+- `flutter test --no-pub tool/capture_cafe_items_test.dart`로 12개 고정 시점을 캡처했다.
+  재질/원화 13개가 모두 로드되고 살아 있는지 검사한 뒤 캡처하고 정원 방문도 확인한다.
+  [잔](../design/cafe/20261124/individual-items/cup-close.jpg),
+  [종이와 연필](../design/cafe/20261124/individual-items/note-close.jpg),
+  [개별 편집](../design/cafe/20261124/individual-items/cup-controls-phone.jpg),
+  [정원](../design/cafe/20261124/individual-items/garden.jpg)과
+  [캡처/검사 메타데이터](../design/cafe/20261124/individual-items/verification.json)를 남겼다.
+  근접 컵/꽃 검수 카메라는 고정 검수 시점이며 모두 일반 보행 도착점이라는 뜻은 아니다.
+- 배포용 `node tool/build_github_pages.mjs` release 빌드가 성공했다. 평균 깊이 정렬
+  렌더러를 교체하지 않았으므로 모든 물건/각도의 가림 오차나 실제 광학 표현을 보장하지
+  않는다. 공개 페이지 UI 직접 조작과 실제 iPhone/Android의 터치·FPS·발열·오디오는
+  미검증이다. 기기 간 공간 동기화나 모든 물체의 별도 수작업 모델 파일 제작도 이번
+  결과에 포함하지 않는다. 공개 파일 배포 확인은 별도 기록한다.

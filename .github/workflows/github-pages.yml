@@ -27,13 +27,13 @@ jobs:
       - name: Install SQLite test library
         run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
       - run: flutter pub get
-      - run: dart format --output=none --set-exit-if-changed lib test tool/capture_preview_test.dart
+      - run: dart format --output=none --set-exit-if-changed lib test tool/capture_preview_test.dart tool/capture_cafe_items_test.dart
       - run: flutter analyze --no-pub
-      - run: flutter test --no-pub
+      - run: flutter test --no-pub --concurrency=2
       - name: Check the single narration voice DSP in Chrome
         run: node tool/test_narration_web.mjs
       - name: Check cafe image lifetime and room persistence in Chrome
-        run: flutter test --no-pub --platform chrome test/cafe_image_lifetime_test.dart test/cafe_space_web_test.dart test/cafe_watercolor_test.dart test/cafe_entry_test.dart
+        run: flutter test --no-pub --platform chrome test/cafe_image_lifetime_test.dart test/cafe_space_web_test.dart test/cafe_watercolor_test.dart test/cafe_entry_test.dart test/cafe_items_test.dart
       - name: Build Flutter preview
         run: node tool/build_github_pages.mjs
       - uses: actions/upload-pages-artifact@v4

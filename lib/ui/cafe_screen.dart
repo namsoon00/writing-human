@@ -107,7 +107,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  double? brightnessPreview;
+  double? brightnessPreview, itemLightPreview;
   bool roomSaveFailed = false;
   bool roomLoading = false,
       roomLoadFailed = false,
@@ -126,8 +126,15 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     try {
       final value = await widget.spaceStore!.load();
       if (!mounted) return;
-      if (view.applySpace(value) != null) {
-        throw const FormatException('Invalid room layout');
+      // Schema and storage errors still fail the load. Preserve a prior valid
+      // saved arrangement if newer item footprints require a small adjustment.
+      view.applySpace(value, validate: false);
+      final layoutError =
+          view.world.validateLayout() ??
+          view.world.linkedWorld.validateLayout();
+      if (layoutError != null) {
+        roomError =
+            '\uC800\uC7A5\uD55C \uBC30\uCE58\uB97C \uBD88\uB7EC\uC654\uC5B4\uC694. \uAFB8\uBBF8\uAE30\uC5D0\uC11C \uC0C1\uD310 \uB05D\uACFC \uD1B5\uB85C\uB97C \uD655\uC778\uD574 \uC8FC\uC138\uC694.';
       }
       savedRoom = value;
       bookId = widget.books.any((b) => b.id == value.selectedBookId)
@@ -191,6 +198,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
           ? null
           : '\uADF8\uACF3\uC5D0\uB294 \uB193\uC744 \uC218 \uC5C6\uC5B4\uC694. \uBB38 \uC55E\uACFC \uD1B5\uB85C\uB97C \uBE44\uC6CC \uC8FC\uC138\uC694.';
       placing = false;
+      itemLightPreview = null;
     });
   }
 
@@ -199,10 +207,12 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     if (view.seat != null) {
       final point = view.world.targetApproach(CafeTarget.forSeat(view.seat!));
       view.seat = null;
+      view.activeChairId = null;
       view.updateCamera(
         CafeCamera(position: point, yaw: view.camera.yaw, pitch: -.12),
       );
     }
+    view.resting = false;
     view.look(0, 0);
     setState(() {
       editing = true;
@@ -213,6 +223,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
 
   Future<void> _finishRoom() async {
     if (await _saveRoom() && mounted) {
+      view.look(0, 0);
       setState(() {
         editing = false;
         placing = false;
@@ -223,6 +234,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
 
   void _discardRoom() {
     view.applySpace(savedRoom, validate: false);
+    view.look(0, 0);
     setState(() {
       editing = false;
       placing = false;
@@ -274,45 +286,140 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     }
   }
 
+  void _focusRoomObject(String id) {
+    final object = view.world.objects[id];
+    if (object == null) return;
+    final p = object.pivot;
+    final direction = (view.camera.position - p);
+    final yaw = math.atan2(direction.x, direction.z);
+    for (final distance in [.70, 1.0, 1.4, 1.8]) {
+      for (final turn in [0.0, math.pi / 2, -math.pi / 2, math.pi]) {
+        final eye = CafePoint(
+          p.x + math.sin(yaw + turn) * distance,
+          1.62,
+          p.z + math.cos(yaw + turn) * distance,
+        );
+        if (!view.world.canStand(eye)) continue;
+        view.updateCamera(
+          CafeCamera(
+            position: eye,
+            yaw: math.atan2(p.x - eye.x, eye.z - p.z),
+            pitch:
+                (math.atan2(
+                          p.y +
+                              switch (object.type) {
+                                CafeItemType.chair => .55,
+                                CafeItemType.table || CafeItemType.group => .76,
+                                CafeItemType.plant
+                                    when object.kind == CafeObjectKind.garden =>
+                                  object.id.startsWith('garden.tree')
+                                      ? 1.1
+                                      : .25,
+                                _ => .08,
+                              } -
+                              eye.y,
+                          distance,
+                        ) -
+                        .30)
+                    .clamp(-1.15, .4),
+          ),
+        );
+        return;
+      }
+    }
+  }
+
   Future<void> _chooseRoomObject() async {
+    var category = '전체';
     final chosen = await showDialog<String>(
       context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('\uAFB8\uBC00 \uBB3C\uAC74'),
-        children: [
-          for (final obj in view.world.objects.values)
-            SimpleDialogOption(
-              key: ValueKey('room-object-${obj.id}'),
-              onPressed: () => Navigator.pop(context, obj.id),
-              child: Text(obj.label),
+      builder: (context) => StatefulBuilder(
+        builder: (context, update) => SimpleDialog(
+          title: const Text('꾸밀 물건'),
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Wrap(
+                spacing: 4,
+                children: [
+                  for (final label in ['전체', '가구', '소품', '책', '조명', '식물', '그림'])
+                    ChoiceChip(
+                      label: Text(label),
+                      selected: category == label,
+                      onSelected: (_) => update(() => category = label),
+                    ),
+                ],
+              ),
             ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('\uB2EB\uAE30'),
-          ),
-        ],
+            for (final obj in view.world.objects.values.where(
+              (o) => category == '전체' || o.type.category == category,
+            ))
+              SimpleDialogOption(
+                key: ValueKey('room-object-${obj.id}'),
+                onPressed: () => Navigator.pop(context, obj.id),
+                child: Text(obj.label),
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('닫기'),
+            ),
+          ],
+        ),
       ),
     );
     if (chosen != null && mounted) {
-      final object = view.world.objects[chosen];
-      if (object?.kind == CafeObjectKind.frame) {
-        final p = object!.pivot;
-        final eye = CafePoint(p.x, 1.62, p.z + (p.z > 0 ? -1.6 : 1.6));
-        if (view.world.canStand(eye)) {
-          view.updateCamera(
-            CafeCamera(
-              position: eye,
-              yaw: p.z > 0 ? math.pi : 0,
-              pitch: math.atan2(p.y - eye.y, 1.6),
-            ),
-          );
-        }
+      if (view.world.objects[chosen]?.kind == CafeObjectKind.frame) {
+        _focusRoomObject(chosen);
       }
       setState(() {
         selectedObject = chosen;
         placing = false;
       });
     }
+  }
+
+  bool _activateItem(String id) {
+    if (editing ||
+        roomLoading ||
+        roomSaving ||
+        opening ||
+        dialogOpen ||
+        widget.saveFailed ||
+        view.travelling ||
+        roomLoadFailed) {
+      return true;
+    }
+    final object = view.world.objects[id];
+    if (object == null) return false;
+    if (object.type == CafeItemType.chair) {
+      if (view.activeChairId == id && view.seat != null) {
+        _write();
+        return true;
+      }
+      if (!view.visitChair(id)) setState(() => calmHint = '의자 뒤의 통로를 비워 주세요.');
+      return true;
+    }
+    if ((object.pivot - view.camera.position).length > 2.0) return false;
+    final isNote = object.type == CafeItemType.notebook;
+    final current = view.space.state(
+      id,
+      fallback: id == 'shared.book'
+          ? view.space.bookOpen
+          : id == 'shared.cup'
+          ? view.space.cupFull
+          : object.defaultState,
+    );
+    if (object.type == CafeItemType.cup ||
+        object.type == CafeItemType.lamp ||
+        (isNote && !current)) {
+      if (view.applySpace(view.space.withState(id, !current)) != null) {
+        setState(() => calmHint = '꾸미기에서 물건의 위치를 확인해 주세요.');
+        return true;
+      }
+      unawaited(_saveRoom());
+      return true;
+    }
+    return false;
   }
 
   Widget _roomControls() {
@@ -336,6 +443,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
           children: [
             for (var i = 0; i < names.length; i++)
               ChoiceChip(
+                key: ValueKey('room-option-${object?.id}-$label-$i'),
                 label: Text(names[i]),
                 selected: value == i,
                 onSelected: roomSaving ? null : (_) => changed(i),
@@ -503,50 +611,147 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                       ),
                     ),
                   ],
-                  if (object?.id == 'shared.book')
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text(
-                        '\uB178\uD2B8 \uD3BC\uCCD0 \uB450\uAE30',
+                  if (object != null) ...[
+                    action(
+                      '가까이 보기',
+                      roomSaving ? null : () => _focusRoomObject(object.id),
+                      key: 'room-inspect',
+                    ),
+                    if ([
+                      CafeItemType.cup,
+                      CafeItemType.notebook,
+                      CafeItemType.pencil,
+                      CafeItemType.vase,
+                      CafeItemType.plant,
+                      CafeItemType.table,
+                      CafeItemType.chair,
+                      CafeItemType.volume,
+                      CafeItemType.cloth,
+                      CafeItemType.stack,
+                    ].contains(object.type))
+                      options(
+                        switch (object.type) {
+                          CafeItemType.table || CafeItemType.chair => '원목',
+                          CafeItemType.notebook || CafeItemType.volume => '표지',
+                          CafeItemType.pencil => '연필',
+                          CafeItemType.plant =>
+                            object.id.startsWith('garden.tree')
+                                ? '잎'
+                                : object.id.startsWith('garden.flowers')
+                                ? '꽃'
+                                : '화분',
+                          CafeItemType.cloth => '천',
+                          _ => '색',
+                        },
+                        space.finish(
+                          object.id,
+                          fallback: object.type == CafeItemType.cup
+                              ? space.mug
+                              : object.type == CafeItemType.plant &&
+                                    object.id.startsWith('plant.')
+                              ? space.pot
+                              : object.defaultFinish,
+                        ),
+                        switch (object.type) {
+                          CafeItemType.table => ['오크', '월넛'],
+                          CafeItemType.chair => ['월넛', '오크', '먹갈색'],
+                          CafeItemType.pencil => ['원목', '먹갈색', '올리브'],
+                          CafeItemType.plant
+                              when object.id.startsWith('garden.tree') =>
+                            ['올리브', '연녹', '회녹'],
+                          CafeItemType.plant
+                              when object.id.startsWith('garden.flowers') =>
+                            ['미색', '분홍', '연노랑'],
+                          CafeItemType.plant => ['토분', '올리브', '미색'],
+                          CafeItemType.notebook ||
+                          CafeItemType.volume => ['올리브', '흙빛', '회녹색'],
+                          _ => ['미색', '흙빛', '올리브'],
+                        },
+                        (v) => _changeRoom(space.withFinish(object.id, v)),
                       ),
-                      value: space.bookOpen,
-                      onChanged: roomSaving
+                    if ([
+                      CafeItemType.cup,
+                      CafeItemType.vase,
+                      CafeItemType.chair,
+                    ].contains(object.type))
+                      options(
+                        object.type == CafeItemType.cup
+                            ? '담을 차'
+                            : object.type == CafeItemType.vase
+                            ? '잎의 색'
+                            : '방석',
+                        space.accent(
+                          object.id,
+                          fallback: object.type == CafeItemType.chair
+                              ? space.cushion
+                              : 0,
+                        ),
+                        object.type == CafeItemType.cup
+                            ? ['홍차', '커피', '연한 차']
+                            : ['올리브', '흙빛', '미색'],
+                        (v) => _changeRoom(space.withAccent(object.id, v)),
+                      ),
+                    if ([
+                      CafeItemType.cup,
+                      CafeItemType.notebook,
+                      CafeItemType.vase,
+                      CafeItemType.chair,
+                      CafeItemType.volume,
+                      CafeItemType.lamp,
+                    ].contains(object.type))
+                      SwitchListTile(
+                        key: const ValueKey('room-item-state'),
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(switch (object.type) {
+                          CafeItemType.cup => '잔 채워 두기',
+                          CafeItemType.notebook => '노트 펼쳐 두기',
+                          CafeItemType.vase => '가지 꽂아 두기',
+                          CafeItemType.chair => '방석 놓기',
+                          CafeItemType.volume => '표지 보이게 두기',
+                          _ => '불 켜 두기',
+                        }),
+                        value: space.state(
+                          object.id,
+                          fallback: object.id == 'shared.book'
+                              ? space.bookOpen
+                              : object.id == 'shared.cup'
+                              ? space.cupFull
+                              : object.defaultState,
+                        ),
+                        onChanged: roomSaving
+                            ? null
+                            : (v) => _changeRoom(space.withState(object.id, v)),
+                      ),
+                    if (object.type == CafeItemType.lamp) ...[
+                      const Text('이 조명의 밝기'),
+                      Slider(
+                        key: const ValueKey('room-item-light'),
+                        value: itemLightPreview ?? space.lights[object.id] ?? 1,
+                        min: .2,
+                        max: 1.25,
+                        divisions: 7,
+                        onChanged: roomSaving
+                            ? null
+                            : (v) => setState(() => itemLightPreview = v),
+                        onChangeEnd: roomSaving
+                            ? null
+                            : (v) {
+                                itemLightPreview = null;
+                                _changeRoom(space.withLight(object.id, v));
+                              },
+                      ),
+                    ],
+                    action(
+                      '이 물건만 처음처럼',
+                      roomSaving
                           ? null
-                          : (v) => _changeRoom(space.copy(bookOpen: v)),
-                    ),
-                  if (object?.id == 'shared.cup') ...[
-                    options(
-                      '\uCC3B\uC794',
-                      space.mug,
-                      ['\uBBF8\uC0C9', '\uD759\uBE5B', '\uC62C\uB9AC\uBE0C'],
-                      (v) => _changeRoom(space.copy(mug: v)),
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('\uCC28\uAC00 \uB2F4\uAE34 \uC794'),
-                      value: space.cupFull,
-                      onChanged: roomSaving
-                          ? null
-                          : (v) => _changeRoom(space.copy(cupFull: v)),
+                          : () => _changeRoom(space.resetItem(object.id)),
+                      key: 'room-reset-item',
                     ),
                   ],
-                  if (object?.kind == CafeObjectKind.floor &&
-                      !object!.id.startsWith('plant.'))
-                    options(
-                      '\uBC29\uC11D',
-                      space.cushion,
-                      ['\uC62C\uB9AC\uBE0C', '\uD759\uBE5B', '\uBBF8\uC0C9'],
-                      (v) => _changeRoom(space.copy(cushion: v)),
-                    ),
-                  if (object?.id.startsWith('plant.') == true)
-                    options(
-                      '\uD654\uBD84 \uC0C9',
-                      space.pot,
-                      ['\uD1A0\uBD84', '\uC62C\uB9AC\uBE0C', '\uBBF8\uC0C9'],
-                      (v) => _changeRoom(space.copy(pot: v)),
-                    ),
                   if (object == null ||
-                      object.kind == CafeObjectKind.light) ...[
+                      object.type == CafeItemType.group ||
+                      object.id == 'garden.door') ...[
                     const Text('\uC2E4\uB0B4 \uC870\uBA85 \uBC1D\uAE30'),
                     Slider(
                       key: const ValueKey('room-brightness'),
@@ -585,7 +790,8 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                           : (v) => _changeRoom(space.copy(doorOpen: v)),
                     ),
                   ],
-                  if (view.inCourtyard)
+                  if (view.inCourtyard &&
+                      (object == null || object.type == CafeItemType.group))
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text(
@@ -594,7 +800,8 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                       value: space.gardenTea,
                       onChanged: roomSaving
                           ? null
-                          : (v) => _changeRoom(space.copy(gardenTea: v)),
+                          : (v) =>
+                                _changeRoom(space.withState('garden.cup', v)),
                     ),
                   Wrap(
                     children: [
@@ -689,7 +896,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
           view.ring();
         } else {
           view.pourTea();
-          view.applySpace(view.space.copy(gardenTea: true));
+          view.applySpace(view.space.withState('garden.cup', true));
           unawaited(_saveRoom());
         }
         setState(() => calmHint = bell ? '종소리가 천천히 잦아들어요.' : '따뜻한 차를 놓아 두었어요.');
@@ -722,7 +929,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     if (target == CafeTarget.shared &&
         view.seat == CafeSeat.shared &&
         !view.space.bookOpen) {
-      view.applySpace(view.space.copy(bookOpen: true));
+      view.applySpace(view.space.withState('shared.book', true));
       unawaited(_saveRoom());
       return;
     }
@@ -984,6 +1191,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                 _changeRoom(view.world.placed(selectedObject!, point));
               }
             },
+            onItemActivated: _activateItem,
             onTargetSelected: _activate,
             onWrite: _write,
           ),

@@ -1,0 +1,152 @@
+{
+  "kind": "Actual Flutter test fixture rendering, not generated concept or browser/device capture",
+  "created_at": "2026-11-24T00:40:37.456990+00:00",
+  "base_commit": "c0e04e73082aa4bb233351a9acf73286e4738343",
+  "materials_loaded_and_alive": 13,
+  "native": {
+    "passed": 298,
+    "files": 44,
+    "batches": 6,
+    "concurrency": 2
+  },
+  "chrome": {
+    "passed": 12,
+    "files": [
+      "cafe_image_lifetime_test",
+      "cafe_space_web_test",
+      "cafe_watercolor_test",
+      "cafe_entry_test",
+      "cafe_items_test"
+    ]
+  },
+  "capture": {
+    "tests": 1,
+    "views": 12,
+    "command": "flutter test --no-pub tool/capture_cafe_items_test.dart",
+    "limitations": "Fixed fixture cameras; cup/note/flower closeups are inspection views, not every camera is a standing navigation destination. No real iPhone/Android touch, FPS, heat or audio verification."
+  },
+  "screenshots": [
+    {
+      "file": "entrance-wide.jpg",
+      "source_png_sha256": "a27aac1d3d810f73807c1b4d2efa20d4c40e91094ac36af185716a1594f19ee6",
+      "source_pixels": [
+        2400,
+        1600
+      ],
+      "export_pixels": [
+        1280,
+        853
+      ],
+      "sha256": "bd2b10898ee11edb47921fe895101014c27b07d7da7216960b43a47c6757ff6b"
+    },
+    {
+      "file": "central-items.jpg",
+      "source_png_sha256": "5546597c9ced82d234b0d5d71938d1917b73884c8108b4e367d4cc6f3ee07706",
+      "source_pixels": [
+        2400,
+        1600
+      ],
+      "export_pixels": [
+        1280,
+        853
+      ],
+      "sha256": "412f9fbffaac2d271a7ebe61b97d16a5804774d5024ca39cff5681946c736a37"
+    },
+    {
+      "file": "cup-close.jpg",
+      "source_png_sha256": "994c382584d2ee4bec7cbf550242e318ba90b1e463915e88ea425cbbbd6f2331",
+      "source_pixels": [
+        2400,
+        1600
+      ],
+      "export_pixels": [
+        1280,
+        853
+      ],
+      "sha256": "19b94bdcb10460be0185f3ba5b87610dbe510ab2029715e0946e2cdcac00df1b"
+    },
+    {
+      "file": "note-close.jpg",
+      "source_png_sha256": "3a9fb855c1acde358bea2a9bde7877d3b175b98afc706426a2d81b45facb3aa9",
+      "source_pixels": [
+        2400,
+        1600
+      ],
+      "export_pixels": [
+        1280,
+        853
+      ],
+      "sha256": "2c259217050cd8e4694060a702ea53f52fa0d195d1e93c3809255f2e5ec5d782"
+    },
+    {
+      "file": "counter.jpg",
+      "source_png_sha256": "27bece9bb3155644addb2bef0094876ad2919c961f78bf889f322bed849e33d4",
+      "source_pixels": [
+        2400,
+        1600
+      ],
+      "export_pixels": [
+        1280,
+        853
+      ],
+      "sha256": "b610e3c23ede3701d05f8cb6fc6541aacb52f08ff40a76bb369de97b4141ef6b"
+    },
+    {
+      "file": "cup-controls-phone.jpg",
+      "source_png_sha256": "ebd99e1d3ac4258722f1df497a3a886329392bf24304339938b499ba1ec725e1",
+      "source_pixels": [
+        780,
+        1688
+      ],
+      "export_pixels": [
+        591,
+        1280
+      ],
+      "sha256": "47743a379ff91c454ede34d3682fc9f7138a69abc4904085e368657992482989"
+    },
+    {
+      "file": "garden.jpg",
+      "source_png_sha256": "7f3350ccfa81b18a8af535ae640cf06138ebd29ff6c8c6dad4ad902c904a730a",
+      "source_pixels": [
+        2400,
+        1600
+      ],
+      "export_pixels": [
+        1280,
+        853
+      ],
+      "sha256": "48f49da060d852887d8ce32943473f2dfdbd6c215e0b659e5aeb674819e69f76"
+    },
+    {
+      "file": "flowers-close.jpg",
+      "source_png_sha256": "a11f670a363004938007835b179e2ab06d0accd740197fe2e6e82c52d05ed030",
+      "source_pixels": [
+        2400,
+        1600
+      ],
+      "export_pixels": [
+        1280,
+        853
+      ],
+      "sha256": "2f0a10cc4a1345b00b0d9f8743d294791216d84a80c9ca6cfeaecdf864579a18"
+    }
+  ],
+  "source_sha256": {
+    "lib/cafe/cafe_courtyard.dart": "abf0081c7d35739ab70399386263a1cb458a8865e744af3be4bfa6292eed985e",
+    "lib/cafe/cafe_interior.dart": "12b22fcbb62b080a0bc4cb5689c33f4c2cc4fbcf0f39e5689bf909f58cd3c9e3",
+    "lib/cafe/cafe_items.dart": "7e234fa135f218d35dfc9d888e91dc7525cc6a3d9f447170f36adffee6ba5ae9",
+    "lib/cafe/cafe_objects.dart": "614f86d431998013f430116739de9df54269bb514b409cbc55991ffe75757f6f",
+    "lib/cafe/cafe_renderer.dart": "210dc69a3784d50cd522a95c370b730c715525313d6c6282cc85b9afb701c56d",
+    "lib/cafe/cafe_space.dart": "b77d1eff5e8b37d3f8a3f8c4d26de58de826db815b62796271452257b78206f6",
+    "lib/cafe/cafe_view_controller.dart": "f3fe8994feddb6662d21116571d38c66d051875fa854a2d163ccdda0b1344e13",
+    "lib/cafe/cafe_world.dart": "b5272e9dece1fef95d1cf9dba2e7fbea82d8b190b0748079377343bea0306b20",
+    "lib/ui/cafe_scene.dart": "503f7cc5c46925bba96cd0a65101fa8e9f5d591a5e5cc7434f46f1996af3e2c6",
+    "lib/ui/cafe_screen.dart": "ea6148b7b25f234ce3fc86836b74dfe0d92591d1dd90752e6a6657834bdd0010",
+    "test/cafe_item_controls_test.dart": "ad1cd169896512f73390def6ab3b67d576f578ca28423a124849bdb31e6f4d13",
+    "test/cafe_items_test.dart": "745106dc542fc9be09df94e674a3910cdab555cb607480a67aadafb02fe9c54d",
+    "test/cafe_personal_space_test.dart": "68e79ae6d1415b7987aaa294bf1b72991a42e73eebbc8acead7193972b066413",
+    "test/cafe_space_web_test.dart": "b0bfef4620e2441804d5de142fdf1317025c1ce6a87b64f4a90202ba09f792a9",
+    "test/cafe_watercolor_test.dart": "2635a44cfa6215b3b0a66ad2b26067e4c7971463feeaba335c68538156e1a61d",
+    "tool/capture_cafe_items_test.dart": "ddf5e71a04b229554ecec36beb9fb3f5200594b71b5398eff849d66c64be1e60"
+  }
+}

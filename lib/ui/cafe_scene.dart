@@ -28,6 +28,7 @@ class CafeScene extends StatefulWidget {
     this.placingId,
     this.onObjectSelected,
     this.onObjectPlaced,
+    this.onItemActivated,
   });
   final CafeViewController controller;
   final bool interactive;
@@ -35,6 +36,7 @@ class CafeScene extends StatefulWidget {
   final String? placingId;
   final ValueChanged<String>? onObjectSelected;
   final ValueChanged<CafePoint>? onObjectPlaced;
+  final bool Function(String)? onItemActivated;
   final ValueChanged<CafeSeat>? onSeatSelected;
   final ValueChanged<CafeTarget>? onTargetSelected;
   final VoidCallback? onWrite;
@@ -587,6 +589,11 @@ class _CafeSceneState extends State<CafeScene>
                           } else if (hit?.objectId != null) {
                             widget.onObjectSelected?.call(hit!.objectId!);
                           }
+                          return;
+                        }
+                        if (hit?.objectId != null &&
+                            widget.onItemActivated?.call(hit!.objectId!) ==
+                                true) {
                           return;
                         }
                         if (hit?.target != null) {

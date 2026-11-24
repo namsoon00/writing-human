@@ -12,11 +12,14 @@ class CafeViewController extends ChangeNotifier {
       inCourtyard = seat == CafeSeat.garden,
       _cafe = CafeWorld(space: space) {
     teaFilled = space.gardenTea;
-    if (seat != null) camera = world.seatedCamera(seat!);
+    if (seat != null) {
+      camera = world.seatedCamera(seat!, chairId: activeChairId);
+    }
   }
   Future<void> roomReady = Future<void>.value();
   double walkSpeed = 0;
   CafeSeat? _pendingSeat;
+  String? activeChairId, _pendingChairId;
   CafeTarget? _departure;
   void advanceCamera(
     CafeCamera value, {
@@ -45,7 +48,9 @@ class CafeViewController extends ChangeNotifier {
     if (error != null) return error;
     _cafe = cafe;
     teaFilled = next.gardenTea;
-    if (seat != null) camera = world.seatedCamera(seat!);
+    if (seat != null) {
+      camera = world.seatedCamera(seat!, chairId: activeChairId);
+    }
     if (!world.canStand(camera.position) && seat == null && !resting) {
       camera = inCourtyard ? CafeCamera.courtyardEntrance : CafeCamera.entrance;
     }
@@ -82,17 +87,29 @@ class CafeViewController extends ChangeNotifier {
 
   CafePoint get _origin {
     if (resting) return world.targetApproach(CafeTarget.bench);
-    if (seat != null) return world.targetApproach(CafeTarget.forSeat(seat!));
+    if (seat != null) {
+      return activeChairId == null
+          ? world.targetApproach(CafeTarget.forSeat(seat!))
+          : world.chairApproach(activeChairId!);
+    }
     if (!world.canStand(camera.position) && _departure != null) {
       return world.targetApproach(_departure!);
     }
     return camera.position;
   }
 
-  bool visit(CafeTarget target) {
+  bool visitChair(String id) {
+    final chair = world.objects[id];
+    if (chair?.type != CafeItemType.chair || chair?.seat == null) return false;
+    return visit(CafeTarget.forSeat(chair!.seat!), chairId: id);
+  }
+
+  bool visit(CafeTarget target, {String? chairId}) {
     if (target.inCourtyard != inCourtyard) return false;
     final next = target.seat;
-    final approach = world.targetApproach(target);
+    final approach = chairId == null
+        ? world.targetApproach(target)
+        : world.chairApproach(chairId);
     final origin = _origin;
     final path = world.path(origin, approach);
     if (path.isEmpty) return false;
@@ -107,11 +124,13 @@ class CafeViewController extends ChangeNotifier {
     journey = [
       if (seat != null) _facing(origin, gaze),
       for (final p in path) _facing(p, gaze),
-      if (next != null) world.seatedCamera(next),
+      if (next != null) world.seatedCamera(next, chairId: chairId),
       if (target == CafeTarget.bench) CafeCamera.gardenRest,
       if (target == CafeTarget.pond) _facing(approach, gaze, pitch: -.55),
     ];
     _pendingSeat = next;
+    _pendingChairId = chairId;
+    activeChairId = null;
     seat = null;
     _begin();
     return true;
@@ -122,15 +141,19 @@ class CafeViewController extends ChangeNotifier {
   void stand() {
     final selected = seat;
     if (selected == null && !resting) return;
-    final p = world.targetApproach(
-      selected == null ? CafeTarget.bench : CafeTarget.forSeat(selected),
-    );
+    final p = activeChairId == null
+        ? world.targetApproach(
+            selected == null ? CafeTarget.bench : CafeTarget.forSeat(selected),
+          )
+        : world.chairApproach(activeChairId!);
     _departure = selected == null
         ? CafeTarget.bench
         : CafeTarget.forSeat(selected);
     resting = false;
     arrival = null;
     _pendingSeat = null;
+    _pendingChairId = null;
+    activeChairId = null;
     seat = null;
     journey = [CafeCamera(position: p, yaw: camera.yaw, pitch: -.10)];
     _begin();
@@ -148,6 +171,8 @@ class CafeViewController extends ChangeNotifier {
         : CafeTarget.forSeat(seat!);
     seat = null;
     _pendingSeat = null;
+    _pendingChairId = null;
+    activeChairId = null;
     resting = false;
     arrival = null;
     journey = [
@@ -173,7 +198,9 @@ class CafeViewController extends ChangeNotifier {
 
   void finishTravel() {
     seat = _pendingSeat;
+    activeChairId = _pendingChairId;
     _pendingSeat = null;
+    _pendingChairId = null;
     walkSpeed = 0;
     if (arrival == CafeTarget.courtyard) {
       inCourtyard = true;
@@ -209,6 +236,8 @@ class CafeViewController extends ChangeNotifier {
     if (travelling) seat = null;
     walkSpeed = 0;
     _pendingSeat = null;
+    _pendingChairId = null;
+    activeChairId = null;
     _departure = null;
     destination = null;
     journey = [];
@@ -265,6 +294,8 @@ class CafeViewController extends ChangeNotifier {
     journey = [];
     arrival = null;
     _pendingSeat = null;
+    _pendingChairId = null;
+    activeChairId = null;
     request++;
     advanceCamera(next, dt: .2, walking: true);
     walkSpeed = 0;

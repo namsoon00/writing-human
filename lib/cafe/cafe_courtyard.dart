@@ -70,28 +70,179 @@ extension _CourtyardGeometry on CafeWorld {
     }
   }
 
+  void _leaf(CafePoint start, CafePoint tip, double width, Color color) {
+    final along = (tip - start).normalized;
+    final side = along.cross(const CafePoint(0, 1, .1)).normalized * width;
+    CafePoint at(double t, double sideSign) =>
+        CafePoint.lerp(start, tip, t) +
+        side * (sideSign * math.sin(t * math.pi)) +
+        CafePoint(0, .012 * math.sin(t * math.pi), 0);
+    for (final sign in [-1.0, 1.0]) {
+      for (var i = 0; i < 3; i++) {
+        final a = i / 3, b = (i + 1) / 3;
+        quad(
+          CafePoint.lerp(start, tip, a),
+          at(a, sign),
+          at(b, sign),
+          CafePoint.lerp(start, tip, b),
+          color,
+          doubleSided: true,
+        );
+      }
+    }
+  }
+
   void _tree(double x, double z, double height, int seed) {
-    plants.add(
-      CafePlant(
-        CafePoint(x, .02, z),
-        height * .74,
-        height,
-        CafeSurface.tree,
-        flip: seed.isEven,
-      ),
+    final id = 'garden.tree.$seed';
+    _object(
+      id,
+      seed == 18 ? '뜰의 왼쪽 나무' : '뜰의 오른쪽 나무',
+      CafeObjectKind.garden,
+      CafePoint(x, 0, z),
+      () {
+        obstacles.add(
+          Rect.fromCenter(center: Offset(x, z), width: .42, height: .42),
+        );
+        final random = math.Random(seed);
+        _rod(
+          CafePoint(x, .02, z),
+          CafePoint(x + .07, height * .76, z + .035),
+          .043,
+          CafeWorld.dark,
+          sides: 10,
+          surface: CafeSurface.walnut,
+        );
+        for (var branch = 0; branch < 17; branch++) {
+          final angle = branch * 2.4 + random.nextDouble() * .55;
+          final level = height * (.42 + random.nextDouble() * .31);
+          final reach = .46 + random.nextDouble() * .42;
+          final root = CafePoint(x + .035, level, z);
+          final tip =
+              root +
+              CafePoint(
+                math.cos(angle) * reach,
+                .20 + random.nextDouble() * .40,
+                math.sin(angle) * reach,
+              );
+          _rod(
+            root,
+            tip,
+            .009,
+            CafeWorld.dark,
+            sides: 6,
+            surface: CafeSurface.walnut,
+          );
+          for (var twig = 0; twig < 6; twig++) {
+            final base = CafePoint.lerp(
+              root,
+              tip,
+              .32 + random.nextDouble() * .66,
+            );
+            final twigAngle =
+                angle + (twig.isEven ? -1 : 1) * (.5 + random.nextDouble());
+            final end =
+                base +
+                CafePoint(
+                  math.cos(twigAngle) * .27,
+                  .11 + random.nextDouble() * .20,
+                  math.sin(twigAngle) * .27,
+                );
+            _rod(base, end, .003, CafeWorld.sage, sides: 4);
+            for (var i = 0; i < 5; i++) {
+              final start = CafePoint.lerp(base, end, .18 + i * .18);
+              final a =
+                  twigAngle +
+                  (i.isEven ? 1.0 : -1.0) * (.7 + random.nextDouble() * .8);
+              final size = .23 + random.nextDouble() * .12;
+              _leaf(
+                start,
+                start +
+                    CafePoint(
+                      math.cos(a) * size,
+                      .015 + random.nextDouble() * .08,
+                      math.sin(a) * size,
+                    ),
+                .045 + random.nextDouble() * .022,
+                [
+                  const Color(0xff748366),
+                  const Color(0xff8d9c79),
+                  const Color(0xffa2ab83),
+                ][(space.finish(id) + i + branch) % 3],
+              );
+            }
+          }
+        }
+        shadow(x + .06, z + .02, .7, .65, strength: .12);
+      },
+      type: CafeItemType.plant,
     );
-    shadow(x + .06, z + .02, .7, .65, strength: .12);
   }
 
   void _flower(double x, double z, Color color) {
-    plants.add(
-      CafePlant(
-        CafePoint(x, .025, z),
-        .75,
-        .55,
-        CafeSurface.flowers,
-        flip: x < -1,
-      ),
+    final id = 'garden.flowers.${_flowerCount++}';
+    _object(
+      id,
+      '뜰의 꽃 $_flowerCount',
+      CafeObjectKind.garden,
+      CafePoint(x, 0, z),
+      () {
+        final random = math.Random(_flowerCount * 37);
+        for (var stem = 0; stem < 5; stem++) {
+          final angle = stem * 2.4;
+          final base = CafePoint(
+            x + math.cos(angle) * .16,
+            .025,
+            z + math.sin(angle) * .16,
+          );
+          final top =
+              base + CafePoint(.025, .24 + random.nextDouble() * .15, .018);
+          _rod(base, top, .003, CafeWorld.sage, sides: 5);
+          _leaf(
+            CafePoint.lerp(base, top, .4),
+            base + const CafePoint(.12, .16, .025),
+            .024,
+            const Color(0xff869575),
+          );
+          _leaf(
+            CafePoint.lerp(base, top, .6),
+            base + const CafePoint(-.10, .23, -.045),
+            .023,
+            CafeWorld.sage,
+          );
+          final petal = [
+            color,
+            const Color(0xffd6b5c2),
+            const Color(0xffe2c996),
+          ][space.finish(id)];
+          for (var i = 0; i < 7; i++) {
+            final a = i * math.pi * 2 / 7;
+            final along = CafePoint(math.cos(a), 0, math.sin(a));
+            final across = CafePoint(-math.sin(a), 0, math.cos(a));
+            final points = <CafePoint>[];
+            for (final sign in [-1.0, 1.0]) {
+              for (var j = 0; j <= 4; j++) {
+                final t = sign < 0 ? j / 4 : 1 - j / 4;
+                points.add(
+                  top +
+                      along * (.012 + .048 * t) +
+                      across * (sign * .020 * math.sin(t * math.pi)) +
+                      CafePoint(0, .006 + .020 * t * t, 0),
+                );
+              }
+            }
+            faces.add(CafeFace(points, petal, doubleSided: true));
+          }
+          _oval(
+            top + const CafePoint(0, .006, 0),
+            const CafePoint(.017, .008, .017),
+            const Color(0xffc5a65e),
+            segments: 6,
+            rings: 3,
+          );
+        }
+      },
+      type: CafeItemType.plant,
+      footprint: Rect.fromCenter(center: Offset(x, z), width: .5, height: .5),
     );
   }
 
@@ -333,8 +484,6 @@ extension _CourtyardGeometry on CafeWorld {
       );
     }
     _target = null;
-    obstacles.add(const Rect.fromLTWH(-3.36, -1.76, .42, .42));
-    obstacles.add(const Rect.fromLTWH(3.04, -2.26, .42, .42));
     _tree(-3.15, -1.55, 2.55, 18);
     _tree(3.25, -2.05, 2.30, 29);
     for (var i = 0; i < 18; i++) {
@@ -353,29 +502,12 @@ extension _CourtyardGeometry on CafeWorld {
       );
       _flower(x + .07, z + .04, const Color(0xfff0eee0));
     }
-    // Low overlapping clumps connect the existing two trees without filling the path.
+    // Separate plant groups keep the same quiet border, with real petals in 3D.
     for (var i = 0; i < 10; i++) {
-      final x = -4.0 + i * .84;
-      plants.add(
-        CafePlant(
-          CafePoint(x, .025, -2.63 + (i % 3) * .07),
-          1.02 + (i % 3) * .09,
-          .43 + (i % 3) * .065,
-          CafeSurface.flowers,
-          flip: i.isEven,
-        ),
-      );
+      _flower(-4.0 + i * .84, -2.63 + (i % 3) * .07, const Color(0xfff0eee0));
     }
     for (final p in [(-3.8, -1.5), (3.9, -1.7)]) {
-      plants.add(
-        CafePlant(
-          CafePoint(p.$1, .025, p.$2),
-          1.10,
-          .63,
-          CafeSurface.flowers,
-          flip: p.$1 < 0,
-        ),
-      );
+      _flower(p.$1, p.$2, const Color(0xffd6b5c2));
     }
     _target = CafeTarget.bench;
     box(4.05, .28, -.05, .72, .46, 2.9, CafeWorld.dark, wood: true);
@@ -384,17 +516,45 @@ extension _CourtyardGeometry on CafeWorld {
     box(4.28, .82, -.95, .25, .48, .5, CafeWorld.cream);
     obstacles.add(const Rect.fromLTWH(3.63, -1.5, .87, 2.9));
     _target = null;
-    _writingSurface(
-      CafeWorld.tableBounds(CafeSeat.garden),
-      target: CafeTarget.gardenDesk,
+    final bounds = CafeWorld.tableBounds(CafeSeat.garden);
+    _object(
+      'garden.table',
+      '뜰의 필사 테이블',
+      CafeObjectKind.garden,
+      const CafePoint(3.13, 0, .58),
+      () {
+        _writingSurface(bounds, target: CafeTarget.gardenDesk);
+        _target = CafeTarget.gardenDesk;
+        _noteItem(
+          'garden.book',
+          '뜰의 노트',
+          3.26,
+          .773,
+          .55,
+          support: bounds.deflate(.015),
+        );
+        _pencilItem(
+          'garden.pen',
+          '뜰의 연필',
+          3.12,
+          .805,
+          .23,
+          support: bounds.deflate(.015),
+        );
+        _target = CafeTarget.tea;
+        _cupItem(
+          'garden.cup',
+          '뜰의 찻잔',
+          3.22,
+          .76,
+          .93,
+          support: bounds.deflate(.015),
+          filled: space.gardenTea,
+        );
+        _target = null;
+      },
+      type: CafeItemType.table,
     );
-    _target = CafeTarget.gardenDesk;
-    _book(3.26, .773, .55);
-    box(3.18, .805, .36, .22, .012, .015, CafeWorld.dark);
-    box(3.4, .795, .18, .23, .045, .22, CafeWorld.sage);
-    _target = CafeTarget.tea;
-    cylinder(3.22, .82, .93, .07, .11, CafeWorld.cream, sides: 16);
-    _target = null;
     _pendant(3.28, .62, radius: .17);
     // A glass door shares the cafe's rear-left window bay, with matching jambs.
     _target = CafeTarget.cafeReturn;

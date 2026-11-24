@@ -39,6 +39,10 @@ class CafePose {
 class CafeSpace {
   const CafeSpace({
     this.poses = const {},
+    this.finishes = const {},
+    this.accents = const {},
+    this.states = const {},
+    this.lights = const {},
     this.frames = const {},
     this.mats = const {},
     this.art = const {},
@@ -54,6 +58,38 @@ class CafeSpace {
     this.doorOpen = true,
   });
   final Map<String, CafePose> poses;
+  final Map<String, int> finishes, accents;
+  final Map<String, bool> states;
+  final Map<String, double> lights;
+  int finish(String id, {int fallback = 0}) => finishes[id] ?? fallback;
+  int accent(String id, {int fallback = 0}) => accents[id] ?? fallback;
+  bool state(String id, {bool fallback = true}) => states[id] ?? fallback;
+  double light(String id) => state(id) ? lights[id] ?? 1 : 0;
+  CafeSpace withFinish(String id, int value) =>
+      copy(finishes: {...finishes, id: value});
+  CafeSpace withAccent(String id, int value) =>
+      copy(accents: {...accents, id: value});
+  CafeSpace withState(String id, bool value) => copy(
+    states: {...states, id: value},
+    bookOpen: id == "shared.book" ? value : null,
+    cupFull: id == "shared.cup" ? value : null,
+    gardenTea: id == "garden.cup" ? value : null,
+  );
+  CafeSpace withLight(String id, double value) =>
+      copy(lights: {...lights, id: value});
+  CafeSpace resetItem(String id) => copy(
+    poses: {...poses}..remove(id),
+    finishes: {...finishes}..remove(id),
+    accents: {...accents}..remove(id),
+    states: {...states}..remove(id),
+    lights: {...lights}..remove(id),
+    frames: {...frames}..remove(id),
+    mats: {...mats}..remove(id),
+    art: {...art}..remove(id),
+    bookOpen: id == 'shared.book' ? true : null,
+    cupFull: id == 'shared.cup' ? true : null,
+    gardenTea: id == 'garden.cup' ? false : null,
+  );
   final Map<String, int> frames, mats, art;
   final String? selectedBookId;
   final double brightness, warmth;
@@ -62,6 +98,10 @@ class CafeSpace {
   CafePose pose(String id) => poses[id] ?? const CafePose();
   CafeSpace copy({
     Map<String, CafePose>? poses,
+    Map<String, int>? finishes,
+    Map<String, int>? accents,
+    Map<String, bool>? states,
+    Map<String, double>? lights,
     Map<String, int>? frames,
     Map<String, int>? mats,
     Map<String, int>? art,
@@ -78,6 +118,10 @@ class CafeSpace {
     bool? doorOpen,
   }) => CafeSpace(
     poses: poses ?? this.poses,
+    finishes: finishes ?? this.finishes,
+    accents: accents ?? this.accents,
+    states: states ?? this.states,
+    lights: lights ?? this.lights,
     frames: frames ?? this.frames,
     mats: mats ?? this.mats,
     art: art ?? this.art,
@@ -93,7 +137,11 @@ class CafeSpace {
     doorOpen: doorOpen ?? this.doorOpen,
   );
   Map<String, dynamic> toJson() => {
-    'version': 1,
+    'version': 2,
+    'finishes': finishes,
+    'accents': accents,
+    'states': states,
+    'lights': lights,
     'poses': poses.map((k, v) => MapEntry(k, v.toJson())),
     'frames': frames,
     'mats': mats,
@@ -112,7 +160,7 @@ class CafeSpace {
   String encode() => jsonEncode(toJson());
   factory CafeSpace.decode(String raw) {
     final j = jsonDecode(raw);
-    if (j is! Map<String, dynamic> || j['version'] != 1) {
+    if (j is! Map<String, dynamic> || ![1, 2].contains(j['version'])) {
       throw const FormatException('Invalid room data');
     }
     final selected = j['selectedBookId'];
@@ -120,8 +168,18 @@ class CafeSpace {
       throw const FormatException('Invalid book reference');
     }
     Map<String, T> map<T>(String key, T Function(dynamic) read) {
-      final v = j[key];
-      if (v is! Map<String, dynamic> || v.length > 80) {
+      final v =
+          j[key] ??
+          (j['version'] == 1 &&
+                  const {
+                    'finishes',
+                    'accents',
+                    'states',
+                    'lights',
+                  }.contains(key)
+              ? <String, dynamic>{}
+              : null);
+      if (v is! Map<String, dynamic> || v.length > 256) {
         throw const FormatException('Invalid room objects');
       }
       return Map.unmodifiable(
@@ -155,6 +213,18 @@ class CafeSpace {
     }
 
     return CafeSpace(
+      finishes: map('finishes', index),
+      accents: map('accents', index),
+      states: map('states', (v) {
+        if (v is! bool) throw const FormatException('Invalid item state');
+        return v;
+      }),
+      lights: map('lights', (v) {
+        if (v is! num || !v.isFinite || v < .2 || v > 1.25) {
+          throw const FormatException('Invalid item light');
+        }
+        return v.toDouble();
+      }),
       poses: map(
         'poses',
         (v) => CafePose.read(Map<String, dynamic>.from(v as Map)),

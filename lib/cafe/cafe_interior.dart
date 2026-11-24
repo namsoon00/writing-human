@@ -80,32 +80,54 @@ extension _CafeInterior on CafeWorld {
       box(-4.31, 2.90, z, .15, .07, 2.26, CafeWorld.dark, wood: true);
       box(-4.15, .595, z, .20, .014, 2.14, const Color(0xff765d42));
     }
-    // Real shelf backs and a few horizontal volumes break identical rows.
+    // Each low stack belongs to a shelf slot, with the same parent selection
+    // and support rules as the upright volumes.
     for (final z in [-2.25, .3]) {
       for (var row = 0; row < 3; row++) {
-        final y = .64 + row * .55;
-        for (var book = 0; book < 3; book++) {
-          box(
-            3.85,
-            y + .065 + book * .035,
-            z + .65,
-            .24,
-            .029,
-            .29,
-            [CafeWorld.sage, CafeWorld.cream, const Color(0xff9c715b)][book],
-          );
-          box(
-            3.718,
-            y + .065 + book * .035,
-            z + .65,
-            .006,
-            .016,
-            .25,
-            CafeWorld.cream,
-          );
-        }
+        final y = .64 + row * .55, id = 'shelf.stack.${z}_$row';
+        _target = z < 0 ? CafeTarget.recommendations : CafeTarget.bookshelf;
+        _object(
+          id,
+          '${z < 0 ? '추천 서가' : '책장'} ${row + 1}단의 포개 둔 책',
+          CafeObjectKind.prop,
+          CafePoint(3.85, y + .03, z + .78),
+          () {
+            for (var book = 0; book < 3; book++) {
+              box(
+                3.85,
+                y + .065 + book * .035,
+                z + .78,
+                .24,
+                .029,
+                .16,
+                [
+                  CafeWorld.sage,
+                  CafeWorld.cream,
+                  const Color(0xff9c715b),
+                ][(book + space.finish(id)) % 3],
+              );
+              box(
+                3.718,
+                y + .065 + book * .035,
+                z + .78,
+                .006,
+                .016,
+                .13,
+                CafeWorld.cream,
+              );
+            }
+          },
+          support: Rect.fromLTWH(3.71, z - 1.08, .43, 2.16),
+          footprint: Rect.fromCenter(
+            center: Offset(3.85, z + .78),
+            width: .26,
+            height: .16,
+          ),
+          type: CafeItemType.stack,
+        );
       }
     }
+    _target = null;
     // Bench seat seams and a piped cushion, below the private bookshelf.
     for (final z in [-.29, .29, .88]) {
       box(3.86, .558, z, .59, .018, .012, const Color(0xff747b61));
@@ -370,6 +392,20 @@ extension _CafeInterior on CafeWorld {
   }
 
   void _sconce(double x, double y, double z, {bool front = true}) {
+    final id = 'lamp.wall.${x}_$z';
+    _object(
+      id,
+      '벽 조명',
+      CafeObjectKind.light,
+      CafePoint(x, y, z),
+      () => _sconceMesh(x, y, z, front: front),
+    );
+  }
+
+  void _sconceMesh(double x, double y, double z, {bool front = true}) {
+    final gain = space.light(_buildingObject!);
+    wallLights.add(CafePoint(x, y + .19, z + (front ? .18 : -.18)));
+    wallGains.add(gain);
     final s = front ? 1.0 : -1.0;
     box(x, y, z, .09, .22, .04, CafeWorld.brass);
     box(x, y - .03, z + s * .08, .025, .025, .16, CafeWorld.brass);
@@ -389,12 +425,12 @@ extension _CafeInterior on CafeWorld {
       z + s * .16,
       .073,
       .006,
-      const Color(0xffffe1ab),
+      gain == 0 ? const Color(0xffa79c81) : const Color(0xffffe1ab),
       sides: 16,
-      unlit: true,
+      unlit: gain != 0,
     );
     // A feathered, wall-bound light pool drawn beneath solid fixtures.
-    for (var band = 6; band > 0; band--) {
+    for (var band = gain == 0 ? 0 : 6; band > 0; band--) {
       final radius = band / 6;
       final points = <CafePoint>[];
       for (var i = 0; i < 24; i++) {
@@ -410,7 +446,7 @@ extension _CafeInterior on CafeWorld {
       faces.add(
         CafeFace(
           points,
-          const Color(0xffffdda0).withValues(alpha: .018),
+          const Color(0xffffdda0).withValues(alpha: .018 * gain),
           unlit: true,
           layer: 1,
           doubleSided: true,
@@ -421,61 +457,187 @@ extension _CafeInterior on CafeWorld {
 
   void _counterDetails() {
     const metal = Color(0xffaaa79a), ink = Color(0xff333934);
-    // Espresso machine: drip tray, two group heads, gauges, steam wand.
-    box(1.05, 1.075, -4.36, .79, .035, .43, metal);
-    box(1.05, 1.26, -4.301, .64, .19, .015, ink);
-    for (final x in [.84, 1.22]) {
-      box(x, 1.27, -4.26, .09, .045, .09, metal);
-      box(x + .065, 1.24, -4.21, .18, .018, .025, CafeWorld.dark);
-      _cup(x, 1.096, -4.25, radius: .032, filled: false);
-    }
-    for (var i = 0; i < 12; i++) {
-      box(.70 + i * .061, 1.098, -4.19, .007, .003, .15, ink);
-    }
-    box(1.39, 1.23, -4.25, .012, .19, .012, metal);
-    box(1.42, 1.145, -4.25, .07, .012, .012, metal);
-    for (final x in [.87, 1.09, 1.31]) {
-      _cup(x, 1.515, -4.55, radius: .035, filled: false);
-    }
-    // Coffee grinder has a separate bean hopper and dose chute.
-    cylinder(
-      1.95,
-      1.425,
-      -4.5,
-      .11,
-      .15,
-      const Color(0xff77694f),
-      sides: 16,
-      topRadius: .085,
-    );
-    cylinder(1.95, 1.505, -4.5, .09, .018, ink, sides: 16);
-    box(1.95, 1.22, -4.36, .045, .15, .06, metal);
-    // Folded linen, saucers, water carafe and a short stack of menus.
-    box(-.33, 1.061, -4.37, .31, .013, .24, const Color(0xffb0a58c));
-    for (var i = 0; i < 3; i++) {
-      cylinder(
-        -.28,
-        1.075 + i * .014,
-        -4.38,
-        .079,
-        .012,
-        CafeWorld.cream,
-        sides: 18,
+    const counter = Rect.fromLTWH(-.65, -4.89, 3.2, .86);
+    void item(
+      String id,
+      String label,
+      CafePoint pivot,
+      double w,
+      double d,
+      void Function() build, {
+      Rect support = counter,
+      CafeItemType type = CafeItemType.fixture,
+    }) {
+      _object(
+        id,
+        label,
+        CafeObjectKind.prop,
+        pivot,
+        build,
+        support: support,
+        footprint: Rect.fromCenter(
+          center: Offset(pivot.x, pivot.z),
+          width: w,
+          height: d,
+        ),
+        type: type,
       );
     }
-    cylinder(
-      2.25,
-      1.20,
-      -4.47,
-      .057,
-      .28,
-      const Color(0xffadb9a7),
-      sides: 16,
-      topRadius: .04,
+
+    item(
+      'counter.machine',
+      '에스프레소 머신',
+      const CafePoint(1.05, 1.05, -4.44),
+      .85,
+      .66,
+      () {
+        box(1.05, 1.29, -4.52, .75, .45, .40, ink);
+        box(1.05, 1.26, -4.29, .67, .23, .04, metal);
+        box(1.05, 1.075, -4.36, .79, .035, .43, metal);
+        box(1.05, 1.26, -4.301, .64, .19, .015, ink);
+        for (final x in [.84, 1.22]) {
+          box(x, 1.27, -4.26, .09, .045, .09, metal);
+          box(x + .065, 1.24, -4.21, .18, .018, .025, CafeWorld.dark);
+        }
+        for (var i = 0; i < 12; i++) {
+          box(.70 + i * .061, 1.098, -4.19, .007, .003, .15, ink);
+        }
+        box(1.39, 1.23, -4.25, .012, .19, .012, metal);
+        box(1.42, 1.145, -4.25, .07, .012, .012, metal);
+        const tray = Rect.fromLTWH(.66, -4.72, .78, .43);
+        for (var i = 0; i < 3; i++) {
+          _cupItem(
+            'counter.machine.cup.$i',
+            '머신 위 ${i + 1}번째 잔',
+            .87 + i * .22,
+            1.515,
+            -4.55,
+            radius: .035,
+            filled: false,
+            support: tray,
+          );
+        }
+        for (var i = 0; i < 2; i++) {
+          _cupItem(
+            'counter.machine.serving.$i',
+            '추출 잔 ${i + 1}',
+            .84 + i * .38,
+            1.096,
+            -4.25,
+            radius: .032,
+            filled: false,
+            support: const Rect.fromLTWH(.66, -4.45, .78, .32),
+          );
+        }
+      },
     );
-    cylinder(2.25, 1.344, -4.47, .039, .012, CafeWorld.dark, sides: 12);
-    for (var i = 0; i < 3; i++) {
-      box(2.28, 1.063 + i * .009, -4.21, .25, .007, .20, CafeWorld.cream);
+    item(
+      'counter.grinder',
+      '커피 그라인더',
+      const CafePoint(1.95, 1.05, -4.48),
+      .26,
+      .32,
+      () {
+        cylinder(1.95, 1.21, -4.5, .09, .32, CafeWorld.dark, sides: 20);
+        cylinder(
+          1.95,
+          1.425,
+          -4.5,
+          .11,
+          .15,
+          const Color(0xff77694f),
+          sides: 20,
+          topRadius: .085,
+        );
+        cylinder(1.95, 1.505, -4.5, .09, .018, ink, sides: 20);
+        box(1.95, 1.22, -4.36, .045, .15, .06, metal);
+      },
+    );
+    item(
+      'counter.linen',
+      '접어 둔 리넨',
+      const CafePoint(-.33, 1.05, -4.37),
+      .31,
+      .24,
+      () {
+        box(
+          -.33,
+          1.061,
+          -4.37,
+          .31,
+          .013,
+          .24,
+          [
+            const Color(0xffb0a58c),
+            const Color(0xffaa7c62),
+            CafeWorld.sage,
+          ][space.finish('counter.linen')],
+          surface: CafeSurface.cord,
+        );
+        for (var i = 0; i < 3; i++) {
+          cylinder(
+            -.28,
+            1.075 + i * .014,
+            -4.38,
+            .079,
+            .012,
+            CafeWorld.cream,
+            sides: 24,
+          );
+        }
+      },
+      type: CafeItemType.cloth,
+    );
+    item(
+      'counter.carafe',
+      '물병',
+      const CafePoint(2.25, 1.05, -4.61),
+      .16,
+      .16,
+      () {
+        _turned(2.25, -4.61, [
+          (1.06, .05),
+          (1.13, .057),
+          (1.28, .057),
+          (1.32, .035),
+          (1.35, .035),
+        ], const Color(0xffadb9a7));
+        cylinder(2.25, 1.35, -4.61, .039, .012, CafeWorld.dark, sides: 20);
+      },
+    );
+    item(
+      'counter.menus',
+      '카운터의 작은 책',
+      const CafePoint(2.28, 1.05, -4.21),
+      .25,
+      .20,
+      () {
+        for (var i = 0; i < 3; i++) {
+          box(
+            2.28,
+            1.063 + i * .009,
+            -4.21,
+            .25,
+            .007,
+            .20,
+            [CafeWorld.cream, const Color(0xffb18a70), CafeWorld.sage][space
+                .finish('counter.menus')],
+          );
+        }
+      },
+      type: CafeItemType.stack,
+    );
+    for (var i = 0; i < 4; i++) {
+      _cupItem(
+        'counter.cup.$i',
+        '카운터 ${i + 1}번째 잔',
+        .0 + i * .15,
+        1.054,
+        -4.45,
+        radius: .040,
+        filled: false,
+        support: counter,
+      );
     }
   }
 
@@ -486,22 +648,51 @@ extension _CafeInterior on CafeWorld {
     double radius = .052,
     bool filled = true,
   }) {
+    final id = _buildingObject ?? '';
+    filled = space.state(id, fallback: filled);
+    final colorIndex = space.finish(id, fallback: space.mug);
+    final saucer = [
+      CafeWorld.cream,
+      const Color(0xffb18a70),
+      CafeWorld.sage,
+    ][colorIndex];
+    shadow(
+      x,
+      z,
+      radius * 1.43,
+      radius * 1.43,
+      y: bottom + .001,
+      strength: .08,
+      layer: 2,
+    );
+    // Only the exposed annulus is opaque: a full cap under the cup can sort
+    // across its foot and produce teeth in close painter-order views.
     cylinder(
       x,
       bottom + .006,
       z,
       radius * 1.40,
       .012,
-      [CafeWorld.cream, const Color(0xffb18a70), CafeWorld.sage][space.mug],
+      saucer,
       sides: 28,
+      topFace: false,
     );
+    for (var i = 0; i < 28; i++) {
+      final a = i * math.pi / 14, b = (i + 1) * math.pi / 14;
+      CafePoint at(double r, double t) => CafePoint(
+        x + math.cos(t) * radius * r,
+        bottom + .012,
+        z + math.sin(t) * radius * r,
+      );
+      quad(at(.69, b), at(1.40, b), at(1.40, a), at(.69, a), saucer);
+    }
     final ceramic = [
       CafeWorld.cream,
       const Color(0xffb18a70),
       CafeWorld.sage,
-    ][space.mug];
+    ][colorIndex];
     _turned(x, z, [
-      (bottom + .011, radius * .70),
+      (bottom + .013, radius * .70),
       (bottom + .022, radius * .80),
       (bottom + .055, radius * .94),
       (bottom + .089, radius),
@@ -513,7 +704,13 @@ extension _CafeInterior on CafeWorld {
       z,
       radius * .87,
       .004,
-      filled ? const Color(0xff684b32) : const Color(0xffc6bba6),
+      filled
+          ? [
+              const Color(0xff684b32),
+              const Color(0xff49372d),
+              const Color(0xffa18c56),
+            ][space.accent(id)]
+          : const Color(0xffc6bba6),
       sides: 28,
     );
     for (var i = 0; i < 28; i++) {
@@ -535,32 +732,51 @@ extension _CafeInterior on CafeWorld {
         bottom + h,
         z + math.sin(t) * radius * r,
       );
-      quad(
-        inner(a, .102, .87),
-        inner(a, .035, .65),
-        inner(b, .035, .65),
-        inner(b, .102, .87),
-        ceramic,
-      );
+      for (var band = 0; band < 4; band++) {
+        final u = band / 4, v = (band + 1) / 4;
+        quad(
+          inner(a, .102 - u * .067, .87 - u * .22),
+          inner(a, .102 - v * .067, .87 - v * .22),
+          inner(b, .102 - v * .067, .87 - v * .22),
+          inner(b, .102 - u * .067, .87 - u * .22),
+          ceramic,
+        );
+      }
     }
-    // A round ceramic handle with real depth and smooth vertex normals.
-    for (var i = 0; i < 20; i++) {
-      CafePoint handle(double a) => CafePoint(
-        x + radius + math.cos(a) * .025,
-        bottom + .055 + math.sin(a) * .030,
-        z,
-      );
-      _rod(
-        handle(i * math.pi / 10),
-        handle((i + 1) * math.pi / 10),
-        .0048,
-        ceramic,
-        sides: 6,
-      );
+    // A continuous elliptical tube, with matching normals at each joint.
+    const count = 24, rings = 8;
+    CafePoint normal(double a, double q) =>
+        CafePoint(math.cos(a) / .025, math.sin(a) / .030, 0).normalized *
+            math.cos(q) +
+        const CafePoint(0, 0, 1) * math.sin(q);
+    CafePoint handle(double a, double q) =>
+        CafePoint(
+          x + radius + math.cos(a) * .025,
+          bottom + .055 + math.sin(a) * .030,
+          z,
+        ) +
+        normal(a, q) * .0048;
+    for (var i = 0; i < count; i++) {
+      for (var j = 0; j < rings; j++) {
+        final a = i * math.pi * 2 / count, b = (i + 1) * math.pi * 2 / count;
+        final u = j * math.pi * 2 / rings, v = (j + 1) * math.pi * 2 / rings;
+        var p = [handle(a, u), handle(b, u), handle(b, v), handle(a, v)];
+        var n = [normal(a, u), normal(b, u), normal(b, v), normal(a, v)];
+        if ((p[1] - p[0]).cross(p[2] - p[0]).dot(n[0]) < 0) {
+          p = p.reversed.toList();
+          n = n.reversed.toList();
+        }
+        faces.add(CafeFace(p, ceramic, vertexNormals: n, target: _target));
+      }
     }
   }
 
   void _pencil(double x, double y, double z) {
+    final lacquer = [
+      CafeWorld.dark,
+      CafeWorld.sage,
+      const Color(0xffa07560),
+    ][space.finish(_buildingObject ?? '')];
     // Hexagonal lacquered shaft, exposed cedar and a graphite point.
     for (var i = 0; i < 6; i++) {
       final a = i * math.pi / 3, b = (i + 1) * math.pi / 3;
@@ -574,7 +790,7 @@ extension _CafeInterior on CafeWorld {
         at(x + .11, a, .007),
         at(x + .11, b, .007),
         at(x - .11, b, .007),
-        CafeWorld.dark,
+        lacquer,
       );
       quad(
         at(x + .11, a, .007),
@@ -595,77 +811,71 @@ extension _CafeInterior on CafeWorld {
         ),
       );
     }
-    box(x - .085, y + .007, z, .027, .002, .012, CafeWorld.brass);
-  }
-
-  void _windowDeskDetails(CafeSeat seat) {
-    final z = CafeWorld.desk(seat).z;
-    _target = CafeTarget.forSeat(seat);
-    cylinder(
-      -3.80,
-      .760,
-      z - .40,
-      .10,
-      .014,
-      const Color(0xffa18c65),
-      sides: 18,
+    _oval(
+      CafePoint(x - .122, y, z),
+      const CafePoint(.013, .0068, .0068),
+      const Color(0xffcbb39a),
+      segments: 12,
+      rings: 6,
     );
-    box(-3.46, .765, z + .33, .015, .012, .22, CafeWorld.dark);
-    box(-3.46, .772, z + .25, .019, .008, .035, CafeWorld.brass);
+    box(x - .085, y + .007, z, .027, .002, .012, CafeWorld.brass);
   }
 
   void _sharedDetails() {
     _target = CafeTarget.shared;
-    for (var i = 0; i < 2; i++) {
-      box(
-        .21,
-        .769 + i * .032,
-        -1.27,
-        .31,
-        .026,
-        .22,
-        i.isEven ? CafeWorld.sage : const Color(0xffae8166),
-      );
-      box(.21, .767 + i * .032, -1.151, .275, .016, .004, CafeWorld.cream);
-    }
-    box(.29, .799, -1.13, .017, .002, .08, CafeWorld.brass);
-    for (var i = 0; i < 9; i++) {
-      quad(
-        CafePoint(-.16, .754, -.53 + i * .052),
-        CafePoint(.16, .754, -.53 + i * .052),
-        CafePoint(.16, .754, -.48 + i * .052),
-        CafePoint(-.16, .754, -.48 + i * .052),
-        const Color(0xffc5b89b),
-        surface: CafeSurface.cord,
-      );
-    }
-  }
-
-  void _vase() {
-    cylinder(
-      0,
-      .84,
-      -.30,
-      .065,
-      .19,
-      const Color(0xffbdad89),
-      sides: 12,
-      topRadius: .04,
+    _object(
+      'shared.stack',
+      '중앙 테이블의 책 두 권',
+      CafeObjectKind.prop,
+      const CafePoint(.21, .754, -1.27),
+      () {
+        for (var i = 0; i < 2; i++) {
+          box(
+            .21,
+            .769 + i * .032,
+            -1.27,
+            .31,
+            .026,
+            .22,
+            [
+              CafeWorld.sage,
+              const Color(0xffae8166),
+              CafeWorld.cream,
+            ][(space.finish('shared.stack') + i) % 3],
+          );
+          box(.21, .767 + i * .032, -1.151, .275, .016, .004, CafeWorld.cream);
+        }
+        box(.29, .799, -1.13, .017, .002, .08, CafeWorld.brass);
+      },
+      support: CafeWorld.tableBounds(CafeSeat.shared).deflate(.015),
+      footprint: const Rect.fromLTWH(.055, -1.38, .31, .22),
+      type: CafeItemType.stack,
     );
-    for (var i = 0; i < 3; i++) {
-      final x = (i - 1) * .025;
-      box(x, 1.02 + i * .023, -.30, .006, .23 + i * .045, .006, CafeWorld.sage);
-      for (var j = 0; j < 3; j++) {
-        final y = .99 + j * .055 + i * .025;
-        quad(
-          CafePoint(x, y, -.30),
-          CafePoint(x + .06, y + .015, -.29),
-          CafePoint(x + .08, y + .045, -.30),
-          CafePoint(x + .018, y + .035, -.31),
-          const Color(0xff7f896b),
-        );
-      }
-    }
+    _object(
+      'shared.runner',
+      '중앙 테이블의 리넨',
+      CafeObjectKind.prop,
+      const CafePoint(0, .754, -.30),
+      () {
+        for (var i = 0; i < 9; i++) {
+          quad(
+            CafePoint(-.16, .754, -.53 + i * .052),
+            CafePoint(.16, .754, -.53 + i * .052),
+            CafePoint(.16, .754, -.48 + i * .052),
+            CafePoint(-.16, .754, -.48 + i * .052),
+            [
+              const Color(0xffc5b89b),
+              const Color(0xffaa7c62),
+              CafeWorld.sage,
+            ][space.finish('shared.runner')],
+            surface: CafeSurface.cord,
+          );
+        }
+      },
+      support: CafeWorld.tableBounds(CafeSeat.shared).deflate(.015),
+      footprint: const Rect.fromLTWH(-.16, -.53, .32, .47),
+      type: CafeItemType.cloth,
+    );
   }
 
   void _entranceDetails() => _clearEntrance();

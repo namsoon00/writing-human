@@ -47,7 +47,12 @@ void main() {
         },
       ),
     );
-    for (final id in ['shared.cup', 'shared.pen', 'shared.book', 'shared']) {
+    for (final id in [
+      'shared.cup',
+      'shared.pen',
+      'shared.book',
+      'shared.table',
+    ]) {
       final a = before.faces.where((f) => f.objectId == id).toList();
       final b = after.faces.where((f) => f.objectId == id).toList();
       expect(a, isNotEmpty);

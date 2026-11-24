@@ -10,6 +10,7 @@ part 'cafe_interior.dart';
 part 'cafe_objects.dart';
 part 'cafe_soft_geometry.dart';
 part 'cafe_entrance.dart';
+part 'cafe_items.dart';
 
 enum CafeSurface {
   plain,
@@ -153,6 +154,7 @@ class CafeWorld {
   final CafeSpace space;
   final Map<String, CafeObject> objects = {};
   String? _buildingObject, layoutError;
+  int _flowerCount = 0;
   final bool courtyard;
   Iterable<CafeTarget> get targets =>
       CafeTarget.values.where((t) => t.inCourtyard == courtyard);
@@ -160,12 +162,21 @@ class CafeWorld {
   final List<Rect> obstacles = [];
   final List<CafePlant> plants = [];
   final List<CafePoint> pendantLights = [];
+  final List<double> pendantGains = [];
+  final List<CafePoint> wallLights = [];
+  final List<double> wallGains = [];
   Iterable<CafeFace> lightFaces(CafeCamera camera) sync* {
-    for (final center in pendantLights) {
+    for (var index = 0; index < pendantLights.length; index++) {
+      final center = pendantLights[index], gain = pendantGains[index];
+      if (gain == 0) continue;
       for (var ring = 0; ring < 3; ring++) {
         final inner = ring / 3, outer = (ring + 1) / 3;
-        Color color(double radius) =>
-            Color.fromRGBO(255, 218, 163, .16 * (1 - radius) * (1 - radius));
+        Color color(double radius) => Color.fromRGBO(
+          255,
+          218,
+          163,
+          .16 * gain * (1 - radius) * (1 - radius),
+        );
         CafePoint at(double r, double a) =>
             center +
             camera.right * (math.cos(a) * r * .16) +
@@ -366,6 +377,7 @@ class CafeWorld {
     Color color, {
     bool wood = false,
     bool unlit = false,
+    bool doubleSided = false,
     int layer = 2,
     CafeSurface? surface,
     CafeGrain grain = CafeGrain.y,
@@ -399,6 +411,7 @@ class CafeWorld {
             color,
             wood: wood,
             unlit: unlit,
+            doubleSided: doubleSided,
             layer: layer,
             target: _target,
             surface: surface,
@@ -711,6 +724,11 @@ class CafeWorld {
   }
 
   void _chair(double x, double z, {double angle = 0, bool padded = false}) {
+    final id = _buildingObject ?? '';
+    final timber = [dark, oak, const Color(0xff514b41)][space.finish(id)];
+    final timberSurface = space.finish(id) == 1
+        ? CafeSurface.oak
+        : CafeSurface.walnut;
     CafePoint rot(double dx, double y, double dz) => CafePoint(
       x + dx * math.cos(angle) - dz * math.sin(angle),
       y,
@@ -762,7 +780,7 @@ class CafeWorld {
           const Color(0xff858a6b),
           const Color(0xffaa7c62),
           cream,
-        ][space.cushion],
+        ][space.accent(id, fallback: space.cushion)],
       );
     }
     for (final dx in [-.18, .18]) {
@@ -771,8 +789,8 @@ class CafeWorld {
           rot(dx, .015, dz),
           rot(dx * .92, .44, dz * .92),
           .019,
-          dark,
-          surface: CafeSurface.walnut,
+          timber,
+          surface: timberSurface,
         );
         final foot = rot(dx, 0, dz);
         shadow(foot.x, foot.z, .065, .065, strength: .14);
@@ -781,8 +799,8 @@ class CafeWorld {
         rot(dx, .43, .16),
         rot(dx, .77, .16),
         .019,
-        dark,
-        surface: CafeSurface.walnut,
+        timber,
+        surface: timberSurface,
       );
     }
     // A sculpted round rail, not flat rectangular arc segments.
@@ -825,8 +843,8 @@ class CafeWorld {
         faces.add(
           CafeFace(
             points,
-            dark,
-            surface: CafeSurface.walnut,
+            timber,
+            surface: timberSurface,
             grain: math.cos(angle).abs() > .5 ? CafeGrain.x : CafeGrain.z,
             vertexNormals: normals,
             target: _target,
@@ -835,23 +853,32 @@ class CafeWorld {
       }
     }
     obstacles.add(
-      Rect.fromCenter(center: Offset(x, z), width: .48, height: .45),
+      Rect.fromCenter(
+        center: Offset(x, z),
+        width: .48 * math.cos(angle).abs() + .45 * math.sin(angle).abs(),
+        height: .45 * math.cos(angle).abs() + .48 * math.sin(angle).abs(),
+      ),
     );
     shadow(x, z, .32, .3, strength: .045);
   }
 
   void _book(double x, double y, double z, {double angle = 0}) {
+    final cover = [
+      sage,
+      const Color(0xffaa806b),
+      const Color(0xff8d9683),
+    ][space.finish(_buildingObject ?? "")];
     final firstFace = faces.length;
     shadow(x + .012, z + .015, .29, .20, y: y - .014, layer: 2, strength: .13);
-    box(x, y, z, .43, .018, .30, sage, topFace: false);
+    box(x, y, z, .43, .018, .30, cover, topFace: false);
     box(x, y + .013, z, .40, .016, .28, cream, topFace: false);
     // Expose only the cover border, not an opaque full face under the pages.
     // A full backing sorts in front of small page patches at low eye angles.
     for (final xx in [x - .2075, x + .2075]) {
-      box(xx, y, z, .015, .018, .30, sage);
+      box(xx, y, z, .015, .018, .30, cover);
     }
     for (final zz in [z - .145, z + .145]) {
-      box(x, y, zz, .40, .018, .01, sage);
+      box(x, y, zz, .40, .018, .01, cover);
     }
     for (final side in [-1, 1]) {
       final center = x + side * .104;
@@ -865,25 +892,38 @@ class CafeWorld {
         const Color(0xfff5efdf),
         topFace: false,
       );
-      faces.add(
-        CafeFace(
-          [
-            CafePoint(center - .095, y + .0275, z + .138),
-            CafePoint(center + .095, y + .0275, z + .138),
-            CafePoint(center + .095, y + .0275, z - .138),
-            CafePoint(center - .095, y + .0275, z - .138),
-          ],
-          const Color(0xfff5efdf),
-          surface: CafeSurface.artwork,
-          target: _target,
-          textureCoordinates: const [
-            Offset(0, 1),
-            Offset(1, 1),
-            Offset(1, 2 / 3),
-            Offset(0, 2 / 3),
-          ],
-        ),
-      );
+      for (var column = 0; column < 8; column++) {
+        for (var row = 0; row < 12; row++) {
+          final u = column / 8,
+              v = row / 12,
+              uu = (column + 1) / 8,
+              vv = (row + 1) / 12;
+          CafePoint page(double u, double v) {
+            final across = u * 2 - 1;
+            return CafePoint(
+              center - .095 + u * .19,
+              y + .0275 + .003 * (1 - across * across),
+              z + .138 - v * .276,
+            );
+          }
+
+          Offset ink(double u, double v) => Offset(u, 1 - v / 3);
+          faces.add(
+            CafeFace(
+              [page(u, v), page(uu, v), page(uu, vv), page(u, vv)],
+              const Color(0xfff5efdf),
+              surface: CafeSurface.artwork,
+              target: _target,
+              textureCoordinates: [
+                ink(u, v),
+                ink(uu, v),
+                ink(uu, vv),
+                ink(u, vv),
+              ],
+            ),
+          );
+        }
+      }
     }
     box(x, y + .027, z, .007, .009, .28, const Color(0xffbfb29b));
     if (angle != 0) {
@@ -923,7 +963,10 @@ class CafeWorld {
       z,
       .16,
       .30,
-      [const Color(0xff9e7353), sage, cream][space.pot],
+      [const Color(0xff9e7353), sage, cream][space.finish(
+        _buildingObject ?? '',
+        fallback: space.pot,
+      )],
       topRadius: .21,
     );
     cylinder(x, .315, z, .18, .01, dark);
@@ -987,7 +1030,9 @@ class CafeWorld {
   }
 
   void _pendantMesh(double x, double z, {double radius = .25}) {
+    final gain = space.light(_buildingObject ?? '');
     pendantLights.add(CafePoint(x, 2.175, z));
+    pendantGains.add(gain);
     cylinder(x, 2.65, z, .012, .56, dark, sides: 5);
     _turned(x, z, [
       (2.185, radius),
@@ -1006,9 +1051,9 @@ class CafeWorld {
       z,
       radius * .88,
       .008,
-      const Color(0xffffdfad),
+      gain == 0 ? const Color(0xffa79c81) : const Color(0xffffdfad),
       sides: 16,
-      unlit: true,
+      unlit: gain != 0,
     );
     shadow(x, z, .65, .70, strength: .025);
   }
@@ -1017,7 +1062,15 @@ class CafeWorld {
     _target = target;
     obstacles.add(bounds);
     final x = bounds.center.dx, z = bounds.center.dy;
-    _roundedSlab(x, z, bounds.width, bounds.height);
+    final finish = space.finish(_buildingObject ?? '');
+    _roundedSlab(
+      x,
+      z,
+      bounds.width,
+      bounds.height,
+      surface: finish == 1 ? CafeSurface.walnut : CafeSurface.oak,
+      color: finish == 1 ? dark : oak,
+    );
     box(
       x,
       .682,
@@ -1207,29 +1260,63 @@ class CafeWorld {
         layer: 1,
       );
     }
-    // Three individual window desks, facing the garden, with their own chair zone.
     for (final seat in [
       CafeSeat.windowRear,
       CafeSeat.windowMiddle,
       CafeSeat.window,
     ]) {
-      final z = desk(seat).z;
+      final z = desk(seat).z, group = 'desk.${seat.name}';
       _object(
-        'desk.${seat.name}',
-        seat.label,
-        CafeObjectKind.floor,
+        group,
+        '${seat.label} 함께 옮기기',
+        CafeObjectKind.group,
         CafePoint(-3.4, 0, z),
         () {
-          final target = CafeTarget.forSeat(seat);
-          _writingSurface(
-            Rect.fromCenter(center: Offset(-3.76, z), width: .72, height: 1.36),
-            target: target,
+          _tableItem('$group.table', '${seat.label} 책상', seat, (support) {
+            _noteItem(
+              '$group.book',
+              '${seat.label} 노트',
+              -3.72,
+              .773,
+              z,
+              angle: math.pi / 2,
+              support: support,
+            );
+            _cupItem(
+              '$group.cup',
+              '${seat.label} 찻잔',
+              -3.80,
+              .767,
+              z - .40,
+              support: support,
+            );
+            _pencilItem(
+              '$group.pen',
+              '${seat.label} 연필',
+              -3.75,
+              .806,
+              z + .38,
+              support: support,
+            );
+            _vaseItem(
+              '$group.vase',
+              '${seat.label} 화병',
+              -4.0,
+              .754,
+              z + .42,
+              support: support,
+            );
+          });
+          _target = CafeTarget.forSeat(seat);
+          _chairItem(
+            '$group.chair',
+            '${seat.label} 의자',
+            -3.0,
+            z,
+            angle: -math.pi / 2,
+            padded: seat == CafeSeat.window,
+            seat: seat,
           );
-          _target = target;
-          _chair(-3.0, z, angle: math.pi / 2, padded: seat == CafeSeat.window);
-          _book(-3.72, .773, z, angle: math.pi / 2);
-          _cup(-3.8, .767, z - .40);
-          _windowDeskDetails(seat);
           _target = null;
           _pendant(-3.68, z, radius: .19);
         },
@@ -1237,65 +1324,62 @@ class CafeWorld {
     }
     _object(
       'shared',
-      '\uD070 \uCC45\uC0C1',
-      CafeObjectKind.floor,
+      '중앙 자리 함께 옮기기',
+      CafeObjectKind.group,
       const CafePoint(0, 0, 0),
       () {
-        // A true longitudinal communal table; six side chairs, open short ends.
-        _writingSurface(
-          tableBounds(CafeSeat.shared),
-          target: CafeTarget.shared,
-        );
+        _tableItem('shared.table', '큰 책상', CafeSeat.shared, (support) {
+          _noteItem(
+            'shared.book',
+            '중앙 노트',
+            .24,
+            .773,
+            .75,
+            angle: math.pi / 2,
+            support: support,
+          );
+          _noteItem(
+            'shared.book.other',
+            '맞은편 노트',
+            -.23,
+            .773,
+            -.85,
+            angle: -math.pi / 2,
+            support: support,
+          );
+          _pencilItem('shared.pen', '중앙 연필', .29, .806, .49, support: support);
+          _cupItem(
+            'shared.cup',
+            '중앙 찻잔',
+            -.2,
+            .767,
+            .18,
+            support: support,
+            filled: space.cupFull,
+          );
+          _vaseItem('shared.vase', '중앙 화병', 0, .754, -.30, support: support);
+          _sharedDetails();
+        });
         _target = CafeTarget.shared;
-        for (final z in [-.95, .05, 1.05]) {
-          _chair(.98, z, angle: -math.pi / 2);
-          _chair(-.98, z, angle: math.pi / 2);
+        for (var i = 0; i < 3; i++) {
+          final z = -.95 + i;
+          _chairItem(
+            'shared.chair.right.$i',
+            '중앙 오른쪽 ${i + 1}번 의자',
+            .98,
+            z,
+            angle: -math.pi / 2,
+            seat: CafeSeat.shared,
+          );
+          _chairItem(
+            'shared.chair.left.$i',
+            '중앙 왼쪽 ${i + 1}번 의자',
+            -.98,
+            z,
+            angle: math.pi / 2,
+            seat: CafeSeat.shared,
+          );
         }
-        _object(
-          'shared.book',
-          '\uB178\uD2B8',
-          CafeObjectKind.prop,
-          const CafePoint(.24, .773, .75),
-          () {
-            if (space.bookOpen) {
-              _book(.24, .773, .75, angle: math.pi / 2);
-            } else {
-              box(.24, .784, .75, .30, .030, .43, sage);
-              box(.24, .802, .75, .25, .006, .36, cream);
-            }
-          },
-          support: const Rect.fromLTWH(-.38, -1.35, .76, 2.4),
-        );
-        _book(-.23, .773, -.85, angle: -math.pi / 2);
-        _object(
-          'shared.pen',
-          '\uC5F0\uD544',
-          CafeObjectKind.prop,
-          const CafePoint(.29, .806, .49),
-          () {
-            _pencil(.29, .806, .49);
-          },
-          support: const Rect.fromLTWH(-.34, -1.35, .68, 2.4),
-        );
-        _object(
-          'shared.cup',
-          '\uCC3B\uC794',
-          CafeObjectKind.prop,
-          const CafePoint(-.2, .767, .18),
-          () {
-            _cup(-.2, .767, .18, filled: space.cupFull);
-          },
-          support: const Rect.fromLTWH(-.44, -1.5, .88, 2.7),
-        );
-        _object(
-          'shared.vase',
-          '\uD654\uBCD1',
-          CafeObjectKind.prop,
-          const CafePoint(0, .75, -.30),
-          _vase,
-          support: const Rect.fromLTWH(-.38, -1.4, .76, 2.6),
-        );
-        _sharedDetails();
         _target = null;
         _pendant(0, -.83);
         _pendant(0, .68);
@@ -1342,18 +1426,46 @@ class CafeWorld {
     }
     _object(
       'quiet',
-      '\uC548\uCABD \uC790\uB9AC',
-      CafeObjectKind.floor,
+      '안쪽 자리 함께 옮기기',
+      CafeObjectKind.group,
       const CafePoint(-1.70, 0, -4.02),
       () {
-        _writingSurface(tableBounds(CafeSeat.quiet), target: CafeTarget.quiet);
+        _tableItem('quiet.table', '안쪽 책상', CafeSeat.quiet, (support) {
+          _noteItem(
+            'quiet.book',
+            '안쪽 노트',
+            -1.70,
+            .773,
+            -4.02,
+            support: support,
+          );
+          _pencilItem(
+            'quiet.pen',
+            '안쪽 연필',
+            -1.32,
+            .806,
+            -3.94,
+            support: support,
+          );
+          _cupItem('quiet.cup', '안쪽 찻잔', -2.23, .767, -4.02, support: support);
+          _vaseItem(
+            'quiet.vase',
+            '안쪽 화병',
+            -2.23,
+            .754,
+            -4.28,
+            support: support,
+          );
+        });
         _target = CafeTarget.quiet;
-        _chair(-1.70, -3.3, padded: true);
-        _book(-1.70, .773, -4.02);
-        _pencil(-1.37, .806, -3.94);
-        _cup(-2.23, .767, -4.02);
-        // A quiet cloth bookmark stays on the real book, with no sample user text.
-        box(-1.74, .805, -3.91, .023, .005, .16, const Color(0xff9a7058));
+        _chairItem(
+          'quiet.chair',
+          '안쪽 의자',
+          -1.70,
+          -3.3,
+          padded: true,
+          seat: CafeSeat.quiet,
+        );
         _target = null;
         _pendant(-1.70, -3.95, radius: .18);
       },
@@ -1375,12 +1487,6 @@ class CafeWorld {
       surface: CafeSurface.limestone,
       color: const Color(0xfff5eee2),
     );
-    box(1.05, 1.29, -4.52, .75, .45, .40, const Color(0xff55534b));
-    box(1.05, 1.26, -4.29, .67, .23, .04, const Color(0xffb5aea0));
-    for (var i = 0; i < 4; i++) {
-      cylinder(.0 + i * .15, 1.10, -4.45, .048, .10, cream, sides: 12);
-    }
-    cylinder(1.95, 1.21, -4.5, .09, .32, dark, sides: 12);
     faces.add(
       CafeFace(
         [
@@ -1460,41 +1566,70 @@ class CafeWorld {
         final y = .64 + row * .55;
         box(3.97, y, z, .51, .055, 2.20, oak, wood: true);
         box(3.72, y + .06, z, .025, .025, 2.05, const Color(0xffffd69b));
-        for (var i = 0; i < 5; i++) {
-          final colors = [
-            sage,
-            cream,
-            const Color(0xffa78167),
-            const Color(0xffc2b493),
-          ];
+        for (var i = 0; i < (row < 3 ? 4 : 5); i++) {
           final featured =
               section.$2 == CafeTarget.recommendations &&
               row == 1 &&
               i > 0 &&
               i < 4;
+          final bookId = 'shelf.${section.$2.name}.$row.$i';
           final coverZ = z - .86 + i * .41;
-          box(
-            featured ? 3.83 : 3.91,
-            y + .23,
-            coverZ,
-            featured ? .085 : .065,
-            featured ? .41 : .36,
-            featured ? .34 : .25,
-            colors[(row + i) % 4],
+          _object(
+            bookId,
+            '${section.$2 == CafeTarget.recommendations ? '추천' : '책장'} ${row + 1}단 ${i + 1}번째 책',
+            CafeObjectKind.prop,
+            CafePoint(3.88, y + .03, coverZ),
+            () {
+              final faceOut = space.state(bookId, fallback: featured);
+              final color = [
+                sage,
+                const Color(0xffa78167),
+                const Color(0xff929d89),
+              ][space.finish(bookId, fallback: (row + i) % 3)];
+              final x = faceOut ? 3.83 : 3.91;
+              box(
+                x,
+                y + .23,
+                coverZ,
+                faceOut ? .085 : .065,
+                faceOut ? .41 : .36,
+                faceOut ? .34 : .25,
+                color,
+              );
+              box(
+                x - .044,
+                y + .19,
+                coverZ,
+                .005,
+                .006,
+                faceOut ? .19 : .13,
+                brass,
+              );
+              // Recessed paper edges, rounded spine and a cover label.
+              box(
+                x,
+                y + .421,
+                coverZ,
+                .055,
+                .008,
+                faceOut ? .315 : .225,
+                cream,
+              );
+              if (faceOut) {
+                box(3.781, y + .31, coverZ, .006, .09, .17, cream);
+                box(3.777, y + .02, coverZ + .10, .008, .08, .018, sage);
+              }
+            },
+            support: Rect.fromLTWH(3.71, z - 1.08, .43, 2.16),
+            footprint: Rect.fromCenter(
+              center: Offset(3.88, coverZ),
+              width: .20,
+              height: .35,
+            ),
+            type: CafeItemType.volume,
+            defaultState: featured,
+            defaultFinish: (row + i) % 3,
           );
-          box(
-            featured ? 3.783 : 3.87,
-            y + .19,
-            coverZ,
-            .005,
-            .006,
-            featured ? .19 : .13,
-            brass,
-          );
-          if (featured) {
-            box(3.781, y + .31, coverZ, .006, .09, .17, cream);
-            box(3.777, y + .02, coverZ + .10, .008, .08, .018, sage);
-          }
         }
       }
       final row = section.$2 == CafeTarget.recommendations ? 1 : 2;

@@ -204,12 +204,6 @@ class CafeRenderer extends CustomPainter {
   /// End faces use two cross-grain axes instead of a collapsed UV coordinate.
   static Offset materialUv(CafeFace face, CafePoint p) => face.materialUv(p);
 
-  static const _wallLights = [
-    CafePoint(-3.60, 2.10, -4.68),
-    CafePoint(-3.72, 2.25, 4.67),
-    CafePoint(3.61, 2.25, 4.67),
-    CafePoint(.70, 2.73, -4.68),
-  ];
   static final _illumination = Expando<List<CafePoint>>();
   List<CafePoint> _diffuse(CafeFace face) =>
       _illumination[face] ??= List.generate(face.points.length, (i) {
@@ -227,22 +221,26 @@ class CafeRenderer extends CustomPainter {
             .11 * math.max(0, n.dot(_daylightDirection)) * window +
             .035 * math.max(0, n.y);
         var warm = 0.0;
-        for (final lamp in world.pendantLights) {
+        for (var i = 0; i < world.pendantLights.length; i++) {
+          final lamp = world.pendantLights[i];
           final delta = lamp - p, distance = delta.length;
           final down = math.max(0, delta.y);
           final radial = math.sqrt(delta.x * delta.x + delta.z * delta.z);
           final cone = (1 - radial / (.40 + down * .75)).clamp(0.0, 1.0);
           warm +=
               1.45 *
+              world.pendantGains[i] *
               cone *
               cone *
               math.max(0, n.dot(delta.normalized)) /
               (1 + .45 * distance * distance);
         }
-        for (final lamp in _wallLights) {
+        for (var i = 0; i < world.wallLights.length; i++) {
+          final lamp = world.wallLights[i];
           final delta = lamp - p;
           warm +=
               .70 *
+              world.wallGains[i] *
               math.max(0, n.dot(delta.normalized)) /
               (1 + 3.2 * delta.dot(delta));
         }

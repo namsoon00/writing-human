@@ -1,0 +1,12 @@
+{
+  "font": "/private/tmp/writing-typeface-balance-20261124/design/typeface/release/WritingHumanDevelopment-Regular.ttf",
+  "sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+  "cmap_entries": 11422,
+  "unique_hangul_outlines": 11172,
+  "nfc_nfd_syllables_checked": 11172,
+  "explicit_composition_rules": 11172,
+  "geometry": "pass",
+  "shaping": "pass",
+  "harfbuzz": "12.1.0",
+  "scope": "Font tables and HarfBuzz; not physical device or optical approval"
+}

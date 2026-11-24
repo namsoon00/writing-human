@@ -594,7 +594,14 @@ OS TextScaler에 전달하며, 그 외 크기를 일괄 확대하지 않는다. 
 
 ## 개발 중 서체 연결
 
-WritingHumanDevelopment family를 pubspec.yaml에 등록했다. 0.007은 현대 한글 11,172자·자모·ASCII·문장부호를 담은 실제 TTF이며 반복 자모를 TrueType composite으로 공유한다. OpenType ccmp는 현대 초성+중성 및 받침을 완성형과 같은 윤곽으로 조합한다. 본문은 기존
+현재 0.009는 `source/reading-v009.json`의 범위로 완성 음절의 획 외곽 크기와 아래선을
+보정한다. 공유 자모의 윤곽을 음절마다 하나의 affine 변환으로 배치하고, 문자 advance와
+기존 cmap/GSUB/GPOS/줄 메트릭은 유지한다. 실제 입력 문자열·조합 상태·커서·글꼴 선택·
+크기 설정에는 별도 마이그레이션을 적용하지 않는다. 대체 서체 체인도 그대로 사용한다.
+`review_balance.py`가 이전 TTF와 전 글자 폭·조판/커닝/비한글 윤곽의 동일성을 비교하고
+크기 편차 및 실제 14–42px 견본을 기록한다. 경계 수치 검사는 최종 광학 승인을 대신하지 않는다.
+
+WritingHumanDevelopment family를 pubspec.yaml에 등록했다. 0.007부터 현대 한글 11,172자·자모·ASCII·문장부호를 담은 실제 TTF이며 반복 자모를 TrueType composite으로 공유한다. OpenType ccmp는 현대 초성+중성 및 받침을 완성형과 같은 윤곽으로 조합한다. 본문은 기존
 TextField와 TextEditingController를 유지하고 TextStyle의 family/fallback만
 바꾼다. 개발 TTF의 미지원 글자는 NanumMyeongjo → NanumGothic → 플랫폼
 대체 글꼴로 표시한다. 문자열·선택 영역·composing을 나누거나 다시 설정하지 않는다.

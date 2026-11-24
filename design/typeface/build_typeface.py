@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parent
 APP = ROOT.parents[1] / "assets/fonts"
 OUT = ROOT / "release"
 LATIN = ROOT / "source/latin-v006.json"
-PROFILE = ROOT / "source/reading-v008.json"
+PROFILE = ROOT / "source/reading-v009.json"
 READING = json.loads(PROFILE.read_text())
 REVISION = READING["revision"]
 FILENAME = "WritingHumanDevelopment-Regular.ttf"
@@ -53,6 +53,28 @@ class DenseFinal(Designer):
     """Keep a wider opening between two consonants at the bottom of a syllable."""
 
     cluster_gap = READING["double_final_gap"]
+
+
+def optical_transform(glyph, glyphs, final):
+    """Balance the visible body, allowing a small band instead of equal boxes.
+
+    Apply one bounded transform to all shared parts of a syllable. Advances and
+    ccmp remain unchanged; Latin, punctuation and standalone jamo are untouched.
+    """
+    glyph.recalcBounds(glyphs)
+    profile = READING['optical_size']
+    width = glyph.xMax - glyph.xMin
+    height = glyph.yMax - glyph.yMin
+    def clamp(value, limits):
+        return max(limits[0], min(value, limits[1]))
+    sx = clamp(width, profile['width_range']) / width
+    sy = clamp(height, profile['height_range']) / height
+    # Round final forms sit just below the common lower edge, a small optical
+    # overshoot rather than a lower baseline for every final consonant.
+    baseline = profile['baseline'] - (profile['round_overshoot'] if final == 'ㅇ' else 0)
+    dx = profile['center_x'] - sx * (glyph.xMin + glyph.xMax) / 2
+    dy = baseline - sy * glyph.yMin
+    return sx, 0, 0, sy, dx, dy
 
 
 def name_for(cp):
@@ -195,7 +217,12 @@ def build(install=False):
                 parts[spec] = part_name
             pen.addComponent(parts[spec], (1, 0, 0, 1, 0, 0))
         name = name_for(cp)
-        glyphs[name] = pen.glyph(componentFlags=0)
+        raw = pen.glyph(componentFlags=0)
+        transform = optical_transform(raw, glyphs, final)
+        balanced = TTGlyphPen(glyphs)
+        for component in raw.components:
+            balanced.addComponent(component.glyphName, transform)
+        glyphs[name] = balanced.glyph(componentFlags=0)
         cmap[cp] = name
         metrics[name] = (920, 0)
     fb = FontBuilder(1000, isTTF=True)

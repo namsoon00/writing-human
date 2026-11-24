@@ -3468,3 +3468,42 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   공개 파일 배포 확인이며 공개 페이지 UI 직접 조작·실제 iPhone/Android의 터치/성능
   검증은 아니다. 개인 배치/필사 저장 키, 기존 비공개 Sites 식별자/범위, 공유 작업공간의
   다른 미완성 변경은 이번 배포에서 바꾸지 않았다.
+
+
+## 2026-11-24 · 쓰는 인간체 0.009 자형 크기 보정
+
+- 사용자가 같은 문장 안에서 자형 크기가 달라 보인다고 알려 주었다. 0.008의 완성 한글
+  획 외곽 높이는 638–777, 폭은 610–751, 아래선은 82–146 디자인 단위였다(1em=1000).
+  ㅣ 계열의 좁은 음절과 받침 유무·가로/복합 모음의 높이 차이가 함께 드러났다.
+- 0.009는 완성 음절의 높이를 712–728, 폭을 690–728의 작은 범위로 보정하고
+  아래선을 100에 맞췄다. 둥근 ㅇ 받침은 97로 두어 작은 광학적 여유를 남겼다.
+  자형의 구조와 곡선은 공유 자모에서 유지하고 전체 음절에 같은 변환을 적용한다.
+- 실제 측정 편차: 높이 139→16, 폭 141→38, 아래선 64→3. 이 수치는 획 외곽 경계의
+  편차이며 가독성 향상률이나 모든 자형의 최종 광학 승인을 뜻하지 않는다.
+  [전후 비교](evidence/20261124/typeface-v009/balance-comparison.png)와
+  [14–42px 견본](evidence/20261124/typeface-v009/reading-sizes.png)은 실제 TTF의 FreeType 렌더다.
+- `build_typeface.py --install`로 실제 앱 TTF와 배포 원본을 재생성했다. 같은 원본의 두 빌드에서
+  SHA-256 `d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05`가 같았다.
+  원본·빌더 해시는 두 매니페스트에 기록한다. family와 저장된 글꼴/크기 선택은 유지한다.
+- `audit_typeface.py`: 문자 매핑 11,422개, 고유 한글 11,172자, 전체 NFC/NFD 조판과
+  명시적 합성 규칙 11,172개, 빈 글자·경계·윤곽 중복 검사 통과.
+  [전수 검사](evidence/20261124/typeface-v009/coverage-audit.json)를 남겼다.
+- `review_balance.py`: 기존 글자별 advance 11,422개와 비한글 윤곽, cmap, hhea/OS2 줄 메트릭,
+  GSUB 조합, GPOS 영문 커닝이 같은지 대조했다. 본문·선택·composing·저장 구조는 수정하지 않는다.
+  [크기·보존 대조](evidence/20261124/typeface-v009/balance-audit.json)를 남겼다.
+- `dart format --output=none --set-exit-if-changed lib test tool/render_full_typeface_test.dart`:
+  183개 파일 변경 없음. `flutter analyze --no-pub`: 이슈 없음.
+  `flutter test --no-pub --concurrency=2`: 298개 모두 통과.
+- `flutter test --no-pub tool/render_full_typeface_test.dart`: 실제 번들 TTF를 FontLoader로 읽어
+  여러 본문 크기와 14·18·23·32·42px 견본을 렌더했다. Flutter 테스트 rasterizer 결과이며
+  실제 앱 UI 조작이나 iOS/Android 물리 기기 캡처와 구분한다.
+- 별도 임시 Chrome origin의 FontFace/Canvas 검사에서 실제 TTF 로드, 획 표시, `꽃값힣이기시`의
+  NFC/NFD 픽셀 일치, advance 176.64px 유지가 통과했다.
+  [Chrome 결과](evidence/20261124/typeface-v009/chrome-font-audit.json)는 웹 글꼴 엔진 검사이며
+  앱 전체 UI·실기기 IME/성능·모든 자형의 수작업 광학 검수는 이번 확인 범위에 포함하지 않는다.
+- 디자이너·기획자·마케터·개발자 판단을 브랜드 페르소나에 갱신했다. 배포와 공개 파일 대조는
+  완료 후 따로 기록한다. 기존 비공개 Sites 설정과 사용자 기록은 건드리지 않는다.
+- `node tool/build_github_pages.mjs`: 성공. 로컬 release 산출물의 TTF와 앱 자산이 같은
+  `d759a184…` 해시인지 확인했으며, 실제 공개 주소의 파일 대조는 배포 후 기록한다.
+- Flutter 렌더를 20px 본문 견본까지 포함해 다시 실행했고 1개 검사 통과. 14/20/27.6px
+  읽기 견본과 14/18/23/32/42px 자형 견본은 실제 번들 파일로 생성했다.

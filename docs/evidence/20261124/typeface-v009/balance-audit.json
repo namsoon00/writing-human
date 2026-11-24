@@ -1,0 +1,53 @@
+{
+  "reference_sha256": "52e61fbf08b165ccd2d5f17d232d2e5d509b87edf69b46397668b8398b2d903f",
+  "candidate_sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+  "before": {
+    "width": {
+      "min": 610,
+      "median": 714.0,
+      "max": 751,
+      "spread": 141
+    },
+    "height": {
+      "min": 638,
+      "median": 732.0,
+      "max": 777,
+      "spread": 139
+    },
+    "bottom": {
+      "min": 82,
+      "median": 99.0,
+      "max": 146,
+      "spread": 64
+    }
+  },
+  "after": {
+    "width": {
+      "min": 690,
+      "median": 714.0,
+      "max": 728,
+      "spread": 38
+    },
+    "height": {
+      "min": 712,
+      "median": 728.0,
+      "max": 728,
+      "spread": 16
+    },
+    "bottom": {
+      "min": 97,
+      "median": 100.0,
+      "max": 100,
+      "spread": 3
+    }
+  },
+  "unchanged_advances": 11422,
+  "unchanged": [
+    "cmap",
+    "non-Hangul outlines",
+    "line metrics",
+    "NFC/NFD GSUB",
+    "Latin kerning"
+  ],
+  "scope": "Exhaustive ink bounds plus actual FreeType renders; not final optical approval or physical-device review"
+}

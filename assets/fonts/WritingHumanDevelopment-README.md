@@ -1,9 +1,14 @@
-# 쓰는 인간체 0.008
+# 쓰는 인간체 0.009
 
-0.008은 겹받침의 두 자음 사이를 벌리고 획이 많은 받침의 안쪽 여백을 넓힌다.
-영문 대문자와 숫자의 윤곽 높이는 7%, 소문자는 3% 낮춰 한글과 섞인 줄을 다듬었다.
-`source/reading-v008.json`에 조정값을 두며, 지원 문자와 자모 조판, 글꼴의 글자 폭은
-유지한다. 앱의 필사 본문과 해당 미리보기는 쓰는 인간체의 자간을 조금 좁혀 표시한다.
+0.009는 같은 크기로 쓴 한글이 받침·모음 구조에 따라 들쭉날쭉해 보이던 점을 다듬는다.
+완성 음절의 획 외곽 높이는 712–728, 폭은 690–728 디자인 단위의 작은 범위에 맞추고
+아래선을 100에 둔다(둥근 ㅇ 받침은 3단위 내려 광학적 여유를 둔다). 1em은 1000단위다.
+범위 안의 차이는 유지하며 기존 자모의 획 구조와 부드러운 곡선은 재사용한다.
+
+`source/reading-v009.json`이 보정 기준이다. 한글 11,172자와 기존 문자 지원, 한 글자의
+차지 폭 920, 줄 높이, 완성형/분해형 조판, 영문·숫자·문장부호는 유지한다.
+0.008에서 넓힌 겹받침과 안쪽 여백도 이어받는다. 한글 이외의 글자에는 이번 크기 보정을 적용하지 않는다.
+실제 TTF의 작은 글씨와 문장 견본을 확인했으며 최종 광학 승인과 실기기 검수는 별도다.
 
 
 직접 작성한 자모·영문 벡터 원본에서 빌드한 실제 TTF다. 현대 한글 11,172자,
@@ -33,6 +38,8 @@ artifacts/typeface-venv/bin/python design/typeface/build_typeface.py
 artifacts/typeface-venv/bin/python design/typeface/audit_typeface.py
 artifacts/typeface-venv/bin/python design/typeface/build_typeface.py --install
 flutter test tool/render_full_typeface_test.dart --no-pub
+# 이전 TTF와 크기·배치 및 실제 읽기 견본을 비교할 때:
+artifacts/typeface-venv/bin/python design/typeface/review_balance.py /path/to/previous.ttf design/typeface/release/WritingHumanDevelopment-Regular.ttf
 ```
 
 기본 출력은 `design/typeface/release/`이며, `--install`은 빌드·경계 검사 성공 후

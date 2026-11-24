@@ -1,0 +1,25 @@
+{
+  "revision": "0.009",
+  "units_per_em": 1000,
+  "outline_expansion": 6,
+  "dense_single_finals": "ㄹㅆㅊㅌㅍ",
+  "dense_final_expansion": 3,
+  "double_final_gap": 106,
+  "double_final_top_inset": 12,
+  "capital_digit_height_scale": 0.93,
+  "lowercase_height_scale": 0.97,
+  "method": "Balance visible Hangul size across the six layouts; retain modest width/height variation, align the lower ink edge, preserve character advances, Latin metrics, cmap and NFC/NFD composition.",
+  "optical_size": {
+    "height_range": [
+      712,
+      728
+    ],
+    "width_range": [
+      690,
+      728
+    ],
+    "baseline": 100,
+    "center_x": 460,
+    "round_overshoot": 3
+  }
+}

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:web/web.dart' as web;
 import 'package:writing_human/cafe/cafe_space.dart';
 import 'package:writing_human/cafe/cafe_home.dart';
+import 'package:writing_human/cafe/cafe_atmosphere.dart';
 import 'package:writing_human/cafe/cafe_space_store_web.dart';
 
 void main() {
@@ -16,6 +17,13 @@ void main() {
       final a = WebCafeSpaceStore(key), b = WebCafeSpaceStore('$key.other');
       try {
         const expected = CafeSpace(
+          atmosphere: CafeAtmosphere(
+            flow: false,
+            rain: .7,
+            water: .2,
+            leaves: .8,
+            music: 0,
+          ),
           brightness: 1.15,
           home: CafeHome(
             mood: 2,

@@ -1,0 +1,95 @@
+{
+  "checked_at": "2026-11-24T14:02:27.666907+00:00",
+  "capture_kind": "Synthetic empty-library Flutter fixture with real bundled fonts, 13 materials and letter atlas; not a physical phone",
+  "viewport": [
+    390,
+    844
+  ],
+  "pixel_ratio": 2,
+  "views": [
+    "afternoon-window",
+    "late-window",
+    "leaf-shadow-desk",
+    "personal-sound-mix"
+  ],
+  "earlier_complete_native_suite": 329,
+  "final_scoped_native_including_capture_and_incoming_pencil_tests": 16,
+  "earlier_native_room_storage_and_walk_tests": 20,
+  "chrome_atmosphere_and_storage_tests_before_final_shadow_polish": 8,
+  "chrome_atmosphere_after_error_handling": 8,
+  "format": "199 files; no changes",
+  "analysis": "flutter analyze --no-pub: no issues",
+  "audio": {
+    "rain": {
+      "seconds": 8.0,
+      "rate": 22050,
+      "channels": 1,
+      "peak": 0.1317138671875,
+      "rms": 0.0453091238885164,
+      "seam_delta": 0.02423095703125,
+      "sha256": "f6593f9d061151c8ceee7701d25a8d0109439380906f57479c0a48887d81e833"
+    },
+    "water": {
+      "seconds": 8.0,
+      "rate": 22050,
+      "channels": 1,
+      "peak": 0.449981689453125,
+      "rms": 0.09951475345448112,
+      "seam_delta": 0.0,
+      "sha256": "9b148e80814d29e49ff850cfd17d6add0f414c34938d4dd258d3c819bdb4cd48"
+    },
+    "leaves": {
+      "seconds": 7.8500226757369616,
+      "rate": 22050,
+      "channels": 1,
+      "peak": 0.259979248046875,
+      "rms": 0.046919598947335744,
+      "seam_delta": 0.015045166015625,
+      "sha256": "c6b9d20b6129a4519bfc256e1dfd0cd2bea03ebfaea769f29806981551efe993"
+    },
+    "music": {
+      "seconds": 24.0,
+      "rate": 22050,
+      "channels": 1,
+      "peak": 0.259979248046875,
+      "rms": 0.060181056143092666,
+      "seam_delta": 0.00054931640625,
+      "sha256": "484820eb3500a54134c1f0a45f7169a5caaa66e3097f6b2f7d744fed3f60fc0b"
+    }
+  },
+  "implementation": [
+    "12-minute active-view light passage within the selected mood",
+    "World-anchored leaf wash applied after light range limiting",
+    "Position, distance, doorway transmission and stereo gains",
+    "Web: one AudioContext, gain/pan/low-pass ramps; native: four audioplayers with volume/pan fades",
+    "v5 atmosphere migration; v1-v4 layout, item and manuscript preservation; no persisted playing state"
+  ],
+  "browser_check": {
+    "environment": "Local release build through in-app browser, before final cosmetic shadow/switch edits and before incoming pencil source merge; same cafe audio backend",
+    "observed": [
+      "Explicit start, stop and restart reached the matching sound control state",
+      "Garden travel retained the playing state",
+      "Reload and fresh cafe entry stayed muted"
+    ],
+    "limits": [
+      "Header-close automation timed out; route-close completion was not established by that browser interaction. Unit lifecycle/disposal checks are separate.",
+      "The tool did not measure audible speaker/headphone quality or actual per-room loudness."
+    ],
+    "screenshot": "local-browser-audio.jpg"
+  },
+  "images": {
+    "afternoon-window": "26a4fca0db3c98435f4341cc92d71812650e38b9c8f5e314fabe909d7dcaf5b7",
+    "late-window": "81dfc756a103ad2ea474c5baf13ce7e9fb1489bad77e247ecf6ee16e779fd560",
+    "leaf-shadow-desk": "42c6865a7666296a4ff700848dcda2cb5db24cc8fa360091331d7a9edcdf1b1b",
+    "personal-sound-mix": "6991fd0571ff57d3fb51701b5cc0682cf80e74c963b66319bef9c98221fb0527"
+  },
+  "unverified": [
+    "Physical iPhone/Android playback and touch",
+    "Mobile frame rate, thermals and speaker/headphone sound quality",
+    "Direct public-page interaction of the final published build"
+  ],
+  "final_chrome_atmosphere_tests": 9,
+  "local_release_build": "node tool/build_github_pages.mjs: passed, including incoming original pencil recording change",
+  "main_js_sha256": "46c0f14cff2c5f6b9672db5aa776fc1f63ec68c1b18c55acdad5df6df170278a",
+  "font_sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05"
+}

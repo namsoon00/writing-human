@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'cafe_home.dart';
+import 'cafe_atmosphere.dart';
 import 'dart:math' as math;
 
 class CafePose {
@@ -39,6 +40,7 @@ class CafePose {
 
 class CafeSpace {
   const CafeSpace({
+    this.atmosphere = const CafeAtmosphere(),
     this.home = const CafeHome(),
     this.poses = const {},
     this.amounts = const {},
@@ -62,6 +64,7 @@ class CafeSpace {
     this.doorOpen = true,
   });
   final CafeHome home;
+  final CafeAtmosphere atmosphere;
   final Map<String, CafePose> poses;
   final Map<String, int> amounts;
   final Map<String, bool> uses;
@@ -122,6 +125,7 @@ class CafeSpace {
   final bool bookOpen, cupFull, gardenTea, doorOpen;
   CafePose pose(String id) => poses[id] ?? const CafePose();
   CafeSpace copy({
+    CafeAtmosphere? atmosphere,
     CafeHome? home,
     Map<String, CafePose>? poses,
     Map<String, int>? amounts,
@@ -145,6 +149,7 @@ class CafeSpace {
     bool? gardenTea,
     bool? doorOpen,
   }) => CafeSpace(
+    atmosphere: atmosphere ?? this.atmosphere,
     home: home ?? this.home,
     poses: poses ?? this.poses,
     amounts: amounts ?? this.amounts,
@@ -168,7 +173,8 @@ class CafeSpace {
     doorOpen: doorOpen ?? this.doorOpen,
   );
   Map<String, dynamic> toJson() => {
-    'version': 4,
+    'version': 5,
+    'atmosphere': atmosphere.toJson(),
     'home': home.toJson(),
     'amounts': amounts,
     'uses': uses,
@@ -194,7 +200,7 @@ class CafeSpace {
   String encode() => jsonEncode(toJson());
   factory CafeSpace.decode(String raw) {
     final j = jsonDecode(raw);
-    if (j is! Map<String, dynamic> || ![1, 2, 3, 4].contains(j['version'])) {
+    if (j is! Map<String, dynamic> || ![1, 2, 3, 4, 5].contains(j['version'])) {
       throw const FormatException('Invalid room data');
     }
     final selected = j['selectedBookId'];
@@ -248,6 +254,9 @@ class CafeSpace {
     }
 
     return CafeSpace(
+      atmosphere: j['version'] < 5
+          ? const CafeAtmosphere()
+          : CafeAtmosphere.read(j['atmosphere']),
       home: j['version'] < 4 ? const CafeHome() : CafeHome.read(j['home']),
       amounts: map('amounts', (v) {
         if (v is! int || v < 0 || v > 3) {

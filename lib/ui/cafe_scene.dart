@@ -1,4 +1,5 @@
 import 'dart:ui' as ui;
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -117,6 +118,9 @@ class _CafeSceneState extends State<CafeScene>
   }
 
   double sceneTime = 0, heldTime = 0;
+  double lightTime = 0;
+  Timer? lightClock;
+  late int lightMood = widget.controller.space.home.mood;
   bool appActive = true;
   @override
   void didChangeDependencies() {
@@ -138,13 +142,23 @@ class _CafeSceneState extends State<CafeScene>
   }
 
   void _syncCalm() {
-    final animate =
+    final visible =
         mounted &&
         appActive &&
-        (widget.controller.inCourtyard ||
-            widget.controller.camera.forward.x < -.5) &&
         !MediaQuery.disableAnimationsOf(context) &&
         TickerMode.valuesOf(context).enabled;
+    final animate =
+        visible &&
+        (widget.controller.inCourtyard ||
+            widget.controller.camera.forward.x < -.5);
+    if (visible && widget.controller.space.atmosphere.flow && !widget.editing) {
+      lightClock ??= Timer.periodic(const Duration(seconds: 2), (_) {
+        if (mounted) setState(() => lightTime += 2);
+      });
+    } else {
+      lightClock?.cancel();
+      lightClock = null;
+    }
     if (animate && !calm.isActive) {
       calm.start();
     }
@@ -429,11 +443,17 @@ class _CafeSceneState extends State<CafeScene>
       useRequest = widget.controller.useRequest;
       request = widget.controller.request;
       widget.controller.addListener(_changed);
+      lightTime = 0;
     }
+    _syncCalm();
   }
 
   void _changed() {
     final c = widget.controller;
+    if (lightMood != c.space.home.mood) {
+      lightMood = c.space.home.mood;
+      lightTime = 0;
+    }
     _refreshAtlas();
     if (useRequest != c.useRequest) {
       useRequest = c.useRequest;
@@ -530,6 +550,7 @@ class _CafeSceneState extends State<CafeScene>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     calm.dispose();
+    lightClock?.cancel();
     keyboard.dispose();
     focus.removeListener(_focusChanged);
     widget.controller.removeListener(_changed);
@@ -803,6 +824,7 @@ class _CafeSceneState extends State<CafeScene>
                       flowers: flowers,
                       framedArt: framedArt,
                       time: sceneTime,
+                      lightTime: lightTime,
                       teaFilled: c.teaFilled,
                       bellAt: c.bellAt,
                       teaAt: c.teaAt,

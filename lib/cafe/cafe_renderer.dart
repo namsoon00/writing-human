@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'cafe_camera.dart';
 import 'cafe_world.dart';
 import 'cafe_visit.dart';
+import 'cafe_atmosphere.dart';
 
 part 'cafe_depth_order.dart';
 
@@ -30,6 +31,11 @@ class _ProjectedFace {
   final double depth;
 }
 
+class _Illumination {
+  const _Illumination(this.ambient, this.lamp);
+  final CafePoint ambient, lamp;
+}
+
 /// Perspective projection of 3D mesh surfaces into Flutter's Canvas renderer.
 /// Near-plane clipping prevents faces behind the eye from folding across view.
 class CafeRenderer extends CustomPainter {
@@ -50,6 +56,7 @@ class CafeRenderer extends CustomPainter {
     this.use,
     this.letterAtlas,
     this.time = 0,
+    this.lightTime = 0,
     this.teaFilled = false,
     this.bellAt,
     this.teaAt,
@@ -72,6 +79,12 @@ class CafeRenderer extends CustomPainter {
   final List<ui.Image?> framedArt;
   final bool allowPortal;
   final double time;
+  final double lightTime;
+  late final _lightFrame = CafeLightFrame(
+    seconds: lightTime,
+    flow: world.space.atmosphere.flow,
+    mood: world.space.home.mood,
+  );
   final bool teaFilled;
   final double? bellAt, teaAt;
   static const near = .075;
@@ -217,8 +230,8 @@ class CafeRenderer extends CustomPainter {
   /// End faces use two cross-grain axes instead of a collapsed UV coordinate.
   static Offset materialUv(CafeFace face, CafePoint p) => face.materialUv(p);
 
-  static final _illumination = Expando<List<CafePoint>>();
-  List<CafePoint> _diffuse(CafeFace face) =>
+  static final _illumination = Expando<List<_Illumination>>();
+  List<_Illumination> _diffuse(CafeFace face) =>
       _illumination[face] ??= List.generate(face.points.length, (i) {
         final p = face.points[i], n = face.vertexNormals?[i] ?? face.normal;
         if (world.courtyard) {
@@ -235,10 +248,13 @@ class CafeRenderer extends CustomPainter {
                 math.max(0, n.dot(delta.normalized)) /
                 (1 + delta.dot(delta) * 2.4);
           }
-          return CafePoint(
-            fill * (world.space.home.mood == 0 ? 1 : .93) + glow,
-            fill * .978 + glow * .76,
-            fill * (world.space.home.mood == 0 ? .925 : 1.08) + glow * .43,
+          return _Illumination(
+            CafePoint(
+              fill * (world.space.home.mood == 0 ? 1 : .93),
+              fill * .978,
+              fill * (world.space.home.mood == 0 ? .925 : 1.08),
+            ),
+            CafePoint(glow, glow * .76, glow * .43),
           );
         }
         final window = math.exp(-(p.x + 4.4).clamp(0, 12) / 4.5);
@@ -285,14 +301,14 @@ class CafeRenderer extends CustomPainter {
           contact -= .12 * math.exp(-p.y * 5);
           contact -= .05 * math.exp(-(2.95 - p.y).abs() * 5);
         }
-        return CafePoint(
-          (fill + warm) * contact * world.space.brightness,
-          (fill * .96 + warm * (.86 - world.space.warmth * .08)) *
-              contact *
-              world.space.brightness,
-          (fill * .89 + warm * (.69 - world.space.warmth * .16)) *
-              contact *
-              world.space.brightness,
+        final gain = contact * world.space.brightness;
+        return _Illumination(
+          CafePoint(fill * gain, fill * .96 * gain, fill * .89 * gain),
+          CafePoint(
+            warm * gain,
+            warm * (.86 - world.space.warmth * .08) * gain,
+            warm * (.69 - world.space.warmth * .16) * gain,
+          ),
         );
       });
 
@@ -307,8 +323,30 @@ class CafeRenderer extends CustomPainter {
   Color _light(CafeFace face, int i, bool textured, double specular) {
     if (face.vertexColors != null) return face.vertexColors![i];
 
-    if (face.unlit && !face.sign) return face.color;
-    final light = _diffuse(face)[i];
+    if (face.unlit && !face.sign) {
+      if (world.courtyard && face.layer == -1) {
+        return Color.lerp(
+          face.color,
+          const Color(0xff617a89),
+          _lightFrame.dusk * .7,
+        )!;
+      }
+      return face.color;
+    }
+    final cached = _diffuse(face)[i];
+    final tint = world.courtyard ? _lightFrame.outdoor : _lightFrame.indoor;
+    final shade = world.courtyard
+        ? 1.0
+        : _lightFrame.shadow(
+            face.points[i],
+            face.vertexNormals?[i] ?? face.normal,
+            world.space.atmosphere.flow ? time : 0,
+          );
+    final light = CafePoint(
+      cached.ambient.x * tint.x + cached.lamp.x * _lightFrame.lamps,
+      cached.ambient.y * tint.y + cached.lamp.y * _lightFrame.lamps,
+      cached.ambient.z * tint.z + cached.lamp.z * _lightFrame.lamps,
+    );
     final base =
         textured &&
             face.surface != CafeSurface.limestone &&
@@ -318,8 +356,10 @@ class CafeRenderer extends CustomPainter {
             face.surface != CafeSurface.brass
         ? face.materialTint
         : face.color;
+    // Apply the watercolor leaf wash after limiting the light range, so a
+    // bright desk lamp cannot clip the entire shadow back to uniform white.
     int channel(double value, double factor) =>
-        ((value * factor + specular) * 255).round().clamp(0, 255);
+        (((value * factor + specular) * 255).clamp(0, 255) * shade).round();
     return Color.fromARGB(
       (base.a * 255).round(),
       channel(base.r, light.x),
@@ -335,9 +375,13 @@ class CafeRenderer extends CustomPainter {
     canvas.clipRect(Offset.zero & size);
     canvas.drawColor(
       world.courtyard
-          ? (world.space.home.mood == 0
-                ? const Color(0xffc5bfbd)
-                : const Color(0xff617a89))
+          ? Color.lerp(
+              (world.space.home.mood == 0
+                  ? const Color(0xffc5bfbd)
+                  : const Color(0xff617a89)),
+              const Color(0xff536b7b),
+              _lightFrame.dusk * .7,
+            )!
           : const Color(0xfff3eadb),
       BlendMode.srcOver,
     );
@@ -595,6 +639,7 @@ class CafeRenderer extends CustomPainter {
         framedArt: framedArt,
         sign: sign,
         time: time,
+        lightTime: lightTime,
         teaFilled: teaFilled,
         bellAt: bellAt,
         teaAt: teaAt,
@@ -652,6 +697,7 @@ class CafeRenderer extends CustomPainter {
       oldDelegate.use != use ||
       oldDelegate.allowPortal != allowPortal ||
       oldDelegate.time != time ||
+      oldDelegate.lightTime != lightTime ||
       oldDelegate.teaFilled != teaFilled ||
       oldDelegate.bellAt != bellAt ||
       oldDelegate.teaAt != teaAt ||

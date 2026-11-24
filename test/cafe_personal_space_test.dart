@@ -7,6 +7,7 @@ import 'package:writing_human/cafe/cafe_camera.dart';
 import 'package:writing_human/cafe/cafe_visit.dart';
 import 'package:writing_human/cafe/cafe_space.dart';
 import 'package:writing_human/cafe/cafe_home.dart';
+import 'package:writing_human/cafe/cafe_atmosphere.dart';
 import 'package:writing_human/cafe/cafe_world.dart';
 import 'package:writing_human/cafe/cafe_view_controller.dart';
 import 'package:writing_human/data/model.dart';
@@ -90,6 +91,13 @@ void main() {
         await db.save(library);
         final a = await db.openSpaceStore('account-a');
         final config = const CafeSpace().copy(
+          atmosphere: const CafeAtmosphere(
+            flow: false,
+            rain: .7,
+            water: .2,
+            leaves: .8,
+            music: 0,
+          ),
           brightness: 1.15,
           home: const CafeHome(
             mood: 2,

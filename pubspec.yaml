@@ -126,6 +126,8 @@ flutter:
     - assets/audio/cafe-sip.wav
     - assets/audio/cafe-page.wav
     - assets/audio/cafe-water.wav
+    - assets/audio/cafe-leaves.wav
+    - assets/audio/cafe-music.wav
     - assets/audio/supertonic-license.txt
     - assets/audio/supertonic-code-license.txt
     - assets/audio/signalsmith-code-license.txt

@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../audio/cafe_ambience.dart';
+import '../audio/cafe_soundscape.dart';
+import '../cafe/cafe_atmosphere.dart';
+import 'cafe_atmosphere_sheet.dart';
 
 import '../cafe/cafe_visit.dart';
 import '../cafe/cafe_world.dart';
@@ -32,7 +35,9 @@ class CafeScreen extends StatefulWidget {
     this.moment,
     this.lastSentence = '',
     this.onTranscribe,
+    this.soundscape,
   });
+  final CafeSoundOutput? soundscape;
   final Future<void> Function(String name)? playCalmSound;
   final CafeSpaceStore? spaceStore;
   final DateTime? moment;
@@ -55,7 +60,7 @@ class CafeScreen extends StatefulWidget {
 }
 
 class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
-  final ambience = CafeAmbience();
+  late final ambience = widget.soundscape ?? createCafeSoundscape(_soundFailed);
   final calmAudio = CafeCalmAudio();
   bool lastCourtyard = false;
   bool showIntro = true;
@@ -64,7 +69,32 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
   late final moment = widget.moment ?? DateTime.now();
   String? calmHint;
   bool sound = false, soundBusy = false;
+  final soundState = ValueNotifier(false);
+  void _setSound(bool value) {
+    sound = value;
+    soundState.value = value;
+  }
+
   int soundGeneration = 0;
+  void _soundFailed(Object error) {
+    soundGeneration++;
+    unawaited(ambience.stop());
+    if (mounted) {
+      setState(() {
+        _setSound(false);
+        calmHint = '소리를 재생하지 못했어요. 소리를 다시 켜 주세요.';
+      });
+    }
+  }
+
+  void _updateSound([CafeAtmosphere? mix]) => ambience.update(
+    CafeSoundFrame.at(
+      mix: mix ?? view.space.atmosphere,
+      camera: view.camera,
+      courtyard: view.inCourtyard,
+      doorOpen: view.space.doorOpen,
+    ),
+  );
   @override
   void initState() {
     super.initState();
@@ -80,7 +110,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
       soundGeneration++;
       unawaited(ambience.stop());
       unawaited(calmAudio.stop());
-      if (mounted) setState(() => sound = false);
+      if (mounted) setState(() => _setSound(false));
     }
   }
 
@@ -93,17 +123,14 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
       if (sound) {
         await ambience.stop();
       } else {
-        await ambience.start(courtyard: view.inCourtyard);
+        _updateSound();
+        await ambience.start();
       }
       if (mounted && generation == soundGeneration) {
-        setState(() => sound = desired);
+        setState(() => _setSound(desired));
       }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('소리를 재생하지 못했어요. 다시 켜 주세요.')),
-        );
-      }
+    } catch (error) {
+      if (mounted && generation == soundGeneration) _soundFailed(error);
     } finally {
       if (mounted) setState(() => soundBusy = false);
     }
@@ -118,6 +145,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     unawaited(ambience.dispose());
     unawaited(calmAudio.dispose());
+    soundState.dispose();
     view.removeListener(_viewChanged);
     view.dispose();
     super.dispose();
@@ -413,19 +441,33 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     setState(() => dialogOpen = true);
     final result = await showDialog<Object>(
       context: context,
-      builder: (context) => CafeRitualSheet(
-        page: page,
-        home: view.space.home,
-        moment: moment,
-        currentSeat: view.seat,
-        chair: view.activeChairId,
-        lastSentence: widget.lastSentence,
-        canTranscribe: widget.onTranscribe != null,
-        onSave: (home) => _storeUse(view.space.copy(home: home)),
-      ),
+      builder: (context) => page == 'ambience'
+          ? CafeAtmosphereSheet(
+              value: view.space.atmosphere,
+              playing: soundState,
+              onPreview: (mix) {
+                if (sound) _updateSound(mix);
+              },
+              onSave: (mix) => _storeUse(view.space.copy(atmosphere: mix)),
+              onToggle: () async {
+                await _toggleSound();
+                return sound;
+              },
+            )
+          : CafeRitualSheet(
+              page: page,
+              home: view.space.home,
+              moment: moment,
+              currentSeat: view.seat,
+              chair: view.activeChairId,
+              lastSentence: widget.lastSentence,
+              canTranscribe: widget.onTranscribe != null,
+              onSave: (home) => _storeUse(view.space.copy(home: home)),
+            ),
     );
     if (!mounted) return;
     setState(() => dialogOpen = false);
+    if (sound) _updateSound();
     if (result is CafeSentence) {
       await _startSentence(result);
     } else if (result == CafeRitualAction.rainWindow) {
@@ -1451,12 +1493,10 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     if (!roomLoading) showIntro = false;
     if (lastCourtyard != view.inCourtyard) {
       lastCourtyard = view.inCourtyard;
-      soundGeneration++;
-      unawaited(ambience.stop());
       unawaited(calmAudio.stop());
-      sound = false;
       calmHint = null;
     }
+    if (sound) _updateSound();
     if (pending != null && pendingRequest != view.request) pending = null;
     setState(() {});
     if (!view.travelling && pending != null) {
@@ -1771,6 +1811,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                 for (final entry in const {
                   'arrival': '나의 자리',
                   'mood': '공간의 시간',
+                  'ambience': '빛과 소리',
                   'today': '오늘의 문장',
                   'memory': '내가 남긴 문장',
                   'letter': '쓰는 인간의 쪽지',
@@ -1920,9 +1961,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                               ),
                             ),
                             IconButton(
-                              tooltip: view.inCourtyard
-                                  ? (sound ? '물소리 끄기' : '물소리 켜기')
-                                  : (sound ? '빗소리 끄기' : '빗소리 켜기'),
+                              tooltip: sound ? '소리 끄기' : '소리 켜기',
                               onPressed: soundBusy ? null : _toggleSound,
                               icon: Icon(
                                 sound

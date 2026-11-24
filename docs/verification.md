@@ -3744,3 +3744,17 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   실제 음성 디코더/렌더 검사이며 스피커 청음·앱 UI의 신뢰된 입력 활성화·실기기 전체 검증은 아니다.
 - 작업 전 여유 공간을 확인했고 도구 다운로드·디코드·Chrome 임시 폴더는 try/finally로
   정리했다. 격리 release worktree는 검증 자료 보관과 원격 반영 확인 후 정리한다.
+
+- 로컬 전체 테스트 322개와 release 웹 빌드가 완료됐다. 음원 준비에는 DC 평균 정렬도
+  포함했으며, 들리는 음높이·속도·질감을 재설계하지 않았다.
+- 공개 CI [45405590143](https://github.com/namsoon00/writing-human/actions/runs/45405590143):
+  포맷·분석, 전체 322개, Chrome 음성 6개·공간 38개 검사, 웹 빌드·게시 모두 통과했다.
+- 2026-11-24 22:49 KST 공개 웹의 앱 JS·새 WAV·출처 JSON을 내려받아 검증 빌드와
+  바이트 단위로 일치함을 확인했다. WAV는 643,464바이트이며 SHA-256은
+  `10f5de0304ddfe461a19e57a5963bd7f1c973deadc3db1d5d7e632d18bb18360`이다.
+  [게시 근거](evidence/20261124/pencil-original/deployment.json)를 남겼다.
+- 원격 게시 트리와 로컬 트리, 저장한 최종 자료를 확인한 뒤 이번 release worktree를
+  `git worktree remove`로 정리했다. 다운로드/디코드 도구·Chrome 프로필·중간 PCM·
+  전송용 base64/JSON도 정리했다. 원본 WebM·적용 WAV·출처/처리 증거·검사 로그는
+  `output/pencil-original-20261124/`에 보존한다. 정리 후 남은 공간은 약 82GiB다.
+- 실제 iPhone/Android 스피커 청음과 앱 전체 UI에서의 입력 활성화는 이번 확인 범위와 구분한다.

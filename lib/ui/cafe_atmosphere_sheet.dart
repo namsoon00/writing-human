@@ -118,16 +118,16 @@ class _CafeAtmosphereSheetState extends State<CafeAtmosphereSheet> {
                             : (v) => save(draft.copy(flow: v)),
                       ),
                       const SizedBox(height: 14),
-                      const Text('나의 소리 풍경', style: TextStyle(fontSize: 20)),
+                      const Text('고요한 공간', style: TextStyle(fontSize: 20)),
                       const SizedBox(height: 8),
                       const Text(
-                        '창가와 정원, 열린 문에 따라 소리의 거리감이 달라져요.',
+                        '배경음 없이 조용히 머물러요. 소리를 켜면 물건을 사용할 때만 짧게 들려요.',
                         style: TextStyle(height: 1.6, color: muted),
                       ),
                       const SizedBox(height: 12),
-                      Text('전체 음량 · ${(draft.volume * 100).round()}%'),
+                      Text('동작음 음량 · ${(draft.volume * 100).round()}%'),
                       Semantics(
-                        label: '전체 음량',
+                        label: '동작음 음량',
                         child: Slider(
                           key: const ValueKey('cafe-master-volume'),
                           value: draft.volume,
@@ -146,32 +146,6 @@ class _CafeAtmosphereSheetState extends State<CafeAtmosphereSheet> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      for (final sound in CafeSound.values) ...[
-                        Text(switch (sound) {
-                          CafeSound.rain => '빗방울',
-                          CafeSound.water => '연못의 물',
-                          CafeSound.leaves => '잎과 바람',
-                          CafeSound.music => '작은 선율',
-                        }),
-                        Slider(
-                          key: ValueKey('cafe-mix-${sound.name}'),
-                          min: 0,
-                          max: 1,
-                          value: draft.level(sound),
-                          semanticFormatterCallback: (v) =>
-                              '${(v * 100).round()}%',
-                          onChanged: busy
-                              ? null
-                              : (v) {
-                                  setState(() {
-                                    draft = draft.copy(sound: sound, level: v);
-                                    notice = null;
-                                  });
-                                  widget.onPreview(draft);
-                                },
-                          onChangeEnd: busy ? null : (_) => save(draft),
-                        ),
-                      ],
                       if (soundError != null)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 10),
@@ -190,12 +164,12 @@ class _CafeAtmosphereSheetState extends State<CafeAtmosphereSheet> {
                                 ? Icons.volume_off_outlined
                                 : Icons.volume_up_outlined,
                           ),
-                          label: Text(playing ? '소리 끄기' : '소리 켜고 듣기'),
+                          label: Text(playing ? '동작음 끄기' : '동작음 켜기'),
                         ),
                       ),
                       const SizedBox(height: 10),
                       const Text(
-                        '조합은 기억하고, 소리는 올 때마다 직접 켜요.',
+                        '음량은 기억하고, 동작음은 올 때마다 직접 켜요.',
                         style: TextStyle(
                           color: muted,
                           fontSize: 14,

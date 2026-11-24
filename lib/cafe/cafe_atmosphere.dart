@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'cafe_camera.dart';
 
+// Retained only to read existing room preferences without discarding data.
 enum CafeSound { rain, water, leaves, music }
 
 /// Preferences only. Playing/muted state and animation progress are not saved.
@@ -8,8 +9,8 @@ class CafeAtmosphere {
   const CafeAtmosphere({
     this.flow = true,
     this.volume = .20,
-    this.rain = .35,
-    this.water = .15,
+    this.rain = 0,
+    this.water = 0,
     this.leaves = 0,
     this.music = 0,
   });

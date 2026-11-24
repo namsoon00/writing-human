@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
 import 'package:writing_human/audio/cafe_soundscape.dart';
 import 'package:writing_human/cafe/cafe_atmosphere.dart';
 import 'package:writing_human/cafe/cafe_camera.dart';
@@ -73,6 +74,8 @@ void main() {
     expect(mix.copy(volume: 0).actionVolume, 0);
     expect(mix.actionVolume, closeTo(.04, 1e-10));
     const defaults = CafeAtmosphere();
+    expect(defaults.rain, 0);
+    expect(defaults.water, 0);
     expect(defaults.leaves, 0);
     expect(defaults.music, 0);
     // Worst-case sum of gains, even with every source next to the listener.
@@ -81,6 +84,43 @@ void main() {
       lessThan(.04),
     );
   });
+
+  testWidgets(
+    'Removed ambient assets cannot replay even with an old maximum mix',
+    (tester) async {
+      await tester.runAsync(() async {
+        final action = await rootBundle.load('assets/audio/cafe-touch.wav');
+        expect(action.lengthInBytes, greaterThan(44));
+        for (final name in ['rain', 'water', 'leaves', 'music']) {
+          await expectLater(
+            () => rootBundle.load('assets/audio/cafe-$name.wav'),
+            throwsA(isA<FlutterError>()),
+          );
+        }
+        final errors = <Object>[];
+        final output = createCafeSoundscape(errors.add);
+        final frame = CafeSoundFrame.at(
+          mix: const CafeAtmosphere(
+            volume: 1,
+            rain: 1,
+            water: 1,
+            leaves: 1,
+            music: 1,
+          ),
+          camera: const CafeCamera(position: CafePoint(-7.4, 1.62, 0)),
+          courtyard: true,
+          doorOpen: true,
+        );
+        for (var visit = 0; visit < 2; visit++) {
+          output.update(frame);
+          await output.start();
+          await output.stop();
+        }
+        await output.dispose();
+        expect(errors, isEmpty);
+      });
+    },
+  );
 
   testWidgets('Leaf shadows remain visible and move under a bright desk lamp', (
     tester,
@@ -203,7 +243,7 @@ void main() {
         bool garden = false,
         bool open = true,
       }) => CafeSoundFrame.at(
-        mix: const CafeAtmosphere(),
+        mix: const CafeAtmosphere(rain: .35, water: .15),
         camera: camera,
         courtyard: garden,
         doorOpen: open,
@@ -405,12 +445,10 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('cafe-atmosphere-retry')));
       await tester.pumpAndSettle();
       expect(store.value.atmosphere.flow, isFalse);
-      final water = find.byKey(const ValueKey('cafe-mix-water'));
-      await tester.ensureVisible(water);
-      await tester.tap(water);
-      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('cafe-mix-water')), findsNothing);
+      expect(find.byKey(const ValueKey('cafe-mix-rain')), findsNothing);
+      expect(find.text('고요한 공간'), findsOneWidget);
       expect(audio.starts, 0);
-      expect(store.value.atmosphere.water, isNot(.15));
       await end(tester);
     },
   );
@@ -445,14 +483,14 @@ void main() {
       await tester.tap(listen);
       await tester.pumpAndSettle();
       expect(find.text('소리를 재생하지 못했어요. 다시 켜 주세요.'), findsOneWidget);
-      expect(find.text('소리 켜고 듣기'), findsOneWidget);
+      expect(find.text('동작음 켜기'), findsOneWidget);
       audio.reject = false;
       await tester.tap(listen);
       await tester.pumpAndSettle();
-      expect(find.text('소리 끄기'), findsOneWidget);
+      expect(find.text('동작음 끄기'), findsOneWidget);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
       await tester.pump();
-      expect(find.text('소리 켜고 듣기'), findsOneWidget);
+      expect(find.text('동작음 켜기'), findsOneWidget);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await end(tester);
     },

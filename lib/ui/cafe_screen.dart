@@ -122,6 +122,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     try {
       if (sound) {
         await ambience.stop();
+        await calmAudio.stop();
       } else {
         _updateSound();
         await ambience.start();

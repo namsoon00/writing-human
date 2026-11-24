@@ -3821,3 +3821,22 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - 로컬 전체 회귀 324개가 통과했고, 600ms 시작 위치 보정 뒤 관련 4개를 다시 실행해
   모두 통과했다. 통합된 최신 main을 보존한 상태의 `flutter analyze --no-pub`도 이슈 없음이다.
   최종 공개 CI와 게시 파일 대조는 완료 후 별도로 기록한다.
+
+## 2026-11-24 · 카페 빛과 소리 웹 게시 확인
+
+- 소스 `6242927bbd20bb502bc259af4443a159a537cc3d`의
+  [Actions 45410362801](https://github.com/namsoon00/writing-human/actions/runs/45410362801)는
+  포맷·정적 분석·네이티브 331개·음성 DSP 6개·Chrome 47개·최종 빌드·배포가
+  모두 success다. 로컬 release 빌드와 포맷/정적 분석도 통과했다.
+- [공개 카페](https://namsoon00.github.io/writing-human/?v=6242927&check=1795529755)의
+  index → versioned bootstrap → main.dart.js를 HTTP로 대조했다. main SHA-256
+  `46c0f14cff2c5f6b9672db5aa776fc1f63ec68c1b18c55acdad5df6df170278a`는 로컬 release와
+  바이트가 같다. 재질/서체/FontManifest·기존 동작 소리·환경음 네 개·기존 원음 필사
+  WAV와 출처 JSON까지 16개 자산도 모두 같은 파일이다.
+  [공개 파일 대조](../design/cafe/20261124/return-atmosphere/deployment.json)를 남겼다.
+- 공유 작업 폴더에는 이번 파일만 합쳤다. 기존 전체 조명 제어를 보존해 충돌 한 곳을
+  해결했고 변경 Dart 14개 포맷은 수정 없음, 앱 소스 정적 분석과 관련 검사 12개가 통과했다.
+  루트 인덱스·폰트·다른 로컬 작업은 유지했다.
+- 게시 확인 후의 별도 필사 소리 변경 `760c053`을 덮어쓰지 않고 이 검증 기록의
+  기반으로 보존했다. 위 공개 대조는 명시한 카페 소스의 게시 시점 결과이며 이후 별도
+  필사 소리 버전의 검증 결과를 대신하지 않는다. 실제 휴대폰 청음·FPS는 여전히 미검증이다.

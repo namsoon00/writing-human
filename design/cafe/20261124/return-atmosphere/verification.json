@@ -91,5 +91,22 @@
   "final_chrome_atmosphere_tests": 9,
   "local_release_build": "node tool/build_github_pages.mjs: passed, including incoming original pencil recording change",
   "main_js_sha256": "46c0f14cff2c5f6b9672db5aa776fc1f63ec68c1b18c55acdad5df6df170278a",
-  "font_sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05"
+  "font_sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+  "shared_workspace_verification": {
+    "format": "14 Dart files; no changes",
+    "analysis": "flutter analyze --no-pub lib test tool hook: no issues",
+    "tests": 12,
+    "merge": "Retained pre-existing whole-room lighting controls by resolving the single constructor-adjacent conflict; other root work, index and font unchanged"
+  },
+  "deployment": {
+    "run_id": 45410362801,
+    "url": "https://github.com/namsoon00/writing-human/actions/runs/45410362801",
+    "build": "success",
+    "deploy": "success",
+    "native_tests": 331,
+    "chrome_tests": 47,
+    "voice_dsp_tests": 6
+  },
+  "source_commit": "6242927bbd20bb502bc259af4443a159a537cc3d",
+  "later_unrelated_writing_source_preserved": "760c053dc0f7d03ee24cee50d575c613f313da15"
 }

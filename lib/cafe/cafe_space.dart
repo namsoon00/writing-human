@@ -173,7 +173,7 @@ class CafeSpace {
     doorOpen: doorOpen ?? this.doorOpen,
   );
   Map<String, dynamic> toJson() => {
-    'version': 5,
+    'version': 6,
     'atmosphere': atmosphere.toJson(),
     'home': home.toJson(),
     'amounts': amounts,
@@ -200,7 +200,8 @@ class CafeSpace {
   String encode() => jsonEncode(toJson());
   factory CafeSpace.decode(String raw) {
     final j = jsonDecode(raw);
-    if (j is! Map<String, dynamic> || ![1, 2, 3, 4, 5].contains(j['version'])) {
+    if (j is! Map<String, dynamic> ||
+        ![1, 2, 3, 4, 5, 6].contains(j['version'])) {
       throw const FormatException('Invalid room data');
     }
     final selected = j['selectedBookId'];
@@ -256,7 +257,7 @@ class CafeSpace {
     return CafeSpace(
       atmosphere: j['version'] < 5
           ? const CafeAtmosphere()
-          : CafeAtmosphere.read(j['atmosphere']),
+          : CafeAtmosphere.read(j['atmosphere'], legacy: j['version'] == 5),
       home: j['version'] < 4 ? const CafeHome() : CafeHome.read(j['home']),
       amounts: map('amounts', (v) {
         if (v is! int || v < 0 || v > 3) {

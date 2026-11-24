@@ -3853,3 +3853,17 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   `git worktree remove`로 정리했다. Chrome 프로필·전송용 JSON도 정리했고, 코드·검사 로그·
   프로브 결과·게시 근거는 보존했다. 정리 뒤 남은 공간은 약 82.0GiB다.
   실제 iOS/Android의 청음·전체 제품 UI 입력 검수는 이 결과와 구분한다.
+
+## 2026-11-24 · 카페 소음 제보에 따른 음량 보정
+
+- 범위: 전체 음량 기본20%, 두 배경음의 작은 기본 조합, 소스별 trim, 동작음 연동,
+  v5→v6 조합 보존 이행. 필사 입력·연필 원음·배치는 변경하지 않았다.
+- 원본 WAV의 PCM peak/RMS와 거리 감쇠 전 합산 peak 상한을
+  `design/cafe/20261124/quiet-sound/signal-levels.json`에 기록했다. 새 기본값의 상한은
+  -43.08 dBFS, 이전 기본 조합을 보존한 이행값은 -34.04 dBFS다. 이는 기기 음압이나
+  사용자의 체감 음량 측정이 아니다.
+- 실행 검사와 공개 배포 결과는 아래에 기록한다. 휴대폰 실기기 청음은 미검증이다.
+- 로컬: `dart format --output=none --set-exit-if-changed lib test` 통과,
+  `flutter analyze --no-pub` 문제 없음. 관련 네이티브 29개 통과(디스크 SQLite 포함),
+  동작음 보완 후 카페 음량/정원 15개 재검사 통과. Chrome 음량/실제 localStorage/정원
+  16개 통과. 이후 접근성 이름 보완의 최종 검사는 배포 CI에서 확인한다.

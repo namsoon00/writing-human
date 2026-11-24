@@ -79,7 +79,7 @@ class CafeSoundscape implements CafeSoundOutput {
     if (_closed || context == null || _sources.isEmpty) return;
     final now = context.currentTime;
     void ramp(web.AudioParam param, double value) {
-      if ((param.value - value).abs() < .002) return;
+      if (param.value == value) return;
       final from = param.value;
       param.cancelScheduledValues(now);
       param.setValueAtTime(from, now);

@@ -93,6 +93,7 @@ void main() {
         final config = const CafeSpace().copy(
           atmosphere: const CafeAtmosphere(
             flow: false,
+            volume: .13,
             rain: .7,
             water: .2,
             leaves: .8,

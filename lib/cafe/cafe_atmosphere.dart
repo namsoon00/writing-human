@@ -7,32 +7,40 @@ enum CafeSound { rain, water, leaves, music }
 class CafeAtmosphere {
   const CafeAtmosphere({
     this.flow = true,
-    this.rain = .55,
-    this.water = .40,
-    this.leaves = .30,
-    this.music = .18,
+    this.volume = .20,
+    this.rain = .35,
+    this.water = .15,
+    this.leaves = 0,
+    this.music = 0,
   });
   final bool flow;
-  final double rain, water, leaves, music;
+  final double volume, rain, water, leaves, music;
+  double get actionVolume => .20 * volume;
   double level(CafeSound sound) => switch (sound) {
     CafeSound.rain => rain,
     CafeSound.water => water,
     CafeSound.leaves => leaves,
     CafeSound.music => music,
   };
-  CafeAtmosphere copy({bool? flow, CafeSound? sound, double? level}) =>
-      CafeAtmosphere(
-        flow: flow ?? this.flow,
-        rain: sound == CafeSound.rain ? level! : rain,
-        water: sound == CafeSound.water ? level! : water,
-        leaves: sound == CafeSound.leaves ? level! : leaves,
-        music: sound == CafeSound.music ? level! : music,
-      );
+  CafeAtmosphere copy({
+    bool? flow,
+    double? volume,
+    CafeSound? sound,
+    double? level,
+  }) => CafeAtmosphere(
+    flow: flow ?? this.flow,
+    volume: volume ?? this.volume,
+    rain: sound == CafeSound.rain ? level! : rain,
+    water: sound == CafeSound.water ? level! : water,
+    leaves: sound == CafeSound.leaves ? level! : leaves,
+    music: sound == CafeSound.music ? level! : music,
+  );
   Map<String, dynamic> toJson() => {
     'flow': flow,
+    'volume': volume,
     for (final sound in CafeSound.values) sound.name: level(sound),
   };
-  factory CafeAtmosphere.read(dynamic value) {
+  factory CafeAtmosphere.read(dynamic value, {bool legacy = false}) {
     if (value is! Map<String, dynamic> || value['flow'] is! bool) {
       throw const FormatException('Invalid cafe atmosphere');
     }
@@ -46,6 +54,7 @@ class CafeAtmosphere {
 
     return CafeAtmosphere(
       flow: value['flow'],
+      volume: legacy ? .20 : number('volume'),
       rain: number('rain'),
       water: number('water'),
       leaves: number('leaves'),
@@ -150,7 +159,19 @@ class CafeSoundFrame {
           : courtyard
           ? (doorOpen ? .18 : .035)
           : 1.0;
-      final gain = .48 * mix.level(sound) * spatial / (1 + distance * .12);
+      // Water and rustle recordings have higher signal levels than the rain.
+      final trim = switch (sound) {
+        CafeSound.rain => 1.0,
+        CafeSound.water => .40,
+        CafeSound.leaves || CafeSound.music => .50,
+      };
+      final gain =
+          .48 *
+          mix.volume *
+          trim *
+          mix.level(sound) *
+          spatial /
+          (1 + distance * .12);
       values[sound] = CafeSoundLevel(
         gain.clamp(0, .48),
         (delta.normalized.dot(right) * .72).clamp(-.72, .72),

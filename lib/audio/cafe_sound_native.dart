@@ -66,8 +66,10 @@ class CafeSoundscape implements CafeSoundOutput {
         if (player == null) continue;
         final target = _target!.levels[sound]!;
         final old = _levels[sound] ?? 0;
-        final next = old + (target.volume - old) * .28;
-        if ((next - old).abs() > .0005) {
+        final next = (target.volume - old).abs() < .00001
+            ? target.volume
+            : old + (target.volume - old) * .28;
+        if (next != old) {
           _levels[sound] = next;
           await player.setVolume(next);
         }

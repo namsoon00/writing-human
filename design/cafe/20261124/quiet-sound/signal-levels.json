@@ -1,0 +1,44 @@
+{
+  "scope": "PCM measurement and conservative sum-of-absolute-peaks bound; no speaker SPL or subjective device listening measured. Bounds ignore spatial attenuation and low-pass filtering.",
+  "master_default": 0.2,
+  "tracks": [
+    {
+      "sound": "rain",
+      "source_peak": 0.1317138671875,
+      "source_rms": 0.0453091238885164,
+      "old_max_gain": 0.264,
+      "new_max_gain": 0.0336,
+      "legacy_max_gain": 0.05280000000000001
+    },
+    {
+      "sound": "water",
+      "source_peak": 0.449981689453125,
+      "source_rms": 0.09951475345448112,
+      "old_max_gain": 0.192,
+      "new_max_gain": 0.00576,
+      "legacy_max_gain": 0.015360000000000002
+    },
+    {
+      "sound": "leaves",
+      "source_peak": 0.259979248046875,
+      "source_rms": 0.046919598947335744,
+      "old_max_gain": 0.144,
+      "new_max_gain": 0.0,
+      "legacy_max_gain": 0.0144
+    },
+    {
+      "sound": "music",
+      "source_peak": 0.259979248046875,
+      "source_rms": 0.060181056143092666,
+      "old_max_gain": 0.08639999999999999,
+      "new_max_gain": 0.0,
+      "legacy_max_gain": 0.00864
+    }
+  ],
+  "old_peak_bound": 0.18106816406249998,
+  "old_peak_bound_dbfs": -14.843158038157306,
+  "new_peak_bound": 0.00701748046875,
+  "new_peak_bound_dbfs": -43.07637574865038,
+  "legacy_peak_bound": 0.0198561328125,
+  "legacy_peak_bound_dbfs": -34.04210661905943
+}

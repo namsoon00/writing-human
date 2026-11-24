@@ -128,6 +128,12 @@ void main() {
       await guide('cafe-guide-bell');
       await guide('cafe-guide-bell');
       expect(sounds, ['tea', 'bell']);
+      c.applySpace(
+        c.space.copy(atmosphere: c.space.atmosphere.copy(volume: 0)),
+      );
+      await guide('cafe-guide-tea');
+      await guide('cafe-guide-tea');
+      expect(sounds, ['tea', 'bell']);
       await guide('cafe-seat-garden');
       expect(writes, 0);
       await guide('cafe-seat-garden');

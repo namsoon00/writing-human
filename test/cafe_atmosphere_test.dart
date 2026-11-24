@@ -52,6 +52,36 @@ class _Store extends MemoryCafeSpaceStore {
 }
 
 void main() {
+  test('Master volume scales all layers and actions, including old mixes', () {
+    const mix = CafeAtmosphere(rain: .55, water: .40, leaves: .30, music: .18);
+    CafeSoundFrame frame(CafeAtmosphere value) => CafeSoundFrame.at(
+      mix: value,
+      camera: const CafeCamera(position: CafePoint(0, 1.62, 0)),
+      courtyard: true,
+      doorOpen: true,
+    );
+    final full = frame(mix.copy(volume: 1));
+    final quiet = frame(mix);
+    final silent = frame(mix.copy(volume: 0));
+    for (final sound in CafeSound.values) {
+      expect(
+        quiet.levels[sound]!.volume,
+        closeTo(full.levels[sound]!.volume * .20, 1e-10),
+      );
+      expect(silent.levels[sound]!.volume, 0);
+    }
+    expect(mix.copy(volume: 0).actionVolume, 0);
+    expect(mix.actionVolume, closeTo(.04, 1e-10));
+    const defaults = CafeAtmosphere();
+    expect(defaults.leaves, 0);
+    expect(defaults.music, 0);
+    // Worst-case sum of gains, even with every source next to the listener.
+    expect(
+      .48 * defaults.volume * (defaults.rain + .4 * defaults.water),
+      lessThan(.04),
+    );
+  });
+
   testWidgets('Leaf shadows remain visible and move under a bright desk lamp', (
     tester,
   ) async {
@@ -100,7 +130,7 @@ void main() {
   });
 
   test(
-    'v1-v4 preserve private room settings; v5 strictly validates the mix',
+    'v1-v4 preserve private room settings; v5 migrates quietly; v6 strictly validates the mix',
     () {
       const old = CafeSpace(
         home: CafeHome(mood: 1, pinned: '남겨 둔 문장'),
@@ -114,7 +144,8 @@ void main() {
         final migrated = CafeSpace.decode(jsonEncode(json));
         expect(migrated.amount('shared.cup'), 1);
         expect(migrated.pose('shared.pen').x, .02);
-        expect(migrated.atmosphere.music, .18);
+        expect(migrated.atmosphere.music, 0);
+        expect(migrated.atmosphere.volume, .20);
         if (version == 4) expect(migrated.home.pinned, old.home.pinned);
       }
       const mix = CafeAtmosphere(
@@ -130,8 +161,19 @@ void main() {
         ).atmosphere.toJson(),
         mix.toJson(),
       );
+      final legacy = old.copy(atmosphere: mix).toJson()..['version'] = 5;
+      (legacy['atmosphere'] as Map).remove('volume');
+      final restored = CafeSpace.decode(jsonEncode(legacy));
+      expect(restored.atmosphere.volume, .20);
+      expect(restored.atmosphere.water, .9);
+      expect(restored.atmosphere.music, .3);
+      expect(restored.home.pinned, old.home.pinned);
+      expect(restored.pose('shared.pen').x, .02);
       for (final bad in [
         mix.toJson()..remove('water'),
+        mix.toJson()..remove('volume'),
+        mix.toJson()..['volume'] = -0.1,
+        mix.toJson()..['volume'] = 1.1,
         mix.toJson()..['music'] = 1.1,
         mix.toJson()..['rain'] = '0.5',
         mix.toJson()..['flow'] = 1,
@@ -318,6 +360,32 @@ void main() {
   );
 
   testWidgets(
+    'Master volume previews silently and survives a failed save retry',
+    (tester) async {
+      final audio = _Audio(), store = _Store();
+      await open(tester, audio, store);
+      await mixer(tester);
+      final finder = find.byKey(const ValueKey('cafe-master-volume'));
+      await tester.ensureVisible(finder);
+      final slider = tester.widget<Slider>(finder);
+      slider.onChanged!(.07);
+      await tester.pump();
+      expect(audio.starts, 0);
+      store.reject = true;
+      slider.onChangeEnd!(.07);
+      await tester.pumpAndSettle();
+      expect(store.value.atmosphere.volume, .20);
+      expect(tester.widget<Slider>(finder).value, .07);
+      store.reject = false;
+      await tester.tap(find.byKey(const ValueKey('cafe-atmosphere-retry')));
+      await tester.pumpAndSettle();
+      expect(store.value.atmosphere.volume, .07);
+      expect(audio.starts, 0);
+      await end(tester);
+    },
+  );
+
+  testWidgets(
     'Mix save failure keeps the draft, retries and never silently enables audio',
     (tester) async {
       final audio = _Audio(), store = _Store();
@@ -342,7 +410,7 @@ void main() {
       await tester.tap(water);
       await tester.pumpAndSettle();
       expect(audio.starts, 0);
-      expect(store.value.atmosphere.water, isNot(.40));
+      expect(store.value.atmosphere.water, isNot(.15));
       await end(tester);
     },
   );

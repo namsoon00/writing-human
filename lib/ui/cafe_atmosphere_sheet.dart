@@ -125,6 +125,27 @@ class _CafeAtmosphereSheetState extends State<CafeAtmosphereSheet> {
                         style: TextStyle(height: 1.6, color: muted),
                       ),
                       const SizedBox(height: 12),
+                      Text('전체 음량 · ${(draft.volume * 100).round()}%'),
+                      Semantics(
+                        label: '전체 음량',
+                        child: Slider(
+                          key: const ValueKey('cafe-master-volume'),
+                          value: draft.volume,
+                          semanticFormatterCallback: (v) =>
+                              '${(v * 100).round()}%',
+                          onChanged: busy
+                              ? null
+                              : (v) {
+                                  setState(() {
+                                    draft = draft.copy(volume: v);
+                                    notice = null;
+                                  });
+                                  widget.onPreview(draft);
+                                },
+                          onChangeEnd: busy ? null : (_) => save(draft),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       for (final sound in CafeSound.values) ...[
                         Text(switch (sound) {
                           CafeSound.rain => '빗방울',

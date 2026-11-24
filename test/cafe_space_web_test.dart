@@ -19,6 +19,7 @@ void main() {
         const expected = CafeSpace(
           atmosphere: CafeAtmosphere(
             flow: false,
+            volume: .13,
             rain: .7,
             water: .2,
             leaves: .8,

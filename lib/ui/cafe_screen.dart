@@ -447,6 +447,11 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
               playing: soundState,
               onPreview: (mix) {
                 if (sound) _updateSound(mix);
+                unawaited(
+                  calmAudio
+                      .setVolume(mix.actionVolume)
+                      .catchError(_soundFailed),
+                );
               },
               onSave: (mix) => _storeUse(view.space.copy(atmosphere: mix)),
               onToggle: () async {
@@ -678,6 +683,16 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     return false;
   }
 
+  Future<void> _playCalm(String name) async {
+    final volume = view.space.atmosphere.actionVolume;
+    if (volume == 0) return;
+    if (widget.playCalmSound case final play?) {
+      await play(name);
+    } else {
+      await calmAudio.play(name, volume: volume);
+    }
+  }
+
   Future<bool> _gesture(String id, CafeUseKind kind) async {
     if (sound) {
       final name = switch (kind) {
@@ -688,7 +703,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
         _ => 'touch',
       };
       unawaited(
-        (widget.playCalmSound ?? calmAudio.play)(name).catchError((Object _) {
+        _playCalm(name).catchError((Object _) {
           if (mounted) {
             setState(() => calmHint = '소리를 재생하지 못했어요. 소리를 다시 켜 주세요.');
           }
@@ -1548,9 +1563,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
         }
         setState(() => calmHint = bell ? '종소리가 천천히 잦아들어요.' : '따뜻한 차를 놓아 두었어요.');
         unawaited(
-          (widget.playCalmSound ?? calmAudio.play)(
-            bell ? 'bell' : 'tea',
-          ).catchError((Object _) {
+          _playCalm(bell ? 'bell' : 'tea').catchError((Object _) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('소리를 재생하지 못했어요. 다시 눌러 주세요.')),

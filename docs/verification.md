@@ -3452,3 +3452,19 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   않는다. 공개 페이지 UI 직접 조작과 실제 iPhone/Android의 터치·FPS·발열·오디오는
   미검증이다. 기기 간 공간 동기화나 모든 물체의 별도 수작업 모델 파일 제작도 이번
   결과에 포함하지 않는다. 공개 파일 배포 확인은 별도 기록한다.
+
+
+## 2026-11-24 · 카페 개별 아이템 웹 배포 확인
+
+- 소스 `c2ea0db9de44241c08895954cb1dcc54fae4163a`의
+  [Actions 45299252182](https://github.com/namsoon00/writing-human/actions/runs/45299252182)
+  build/deploy가 모두 success다. 서버의 전체 검사·단일 음성 DSP·Chrome 검사·release
+  빌드가 통과했고, 앱 코드를 로컬에서 검증한 동일 트리로 배포했다.
+- [공개 미리보기](https://namsoon00.github.io/writing-human/?v=c2ea0db)의 index →
+  versioned bootstrap → main.dart.js를 HTTP로 따라 확인했다. main SHA-256은
+  `0becf07eb6c1746a5730248cb66321e1dbcb263f9464e7fd8263c32ff9c571e4`로 검증한 로컬 빌드와 바이트가 동일하다. 기존 수채화
+  재질 세 개와 아이콘 글꼴도 200 응답·바이트/해시 동일이며 앱에서 참조한다.
+- [HTTP 확인 원문](../design/cafe/20261124/individual-items/deployment.json)을 남겼다.
+  공개 파일 배포 확인이며 공개 페이지 UI 직접 조작·실제 iPhone/Android의 터치/성능
+  검증은 아니다. 개인 배치/필사 저장 키, 기존 비공개 Sites 식별자/범위, 공유 작업공간의
+  다른 미완성 변경은 이번 배포에서 바꾸지 않았다.

@@ -47,6 +47,7 @@ extension _CafeInterior on CafeWorld {
               surface: face.surface,
               signRow: face.signRow,
               objectId: face.objectId,
+              part: face.part,
               artIndex: face.artIndex,
               target: face.target,
               unlit: face.unlit,
@@ -651,7 +652,8 @@ extension _CafeInterior on CafeWorld {
     bool filled = true,
   }) {
     final id = _buildingObject ?? '';
-    filled = space.state(id, fallback: filled);
+    final amount = space.amount(id, fallback: filled ? 3 : 0);
+    filled = amount > 0;
     final colorIndex = space.finish(id, fallback: space.mug);
     final saucer = [
       CafeWorld.cream,
@@ -688,6 +690,7 @@ extension _CafeInterior on CafeWorld {
       );
       quad(at(.69, b), at(1.40, b), at(1.40, a), at(.69, a), saucer);
     }
+    final vesselStart = faces.length;
     final ceramic = [
       CafeWorld.cream,
       const Color(0xffb18a70),
@@ -700,9 +703,10 @@ extension _CafeInterior on CafeWorld {
       (bottom + .089, radius),
       (bottom + .102, radius),
     ], ceramic);
+    final drinkStart = faces.length;
     cylinder(
       x,
-      bottom + (filled ? .099 : .034),
+      bottom + (filled ? .038 + amount * .061 / 3 : .034),
       z,
       radius * .87,
       .004,
@@ -715,6 +719,9 @@ extension _CafeInterior on CafeWorld {
           : const Color(0xffc6bba6),
       sides: 28,
     );
+    for (final f in faces.skip(drinkStart)) {
+      f.part = 'drink';
+    }
     for (var i = 0; i < 28; i++) {
       final a = i * math.pi / 14, b = (i + 1) * math.pi / 14;
       CafePoint edge(double t, double r) =>
@@ -770,6 +777,9 @@ extension _CafeInterior on CafeWorld {
         }
         faces.add(CafeFace(p, ceramic, vertexNormals: n, target: _target));
       }
+    }
+    for (final f in faces.skip(vesselStart)) {
+      f.part ??= 'vessel';
     }
   }
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 
@@ -16,6 +17,117 @@ class CafeViewController extends ChangeNotifier {
       camera = world.seatedCamera(seat!, chairId: activeChairId);
     }
   }
+  String? heldId, contextId;
+  bool heldBookOpen = false;
+  CafeUseFrame? _use;
+  Completer<bool>? _useDone;
+  CafeCamera? _dropFrom, _dropToward;
+  int useRequest = 0;
+  bool get using => _useDone != null;
+  CafeUseFrame? get useFrame =>
+      _use ??
+      (heldId == null
+          ? null
+          : CafeUseFrame(
+              heldId!,
+              CafeUseKind.hold,
+              held: true,
+              open: heldBookOpen,
+            ));
+  void inspect(String? id) {
+    contextId = id;
+    notifyListeners();
+  }
+
+  Future<bool> performUse(String id, CafeUseKind kind) {
+    if (using || travelling || !world.objects.containsKey(id)) {
+      return Future.value(false);
+    }
+    if (kind == CafeUseKind.putDown) {
+      final delta =
+          world.objects[id]!.pivot +
+          const CafePoint(0, .06, 0) -
+          camera.position;
+      _dropFrom = camera;
+      _dropToward = CafeCamera(
+        position: camera.position,
+        yaw: math.atan2(delta.x, -delta.z),
+        pitch: math
+            .atan2(delta.y, math.sqrt(delta.x * delta.x + delta.z * delta.z))
+            .clamp(-.72, .65),
+      );
+    }
+    final done = _useDone = Completer<bool>();
+    _use = CafeUseFrame(id, kind, held: heldId == id, open: heldBookOpen);
+    contextId = id;
+    useRequest++;
+    notifyListeners();
+    return done.future;
+  }
+
+  void advanceUse(double progress) {
+    final frame = _use;
+    if (frame == null || !progress.isFinite) return;
+    if (_dropFrom != null && _dropToward != null) {
+      camera = CafeCamera.interpolate(
+        _dropFrom!,
+        _dropToward!,
+        progress.clamp(0, 1),
+      );
+    }
+    _use = CafeUseFrame(
+      frame.id,
+      frame.kind,
+      progress: progress.clamp(0, 1),
+      held: frame.held,
+      open: frame.open,
+    );
+    notifyListeners();
+  }
+
+  void finishUse() {
+    final frame = _use, done = _useDone;
+    if (frame == null || done == null) return;
+    if (frame.kind == CafeUseKind.pickUp) {
+      heldId = frame.id;
+      heldBookOpen = false;
+    }
+    if (frame.kind == CafeUseKind.putDown) {
+      heldId = null;
+      heldBookOpen = false;
+      contextId = null;
+    }
+    if (frame.held && frame.kind == CafeUseKind.open) heldBookOpen = true;
+    if (frame.held && frame.kind == CafeUseKind.close) heldBookOpen = false;
+    _use = null;
+    _dropFrom = null;
+    _dropToward = null;
+    _useDone = null;
+    done.complete(true);
+    notifyListeners();
+  }
+
+  void cancelUse() {
+    final done = _useDone;
+    _useDone = null;
+    _dropFrom = null;
+    _dropToward = null;
+    _use = null;
+    heldId = null;
+    heldBookOpen = false;
+    contextId = null;
+    if (done != null && !done.isCompleted) done.complete(false);
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    final done = _useDone;
+    _useDone = null;
+    if (done != null && !done.isCompleted) done.complete(false);
+    super.dispose();
+  }
+
   Future<void> roomReady = Future<void>.value();
   double walkSpeed = 0;
   CafeSeat? _pendingSeat;
@@ -105,7 +217,9 @@ class CafeViewController extends ChangeNotifier {
   }
 
   bool visit(CafeTarget target, {String? chairId}) {
-    if (target.inCourtyard != inCourtyard) return false;
+    if (using || heldId != null || target.inCourtyard != inCourtyard) {
+      return false;
+    }
     final next = target.seat;
     final approach = chairId == null
         ? world.targetApproach(target)
@@ -139,6 +253,7 @@ class CafeViewController extends ChangeNotifier {
   void sit(CafeSeat value) => visit(CafeTarget.forSeat(value));
 
   void stand() {
+    if (using || heldId != null) return;
     final selected = seat;
     if (selected == null && !resting) return;
     final p = activeChairId == null
@@ -160,6 +275,8 @@ class CafeViewController extends ChangeNotifier {
   }
 
   bool walkTo(CafePoint point) {
+    if (using || heldId != null) return false;
+    contextId = null;
     final origin = _origin;
     final target = CafePoint(point.x, 1.62, point.z);
     final path = world.path(origin, target);
@@ -225,7 +342,7 @@ class CafeViewController extends ChangeNotifier {
   }
 
   void look(double dx, double dy) {
-    if (!dx.isFinite || !dy.isFinite) return;
+    if (using || !dx.isFinite || !dy.isFinite) return;
     if (travelling && !world.canStand(camera.position) && _departure != null) {
       camera = CafeCamera(
         position: world.targetApproach(_departure!),
@@ -233,11 +350,13 @@ class CafeViewController extends ChangeNotifier {
         pitch: camera.pitch,
       );
     }
-    if (travelling) seat = null;
+    if (travelling) {
+      seat = null;
+      activeChairId = null;
+    }
     walkSpeed = 0;
     _pendingSeat = null;
     _pendingChairId = null;
-    activeChairId = null;
     _departure = null;
     destination = null;
     journey = [];
@@ -265,7 +384,9 @@ class CafeViewController extends ChangeNotifier {
     double dt, {
     bool animate = true,
   }) {
-    if (seat != null ||
+    if (using ||
+        heldId != null ||
+        seat != null ||
         resting ||
         !sideways.isFinite ||
         !ahead.isFinite ||
@@ -283,7 +404,12 @@ class CafeViewController extends ChangeNotifier {
   }
 
   void step(double sideways, double ahead) {
-    if (resting || seat != null || !sideways.isFinite || !ahead.isFinite) {
+    if (using ||
+        heldId != null ||
+        resting ||
+        seat != null ||
+        !sideways.isFinite ||
+        !ahead.isFinite) {
       return;
     }
     if (travelling) look(0, 0);

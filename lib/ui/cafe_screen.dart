@@ -202,7 +202,9 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     });
   }
 
-  void _editRoom() {
+  Future<void> _editRoom() async {
+    if (!await _putDown() || !mounted) return;
+    view.inspect(null);
     if (roomLoading || roomLoadFailed || roomSaving || view.travelling) return;
     if (view.seat != null) {
       final point = view.world.targetApproach(CafeTarget.forSeat(view.seat!));
@@ -244,6 +246,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _requestClose({bool leaving = false}) async {
+    if (view.using || !await _putDown() || !mounted) return;
     if (opening || widget.saveFailed || roomSaving) return;
     if (roomDirty) {
       final save = await showDialog<bool>(
@@ -386,40 +389,408 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
         dialogOpen ||
         widget.saveFailed ||
         view.travelling ||
-        roomLoadFailed) {
+        roomLoadFailed ||
+        view.using) {
       return true;
     }
     final object = view.world.objects[id];
     if (object == null) return false;
     if (object.type == CafeItemType.chair) {
-      if (view.activeChairId == id && view.seat != null) {
-        _write();
-        return true;
-      }
-      if (!view.visitChair(id)) setState(() => calmHint = '의자 뒤의 통로를 비워 주세요.');
+      unawaited(_useItem(id));
       return true;
     }
-    if ((object.pivot - view.camera.position).length > 2.0) return false;
-    final isNote = object.type == CafeItemType.notebook;
-    final current = view.space.state(
-      id,
-      fallback: id == 'shared.book'
-          ? view.space.bookOpen
-          : id == 'shared.cup'
-          ? view.space.cupFull
-          : object.defaultState,
-    );
-    if (object.type == CafeItemType.cup ||
-        object.type == CafeItemType.lamp ||
-        (isNote && !current)) {
-      if (view.applySpace(view.space.withState(id, !current)) != null) {
-        setState(() => calmHint = '꾸미기에서 물건의 위치를 확인해 주세요.');
-        return true;
-      }
-      unawaited(_saveRoom());
+    if ((object.pivot - view.camera.position).length > 2.0 &&
+        view.heldId != id) {
+      return false;
+    }
+    if (const {
+      CafeItemType.cup,
+      CafeItemType.volume,
+      CafeItemType.pencil,
+      CafeItemType.notebook,
+      CafeItemType.lamp,
+      CafeItemType.plant,
+      CafeItemType.vase,
+      CafeItemType.frame,
+      CafeItemType.stack,
+      CafeItemType.cloth,
+      CafeItemType.fixture,
+    }.contains(object.type)) {
+      unawaited(_useItem(id));
       return true;
     }
     return false;
+  }
+
+  Future<bool> _gesture(String id, CafeUseKind kind) async {
+    if (sound) {
+      final name = switch (kind) {
+        CafeUseKind.sip => 'sip',
+        CafeUseKind.open || CafeUseKind.close => 'page',
+        CafeUseKind.refill || CafeUseKind.water => 'tea',
+        CafeUseKind.putDown => 'place',
+        _ => 'touch',
+      };
+      unawaited(
+        (widget.playCalmSound ?? calmAudio.play)(name).catchError((Object _) {
+          if (mounted) {
+            setState(() => calmHint = '소리를 재생하지 못했어요. 소리를 다시 켜 주세요.');
+          }
+        }),
+      );
+    }
+    final completed = await view.performUse(id, kind);
+    return mounted && completed;
+  }
+
+  Future<bool> _putDown() async {
+    if (view.using) return false;
+    final id = view.heldId;
+    if (id == null) return true;
+    // Returning to the remembered support never changes the saved pose.
+    return _gesture(id, CafeUseKind.putDown);
+  }
+
+  Future<void> _walk(CafePoint point) async {
+    if (await _putDown() && mounted) {
+      view.inspect(null);
+      view.walkTo(point);
+    }
+  }
+
+  Future<bool> _storeUse(CafeSpace next) async {
+    // Use changes do not move anything: retain valid old layouts that newer
+    // placement rules would flag, rather than blocking drinking or lighting.
+    final camera = view.camera;
+    view.applySpace(next, validate: false);
+    view.updateCamera(
+      CafeCamera(
+        position: view.camera.position,
+        yaw: camera.yaw,
+        pitch: camera.pitch,
+      ),
+    );
+    return _saveRoom();
+  }
+
+  Future<void> _useItem(String id) async {
+    if (view.using || roomSaving || roomLoadFailed || editing) return;
+    final obj = view.world.objects[id];
+    if (obj == null) return;
+    if (view.heldId != null && view.heldId != id && !await _putDown()) return;
+    if (!mounted) return;
+    switch (obj.type) {
+      case CafeItemType.chair:
+        view.inspect(id);
+        if (view.activeChairId == id && view.seat != null) {
+          view.stand();
+          return;
+        }
+        if ((obj.pivot - view.camera.position).length < 2 &&
+            view.space.uses[id] != true) {
+          if (!await _moveChair(id, push: false)) return;
+        }
+        if (!view.visitChair(id)) {
+          setState(() => calmHint = '의자 뒤의 통로를 비워 주세요.');
+        }
+      case CafeItemType.cup:
+        if (view.heldId != id) {
+          await _gesture(id, CafeUseKind.pickUp);
+        } else {
+          await _drink(id);
+        }
+      case CafeItemType.volume:
+        if (view.heldId != id) {
+          await _gesture(id, CafeUseKind.pickUp);
+        } else {
+          await _gesture(
+            id,
+            view.heldBookOpen ? CafeUseKind.close : CafeUseKind.open,
+          );
+        }
+      case CafeItemType.pencil:
+        if (view.heldId != id) {
+          await _gesture(id, CafeUseKind.pickUp);
+        } else {
+          await _writeWith(id);
+        }
+      case CafeItemType.notebook:
+        final open = view.space.state(
+          id,
+          fallback: id == 'shared.book' ? view.space.bookOpen : true,
+        );
+        if (!open) {
+          if (await _gesture(id, CafeUseKind.open)) {
+            await _storeUse(view.space.withState(id, true));
+          }
+        } else if (view.seat != null) {
+          await _writeWith(id);
+        } else {
+          final target = _itemSeat(id);
+          if (target != null) view.visit(CafeTarget.forSeat(target));
+          view.inspect(id);
+        }
+      case CafeItemType.lamp:
+        if (await _gesture(id, CafeUseKind.touch)) {
+          await _storeUse(view.space.withState(id, !view.space.state(id)));
+        }
+      case CafeItemType.plant:
+        view.inspect(id);
+        setState(
+          () => calmHint = view.space.uses[id] == true
+              ? '물을 주었어요. 잠시 잎을 바라봐요.'
+              : '잎을 바라보거나 물을 줄 수 있어요.',
+        );
+      case CafeItemType.vase:
+        if (await _gesture(id, CafeUseKind.touch)) {
+          await _storeUse(
+            view.space
+                .withState(id, true)
+                .withAccent(id, (view.space.accent(id) + 1) % 3),
+          );
+        }
+      case CafeItemType.frame:
+        view.inspect(id);
+        setState(() => calmHint = '그림을 천천히 바라봐요. 길게 누르면 바꿀 수 있어요.');
+      default:
+        await _gesture(id, CafeUseKind.touch);
+        setState(() => calmHint = '길게 누르면 내 취향으로 꾸밀 수 있어요.');
+    }
+  }
+
+  CafeSeat? _itemSeat(String id) {
+    if (id.startsWith('shared.')) return CafeSeat.shared;
+    if (id.startsWith('quiet.')) return CafeSeat.quiet;
+    if (id.startsWith('garden.')) return CafeSeat.garden;
+    for (final seat in CafeSeat.values) {
+      if (id.startsWith('desk.${seat.name}.')) return seat;
+    }
+    return view.seat;
+  }
+
+  Future<void> _drink(String id) async {
+    final obj = view.world.objects[id]!;
+    final amount = view.space.amount(id, fallback: obj.defaultState ? 3 : 0);
+    if (amount == 0) {
+      await _refill(id);
+      return;
+    }
+    if (await _gesture(id, CafeUseKind.sip)) {
+      await _storeUse(view.space.withAmount(id, amount - 1));
+      if (mounted) {
+        setState(
+          () => calmHint = amount == 1
+              ? '차를 다 마셨어요. 다시 따를 수 있어요.'
+              : '따뜻한 한 모금. 잠시 쉬어 가요.',
+        );
+      }
+    }
+  }
+
+  Future<void> _refill(String id) async {
+    if (await _gesture(id, CafeUseKind.refill)) {
+      await _storeUse(view.space.withAmount(id, 3));
+      if (mounted) setState(() => calmHint = '따뜻한 차를 채웠어요.');
+    }
+  }
+
+  Future<void> _writeWith(String id) async {
+    if (await _gesture(id, CafeUseKind.write) && await _putDown() && mounted) {
+      if (view.seat != null) {
+        await _write();
+      } else {
+        final seat = _itemSeat(id);
+        if (seat != null) {
+          view.visit(CafeTarget.forSeat(seat));
+          setState(() => calmHint = '자리에 앉은 뒤 노트를 눌러 써요.');
+        }
+      }
+    }
+  }
+
+  Future<void> _readHeldBook() async {
+    final id = view.heldId;
+    if (id == null || view.using) return;
+    if (!view.heldBookOpen && !await _gesture(id, CafeUseKind.open)) return;
+    if (!mounted) return;
+    if (id.startsWith('shelf.recommendations')) {
+      await _recommendations();
+    } else {
+      await _chooseBook();
+    }
+  }
+
+  Future<bool> _moveChair(String id, {required bool push}) async {
+    final obj = view.world.objects[id]!;
+    final delta =
+        CafePoint(-math.sin(obj.yaw) * .06, 0, math.cos(obj.yaw) * .06) *
+        (push ? -1 : 1);
+    final next = view.world.placed(id, obj.pivot + delta).withUse(id, !push);
+    if (next.pose(id).x.abs() > 1.5 || next.pose(id).z.abs() > 1.5) {
+      return !push;
+    }
+    final trial = CafeWorld(space: next);
+    if (trial.validateLayout() != null ||
+        trial.linkedWorld.validateLayout() != null) {
+      // If a nearby wall prevents pulling, use the existing accessible seat.
+      if (push) {
+        setState(() => calmHint = '의자 뒤의 통로를 비워 주세요.');
+      }
+      return !push;
+    }
+    if (!await _gesture(id, push ? CafeUseKind.push : CafeUseKind.pull)) {
+      return false;
+    }
+    return _storeUse(next);
+  }
+
+  Future<void> _water(String id) async {
+    if (await _gesture(id, CafeUseKind.water)) {
+      await _storeUse(view.space.withUse(id, true));
+      if (mounted) setState(() => calmHint = '물을 주었어요. 잠시 잎을 바라봐요.');
+    }
+  }
+
+  Widget _useControls() {
+    final id = view.heldId ?? view.contextId;
+    final obj = view.world.objects[id];
+    if (obj == null || editing || view.travelling || opening || dialogOpen) {
+      return const SizedBox.shrink();
+    }
+    final busy =
+        view.using ||
+        roomSaving ||
+        roomLoading ||
+        roomLoadFailed ||
+        widget.saveFailed;
+    Widget action(String label, Future<void> Function() run, String key) =>
+        TextButton(
+          key: ValueKey('cafe-use-$key'),
+          onPressed: busy ? null : run,
+          child: Text(label),
+        );
+    final cup = obj.type == CafeItemType.cup;
+    final amount = view.space.amount(id!, fallback: obj.defaultState ? 3 : 0);
+    return Card(
+      key: const ValueKey('cafe-use-controls'),
+      color: const Color(0xf5faf5eb),
+      margin: const EdgeInsets.only(top: 6),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    cup
+                        ? '${obj.label} · ${['빈 잔', '한 모금 남음', '두 모금 남음', '가득'][amount]}'
+                        : obj.label,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+                if (view.heldId == null)
+                  IconButton(
+                    tooltip: '물건 사용 닫기',
+                    onPressed: busy ? null : () => view.inspect(null),
+                    icon: const Icon(Icons.close, size: 18),
+                  ),
+              ],
+            ),
+            Wrap(
+              children: [
+                if (view.heldId != null) ...[
+                  if (cup) ...[
+                    action(
+                      amount == 0 ? '차 따르기' : '한 모금 마시기',
+                      () => _drink(id),
+                      'sip',
+                    ),
+                    if (amount > 0 && amount < 3)
+                      action('차 채우기', () => _refill(id), 'refill'),
+                  ],
+                  if (obj.type == CafeItemType.volume) ...[
+                    action(view.heldBookOpen ? '책 덮기' : '책 펼치기', () async {
+                      await _gesture(
+                        id,
+                        view.heldBookOpen
+                            ? CafeUseKind.close
+                            : CafeUseKind.open,
+                      );
+                    }, 'open'),
+                    action('책 살펴보기', _readHeldBook, 'read'),
+                  ],
+                  if (obj.type == CafeItemType.pencil)
+                    action('필사하기', () => _writeWith(id), 'write'),
+                  action(
+                    obj.type == CafeItemType.volume ? '책 꽂기' : '제자리에 놓기',
+                    () async {
+                      await _putDown();
+                    },
+                    'put-down',
+                  ),
+                ] else ...[
+                  if (obj.type == CafeItemType.notebook) ...[
+                    action('필사하기', () => _writeWith(id), 'write'),
+                    action(view.space.state(id) ? '노트 덮기' : '노트 펼치기', () async {
+                      final next = !view.space.state(id);
+                      if (await _gesture(
+                        id,
+                        next ? CafeUseKind.open : CafeUseKind.close,
+                      )) {
+                        await _storeUse(view.space.withState(id, next));
+                      }
+                    }, 'note'),
+                  ],
+                  if (obj.type == CafeItemType.plant)
+                    action('물 주기', () => _water(id), 'water'),
+                  if (obj.type == CafeItemType.vase) ...[
+                    action('가지 바꾸기', () => _useItem(id), 'arrange'),
+                    action(view.space.state(id) ? '가지 비우기' : '가지 꽂기', () async {
+                      if (await _gesture(id, CafeUseKind.touch)) {
+                        await _storeUse(
+                          view.space.withState(id, !view.space.state(id)),
+                        );
+                      }
+                    }, 'branches'),
+                  ],
+                  if (obj.type == CafeItemType.lamp) ...[
+                    action(
+                      view.space.state(id) ? '조명 끄기' : '조명 켜기',
+                      () => _useItem(id),
+                      'light',
+                    ),
+                    action('밝기 바꾸기', () async {
+                      await _storeUse(
+                        view.space
+                            .withState(id, true)
+                            .withLight(
+                              id,
+                              (view.space.lights[id] ?? 1) > .7 ? .5 : 1,
+                            ),
+                      );
+                    }, 'brightness'),
+                  ],
+                  if (obj.type == CafeItemType.chair)
+                    action(
+                      view.seat == null ? '앉기' : '일어나기',
+                      () => _useItem(id),
+                      'chair',
+                    ),
+                ],
+              ],
+            ),
+            if (obj.type == CafeItemType.chair &&
+                view.seat == null &&
+                view.space.uses[id] == true)
+              action('의자 넣기', () async {
+                await _moveChair(id, push: true);
+              }, 'push-chair'),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _roomControls() {
@@ -878,6 +1249,16 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
   }
 
   void _activate(CafeTarget target) {
+    if (view.using) return;
+    if (view.heldId != null) {
+      unawaited(
+        _putDown().then((ok) {
+          if (ok && mounted) _activate(target);
+        }),
+      );
+      return;
+    }
+    view.inspect(null);
     if (opening ||
         widget.saveFailed ||
         dialogOpen ||
@@ -948,6 +1329,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _write() async {
+    if (!await _putDown() || !mounted) return;
     final seat = view.seat;
     if (opening || widget.saveFailed || seat == null) return;
     setState(() {
@@ -1131,7 +1513,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
   );
 
   Future<void> _guide() async {
-    final target = await showDialog<CafeTarget>(
+    final target = await showDialog<Object>(
       context: context,
       builder: (context) => SimpleDialog(
         backgroundColor: const Color(0xfff3eadb),
@@ -1144,6 +1526,24 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
               style: TextStyle(height: 1.6),
             ),
           ),
+          for (final obj in view.world.objects.values.where(
+            (o) =>
+                const {
+                  CafeItemType.cup,
+                  CafeItemType.volume,
+                  CafeItemType.pencil,
+                  CafeItemType.notebook,
+                  CafeItemType.lamp,
+                  CafeItemType.plant,
+                  CafeItemType.vase,
+                  CafeItemType.frame,
+                }.contains(o.type) &&
+                (o.pivot - view.camera.position).length < 2,
+          ))
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, obj.id),
+              child: Text('${obj.label} · 사용하기'),
+            ),
           for (final target in view.world.targets)
             SimpleDialogOption(
               key: target.seat == null
@@ -1162,7 +1562,13 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
         ],
       ),
     );
-    if (target != null && mounted) _activate(target);
+    if (mounted) {
+      if (target is CafeTarget) {
+        _activate(target);
+      } else if (target is String) {
+        _activateItem(target);
+      }
+    }
   }
 
   @override
@@ -1182,9 +1588,14 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                 !opening && !widget.saveFailed && !roomLoading && !roomSaving,
             editing: editing,
             placingId: placing ? selectedObject : null,
-            onObjectSelected: (id) {
-              if (!editing) _editRoom();
-              setState(() => selectedObject = id);
+            onObjectSelected: (id) async {
+              if (view.using) return;
+              if (!editing) await _editRoom();
+              if (mounted && editing) setState(() => selectedObject = id);
+            },
+            onWalk: _walk,
+            onPutDown: () {
+              unawaited(_putDown());
             },
             onObjectPlaced: (point) {
               if (selectedObject != null) {
@@ -1234,7 +1645,8 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                                   roomLoading ||
                                       roomLoadFailed ||
                                       roomSaving ||
-                                      view.travelling
+                                      view.travelling ||
+                                      view.using
                                   ? null
                                   : editing
                                   ? _finishRoom
@@ -1261,7 +1673,8 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                               onPressed:
                                   opening ||
                                       widget.saveFailed ||
-                                      view.travelling
+                                      view.travelling ||
+                                      view.using
                                   ? null
                                   : _guide,
                               icon: const Icon(
@@ -1306,12 +1719,16 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                           ),
                         ),
                       ),
-                    if ((view.seat != null || view.resting) && !view.travelling)
+                    _useControls(),
+                    if ((view.seat != null || view.resting) &&
+                        !view.travelling &&
+                        !view.using)
                       TextButton(
                         key: const ValueKey('cafe-stand'),
                         onPressed: opening
                             ? null
-                            : () {
+                            : () async {
+                                if (!await _putDown() || !mounted) return;
                                 pending = null;
                                 view.stand();
                               },

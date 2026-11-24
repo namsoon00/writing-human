@@ -1,0 +1,45 @@
+{
+  "checked_at": "2026-11-24T02:55:16.556821+00:00",
+  "scope": "Synthetic Flutter fixture with empty library, real bundled textures/fonts; not a physical device or direct public UI inspection",
+  "viewport": [
+    390,
+    844
+  ],
+  "capture_pixel_ratio": 2,
+  "loaded_material_images": 13,
+  "views": [
+    "cup-held-390",
+    "cup-sipped-390",
+    "book-held-390",
+    "book-open-390",
+    "pencil-held-390",
+    "pencil-returning-390"
+  ],
+  "contact_sheet_sha256": "e5e5e175e1abc3b63261873ca559fa2e41144df97ec29d99f89662f0f1352edd",
+  "native_final": {
+    "count": 23,
+    "command": "flutter test --no-pub --concurrency=2 test/cafe_actions_test.dart test/cafe_camera_test.dart tool/capture_cafe_actions_test.dart"
+  },
+  "native_storage_regressions": {
+    "count": 16,
+    "command": "flutter test --no-pub --concurrency=2 test/cafe_item_controls_test.dart test/cafe_personal_space_test.dart test/cafe_items_test.dart test/cafe_context_hint_test.dart test/cafe_entry_test.dart test/cafe_image_lifetime_test.dart"
+  },
+  "chrome_final": {
+    "count": 11,
+    "command": "flutter test --no-pub --platform chrome test/cafe_actions_test.dart test/cafe_item_controls_test.dart"
+  },
+  "audio": {
+    "provenance": "Own deterministic synthesis; seed 233; mono PCM16 22050Hz; opt-in only",
+    "files": {
+      "cafe-page.wav": "5d3a3887cb6a3d3d9ce9d216433bb38311666d1cf132b37e969d8d934e21c133",
+      "cafe-place.wav": "75fd0af97a7d510fca9bfd909a3a61a625533b08b9afeee846c98420b41353ac",
+      "cafe-sip.wav": "140161a2a3b38c5ac28a3277e83a0c05100842f882687617ca626025b7b0605d",
+      "cafe-touch.wav": "6de5a8ed938aa69dfb63292736f277e3dc9894e1f533f55edffd2411af5843ec"
+    }
+  },
+  "unverified": [
+    "real iPhone/Android touch, FPS, thermals and speaker quality",
+    "direct public deployment UI use",
+    "universal physics or hands/avatars"
+  ]
+}

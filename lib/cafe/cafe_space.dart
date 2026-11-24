@@ -39,6 +39,8 @@ class CafePose {
 class CafeSpace {
   const CafeSpace({
     this.poses = const {},
+    this.amounts = const {},
+    this.uses = const {},
     this.finishes = const {},
     this.accents = const {},
     this.states = const {},
@@ -58,6 +60,22 @@ class CafeSpace {
     this.doorOpen = true,
   });
   final Map<String, CafePose> poses;
+  final Map<String, int> amounts;
+  final Map<String, bool> uses;
+  int amount(String id, {int fallback = 3}) {
+    final full = id == 'shared.cup'
+        ? cupFull
+        : id == 'garden.cup'
+        ? gardenTea
+        : fallback > 0;
+    return state(id, fallback: full)
+        ? amounts[id] ?? (fallback > 0 ? fallback : 3)
+        : 0;
+  }
+
+  CafeSpace withAmount(String id, int value) =>
+      withState(id, value > 0).copy(amounts: {...amounts, id: value});
+  CafeSpace withUse(String id, bool value) => copy(uses: {...uses, id: value});
   final Map<String, int> finishes, accents;
   final Map<String, bool> states;
   final Map<String, double> lights;
@@ -71,6 +89,7 @@ class CafeSpace {
       copy(accents: {...accents, id: value});
   CafeSpace withState(String id, bool value) => copy(
     states: {...states, id: value},
+    amounts: amounts.containsKey(id) ? {...amounts, id: value ? 3 : 0} : null,
     bookOpen: id == "shared.book" ? value : null,
     cupFull: id == "shared.cup" ? value : null,
     gardenTea: id == "garden.cup" ? value : null,
@@ -79,6 +98,8 @@ class CafeSpace {
       copy(lights: {...lights, id: value});
   CafeSpace resetItem(String id) => copy(
     poses: {...poses}..remove(id),
+    amounts: {...amounts}..remove(id),
+    uses: {...uses}..remove(id),
     finishes: {...finishes}..remove(id),
     accents: {...accents}..remove(id),
     states: {...states}..remove(id),
@@ -98,6 +119,8 @@ class CafeSpace {
   CafePose pose(String id) => poses[id] ?? const CafePose();
   CafeSpace copy({
     Map<String, CafePose>? poses,
+    Map<String, int>? amounts,
+    Map<String, bool>? uses,
     Map<String, int>? finishes,
     Map<String, int>? accents,
     Map<String, bool>? states,
@@ -118,6 +141,8 @@ class CafeSpace {
     bool? doorOpen,
   }) => CafeSpace(
     poses: poses ?? this.poses,
+    amounts: amounts ?? this.amounts,
+    uses: uses ?? this.uses,
     finishes: finishes ?? this.finishes,
     accents: accents ?? this.accents,
     states: states ?? this.states,
@@ -137,7 +162,9 @@ class CafeSpace {
     doorOpen: doorOpen ?? this.doorOpen,
   );
   Map<String, dynamic> toJson() => {
-    'version': 2,
+    'version': 3,
+    'amounts': amounts,
+    'uses': uses,
     'finishes': finishes,
     'accents': accents,
     'states': states,
@@ -160,7 +187,7 @@ class CafeSpace {
   String encode() => jsonEncode(toJson());
   factory CafeSpace.decode(String raw) {
     final j = jsonDecode(raw);
-    if (j is! Map<String, dynamic> || ![1, 2].contains(j['version'])) {
+    if (j is! Map<String, dynamic> || ![1, 2, 3].contains(j['version'])) {
       throw const FormatException('Invalid room data');
     }
     final selected = j['selectedBookId'];
@@ -170,13 +197,14 @@ class CafeSpace {
     Map<String, T> map<T>(String key, T Function(dynamic) read) {
       final v =
           j[key] ??
-          (j['version'] == 1 &&
-                  const {
-                    'finishes',
-                    'accents',
-                    'states',
-                    'lights',
-                  }.contains(key)
+          ((j['version'] < 3 && const {'amounts', 'uses'}.contains(key)) ||
+                  j['version'] == 1 &&
+                      const {
+                        'finishes',
+                        'accents',
+                        'states',
+                        'lights',
+                      }.contains(key)
               ? <String, dynamic>{}
               : null);
       if (v is! Map<String, dynamic> || v.length > 256) {
@@ -213,6 +241,16 @@ class CafeSpace {
     }
 
     return CafeSpace(
+      amounts: map('amounts', (v) {
+        if (v is! int || v < 0 || v > 3) {
+          throw const FormatException('Invalid drink amount');
+        }
+        return v;
+      }),
+      uses: map('uses', (v) {
+        if (v is! bool) throw const FormatException('Invalid use state');
+        return v;
+      }),
       finishes: map('finishes', index),
       accents: map('accents', index),
       states: map('states', (v) {

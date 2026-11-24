@@ -3553,3 +3553,24 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - [공개 파일 대조](../design/cafe/20261124/individual-items/deployment-colors.json)를 남겼다.
   직접 공개 UI를 조작하거나 실제 iPhone/Android의 터치·FPS·발열·오디오를 검수했다는
   뜻은 아니다. 저장된 필사/배치의 키와 계정 범위, 비공개 Sites 설정은 그대로 유지했다.
+
+## 2026-11-24 · 개별 물건의 1인칭 사용 동작
+
+- 최종 `cafe_actions_test` 9개 + `cafe_camera_test` 13개 + 실제 재질 캡처 1개,
+  네이티브 23개가 통과했다. 별도 공간/아이템/문맥 안내/입구/이미지 수명 검사 16개도 통과했다.
+  `dart format --output=none --set-exit-if-changed`와 `flutter analyze --no-pub`를 실행했다.
+- Chrome에서 새 동작 9개와 실제 찻잔 터치/채우기/편집 2개, 최종 11개가 통과했다.
+  같은 실행 환경의 기존 재질/수명/웹 복원/입구/아이템 회귀 16개도 통과했다.
+  들어 올린 기하와 picking의 일치, 받침 유지, 모금/재채우기, 경첩의 실제 종이 면,
+  물 주기/가지/조명, 펜에서 기존 필사 진입, 의자 당기기/다시 넣기와 형제 독립성을 검사했다.
+- 실제 SQLite 임시 파일을 닫고 재열어 남은 양/돌봄 상태와 계정별 복원을 대조하고,
+  실패한 쓰기가 마지막 공간과 필사 데이터를 바꾸지 않는지 검사했다. Chrome의 실제
+  localStorage는 새 store 인스턴스 복원·범위 분리·손상/실패 보존을 검사했다.
+  메모리 store 위젯 검사에서는 모금 저장 실패의 draft/재시도와 앱 비활성화 중 취소를 확인했다.
+- [실제 Flutter 동작 화면 6개](../design/cafe/20261124/actions/first-person-actions.jpg)와
+  [검사 메타데이터](../design/cafe/20261124/actions/verification.json)를 남겼다. 390×844 뷰에
+  실제 번들 글꼴과 13개 재질을 로딩한 합성 빈 라이브러리 fixture다. 손에 든 물건은
+  상판/긴 선반의 평균 깊이 순서가 덮지 않게 하고, 앉아서 드는 높이와 돌아놓는 시선을 보완했다.
+- iPhone/Android 실기기의 터치 감각·FPS·발열·스피커 소리와 직접 공개 UI 조작은 미검증이다.
+  음원 네 개는 자체 합성 WAV이고 opt-in 동작을 유지했다. 저장된 필사/폰트/배치의 기존
+  키와 계정 범위를 보존하며 .openai/hosting.json과 비공개 Sites 접근 설정은 변경하지 않았다.

@@ -45,12 +45,14 @@ class CafeRenderer extends CustomPainter {
     this.tree,
     this.flowers,
     this.framedArt = const [],
+    this.use,
     this.time = 0,
     this.teaFilled = false,
     this.bellAt,
     this.teaAt,
     this.allowPortal = true,
   });
+  final CafeUseFrame? use;
   final CafeWorld world;
   final CafeCamera camera;
   final ui.Image? wood,
@@ -106,8 +108,9 @@ class CafeRenderer extends CustomPainter {
     Offset point,
     CafeCamera camera,
     Size size,
-    CafeWorld world,
-  ) {
+    CafeWorld world, {
+    CafeUseFrame? use,
+  }) {
     if (!camera.isFinite ||
         size.isEmpty ||
         !point.dx.isFinite ||
@@ -116,8 +119,9 @@ class CafeRenderer extends CustomPainter {
     }
     final direction = ray(point, camera, size);
     var closest = double.infinity;
+    var foreground = false;
     CafeHit? result;
-    for (final face in world.faces) {
+    for (final face in world.presentedFaces(camera, use)) {
       // Floor light/shadow decals do not obstruct the physical surface.
       if (face.color.a < .99 && face.surface != CafeSurface.glass) continue;
       for (var i = 1; i + 1 < face.points.length; i++) {
@@ -131,7 +135,11 @@ class CafeRenderer extends CustomPainter {
         final q = delta.cross(edge1), v = direction.dot(q) / det;
         if (v < 0 || u + v > 1) continue;
         final distance = edge2.dot(q) / det;
-        if (distance < near || distance >= closest) continue;
+        if (distance < near) continue;
+        final hand = face.layer == 5;
+        if (foreground && !hand) continue;
+        if (hand == foreground && distance >= closest) continue;
+        foreground = hand;
         closest = distance;
         final hit = camera.position + direction * distance;
         result = CafeHit(
@@ -323,12 +331,12 @@ class CafeRenderer extends CustomPainter {
     }
 
     for (final face in [
-      ...world.faces,
+      ...world.presentedFaces(camera, use),
       ...world.plantFaces(camera),
       ...world.lightFaces(camera),
       ...world.animatedFaces(
         time,
-        teaFilled: teaFilled,
+        teaFilled: teaFilled && use?.id != 'garden.cup',
         bellAt: bellAt,
         teaAt: teaAt,
       ),
@@ -594,6 +602,7 @@ class CafeRenderer extends CustomPainter {
 
   @override
   bool shouldRepaint(CafeRenderer oldDelegate) =>
+      oldDelegate.use != use ||
       oldDelegate.allowPortal != allowPortal ||
       oldDelegate.time != time ||
       oldDelegate.teaFilled != teaFilled ||

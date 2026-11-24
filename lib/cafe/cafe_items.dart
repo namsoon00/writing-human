@@ -63,35 +63,26 @@ extension _IndividualCafeItems on CafeWorld {
       CafeObjectKind.prop,
       CafePoint(x, y, z),
       () {
-        if (space.state(
+        final start = faces.length;
+        _book(0, 0, 0);
+        final source = faces.sublist(start);
+        faces.removeRange(start, faces.length);
+        final open = space.state(
           id,
           fallback: id == 'shared.book' ? space.bookOpen : true,
-        )) {
-          _book(x, y, z, angle: angle);
-        } else {
-          final start = faces.length;
-          final cover = [
-            CafeWorld.sage,
-            const Color(0xffaa806b),
-            const Color(0xff8d9683),
-          ][space.finish(id)];
-          box(x, y + .011, z, .43, .029, .30, cover, topFace: false);
-          box(x, y + .015, z, .406, .019, .28, CafeWorld.cream, topFace: false);
-          _roundedSlab(
-            x,
-            z,
-            .43,
-            .30,
-            top: y + .034,
-            thickness: .005,
-            radius: .015,
-            surface: null,
-            color: cover,
+        );
+        for (final f in CafeUseGeometry._foldBook(source, open ? 1 : 0)) {
+          faces.add(
+            _useFace(
+              f,
+              (q) => CafePoint(x, y, z) + _useRotate(q, angle, 0),
+              (n) => _useRotate(n, angle, 0),
+            ),
           );
-          _rotateItemFaces(start, CafePoint(x, y, z), angle);
         }
       },
       support: support,
+      yaw: angle,
       footprint: Rect.fromCenter(center: Offset(x, z), width: w, height: d),
     );
   }
@@ -142,6 +133,7 @@ extension _IndividualCafeItems on CafeWorld {
         _rotateItemFaces(start, CafePoint(x, y, z), angle);
       },
       support: support,
+      yaw: angle,
       footprint: Rect.fromCenter(
         center: Offset(x, z),
         width: math.cos(angle).abs() * .28 + math.sin(angle).abs() * .02,

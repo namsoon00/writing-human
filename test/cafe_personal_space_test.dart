@@ -90,6 +90,8 @@ void main() {
         final a = await db.openSpaceStore('account-a');
         final config = const CafeSpace().copy(
           brightness: 1.15,
+          amounts: const {'desk.window.cup': 1},
+          uses: const {'plant.3.77_-3.9': true},
           finishes: const {'shared.cup': 1, 'desk.window.cup': 2},
           accents: const {'shared.chair.right.1': 2},
           states: const {'quiet.book': false, 'lamp.0.0_0.68': false},

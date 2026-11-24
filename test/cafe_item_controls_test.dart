@@ -9,7 +9,7 @@ import 'package:writing_human/ui/cafe_screen.dart';
 
 void main() {
   testWidgets(
-    'A real cup hit toggles only that cup; edit, save and reset are item scoped',
+    'A real cup hit lifts, sips, refills and returns only that cup; editing remains item scoped',
     (tester) async {
       tester.platformDispatcher.accessibilityFeaturesTestValue =
           const FakeAccessibilityFeatures(disableAnimations: true);
@@ -49,7 +49,22 @@ void main() {
       );
       await tester.tapAt(tester.getTopLeft(scene) + point);
       await tester.pumpAndSettle();
-      expect(store.value.state('shared.cup'), isFalse);
+      expect(c.heldId, 'shared.cup');
+      expect(store.value.amounts, isEmpty);
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.byKey(const ValueKey('cafe-use-sip')));
+        await tester.pumpAndSettle();
+      }
+      expect(store.value.amount('shared.cup'), 0);
+      expect(c.heldId, 'shared.cup');
+      await tester.tap(find.byKey(const ValueKey('cafe-use-sip')));
+      await tester.pumpAndSettle();
+      expect(store.value.amount('shared.cup'), 3);
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.byKey(const ValueKey('cafe-use-sip')));
+        await tester.pumpAndSettle();
+      }
+      expect(store.value.amount('shared.cup'), 0);
       expect(store.value.states.containsKey('desk.window.cup'), isFalse);
       await tester.tap(find.byKey(const ValueKey('room-edit')));
       await tester.pumpAndSettle();

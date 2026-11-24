@@ -94,6 +94,7 @@ extension CafePersonalObjects on CafeWorld {
         vertexColors: f.vertexColors,
         materialTint: f.materialTint,
         objectId: f.objectId ?? id,
+        part: f.part,
         artIndex: f.artIndex,
       );
     }

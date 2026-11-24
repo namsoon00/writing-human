@@ -29,6 +29,8 @@ class CafeScene extends StatefulWidget {
     this.onObjectSelected,
     this.onObjectPlaced,
     this.onItemActivated,
+    this.onWalk,
+    this.onPutDown,
   });
   final CafeViewController controller;
   final bool interactive;
@@ -37,6 +39,8 @@ class CafeScene extends StatefulWidget {
   final ValueChanged<String>? onObjectSelected;
   final ValueChanged<CafePoint>? onObjectPlaced;
   final bool Function(String)? onItemActivated;
+  final ValueChanged<CafePoint>? onWalk;
+  final VoidCallback? onPutDown;
   final ValueChanged<CafeSeat>? onSeatSelected;
   final ValueChanged<CafeTarget>? onTargetSelected;
   final VoidCallback? onWrite;
@@ -48,6 +52,8 @@ class _CafeSceneState extends State<CafeScene>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   final focus = FocusNode(debugLabel: '카페 둘러보기');
   late final AnimationController travel;
+  late final AnimationController useAnimation;
+  int useRequest = 0;
   double lastTravelTime = 0;
   CafeWalkTiming? timing;
   late final Ticker calm;
@@ -72,7 +78,9 @@ class _CafeSceneState extends State<CafeScene>
     if (!widget.interactive ||
         widget.editing ||
         !appActive ||
-        heldKeys.isEmpty) {
+        heldKeys.isEmpty ||
+        widget.controller.using ||
+        widget.controller.heldId != null) {
       _stopKeys();
       return;
     }
@@ -120,6 +128,8 @@ class _CafeSceneState extends State<CafeScene>
     if (!appActive) {
       _stopKeys();
       travel.stop();
+      useAnimation.stop();
+      widget.controller.cancelUse();
       widget.controller.look(0, 0);
     }
   }
@@ -175,6 +185,22 @@ class _CafeSceneState extends State<CafeScene>
       vsync: this,
       duration: const Duration(milliseconds: 850),
     )..addListener(_travelFrame);
+    useAnimation =
+        AnimationController(
+            vsync: this,
+            duration: const Duration(milliseconds: 650),
+          )
+          ..addListener(() {
+            widget.controller.advanceUse(
+              Curves.easeInOutCubic.transform(useAnimation.value),
+            );
+          })
+          ..addStatusListener((status) {
+            if (status == AnimationStatus.completed) {
+              widget.controller.finishUse();
+            }
+          });
+    useRequest = widget.controller.useRequest;
     request = widget.controller.request;
     widget.controller.addListener(_changed);
     _loadMaterials();
@@ -304,6 +330,9 @@ class _CafeSceneState extends State<CafeScene>
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_changed);
       travel.stop();
+      useAnimation.stop();
+      oldWidget.controller.cancelUse();
+      useRequest = widget.controller.useRequest;
       request = widget.controller.request;
       widget.controller.addListener(_changed);
     }
@@ -311,6 +340,26 @@ class _CafeSceneState extends State<CafeScene>
 
   void _changed() {
     final c = widget.controller;
+    if (useRequest != c.useRequest) {
+      useRequest = c.useRequest;
+      _stopKeys();
+      if (MediaQuery.disableAnimationsOf(context)) {
+        c.advanceUse(1);
+        c.finishUse();
+      } else {
+        final kind = c.useFrame?.kind;
+        useAnimation.duration = Duration(
+          milliseconds:
+              kind == CafeUseKind.sip ||
+                  kind == CafeUseKind.water ||
+                  kind == CafeUseKind.refill
+              ? 1100
+              : 650,
+        );
+        useAnimation.forward(from: 0);
+      }
+    }
+    if (!c.using && useAnimation.isAnimating) useAnimation.stop();
     if (request != c.request) {
       request = c.request;
       travel.stop();
@@ -374,10 +423,8 @@ class _CafeSceneState extends State<CafeScene>
   void _activate(CafeTarget target) {
     final c = widget.controller;
     c.effectTime = sceneTime;
-    if (c.travelling) return;
-    if (target.seat != null && c.seat == target.seat) {
-      widget.onWrite?.call();
-    } else if (widget.onTargetSelected != null) {
+    if (c.travelling || c.using) return;
+    if (widget.onTargetSelected != null) {
       widget.onTargetSelected!(target);
     } else if (target.seat != null) {
       widget.onSeatSelected?.call(target.seat!);
@@ -392,6 +439,7 @@ class _CafeSceneState extends State<CafeScene>
     focus.removeListener(_focusChanged);
     widget.controller.removeListener(_changed);
     travel.dispose();
+    useAnimation.dispose();
     focus.dispose();
     wood?.dispose();
     sign?.dispose();
@@ -424,7 +472,7 @@ class _CafeSceneState extends State<CafeScene>
               LogicalKeyboardKey.arrowDown,
             };
             if (walkingKeys.contains(key)) {
-              if (widget.editing) return;
+              if (widget.editing || c.using || c.heldId != null) return;
               if (event is KeyUpEvent) {
                 heldKeys.remove(key);
                 if (heldKeys.isEmpty) _stopKeys();
@@ -444,6 +492,10 @@ class _CafeSceneState extends State<CafeScene>
             if (event is! KeyDownEvent && event is! KeyRepeatEvent) return;
             if (key == LogicalKeyboardKey.arrowLeft) c.look(.10, 0);
             if (key == LogicalKeyboardKey.arrowRight) c.look(-.10, 0);
+            if (key == LogicalKeyboardKey.escape && c.heldId != null) {
+              widget.onPutDown?.call();
+              return;
+            }
             if (key == LogicalKeyboardKey.escape &&
                 (c.seat != null || c.resting)) {
               c.stand();
@@ -458,6 +510,12 @@ class _CafeSceneState extends State<CafeScene>
         if (widget.interactive &&
             !widget.editing &&
             !c.travelling &&
+            !c.using &&
+            c.heldId == null &&
+            (c.contextId == null ||
+                (c.seat != null &&
+                    c.world.objects[c.contextId]?.type ==
+                        CafeItemType.chair)) &&
             !c.resting) {
           CafeTarget? nearest;
           Offset? nearestPoint;
@@ -555,11 +613,13 @@ class _CafeSceneState extends State<CafeScene>
                 onTapUp: widget.interactive
                     ? (details) {
                         _stopKeys();
+                        if (c.using) return;
                         final hit = CafeRenderer.pick(
                           details.localPosition,
                           camera,
                           size,
                           c.world,
+                          use: c.useFrame,
                         );
                         if (widget.editing) {
                           final selected = c.world.objects[widget.placingId];
@@ -599,7 +659,11 @@ class _CafeSceneState extends State<CafeScene>
                         if (hit?.target != null) {
                           _activate(hit!.target!);
                         } else if (hit?.floor == true) {
-                          c.walkTo(hit!.position);
+                          if (widget.onWalk != null) {
+                            widget.onWalk!(hit!.position);
+                          } else {
+                            c.walkTo(hit!.position);
+                          }
                         }
                       }
                     : null,
@@ -610,6 +674,7 @@ class _CafeSceneState extends State<CafeScene>
                           camera,
                           size,
                           c.world,
+                          use: c.useFrame,
                         );
                         if (hit?.objectId != null) {
                           widget.onObjectSelected?.call(hit!.objectId!);
@@ -626,6 +691,7 @@ class _CafeSceneState extends State<CafeScene>
                   child: CustomPaint(
                     painter: CafeRenderer(
                       world: c.world,
+                      use: c.useFrame,
                       camera: camera,
                       wood: wood,
                       sign: sign,

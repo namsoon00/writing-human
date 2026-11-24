@@ -120,6 +120,10 @@ flutter:
     - assets/audio/cafe-rain.wav
     - assets/audio/cafe-bell.wav
     - assets/audio/cafe-tea.wav
+    - assets/audio/cafe-touch.wav
+    - assets/audio/cafe-place.wav
+    - assets/audio/cafe-sip.wav
+    - assets/audio/cafe-page.wav
     - assets/audio/cafe-water.wav
     - assets/audio/supertonic-license.txt
     - assets/audio/supertonic-code-license.txt

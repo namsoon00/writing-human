@@ -11,6 +11,7 @@ part 'cafe_objects.dart';
 part 'cafe_soft_geometry.dart';
 part 'cafe_entrance.dart';
 part 'cafe_items.dart';
+part 'cafe_use.dart';
 
 enum CafeSurface {
   plain,
@@ -44,6 +45,7 @@ class CafeFace {
     this.target,
     this.signRow = 0,
     this.objectId,
+    this.part,
     this.artIndex,
     CafeSurface? surface,
     this.grain = CafeGrain.y,
@@ -64,6 +66,7 @@ class CafeFace {
   final List<Color>? vertexColors;
   final int signRow;
   final String? objectId;
+  String? part;
   final int? artIndex;
   final CafeTarget? target;
   final List<CafePoint> points;
@@ -161,6 +164,7 @@ class CafeWorld {
   Iterable<CafeTarget> get targets =>
       CafeTarget.values.where((t) => t.inCourtyard == courtyard);
   final List<CafeFace> faces = [];
+  final Map<String, List<CafeFace>> _useBooks = {};
   final List<Rect> obstacles = [];
   final List<CafePlant> plants = [];
   final List<CafePoint> pendantLights = [];
@@ -874,11 +878,11 @@ class CafeWorld {
   }
 
   void _book(double x, double y, double z, {double angle = 0}) {
-    final cover = [
-      sage,
-      const Color(0xffaa806b),
-      const Color(0xff8d9683),
-    ][space.finish(_buildingObject ?? "")];
+    final cover =
+        [sage, const Color(0xffaa806b), const Color(0xff8d9683)][space.finish(
+          _buildingObject ?? "",
+          fallback: objects[_buildingObject]?.defaultFinish ?? 0,
+        )];
     final firstFace = faces.length;
     shadow(x + .012, z + .015, .29, .20, y: y - .014, layer: 2, strength: .13);
     box(x, y, z, .43, .018, .30, cover, topFace: false);
@@ -980,7 +984,14 @@ class CafeWorld {
       )],
       topRadius: .21,
     );
-    cylinder(x, .315, z, .18, .01, dark);
+    cylinder(
+      x,
+      .315,
+      z,
+      .18,
+      .01,
+      space.uses[_buildingObject] == true ? const Color(0xff29251f) : dark,
+    );
     _rod(
       CafePoint(x, .40, z),
       CafePoint(x, .40 + height, z),

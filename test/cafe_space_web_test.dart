@@ -16,6 +16,8 @@ void main() {
       try {
         const expected = CafeSpace(
           brightness: 1.15,
+          amounts: {'desk.window.cup': 1},
+          uses: {'plant.3.77_-3.9': true},
           finishes: {'shared.cup': 1, 'desk.window.cup': 2},
           accents: {'shared.chair.right.1': 2},
           states: {'quiet.book': false, 'lamp.0.0_0.68': false},

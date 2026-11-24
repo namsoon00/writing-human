@@ -8,6 +8,8 @@ import 'cafe_camera.dart';
 import 'cafe_world.dart';
 import 'cafe_visit.dart';
 
+part 'cafe_depth_order.dart';
+
 class _Vertex {
   const _Vertex(this.point, this.u, this.v, this.color);
   final CafePoint point;
@@ -445,17 +447,31 @@ class CafeRenderer extends CustomPainter {
           )) {
         continue;
       }
+      // Do not partition the thousands of surfaces outside the current view.
+      final focal = focalLength(size);
+      var left = double.infinity, top = double.infinity;
+      var rightEdge = double.negativeInfinity, bottom = double.negativeInfinity;
+      for (final v in vertices) {
+        final x = size.width / 2 + v.point.x * focal / v.point.z;
+        final y = size.height / 2 - v.point.y * focal / v.point.z;
+        left = math.min(left, x);
+        rightEdge = math.max(rightEdge, x);
+        top = math.min(top, y);
+        bottom = math.max(bottom, y);
+      }
+      if (rightEdge <= 0 ||
+          left >= size.width ||
+          bottom <= 0 ||
+          top >= size.height) {
+        continue;
+      }
       final depth =
           vertices.fold<double>(0, (sum, v) => sum + v.point.z) /
           vertices.length;
       faces.add(_ProjectedFace(face, vertices, depth));
     }
     hasPortal = hasPortal && portal.getBounds().overlaps(Offset.zero & size);
-    faces.sort(
-      (a, b) => a.face.layer == b.face.layer
-          ? b.depth.compareTo(a.depth)
-          : a.face.layer.compareTo(b.face.layer),
-    );
+    final orderedFaces = _depthOrder(faces);
     final f = focalLength(size);
     final paint = Paint()
       ..isAntiAlias = true
@@ -587,7 +603,7 @@ class CafeRenderer extends CustomPainter {
       canvas.restore();
     }
 
-    for (final face in faces) {
+    for (final face in orderedFaces) {
       if (face.face.layer >= 1) paintLinked();
       final projected = <Offset>[];
       for (final v in face.vertices) {

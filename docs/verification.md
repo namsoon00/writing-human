@@ -3674,3 +3674,27 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   [파일 대조 기록](../design/cafe/20261124/homecoming/deployment.json)을 남겼다.
 - 이 검증은 직접 공개 UI 조작이나 iPhone/Android 실기기 검수가 아니다.
   저장 키·로컬 계정 범위·비공개 Sites project_id/접근 설정은 변경하지 않았다.
+
+
+## 2026-11-24 · 문구대 종이와 상판의 가림 오류
+
+- 사용자가 휴대폰에서 노트에 원목 줄무늬가 겹쳐 보이는 화면을 제보했다. 기존
+  평균 거리 정렬은 긴 상판과 작은 종이 면의 실제 가림 관계를 보장하지 못했다.
+  면 평면 분할(BSP)로 교체하고 분할점의 UV/조명색, 근평면/화면 밖 면 제외를 유지했다.
+- 수정 전 HEAD의 렌더를 복제한 일회 진단에서 같은 지지면 검사가 실패하는 것을
+  확인했다(종이 샘플의 R161, 기대값 >225). 진단 복제 코드는 검사 후 제거했다.
+  수정 후 Chrome에서 양쪽/비스듬한 시점의 종이, 교차 면과 실제 nearest-hit 일치,
+  이미지 핸들 반복 생존 검사 3개가 통과했다.
+- 기존 동작/홈/180개 카메라 자세 렌더와 지지면 검사 20개가 통과했다. 해당 묶음의
+  첫 캡처는 캡처 도구 자신의 debug shadow 복원 검증에 실패했다. 불필요한 override를
+  제거한 최종 지지면/교차면/캡처 묶음 3개는 모두 통과했다. 위 숫자는 중복이 있으므로
+  합산한 고유 테스트 수로 보고하지 않는다. `flutter analyze --no-pub`는 no issues다.
+- [정면](../design/cafe/20261124/occlusion-fix/stationery-close.jpg),
+  [비스듬한 시점](../design/cafe/20261124/occlusion-fix/stationery-oblique.jpg),
+  [낮은 시점](../design/cafe/20261124/occlusion-fix/stationery-low.jpg),
+  [중앙 테이블](../design/cafe/20261124/occlusion-fix/central-desk.jpg)은 실제 번들
+  글꼴·13개 재질을 로딩한 Flutter 합성 빈 라이브러리 fixture의 390×844 렌더다.
+  [검사 범위와 해시](../design/cafe/20261124/occlusion-fix/verification.json)를 남겼다.
+- 저장한 배치/상태·필사·폰트·비공개 Sites 프로젝트/접근 설정을 변경하지 않았다.
+  직접 공개 UI 조작과 iPhone/Android 실기기 터치·FPS·발열·오디오는 미검증이다.
+- 최종 192개 Dart 파일 포맷은 수정 없음이며 로컬 Pages release 빌드도 통과했다.

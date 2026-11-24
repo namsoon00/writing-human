@@ -1,0 +1,39 @@
+{
+  "checked_at": "2026-11-24T12:37:22.460597+00:00",
+  "reported_problem": "Average-depth surface sorting let wooden display-counter faces cover notebook pages in the phone view",
+  "fix": "Plane-based BSP ordering and interpolation of split polygon UVs/lighting; viewport culling before partitioning",
+  "capture_kind": "Actual Flutter synthetic empty-library fixture; not a physical device or a public-browser screenshot",
+  "viewport": [
+    390,
+    844
+  ],
+  "pixel_ratio": 2,
+  "views": [
+    "stationery-close",
+    "stationery-oblique",
+    "stationery-low",
+    "central-desk"
+  ],
+  "native_regressions_completed": 20,
+  "separate_final_occlusion_and_capture_tests": 3,
+  "counts_note": "The 20 passing core tests include the support test; the separate final 3 rerun that test, add the crossing-surface test and pass the corrected capture harness. Do not add these counts as unique tests.",
+  "chrome_occlusion_and_image_lifetime_tests": 3,
+  "analysis": "flutter analyze --no-pub: no issues",
+  "before_fix_reproduction": "Original HEAD renderer fails support occlusion at angle=0 x=-0.16 z=-0.62: rendered red channel161, expected paper >225",
+  "fixture_harness_note": "The initial capture run failed its own debug-shadow reset invariant; removing the unnecessary debug override produced a passing final capture. Not an app failure.",
+  "unverified": [
+    "Physical iPhone/Android touch and frame rate",
+    "Direct public UI use"
+  ],
+  "images": {
+    "stationery-close": "9a75090b057943c65dfb68ab2219d18eb8ced621fb4b5b79ecf3e0ab52b3af49",
+    "stationery-oblique": "209b10468b9c9e486ec4174eda738bdfbb4d2c230e6d2aea0e2655a8429fa472",
+    "stationery-low": "1d4ee438b9ff7e2a6d289c2947c43a7d987d0eb6c9221bcf71246119a2b910d8",
+    "central-desk": "9e45f658f0cef959ed529c8836b1abdaab5b96d90e29a9031f20e061329ff5fe"
+  },
+  "format": "192 files, no changes",
+  "final_capture_view_check": "Final oblique camera centers the actual notebook; capture test passed again",
+  "local_release_build": "node tool/build_github_pages.mjs: passed (65.3s compile)",
+  "main_js_sha256": "9c4b82a46784986782fc14f37c0183d377911bfd2f125fa0e139aac127d7f475",
+  "font_sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05"
+}

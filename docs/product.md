@@ -824,3 +824,12 @@ Supertonic 3의 F1으로 기기에서 생성하고 같은 음성 처리를 적�
 [같은 정원의 입체 식재](../design/cafe/20261124/individual-items/garden.jpg)는 생성 시안이 아닌
 Flutter 테스트 렌더다. 근접 검수 시점과 실제 걸을 수 있는 위치, 실기기 검증 범위는
 [검증 기록](verification.md)에서 구분한다.
+
+
+## 아이템 색 선택과 실제 재질 · 2026-11-24 보완
+
+먹갈색 의자는 나무 결을 유지한 채 더 어두운 색을 입힌다. 나무의 올리브/연녹/회녹은
+각기 다른 잎 팔레트를 사용한다. 꽃과 포개 둔 책은 처음 보이는 대표색과 선택 표시를
+맞추고, 색을 고르면 꽃잎 또는 맨 위 표지가 그 색이 된다. 기본 모습과 기존 배치/기록은
+유지한다. [원목 색 구분](../design/cafe/20261124/individual-items/chair-finishes.jpg)과
+[연녹 잎 선택](../design/cafe/20261124/individual-items/garden-light-leaves.jpg)은 실제 Flutter 렌더다.

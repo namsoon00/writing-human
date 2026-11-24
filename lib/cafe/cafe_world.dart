@@ -49,6 +49,7 @@ class CafeFace {
     this.grain = CafeGrain.y,
     this.vertexNormals,
     this.vertexColors,
+    this.materialTint = const Color(0xffffffff),
   }) : surface =
            surface ??
            (wood
@@ -57,6 +58,7 @@ class CafeFace {
                ? CafeSurface.brass
                : CafeSurface.plain);
   final CafeSurface surface;
+  Color materialTint;
   final CafeGrain grain;
   final List<CafePoint>? vertexNormals;
   final List<Color>? vertexColors;
@@ -725,6 +727,7 @@ class CafeWorld {
 
   void _chair(double x, double z, {double angle = 0, bool padded = false}) {
     final id = _buildingObject ?? '';
+    final faceStart = faces.length;
     final timber = [dark, oak, const Color(0xff514b41)][space.finish(id)];
     final timberSurface = space.finish(id) == 1
         ? CafeSurface.oak
@@ -860,6 +863,14 @@ class CafeWorld {
       ),
     );
     shadow(x, z, .32, .3, strength: .045);
+    if (space.finish(id) == 2) {
+      for (final face
+          in faces
+              .skip(faceStart)
+              .where((f) => f.surface == CafeSurface.walnut)) {
+        face.materialTint = const Color(0xffaaa89c);
+      }
+    }
   }
 
   void _book(double x, double y, double z, {double angle = 0}) {

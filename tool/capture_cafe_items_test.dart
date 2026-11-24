@@ -156,6 +156,21 @@ void main() {
       await tester.pumpAndSettle();
       await capture(shot.key);
     }
+    final unedited = c.space;
+    expect(
+      c.applySpace(unedited.withFinish('shared.chair.right.2', 2)),
+      isNull,
+    );
+    c.updateCamera(
+      const CafeCamera(
+        position: CafePoint(1.85, 1.30, 1.95),
+        yaw: -.769,
+        pitch: -.45,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await capture('chair-finishes');
+    expect(c.applySpace(unedited), isNull);
     c.updateCamera(CafeCamera.entrance);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('room-edit')));
@@ -198,6 +213,16 @@ void main() {
     );
     await tester.pumpAndSettle();
     await capture('flowers-close');
+    expect(c.applySpace(c.space.withFinish('garden.tree.18', 1)), isNull);
+    c.updateCamera(
+      const CafeCamera(
+        position: CafePoint(.35, 1.62, 2.6),
+        yaw: -.65,
+        pitch: -.30,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await capture('garden-light-leaves');
     debugDisableShadows = shadows;
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();

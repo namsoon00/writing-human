@@ -285,7 +285,7 @@ class CafeRenderer extends CustomPainter {
             face.surface != CafeSurface.water &&
             face.surface != CafeSurface.plain &&
             face.surface != CafeSurface.brass
-        ? Colors.white
+        ? face.materialTint
         : face.color;
     int channel(double value, double factor) =>
         ((value * factor + specular) * 255).round().clamp(0, 255);

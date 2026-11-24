@@ -42,6 +42,7 @@ extension _CafeInterior on CafeWorld {
             CafeFace(
               [at(u, v), at(uu, v), at(uu, vv), at(u, vv)],
               face.color,
+              materialTint: face.materialTint,
               sign: face.sign,
               surface: face.surface,
               signRow: face.signRow,
@@ -101,10 +102,10 @@ extension _CafeInterior on CafeWorld {
                 .029,
                 .16,
                 [
-                  CafeWorld.sage,
                   CafeWorld.cream,
                   const Color(0xff9c715b),
-                ][(book + space.finish(id)) % 3],
+                  CafeWorld.sage,
+                ][(book + space.finish(id, fallback: 1) + 1) % 3],
               );
               box(
                 3.718,
@@ -124,6 +125,7 @@ extension _CafeInterior on CafeWorld {
             height: .16,
           ),
           type: CafeItemType.stack,
+          defaultFinish: 1,
         );
       }
     }
@@ -838,10 +840,10 @@ extension _CafeInterior on CafeWorld {
             .026,
             .22,
             [
-              CafeWorld.sage,
-              const Color(0xffae8166),
               CafeWorld.cream,
-            ][(space.finish('shared.stack') + i) % 3],
+              const Color(0xffae8166),
+              CafeWorld.sage,
+            ][(space.finish('shared.stack', fallback: 1) + 1 - i) % 3],
           );
           box(.21, .767 + i * .032, -1.151, .275, .016, .004, CafeWorld.cream);
         }
@@ -850,6 +852,7 @@ extension _CafeInterior on CafeWorld {
       support: CafeWorld.tableBounds(CafeSeat.shared).deflate(.015),
       footprint: const Rect.fromLTWH(.055, -1.38, .31, .22),
       type: CafeItemType.stack,
+      defaultFinish: 1,
     );
     _object(
       'shared.runner',

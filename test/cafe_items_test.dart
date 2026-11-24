@@ -194,6 +194,48 @@ void main() {
           greaterThan(.6),
         );
       }
+      final treeId = trees.first.id;
+      final originalColors = world.faces
+          .where((f) => f.objectId == treeId)
+          .map((f) => f.color)
+          .toSet();
+      for (final finish in [1, 2]) {
+        final changed = CafeWorld(
+          courtyard: true,
+          space: const CafeSpace().withFinish(treeId, finish),
+        );
+        final changedColors = changed.faces
+            .where((f) => f.objectId == treeId)
+            .map((f) => f.color)
+            .toSet();
+        expect(
+          changedColors,
+          isNot(unorderedEquals(originalColors)),
+          reason:
+              'Leaf presets must change the palette, not shuffle the same colors.',
+        );
+      }
+      final pink = world.objects.values.firstWhere(
+        (o) => o.id.startsWith('garden.flowers.') && o.defaultFinish == 1,
+      );
+      final ivory = CafeWorld(
+        courtyard: true,
+        space: const CafeSpace().withFinish(pink.id, 0),
+      );
+      expect(
+        ivory.faces
+            .where((f) => f.objectId == pink.id)
+            .map((f) => f.color)
+            .toList(),
+        isNot(
+          orderedEquals(
+            world.faces
+                .where((f) => f.objectId == pink.id)
+                .map((f) => f.color)
+                .toList(),
+          ),
+        ),
+      );
       final valid = CafeWorld(
         courtyard: true,
         space: const CafeSpace(
@@ -220,6 +262,23 @@ void main() {
         34,
       );
       expect(world.objects['counter.machine.cup.0']!.parent, 'counter.machine');
+      expect(world.objects['shared.stack']!.defaultFinish, 1);
+      expect(world.objects['shelf.stack.-2.25_0']!.defaultFinish, 1);
+      final ivoryStack = CafeWorld(
+        space: const CafeSpace().withFinish('shared.stack', 0),
+      );
+      final topCover = ivoryStack.faces
+          .where(
+            (f) =>
+                f.objectId == 'shared.stack' &&
+                f.normal.y > .99 &&
+                f.center.y > .81 &&
+                f.center.y < .82,
+          )
+          .toList();
+      expect(topCover, isNotEmpty);
+      expect(topCover.every((f) => f.color == CafeWorld.cream), isTrue);
+
       expect(
         world.faces
             .where((f) => f.objectId == 'shelf.stack.-2.25_0')

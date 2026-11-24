@@ -92,6 +92,7 @@ extension CafePersonalObjects on CafeWorld {
         grain: f.grain,
         vertexNormals: f.vertexNormals?.map(normal).toList(),
         vertexColors: f.vertexColors,
+        materialTint: f.materialTint,
         objectId: f.objectId ?? id,
         artIndex: f.artIndex,
       );

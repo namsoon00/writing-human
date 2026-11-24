@@ -163,11 +163,11 @@ extension _CourtyardGeometry on CafeWorld {
                       math.sin(a) * size,
                     ),
                 .045 + random.nextDouble() * .022,
-                [
-                  const Color(0xff748366),
-                  const Color(0xff8d9c79),
-                  const Color(0xffa2ab83),
-                ][(space.finish(id) + i + branch) % 3],
+                const [
+                  [Color(0xff748366), Color(0xff8d9c79), Color(0xffa2ab83)],
+                  [Color(0xff9caa81), Color(0xffbac69b), Color(0xffc8ceaa)],
+                  [Color(0xff8c9890), Color(0xffa6afa5), Color(0xffbcc1b4)],
+                ][space.finish(id)][(i + branch) % 3],
               );
             }
           }
@@ -180,6 +180,7 @@ extension _CourtyardGeometry on CafeWorld {
 
   void _flower(double x, double z, Color color) {
     final id = 'garden.flowers.${_flowerCount++}';
+    final initialFinish = color == const Color(0xffd6b5c2) ? 1 : 0;
     _object(
       id,
       '뜰의 꽃 $_flowerCount',
@@ -209,11 +210,11 @@ extension _CourtyardGeometry on CafeWorld {
             .023,
             CafeWorld.sage,
           );
-          final petal = [
-            color,
-            const Color(0xffd6b5c2),
-            const Color(0xffe2c996),
-          ][space.finish(id)];
+          final petal = const [
+            Color(0xfff0eee0),
+            Color(0xffd6b5c2),
+            Color(0xffe2c996),
+          ][space.finish(id, fallback: initialFinish)];
           for (var i = 0; i < 7; i++) {
             final a = i * math.pi * 2 / 7;
             final along = CafePoint(math.cos(a), 0, math.sin(a));
@@ -242,6 +243,7 @@ extension _CourtyardGeometry on CafeWorld {
         }
       },
       type: CafeItemType.plant,
+      defaultFinish: initialFinish,
       footprint: Rect.fromCenter(center: Offset(x, z), width: .5, height: .5),
     );
   }

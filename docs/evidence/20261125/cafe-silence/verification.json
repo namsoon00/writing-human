@@ -1,0 +1,34 @@
+{
+  "source_commit": "52275c91c9b420260cee0eac1bfd1f64f0802190",
+  "local_checks": {
+    "format": "196 files, unchanged",
+    "analyze": "no issues found",
+    "native_selected": 21,
+    "root_scoped_analyze": "lib test tool hook: no issues found",
+    "root_item_controls": 3,
+    "release_build": "success",
+    "corrected_native": 12,
+    "corrected_chrome": 12,
+    "corrected_analyze": "no issues found"
+  },
+  "implementation": [
+    "Removed production native/web ambient loop players and unused CafeAmbience",
+    "Excluded rain, water, leaves, music WAVs from app bundle; original source files retained",
+    "Production silent output ignores old saved mix levels, without opening audio resources",
+    "Removed four ambient sliders; retained slow light, optional short object sounds and saved action volume",
+    "Sound off also stops a current one-shot",
+    "Room, account, manuscript and writing pencil settings preserved"
+  ],
+  "local_main_sha256": "c65cdb221764a615c4776d9b49ba7bfa9088bdd667134e6f8f467c9b4694f01a",
+  "bundle_checks": "All four WAV paths absent from release JS and AssetManifest.bin; files absent from release assets",
+  "not_verified": [
+    "Physical iPhone/Android listening",
+    "Live public UI use"
+  ],
+  "ci_run": "https://github.com/namsoon00/writing-human/actions/runs/45495455740",
+  "production_change_commit": "558c43a1bd4645a6529bd84372ab700d6a9284c2",
+  "superseded_run": {
+    "id": 45493155473,
+    "outcome": "Cancelled own stalled missing-asset test; replaced with platform/asset request instrumentation; release bundle absence is checked separately."
+  }
+}

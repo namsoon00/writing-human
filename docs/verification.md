@@ -3912,3 +3912,17 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   release JS/AssetManifest/파일 검사로 확인한다. 수정한 Chrome 단일 검사1개 통과.
   정체된 이번 검사만 교체하기 위해 다음 run의 concurrency 취소를 일시 허용하며,
   최종 검증 기록 커밋에서 기존 cancel-in-progress:false를 복원한다.
+- 수정 후 로컬 `flutter analyze --no-pub` 문제 없음, 네이티브12·Chrome12개 모두
+  통과했다. Chrome에서 대기하던 자산 요청은 없앴고 테스트는 생산 factory가 자원
+  요청을 하지 않는지만 검사한다. 실제 번들 부재는 release/HTTP 검사와 구분한다.
+  이전 실행45493155473이 취소됐고 새 실행45495455740으로 교체된 것을 확인했다.
+  최종 기록과 함께 워크플로의 원래 취소 설정을 복원한다.
+- 최종 공개 CI [45495455740](https://github.com/namsoon00/writing-human/actions/runs/45495455740):
+  format/analyze·네이티브336·Chrome50·음성 DSP6개 및 빌드/배포 모두 성공했다.
+- 공개 HTTP200 앱 JS가 로컬 release와 바이트 단위로 일치하고, manifest·동작음·
+  폰트·재질 등15개 자산도 모두 일치했다. JS/manifest에서 네 반복 WAV 경로가 빠진
+  것을 확인했다. SHA256은 `c65cdb221764a615c4776d9b49ba7bfa9088bdd667134e6f8f467c9b4694f01a`.
+  근거는 `docs/evidence/20261125/cafe-silence/`와 로컬 output 경로에 보관한다.
+  실제 휴대폰 청음과 공개 UI 직접 조작은 미검증이다.
+- 최종 기록 커밋에서 임시 concurrency 설정을 원래 false로 복원한다. 근거를 원격과
+  루트에 보관한 뒤 이번 작업 폴더·빌드 캐시·검사 중간 산출물을 정리한다.

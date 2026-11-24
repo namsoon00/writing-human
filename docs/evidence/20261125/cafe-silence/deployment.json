@@ -1,0 +1,141 @@
+{
+  "source_commit": "52275c91c9b420260cee0eac1bfd1f64f0802190",
+  "checked_at": "2026-11-24T22:05:22.248945+00:00",
+  "index": {
+    "url": "https://namsoon00.github.io/writing-human/?v=52275c9&check=1795557915",
+    "status": 200,
+    "sha256": "eac106e4dfd1626dcf01720395bf3dd411d0785e9fc16613e96ff66c218c2510",
+    "bytes": 8150
+  },
+  "bootstrap": {
+    "url": "https://namsoon00.github.io/writing-human/flutter_bootstrap.js?v=47106f1d19259228",
+    "status": 200,
+    "sha256": "47106f1d19259228aea84ab9009aa9596090d2fa7f3b2aaa408876661d31f3c0",
+    "bytes": 10016
+  },
+  "main": {
+    "url": "https://namsoon00.github.io/writing-human/main.dart.js?v=c65cdb221764a615",
+    "status": 200,
+    "sha256": "c65cdb221764a615c4776d9b49ba7bfa9088bdd667134e6f8f467c9b4694f01a",
+    "bytes": 5295606,
+    "matches_local": true
+  },
+  "assets": [
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/AssetManifest.bin?v=52275c9",
+      "status": 200,
+      "sha256": "27af39c2122b91e7af5b057bcbf7ff2deba36d4bde910e546e603eef724c8935",
+      "bytes": 3788,
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/FontManifest.json?v=52275c9",
+      "status": 200,
+      "sha256": "59d2bbd28f1068364d4e0054b81dcde0da04cacf3e19f403efe8697edacc451e",
+      "bytes": 639,
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/fonts/MaterialIcons-Regular.otf?v=52275c9",
+      "status": 200,
+      "sha256": "dbcde9d9032bba0a34344f9e1c2b5ff9f8e16befd0e9489e7095a3d6036178f3",
+      "bytes": 9548,
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/fonts/WritingHumanDevelopment-Regular.ttf?v=52275c9",
+      "status": 200,
+      "sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+      "bytes": 895652,
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-watercolor-oak.webp?v=52275c9",
+      "status": 200,
+      "sha256": "09e57d12c41a0c46e7ab91f03b873161daecf23fa79be9f9d1fabbad6c41c63b",
+      "bytes": 373234,
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-watercolor-tree.webp?v=52275c9",
+      "status": 200,
+      "sha256": "bdc15a907213570558e2fb1887899c1143968a406ac05da95297ce1836319086",
+      "bytes": 624236,
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/images/cafe-watercolor-flowers.webp?v=52275c9",
+      "status": 200,
+      "sha256": "f836315971ced6f0cd79e6cb5c58289cec843f26db75fcf1ca141700ca98e961",
+      "bytes": 471514,
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-touch.wav?v=52275c9",
+      "status": 200,
+      "sha256": "6de5a8ed938aa69dfb63292736f277e3dc9894e1f533f55edffd2411af5843ec",
+      "bytes": 5336,
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-place.wav?v=52275c9",
+      "status": 200,
+      "sha256": "75fd0af97a7d510fca9bfd909a3a61a625533b08b9afeee846c98420b41353ac",
+      "bytes": 9746,
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-sip.wav?v=52275c9",
+      "status": 200,
+      "sha256": "140161a2a3b38c5ac28a3277e83a0c05100842f882687617ca626025b7b0605d",
+      "bytes": 26504,
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-page.wav?v=52275c9",
+      "status": 200,
+      "sha256": "5d3a3887cb6a3d3d9ce9d216433bb38311666d1cf132b37e969d8d934e21c133",
+      "bytes": 15478,
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-bell.wav?v=52275c9",
+      "status": 200,
+      "sha256": "3e79620dc1f6aa73bbf927991e15ecece8ea68611a0b11ef0760bdfecb6a22b2",
+      "bytes": 220544,
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-tea.wav?v=52275c9",
+      "status": 200,
+      "sha256": "a5c241b30a12232b77c0c6a4033cf48934398d49d0d139da27ffd45b81cc5e13",
+      "bytes": 97064,
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/pencil-on-paper-original.wav?v=52275c9",
+      "status": 200,
+      "sha256": "10f5de0304ddfe461a19e57a5963bd7f1c973deadc3db1d5d7e632d18bb18360",
+      "bytes": 643464,
+      "matches_local": true
+    },
+    {
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/pencil-on-paper-original-info.json?v=52275c9",
+      "status": 200,
+      "sha256": "794a10dd647aef989a1e105cf9950191c2cea1b028c25c4968dcab9903cc6165",
+      "bytes": 1318,
+      "matches_local": true
+    }
+  ],
+  "removed_background_assets": [
+    "cafe-rain.wav",
+    "cafe-water.wav",
+    "cafe-leaves.wav",
+    "cafe-music.wav"
+  ],
+  "scope": "Exact public JS and bundle/asset hashes; no ambient file paths in application or manifest, no WAVs in local release. Silent production output and absence validated in tests. Physical-device listening and live public UI interactions unverified.",
+  "ci_run": "https://github.com/namsoon00/writing-human/actions/runs/45495455740",
+  "build": "success",
+  "deploy": "success",
+  "workflow_restore": "Final proof restores original cancel-in-progress:false, byte-identical to the pre-task workflow."
+}

@@ -377,10 +377,22 @@ void main() {
       );
       await tester.pumpAndSettle();
       await _enterCafe(tester, controller: controller);
-      await tester.runAsync(() async {
-        await tester.tap(_start);
-        await controller.settled;
-      });
+      await tester.tap(_start);
+      // Remembering the seat writes to SQLite before opening the editor.
+      // Allow that real I/O and its resulting frames to finish. A blank
+      // editor intentionally has no stored manuscript until typing begins.
+      for (
+        var attempt = 0;
+        attempt < 200 && find.byType(CafeScreen).evaluate().isNotEmpty;
+        attempt++
+      ) {
+        await tester.runAsync(() async {
+          await controller.settled;
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        });
+        await tester.pumpAndSettle();
+      }
+      expect(find.byType(CafeScreen), findsNothing);
       await tester.pumpAndSettle();
       await tester.enterText(_field, '실제 파일에 남기는 카페의 문장');
       await tester.pump();

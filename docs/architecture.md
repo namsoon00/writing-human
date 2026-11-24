@@ -1142,3 +1142,23 @@ WAV는 pubspec 번들에서 제외하고 과거 원본 파일은 보존한다. �
 CafeAtmosphere의 과거 네 값/좌표 계산은 기존 공간 자료를 읽는 호환 형태로 유지하며
 새 기본값은 모두0이다. 스키마/저장 키/계정 범위는 바꾸지 않는다. UI에서는 네 조합
 슬라이더를 없애고 flow와 동작음 volume만 편집한다. 필사 연필 원음은 변경하지 않는다.
+
+## 직접 요청한 미디어 재생 세션 · 2026-11-25
+
+userAudioIOS()는 playback + mixWithOthers를 사용한다. 카페·필기·쪽 넘김·낭독에서
+이 컨텍스트를 사용하며 Android 경로와 입력 타이밍은 바꾸지 않는다. 웹 UserAudioSession은
+navigator.audioSession을 feature detection하고 실제 소리 요청 또는 낭독 준비 시
+type=playback을 요청한다. 자원을 만들지 않는 배경 silent output에는 연결하지 않는다.
+API가 없거나 쓰기가 거절되면 기존 경로를 유지한다. 무음 파일을 따로 재생하거나
+새 반복음·자동 재생·마이크 권한을 추가하지 않는다.
+
+페이지 전역 AudioSessionLeases는 소비자별로 등록하고 마지막 소리가 끝나면 원래
+type을 복원한다. 녹음 세션이나 외부 기능의 나중 변경을 덮어쓰지 않는다. 필기는 기존
+idle/fade 뒤 source.onended, 쪽 넘김은 마지막 source 종료, 카페는 완료/stop/dispose,
+낭독은 완료/실패/close에서 해제한다. 브라우저의 playback 적용 방식은 iOS/호스트에
+달려 있고 다른 미디어를 일시 중지할 수 있다. 네이티브는 mixWithOthers를 명시하지만
+웹에 같은 혼합 동작을 보장하지 않는다.
+
+근거: [WebKit의 playback 안내](https://bugs.webkit.org/show_bug.cgi?id=237322),
+[Audio Session API 초안](https://www.w3.org/TR/audio-session/),
+[Apple playback](https://developer.apple.com/documentation/avfaudio/avaudiosession/category-swift.struct/playback).

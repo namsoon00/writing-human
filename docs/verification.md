@@ -3926,3 +3926,17 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   실제 휴대폰 청음과 공개 UI 직접 조작은 미검증이다.
 - 최종 기록 커밋에서 임시 concurrency 설정을 원래 false로 복원한다. 근거를 원격과
   루트에 보관한 뒤 이번 작업 폴더·빌드 캐시·검사 중간 산출물을 정리한다.
+
+## 2026-11-25 · iPhone 무음 모드의 명시적 소리 재생
+
+- Web Audio Session playback 요청과 네이티브 iOS playback+mixWithOthers를 적용한다.
+  기존 필기 원음·IME·저장·배경음 제거는 유지한다. 세션 지원/미지원/읽기 전용,
+  소비자 중첩·외부 변경 보존·원래 값 복원을 검사한다.
+- Chrome의 가짜 navigator/자산으로 실제 PaperSoundOutput의 요청·중단·종료와
+  JS interop을 검사했다. 정책/연결10개와 카페12개 통과. 네이티브 관련30개도 통과했다.
+  기존 playback 값을 다시 쓰지 않도록 정리한 뒤 재검사했다. 마지막 만료/실패 요청의
+  세션 정리 보완은 최종 공개 CI에서도 검사한다. 실제 WAV 청음·iPhone의 무음 스위치
+  동작을 이 모의 검사로 검증했다고 보고하지 않는다.
+- 실제 iPhone 진동/무음 스위치·인앱 브라우저별 청음은 미검증이다. 구형 브라우저의
+  Audio Session API 지원 차이를 숨기거나 모든 iOS에서 동작한다고 단정하지 않는다.
+  최종 format/analyze·공개 CI·HTTP 반영 근거는 아래에 기록한다.

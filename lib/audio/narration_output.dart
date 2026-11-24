@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'user_audio_context.dart';
 
 class NarrationOutput {
   AudioPlayer? _player;
@@ -19,7 +20,10 @@ class NarrationOutput {
       if (!done.isCompleted) done.complete();
     }, onError: done.completeError);
     try {
-      await player.play(BytesSource(wav, mimeType: 'audio/wav'));
+      await player.play(
+        BytesSource(wav, mimeType: 'audio/wav'),
+        ctx: AudioContext(iOS: userAudioIOS()),
+      );
       onStart();
       await Future.any([done.future, stopped]);
     } finally {

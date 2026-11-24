@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
 import 'paper_sound_effect.dart';
+import '../audio/user_audio_context.dart';
 
 class PaperSoundOutput implements PaperSoundPlayback {
   PaperSoundOutput(this.effect)
@@ -89,7 +90,7 @@ AudioContext _audioContext() => AudioContext(
     audioFocus: AndroidAudioFocus.none,
     usageType: AndroidUsageType.assistanceSonification,
   ),
-  iOS: AudioContextIOS(category: AVAudioSessionCategory.ambient),
+  iOS: userAudioIOS(),
 );
 
 /// A single looping voice. Changes in activity invalidate an in-flight fade.

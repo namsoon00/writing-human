@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:web/web.dart' as web;
 
 import 'paper_sound_effect.dart';
+import '../audio/user_audio.dart';
 
 class PaperSoundOutput implements PaperSoundPlayback {
   PaperSoundOutput(this.effect) {
@@ -16,6 +17,8 @@ class PaperSoundOutput implements PaperSoundPlayback {
   }
 
   final PaperSoundEffect effect;
+  final _session = UserAudioSession();
+  final _voices = <web.AudioBufferSourceNode>{};
   late final Future<ByteData?> _bytes;
 
   static const _activationEvents = [
@@ -54,6 +57,7 @@ class PaperSoundOutput implements PaperSoundPlayback {
 
   void _activate() {
     try {
+      if (_pending?.canPlay == true || _rhythm != null) _session.activate();
       var context = _context;
       if (context == null) {
         context = _context = web.AudioContext();
@@ -67,6 +71,7 @@ class PaperSoundOutput implements PaperSoundPlayback {
         unawaited(_resume(context));
       }
     } catch (error) {
+      _session.release();
       debugPrint('Paper audio activation failed: $error');
     }
   }
@@ -77,6 +82,7 @@ class PaperSoundOutput implements PaperSoundPlayback {
       await context.resume().toDart;
       _playPending();
     } catch (error) {
+      _session.release();
       if (!_closed) debugPrint('Paper audio activation failed: $error');
     } finally {
       _resuming = false;
@@ -86,7 +92,10 @@ class PaperSoundOutput implements PaperSoundPlayback {
   Future<void> _decode(web.AudioContext context) async {
     try {
       final bytes = await _bytes;
-      if (_closed || bytes == null) return;
+      if (_closed || bytes == null) {
+        if (_voices.isEmpty) _session.release();
+        return;
+      }
       final data = bytes.buffer.asUint8List(
         bytes.offsetInBytes,
         bytes.lengthInBytes,
@@ -99,13 +108,15 @@ class PaperSoundOutput implements PaperSoundPlayback {
         _playPending();
       }
     } catch (error) {
+      _session.release();
       if (!_closed) debugPrint('Could not decode paper sound: $error');
     }
   }
 
   @override
   void play(PaperSoundRequest request) {
-    if (_closed) return;
+    if (_closed || !request.canPlay) return;
+    _session.activate();
     if (_rhythm != null) {
       if (_fadeStop != null) {
         _fadeStop?.cancel();
@@ -129,9 +140,14 @@ class PaperSoundOutput implements PaperSoundPlayback {
     }
     final request = _pending;
     _pending = null;
-    if (request == null || !request.canPlay) return;
+    if (request == null || !request.canPlay) {
+      if (_voices.isEmpty) _session.release();
+      return;
+    }
+    web.AudioBufferSourceNode? created;
     try {
-      final source = context.createBufferSource();
+      _session.activate();
+      final source = created = context.createBufferSource();
       source.buffer = buffer;
       if (effect.loops) {
         source.loop = true;
@@ -142,7 +158,10 @@ class PaperSoundOutput implements PaperSoundPlayback {
       source.onended = ((web.Event _) {
         source.disconnect();
         if (_rhythm == source) _rhythm = null;
+        _voices.remove(source);
+        if (_voices.isEmpty) _session.release();
       }).toJS;
+      _voices.add(source);
       if (effect.loops) {
         _startedAt = context.currentTime;
         source.start(0, _offset);
@@ -152,6 +171,11 @@ class PaperSoundOutput implements PaperSoundPlayback {
         source.start();
       }
     } catch (error) {
+      if (created != null) {
+        _voices.remove(created);
+        created.disconnect();
+      }
+      if (_voices.isEmpty) _session.release();
       debugPrint('Paper sound unavailable: $error');
     }
   }
@@ -171,7 +195,11 @@ class PaperSoundOutput implements PaperSoundPlayback {
   void pause() {
     _pending = null;
     final source = _rhythm;
-    if (source == null || _closed || _fadeStop != null) return;
+    if (source == null) {
+      if (_voices.isEmpty) _session.release();
+      return;
+    }
+    if (_closed || _fadeStop != null) return;
     _rampRhythm(0, writingRhythmFade);
     _fadeStop = Timer(writingRhythmFade, () {
       _fadeStop = null;
@@ -202,6 +230,8 @@ class PaperSoundOutput implements PaperSoundPlayback {
       await _context?.close().toDart;
     } catch (error) {
       debugPrint('Could not release paper sound: $error');
+    } finally {
+      _session.release();
     }
   }
 }

@@ -35,5 +35,28 @@
   "final_capture_view_check": "Final oblique camera centers the actual notebook; capture test passed again",
   "local_release_build": "node tool/build_github_pages.mjs: passed (65.3s compile)",
   "main_js_sha256": "9c4b82a46784986782fc14f37c0183d377911bfd2f125fa0e139aac127d7f475",
-  "font_sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05"
+  "font_sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+  "shared_workspace": {
+    "analysis": "flutter analyze --no-pub lib test tool hook: no issues",
+    "tests": 5,
+    "preserved": "Existing lighting controls, root index, font and other local work unchanged"
+  },
+  "native_final_material_and_occlusion_tests": 6,
+  "first_server_run": {
+    "run_id": 45395658430,
+    "native_passed": 321,
+    "failed": 1,
+    "cause": "Old material test sampled the actual bright brass ferrule as if it were dark pencil lacquer. Corrected to separately check shaft, brass and nearest physical hit; no further app code change."
+  },
+  "deployment": {
+    "run_id": 45396910273,
+    "url": "https://github.com/namsoon00/writing-human/actions/runs/45396910273",
+    "build": "success",
+    "deploy": "success",
+    "native_tests": 322,
+    "chrome_tests": 38,
+    "voice_dsp_tests": 6
+  },
+  "source_commit": "2444ed698b7f4c3b79a7dfafac3e9f8d34e31825",
+  "separate_final_chrome_material_tests": 4
 }

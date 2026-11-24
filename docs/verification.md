@@ -3698,3 +3698,22 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - 저장한 배치/상태·필사·폰트·비공개 Sites 프로젝트/접근 설정을 변경하지 않았다.
   직접 공개 UI 조작과 iPhone/Android 실기기 터치·FPS·발열·오디오는 미검증이다.
 - 최종 192개 Dart 파일 포맷은 수정 없음이며 로컬 Pages release 빌드도 통과했다.
+- 공유 폴더에도 이번 14개 파일만 합쳤다. 기존 조명 UI/서체/인덱스와 다른 작업을
+  보존했고 앱 소스 정적 분석 및 가림/물건 조작 5개 검사가 통과했다.
+- 첫 서버 전체 회귀는 321개 통과·1개 실패로 배포되지 않았다. 밝은 금속 띠의
+  실제 x=.20 지점을 어두운 연필 몸통으로 가정하던 기존 재질 검사가 원인이었다.
+  몸통의 실제 지점을 고르고 nearest-hit가 연필인지 함께 확인하며, 금속 띠가 몸통보다
+  밝게 남는 별도 검사도 추가했다. 테스트를 느슨하게 하거나 가구를 이동하지 않았다.
+  최종 재질/가림 네이티브 6개는 통과했다. 이 보완은 검사 파일만 바꿨다.
+- 검사 보완 후 Chrome 재질 검사 4개도 통과했다. 최종 소스
+  `2444ed698b7f4c3b79a7dfafac3e9f8d34e31825`의
+  [Actions 45396910273](https://github.com/namsoon00/writing-human/actions/runs/45396910273)는
+  포맷·정적 분석·네이티브 322개·음성 DSP 6개·Chrome 38개·release 빌드·웹 배포가
+  모두 success다.
+- 게시 전 첫 HTTP 요청은 이전 버전을 반환했다. 배포 success 후 새 쿼리로 다시 확인한
+  [공개 수정본](https://namsoon00.github.io/writing-human/?v=2444ed6&check=1795524959)의
+  index → versioned bootstrap → main.dart.js는 로컬 release와 바이트가 같다. main
+  SHA-256은 `9c4b82a46784986782fc14f37c0183d377911bfd2f125fa0e139aac127d7f475`다.
+  재질 3개·기존 동작 음원 4개·아이콘/쓰는 인간체 0.009·FontManifest도 동일하다.
+  [공개 파일 대조 기록](../design/cafe/20261124/occlusion-fix/deployment.json)을 남겼다.
+  HTTP 파일 대조를 공개 UI 조작이나 실기기 검수로 표현하지 않는다.

@@ -3940,3 +3940,16 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - 실제 iPhone 진동/무음 스위치·인앱 브라우저별 청음은 미검증이다. 구형 브라우저의
   Audio Session API 지원 차이를 숨기거나 모든 iOS에서 동작한다고 단정하지 않는다.
   최종 format/analyze·공개 CI·HTTP 반영 근거는 아래에 기록한다.
+- 최종 format:203개 파일 변경 없음, analyze 문제 없음. 마지막 요청 정리 보완 후
+  Chrome 출력 연결4개 재검사 통과. 웹 release 빌드 통과, 루트 scoped analyze
+  (lib test tool hook) 문제 없음, 루트 정책/물건 조작9개 통과. 원래 인덱스는 보존했다.
+- 공개 CI [45507690577](https://github.com/namsoon00/writing-human/actions/runs/45507690577):
+  호스트 Flutter342·Chrome60·음성 DSP6개, format/analyze·빌드·배포 모두 통과했다.
+  이 호스트/브라우저 검사는 실제 iOS/Android 기기의 설치·청음과 다르다.
+- 공개 HTTP200 앱 JS와15개 자산이 로컬 release와 바이트 단위로 일치했다. JS에
+  audioSession/playback 코드가 포함되고 배경 반복음 네 경로는 JS/manifest에서
+  계속 제외됐다. SHA256: `ca7a5df9210b8bea6100507c98f743545ea4849d0026066ff9894a03cae52f6a`.
+  근거는 `docs/evidence/20261125/user-audio-playback/`에, 원본 로컬 로그는
+  `output/user-audio-playback-evidence-7513e4e/`에 보관한다. 공개 UI 직접 조작,
+  iPhone 무음/진동 스위치와 인앱 브라우저의 실제 청음은 미검증이다.
+- 근거를 원격과 루트에 보관한 뒤 이번 작업 폴더와 빌드/검사 중간 산출물을 정리한다.

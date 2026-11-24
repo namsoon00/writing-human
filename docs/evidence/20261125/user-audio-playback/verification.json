@@ -1,0 +1,28 @@
+{
+  "source_commit": "7513e4ecffd07260fcd0263006df8ba5c9bcfad3",
+  "request": "Explicitly enabled audio should be heard with the iPhone silent switch on",
+  "local_checks": {
+    "format": "203 files unchanged",
+    "analyze": "no issues found",
+    "native_selected": 30,
+    "chrome_policy_and_output": 10,
+    "chrome_cafe": 12,
+    "final_chrome_output_cleanup": 4,
+    "root_scoped_analyze": "lib test tool hook: no issues found",
+    "root_selected": 9,
+    "release_build": "success"
+  },
+  "local_js_sha256": "ca7a5df9210b8bea6100507c98f743545ea4849d0026066ff9894a03cae52f6a",
+  "policy": "Native iOS playback+mixWithOthers; supported web navigator.audioSession playback only for explicit requests, shared consumer leases restore prior type on completion/stop/dispose",
+  "scope": "Web tests use a fake navigator and mock asset data to exercise real PaperSoundOutput request/pause/dispose hooks without a trusted browser input or audible WAV output",
+  "not_verified": [
+    "Actual iPhone mute-switch listening",
+    "iOS native device install/playback",
+    "Embedded webview support and audio mixing behavior"
+  ],
+  "reference_urls": [
+    "https://bugs.webkit.org/show_bug.cgi?id=237322",
+    "https://www.w3.org/TR/audio-session/",
+    "https://developer.apple.com/documentation/avfaudio/avaudiosession/category-swift.struct/playback"
+  ]
+}

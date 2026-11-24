@@ -3537,3 +3537,19 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - 동시 반영된 서체 0.009 커밋 `1ec24673abbfe0a07a79263883ac98deee93482f`를 보존해
   통합했다. 서체 관련 소스/TTF와 문서 추가를 덮어쓰지 않았다. 이 통합 상태에서 관련
   네이티브 15개·Chrome 16개·14개 캡처·release 빌드·정적 분석을 다시 통과했다.
+
+
+## 2026-11-24 · 아이템 재질 색 보완의 웹 배포 확인
+
+- 최종 소스 `4d4266e52abf8e55dcb8151a94ae1cf22d74419f`의
+  [Actions 45303273947](https://github.com/namsoon00/writing-human/actions/runs/45303273947)
+  build/deploy가 모두 success다. 새 재질 회귀를 포함한 서버 전체 검사·음성 DSP·Chrome
+  검사·release 빌드가 통과했다. 병행 반영된 서체 0.009 및 배포 확인 문서를 보존했다.
+- [최종 공개 미리보기](https://namsoon00.github.io/writing-human/?v=4d4266e)의 index →
+  versioned bootstrap → main.dart.js를 HTTP로 따라 확인했다. main SHA-256은
+  `3669880386909af0d12591034e93d97bff996c42c8f00c48e4e1ba5c13bc6e8a`로 통합 상태의 로컬 release 빌드와 바이트가 같다.
+  수채화 재질 세 개·아이콘 글꼴·쓰는 인간체 TTF·FontManifest도 공개 파일과 동일하다.
+  쓰는 인간체는 병행 반영된 `d759a184…` 파일과 같은 해시이고 매니페스트에 등록돼 있다.
+- [공개 파일 대조](../design/cafe/20261124/individual-items/deployment-colors.json)를 남겼다.
+  직접 공개 UI를 조작하거나 실제 iPhone/Android의 터치·FPS·발열·오디오를 검수했다는
+  뜻은 아니다. 저장된 필사/배치의 키와 계정 범위, 비공개 Sites 설정은 그대로 유지했다.

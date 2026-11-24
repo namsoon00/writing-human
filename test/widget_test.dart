@@ -254,7 +254,7 @@ void main() {
   );
 
   testWidgets(
-    'Tapping below the writing or on the title hides input without moving the caret',
+    'Blank paper taps keep writing active and the title dismisses input',
     (tester) async {
       final store = MemoryStore()
         ..data = const Library(
@@ -295,17 +295,21 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tapAt(blank);
       await tester.pumpAndSettle();
-      expect(input.focusNode!.hasFocus, isFalse);
-      expect(tester.testTextInput.isVisible, isFalse);
-      expect(input.controller!.value, before);
+      expect(input.focusNode!.hasFocus, isTrue);
+      expect(tester.testTextInput.isVisible, isTrue);
+      expect(input.controller!.text, before.text);
+      expect(input.controller!.selection.extentOffset, before.text.length);
+      final afterBlank = input.controller!.value;
 
-      await tester.tapAt(caret);
+      await tester.tapAt(blank);
       await tester.pumpAndSettle();
       expect(tester.testTextInput.isVisible, isTrue);
+      expect(input.focusNode!.hasFocus, isTrue);
+      expect(input.controller!.value, afterBlank);
       await tester.tap(find.byKey(const ValueKey('writing-title')));
       await tester.pumpAndSettle();
       expect(input.focusNode!.hasFocus, isFalse);
-      expect(input.controller!.value, before);
+      expect(input.controller!.value, afterBlank);
     },
     variant: TargetPlatformVariant({
       TargetPlatform.iOS,

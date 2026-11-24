@@ -312,6 +312,76 @@ void main() {
     },
   );
   testWidgets(
+    'Writing opens its original directly and resume prefers the current page',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final store = TestStore(
+        fixture().copy(
+          pages: [
+            WritingPage(
+              id: 'p',
+              recordId: 'r',
+              number: 1,
+              text: first.text,
+              base: 2,
+              extent: 2,
+              guidedOriginalId: first.id,
+            ),
+            WritingPage(
+              id: 'later',
+              recordId: 'r',
+              number: 2,
+              text: first.text,
+              base: 4,
+              extent: 4,
+              guidedOriginalId: first.id,
+            ),
+          ],
+        ),
+      );
+      await tester.pumpWidget(WritingHumanApp(store: store));
+      await tester.pumpAndSettle();
+      final field = find.byKey(const ValueKey('page-text'));
+      final input = tester.widget<TextField>(field).controller!;
+      final before = input.value;
+      await tester.tap(find.byKey(const ValueKey('writing-originals')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('source-reading-text')), findsOneWidget);
+      final resume = find.byKey(const ValueKey('source-open-writing'));
+      final start = find.byKey(const ValueKey('source-start-transcription'));
+      expect(tester.widget(resume), isA<FilledButton>());
+      expect(
+        find.descendant(of: resume, matching: find.text('이어서 쓰기')),
+        findsOneWidget,
+      );
+      expect(tester.widget(start), isA<TextButton>());
+      expect(find.text('새로 필사하기'), findsOneWidget);
+      expect(
+        tester.getTopLeft(resume).dy,
+        lessThan(tester.getTopLeft(start).dy),
+      );
+      await tester.tap(resume);
+      await tester.pumpAndSettle();
+      expect(store.data.activePageId, 'p');
+      expect(store.data.pages, hasLength(2));
+      expect(tester.widget<TextField>(field).controller, same(input));
+      expect(input.value, before);
+
+      await tester.tap(find.byKey(const ValueKey('writing-originals')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('원문 목록'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(OriginalListItem, second.text));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('source-open-writing')), findsNothing);
+      expect(tester.widget(start), isA<FilledButton>());
+      expect(find.text('필사하기'), findsOneWidget);
+    },
+  );
+  testWidgets(
     'Transcription starts a new page while opening prior writing preserves its input',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);

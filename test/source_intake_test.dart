@@ -105,6 +105,14 @@ Future<void> openOriginalRegistration(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> showOriginalList(WidgetTester tester) async {
+  final back = find.byTooltip('원문 목록');
+  if (back.evaluate().isNotEmpty) {
+    await tester.tap(back);
+    await tester.pumpAndSettle();
+  }
+}
+
 Future<void> openRegistration(WidgetTester tester) async {
   await tester.tap(place);
   await tester.pumpAndSettle();
@@ -327,10 +335,13 @@ void main() {
       Future<void> attach(String id) async {
         await tester.tap(place);
         await tester.pumpAndSettle();
+        await showOriginalList(tester);
         expect(readingText, findsNothing);
         await tester.tap(find.byKey(ValueKey(id)));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('필사하기'));
+        await tester.tap(
+          find.byKey(const ValueKey('source-start-transcription')),
+        );
         await settleSourceSheets(tester);
       }
 
@@ -1834,6 +1845,7 @@ void main() {
 
     await tester.tap(place.hitTestable());
     await tester.pumpAndSettle();
+    await showOriginalList(tester);
     expect(readingText, findsNothing);
     await tester.tap(find.text('12쪽'));
     await tester.pumpAndSettle();
@@ -1963,6 +1975,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(place);
       await tester.pumpAndSettle();
+      await showOriginalList(tester);
       expect(readingText, findsNothing);
       expect(find.text('둘째 원문'), findsOneWidget);
       expect(find.text('다른 날의 문장').hitTestable(), findsOneWidget);
@@ -2450,8 +2463,7 @@ void main() {
     final writingArea = tester.getRect(bodyField);
     await tester.tap(place);
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(OriginalListItem));
-    await tester.pumpAndSettle();
+    expect(readingText, findsOneWidget);
     final scrollView = find.ancestor(
       of: readingText,
       matching: find.byType(SingleChildScrollView),
@@ -2812,11 +2824,10 @@ void main() {
     await tester.tap(place);
     await tester.pumpAndSettle();
     final savedList = tester.widget<SourceReading>(reading);
-    expect(savedList.initialOriginalId, isNull);
+    expect(savedList.initialOriginalId, original.id);
     expect(savedList.match?.original.id, original.id);
     expect(savedList.match?.start, anchor + repeated.length);
-    await tester.tap(find.byKey(ValueKey(original.id)));
-    await tester.pumpAndSettle();
+    expect(readingText, findsOneWidget);
     await tester.tap(find.text('이전에 남긴 생각'));
     await tester.pumpAndSettle();
     const note = '다시 읽고 남긴 생각';
@@ -3622,7 +3633,7 @@ void main() {
     expect(find.text('정오의 종소리가 들렸다.'), findsNothing);
     await tester.tap(find.text('책장에 천천히 내려앉았다.'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('필사한 쪽 열기'));
+    await tester.tap(find.text('이어서 쓰기'));
     await tester.pumpAndSettle();
     expect(store.data.activePageId, 'marked-page');
     expect(

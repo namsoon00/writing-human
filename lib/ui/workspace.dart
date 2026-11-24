@@ -1251,7 +1251,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     Book? originalBook,
     String? openOriginalId,
     bool unbound = false,
-    bool openList = false,
   }) async {
     if (_readingSource || _sourceBusy || _accountLocked || !_canLeaveInput()) {
       return;
@@ -1271,6 +1270,28 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       bookId: bookId,
       recordId: selectedPage.recordId,
     );
+    Map<String, ({Passage passage, bool marked})> writingLocations() {
+      final sources = originals();
+      final locations = originalWritingLocations(
+        sources,
+        owner.library.volumePages(
+          bookId: bookId,
+          recordId: selectedPage.recordId,
+        ),
+      );
+      if (bookDetails == null) {
+        for (final entry in originalWritingLocations(sources, [
+          selectedPage,
+        ]).entries) {
+          locations[entry.key] = (
+            passage: entry.value.passage,
+            marked: entry.value.marked || locations[entry.key]?.marked == true,
+          );
+        }
+      }
+      return locations;
+    }
+
     Future<_SavedOriginal?> register({bool find = false}) => _registerOriginal(
       initialSearch: find,
       bookId: bookId,
@@ -1301,13 +1322,12 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       final guided =
           activeLink?.original?.id ??
           (bookDetails == null ? selectedPage.guidedOriginalId : null);
-      final initialId = openList
-          ? null
-          : availableId(openOriginalId) ??
-                availableId(guided) ??
-                availableId(pageChoice) ??
-                match?.original.id ??
-                availableId(_originalByVolume[scope]);
+      final initialId =
+          availableId(openOriginalId) ??
+          availableId(guided) ??
+          availableId(pageChoice) ??
+          match?.original.id ??
+          availableId(_originalByVolume[scope]);
       if (initialId != null) _originalByVolume[scope] = initialId;
       _SavedOriginal? savedAfterPanel;
       bool openedWriting = false;
@@ -1362,13 +1382,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                     }
                     return saved.original;
                   },
-            writingLocations: originalWritingLocations(
-              originals(),
-              owner.library.volumePages(
-                bookId: bookId,
-                recordId: selectedPage.recordId,
-              ),
-            ),
+            writingLocations: writingLocations(),
             onExtractPhoto: owner.saveError == null
                 ? (original) => _extractArchivedPhoto(
                     owner,
@@ -2181,9 +2195,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                   onKeyboardDismiss: _editorComposing || c.composing
                       ? null
                       : _dismissWritingKeyboard,
-                  onSource: navigationEnabled
-                      ? () => _showOriginals(openList: true)
-                      : null,
+                  onSource: navigationEnabled ? () => _showOriginals() : null,
                   failed: c.saveError != null,
                   pageLabel: '${index + 1}',
                   pageCount: count,

@@ -427,12 +427,27 @@ class _SourceReadingState extends State<SourceReading> {
 
   Widget _readingActions(RegisteredOriginal original) {
     final transcribe = widget.onTranscribe;
+    final writing = widget.writingLocations[original.id]?.passage;
+    final resume = original.canTranscribe && widget.onOpenWriting != null
+        ? writing
+        : null;
     final link = original.canTranscribe
         ? null
         : RegisteredOriginal.webLink(original.citation);
     void startTranscription() => transcribe!(original);
 
     final actions = <Widget>[
+      if (resume != null)
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            key: const ValueKey('source-open-writing'),
+            onPressed: saving ? null : () => widget.onOpenWriting!(resume),
+            icon: const Icon(CupertinoIcons.book, size: 18),
+            label: const Text('이어서 쓰기'),
+            style: FilledButton.styleFrom(minimumSize: const Size(48, 56)),
+          ),
+        ),
       if (link != null)
         TextButton(
           onPressed: () => openSourceBrowser(
@@ -445,7 +460,7 @@ class _SourceReadingState extends State<SourceReading> {
           child: const Text('링크 열기'),
         ),
       if (transcribe != null)
-        original.canTranscribe
+        original.canTranscribe && resume == null
             ? SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
@@ -463,7 +478,10 @@ class _SourceReadingState extends State<SourceReading> {
               )
             : TextButton(
                 onPressed: saving ? null : startTranscription,
-                child: Text(widget.transcribeLabel),
+                key: const ValueKey('source-start-transcription'),
+                child: Text(
+                  resume != null ? '새로 필사하기' : widget.transcribeLabel,
+                ),
               ),
     ];
     if (actions.isEmpty) return const SizedBox.shrink();
@@ -471,7 +489,7 @@ class _SourceReadingState extends State<SourceReading> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Divider(height: 24),
-        if (original.canTranscribe && transcribe != null)
+        if (original.canTranscribe && transcribe != null && resume == null)
           const Padding(
             padding: EdgeInsets.only(bottom: 8),
             child: Text(
@@ -520,7 +538,6 @@ class _SourceReadingState extends State<SourceReading> {
             );
             return byDate == 0 ? b.$1.compareTo(a.$1) : byDate;
           });
-    final writing = widget.writingLocations[original?.id]?.passage;
     final mark = editing ? draftMark : reflection?.mark;
     final note =
         original == null ||
@@ -560,18 +577,6 @@ class _SourceReadingState extends State<SourceReading> {
                             ? null
                             : () => _editOriginal(original, originalPanelColor),
                       ),
-                      if (writing != null && widget.onOpenWriting != null)
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton.icon(
-                            key: const ValueKey('source-open-writing'),
-                            onPressed: saving
-                                ? null
-                                : () => widget.onOpenWriting!(writing),
-                            icon: const Icon(CupertinoIcons.book, size: 16),
-                            label: const Text('필사한 쪽 열기'),
-                          ),
-                        ),
                     ],
                   ),
             editing: editing,

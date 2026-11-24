@@ -494,13 +494,11 @@ class _PageEditorState extends State<PageEditor> with WidgetsBindingObserver {
         render.globalToLocal(details.globalPosition).dy >
         lastLine.bottom +
             math.max(4.0, (render.preferredLineHeight - lastLine.height) / 2);
-    if (belowLastLine && focus.hasFocus) {
-      _dismissKeyboard();
-      return;
-    }
     editor.hideToolbar();
     editor.renderEditable.selectPositionAt(
-      from: details.globalPosition,
+      from: belowLastLine
+          ? render.localToGlobal(lastLine.center)
+          : details.globalPosition,
       cause: SelectionChangedCause.tap,
     );
     // A tap at the same caret can leave selection unchanged while the

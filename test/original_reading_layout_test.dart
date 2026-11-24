@@ -82,8 +82,8 @@ void main() {
         await tester.pumpAndSettle();
         final body = find.byKey(const ValueKey('source-reading-text'));
         final showPhoto = find.text('원본 사진 보기');
-        final transcribe = find.widgetWithText(FilledButton, '필사하기');
-        final openWriting = find.widgetWithText(TextButton, '필사한 쪽 열기');
+        final transcribe = find.widgetWithText(TextButton, '새로 필사하기');
+        final openWriting = find.widgetWithText(FilledButton, '이어서 쓰기');
         expect(find.byType(OriginalPhoto), findsOneWidget);
         expect(
           tester.getTopLeft(find.byKey(const ValueKey('source-details'))).dy,

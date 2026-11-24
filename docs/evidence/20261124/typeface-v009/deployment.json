@@ -1,0 +1,33 @@
+{
+  "url": "https://namsoon00.github.io/writing-human/",
+  "code_commit": "1ec24673abbfe0a07a79263883ac98deee93482f",
+  "workflow_run": 45301791581,
+  "workflow_url": "https://github.com/namsoon00/writing-human/actions/runs/45301791581",
+  "verified_at": "2026-11-24T01:07:34.016474+00:00",
+  "revision": "0.009",
+  "bootstrap_path": "flutter_bootstrap.js?v=d73db1687474e76a",
+  "main_path": "main.dart.js?v=0becf07eb6c1746a",
+  "files": {
+    "main.dart.js": {
+      "bytes": 5211622,
+      "sha256": "0becf07eb6c1746a5730248cb66321e1dbcb263f9464e7fd8263c32ff9c571e4",
+      "matches_local": true
+    },
+    "assets/FontManifest.json": {
+      "bytes": 639,
+      "sha256": "59d2bbd28f1068364d4e0054b81dcde0da04cacf3e19f403efe8697edacc451e",
+      "matches_local": true
+    },
+    "assets/assets/fonts/WritingHumanDevelopment-Regular.ttf": {
+      "bytes": 895652,
+      "sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+      "matches_local": true
+    },
+    "assets/assets/fonts/WritingHumanDevelopment-info.json": {
+      "bytes": 36337,
+      "sha256": "3d78ee33c60c8d1ea30e8d8e7ff0ca6a7ecbf334f0d0da5a0d784598a27586cf",
+      "matches_local": true
+    }
+  },
+  "scope": "Public HTTP artifact equality, font tables/HarfBuzz, host Flutter rasterizer, isolated Chrome FontFace/Canvas. Physical iOS/Android visual/IME review and exhaustive manual optical approval are not claimed."
+}

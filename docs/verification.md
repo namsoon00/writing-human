@@ -3507,3 +3507,11 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   `d759a184…` 해시인지 확인했으며, 실제 공개 주소의 파일 대조는 배포 후 기록한다.
 - Flutter 렌더를 20px 본문 견본까지 포함해 다시 실행했고 1개 검사 통과. 14/20/27.6px
   읽기 견본과 14/18/23/32/42px 자형 견본은 실제 번들 파일로 생성했다.
+
+- 공개 CI [45301791581](https://github.com/namsoon00/writing-human/actions/runs/45301791581)에서
+  포맷·분석, 전체 298개 테스트, 음성 Chrome 6개, 공간 Chrome 12개, 웹 빌드·게시가 모두 통과했다.
+- 2026-11-24 10:07 KST 공개 주소의 앱 JS·FontManifest·실제 TTF·글꼴 정보 JSON을
+  내려받아 로컬 검증 빌드와 바이트 단위로 일치함을 확인했다. 공개 TTF는 895,652바이트,
+  SHA-256 `d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05`다.
+  [게시 근거](evidence/20261124/typeface-v009/deployment.json)에 커밋과 파일 해시를 남겼다.
+  실제 iOS/Android의 육안 가독성·IME·장시간 사용 검수는 이 게시 확인에 포함하지 않는다.

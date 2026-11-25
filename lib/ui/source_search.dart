@@ -796,231 +796,241 @@ class _SourceSearchState extends State<_SourceSearch> {
     final selected = _selected;
     final preview = _preview;
     final hasHits = _results.any((entry) => entry.$2?.isNotEmpty ?? false);
+    PaperNavigationScope.maybeOf(
+      context,
+    )?.name(context, selected == null ? '새 원문 찾기' : '원문 미리보기');
+    void backToResults() => setState(() {
+      _selected = null;
+      _preview = null;
+      _linkError = null;
+    });
     return PopScope(
-      canPop: !_importing,
-      child: PaperPanel(
-        color: originalPanelColor,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 6, 0),
-              child: Row(
-                children: [
-                  if (selected != null)
-                    IconButton(
-                      tooltip: _webSearch ? '검색 결과로 돌아가기' : '작품 목록으로 돌아가기',
-                      onPressed: _importing
-                          ? null
-                          : () => setState(() {
-                              _selected = null;
-                              _preview = null;
-                              _linkError = null;
-                            }),
-                      icon: const Icon(CupertinoIcons.chevron_back, size: 18),
-                    ),
-                  Expanded(
-                    child: PaperPanelTitle(
-                      selected == null
-                          ? '새 원문 찾기'
-                          : preview != null
-                          ? '원문 미리보기'
-                          : '자료 가져오기',
-                      fontSize: 22,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: '검색 닫기',
-                    onPressed: _importing ? null : () => Navigator.pop(context),
-                    icon: const Icon(CupertinoIcons.xmark, size: 18),
-                  ),
-                ],
-              ),
-            ),
-            if (selected != null)
-              Expanded(
-                child: preview == null
-                    ? _details(selected)
-                    : _previewBody(selected, selected.work!, preview),
-              )
-            else ...[
+      canPop: !_importing && selected == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !_importing && selected != null) backToResults();
+      },
+      child: PaperInternalBack(
+        enabled: selected != null && !_importing,
+        onBack: backToResults,
+        child: PaperPanel(
+          color: originalPanelColor,
+          child: Column(
+            children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Wrap(
-                    spacing: 8,
-                    children: [
-                      for (final web in [false, true])
-                        ChoiceChip(
-                          label: Text(web ? '웹 검색' : '작품 둘러보기'),
-                          selected: _webSearch == web,
-                          shape: const RoundedRectangleBorder(),
-                          side: BorderSide.none,
-                          backgroundColor: Colors.transparent,
-                          selectedColor: Colors.transparent,
-                          showCheckmark: false,
-                          labelStyle: TextStyle(
-                            color: _webSearch == web ? brandInk : muted,
-                            decoration: _webSearch == web
-                                ? TextDecoration.underline
-                                : null,
+                padding: const EdgeInsets.fromLTRB(16, 4, 6, 0),
+                child: PaperHeaderRow(
+                  children: [
+                    PaperBackButton(
+                      label: selected == null
+                          ? null
+                          : (_webSearch ? '검색 결과' : '작품 목록'),
+                      enabled: !_importing,
+                      onPressed: selected == null ? null : backToResults,
+                    ),
+                    Expanded(
+                      child: PaperPanelTitle(
+                        selected == null
+                            ? '새 원문 찾기'
+                            : preview != null
+                            ? '원문 미리보기'
+                            : '자료 가져오기',
+                        fontSize: 22,
+                      ),
+                    ),
+                    PaperWritingReturn(
+                      enabled: !_importing,
+                      force: selected != null,
+                    ),
+                  ],
+                ),
+              ),
+              if (selected != null)
+                Expanded(
+                  child: preview == null
+                      ? _details(selected)
+                      : _previewBody(selected, selected.work!, preview),
+                )
+              else ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Wrap(
+                      spacing: 8,
+                      children: [
+                        for (final web in [false, true])
+                          ChoiceChip(
+                            label: Text(web ? '웹 검색' : '작품 둘러보기'),
+                            selected: _webSearch == web,
+                            shape: const RoundedRectangleBorder(),
+                            side: BorderSide.none,
+                            backgroundColor: Colors.transparent,
+                            selectedColor: Colors.transparent,
+                            showCheckmark: false,
+                            labelStyle: TextStyle(
+                              color: _webSearch == web ? brandInk : muted,
+                              decoration: _webSearch == web
+                                  ? TextDecoration.underline
+                                  : null,
+                            ),
+                            onSelected: _importing
+                                ? null
+                                : (_) {
+                                    _focus.unfocus();
+                                    _catalogFocus.unfocus();
+                                    setState(() => _webSearch = web);
+                                    _queueCompletions();
+                                  },
                           ),
-                          onSelected: _importing
+                      ],
+                    ),
+                  ),
+                ),
+                if (_webSearch) ...[
+                  Wrap(
+                    spacing: 8,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      for (final mode in _SearchMode.values)
+                        ChoiceChip(
+                          label: Text(mode.label),
+                          selected: _mode == mode,
+                          onSelected: _loading
                               ? null
                               : (_) {
-                                  _focus.unfocus();
-                                  _catalogFocus.unfocus();
-                                  setState(() => _webSearch = web);
+                                  setState(() {
+                                    _mode = mode;
+                                    _searched = null;
+                                    _linkError = null;
+                                    _results = const [];
+                                  });
                                   _queueCompletions();
                                 },
                         ),
                     ],
                   ),
-                ),
-              ),
-              if (_webSearch) ...[
-                Wrap(
-                  spacing: 8,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    for (final mode in _SearchMode.values)
-                      ChoiceChip(
-                        label: Text(mode.label),
-                        selected: _mode == mode,
-                        onSelected: _loading
-                            ? null
-                            : (_) {
-                                setState(() {
-                                  _mode = mode;
-                                  _searched = null;
-                                  _linkError = null;
-                                  _results = const [];
-                                });
-                                _queueCompletions();
-                              },
-                      ),
-                  ],
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: PaperSearchField(
-                          controller: _query,
-                          focusNode: _focus,
-                          enabled: !_loading,
-                          maxLength: 160,
-                          hint: _mode.hint,
-                          label: '검색어',
-                          showIcon: false,
-                          onSubmitted: (_) => _search(),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: '자료 검색',
-                        onPressed: _loading ? null : _search,
-                        icon: const Icon(CupertinoIcons.search, size: 19),
-                      ),
-                    ],
-                  ),
-                ),
-                if (_loading) const LinearProgressIndicator(),
-                Flexible(
-                  child: SearchCompletions(
-                    controller: _query,
-                    focusNode: _focus,
-                    options: _completions,
-                    onSelected: (_) => _search(),
-                  ),
-                ),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Text('웹 원문은 본문을 복사하거나 화면을 캡처해서 가져올 수 있어요.'),
-                      ),
-                      if (searched == null)
-                        Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Text(_mode.help),
-                        )
-                      else if (!_loading &&
-                          !hasHits &&
-                          _results.every((entry) => entry.$2 != null))
-                        const ListTile(title: Text('이 자료에서 찾지 못했어요.')),
-                      if (_linkError case final error?)
-                        Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Semantics(
-                            liveRegion: true,
-                            child: Text(error),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: PaperSearchField(
+                            controller: _query,
+                            focusNode: _focus,
+                            enabled: !_loading,
+                            maxLength: 160,
+                            hint: _mode.hint,
+                            label: '검색어',
+                            showIcon: false,
+                            onSubmitted: (_) => _search(),
                           ),
                         ),
-                      for (final (collection, hits) in _results)
-                        if (hits == null || hits.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-                            child: Semantics(
-                              header: true,
-                              child: Text(
-                                collection.label,
-                                style: Theme.of(context).textTheme.titleSmall,
-                              ),
-                            ),
-                          ),
-                          if (hits == null)
-                            const ListTile(title: Text('검색 결과를 가져오지 못했어요.'))
-                          else
-                            for (final hit in hits)
-                              ListTile(
-                                title: Text(hit.title),
-                                trailing: const Icon(
-                                  CupertinoIcons.chevron_right,
-                                  size: 15,
-                                ),
-                                subtitle: switch (hit.work) {
-                                  final work? => Text(
-                                    '원문 미리보기 · ${_workDetails(work)}',
-                                  ),
-                                  null when _mode == _SearchMode.author => null,
-                                  null => const Text('웹 원문 · 복사 또는 캡처'),
-                                },
-                                onTap: () => _showHit(hit),
-                              ),
-                        ],
-                      if (searched != null && !_loading) ...[
-                        TextButton.icon(
-                          onPressed: () => _open(
-                            Uri.https('search.naver.com', '/search.naver', {
-                              'query': switch (_mode) {
-                                _SearchMode.title => '$searched 원문',
-                                _SearchMode.author => '$searched 작품',
-                                _SearchMode.phrase => '$searched 구절 출처',
-                              },
-                            }),
-                            title: '네이버 검색',
-                          ),
-                          icon: const Icon(CupertinoIcons.globe, size: 16),
-                          label: const Text('네이버에서 더 찾기'),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Text('네이버에서 글을 복사하거나 캡처한 뒤 가져오세요.'),
+                        IconButton(
+                          tooltip: '자료 검색',
+                          onPressed: _loading ? null : _search,
+                          icon: const Icon(CupertinoIcons.search, size: 19),
                         ),
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              ] else ...[
-                if (_importing && ModalRoute.isCurrentOf(context) == true)
-                  const LinearProgressIndicator(semanticsLabel: '원문을 담고 있어요'),
-                Expanded(child: _catalog()),
+                  if (_loading) const LinearProgressIndicator(),
+                  Flexible(
+                    child: SearchCompletions(
+                      controller: _query,
+                      focusNode: _focus,
+                      options: _completions,
+                      onSelected: (_) => _search(),
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.all(8),
+                          child: Text('웹 원문은 본문을 복사하거나 화면을 캡처해서 가져올 수 있어요.'),
+                        ),
+                        if (searched == null)
+                          Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Text(_mode.help),
+                          )
+                        else if (!_loading &&
+                            !hasHits &&
+                            _results.every((entry) => entry.$2 != null))
+                          const ListTile(title: Text('이 자료에서 찾지 못했어요.')),
+                        if (_linkError case final error?)
+                          Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Semantics(
+                              liveRegion: true,
+                              child: Text(error),
+                            ),
+                          ),
+                        for (final (collection, hits) in _results)
+                          if (hits == null || hits.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+                              child: Semantics(
+                                header: true,
+                                child: Text(
+                                  collection.label,
+                                  style: Theme.of(context).textTheme.titleSmall,
+                                ),
+                              ),
+                            ),
+                            if (hits == null)
+                              const ListTile(title: Text('검색 결과를 가져오지 못했어요.'))
+                            else
+                              for (final hit in hits)
+                                ListTile(
+                                  title: Text(hit.title),
+                                  trailing: const Icon(
+                                    CupertinoIcons.chevron_right,
+                                    size: 15,
+                                  ),
+                                  subtitle: switch (hit.work) {
+                                    final work? => Text(
+                                      '원문 미리보기 · ${_workDetails(work)}',
+                                    ),
+                                    null when _mode == _SearchMode.author =>
+                                      null,
+                                    null => const Text('웹 원문 · 복사 또는 캡처'),
+                                  },
+                                  onTap: () => _showHit(hit),
+                                ),
+                          ],
+                        if (searched != null && !_loading) ...[
+                          TextButton.icon(
+                            onPressed: () => _open(
+                              Uri.https('search.naver.com', '/search.naver', {
+                                'query': switch (_mode) {
+                                  _SearchMode.title => '$searched 원문',
+                                  _SearchMode.author => '$searched 작품',
+                                  _SearchMode.phrase => '$searched 구절 출처',
+                                },
+                              }),
+                              title: '네이버 검색',
+                            ),
+                            icon: const Icon(CupertinoIcons.globe, size: 16),
+                            label: const Text('네이버에서 더 찾기'),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            child: Text('네이버에서 글을 복사하거나 캡처한 뒤 가져오세요.'),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  if (_importing && ModalRoute.isCurrentOf(context) == true)
+                    const LinearProgressIndicator(semanticsLabel: '원문을 담고 있어요'),
+                  Expanded(child: _catalog()),
+                ],
               ],
             ],
-          ],
+          ),
         ),
       ),
     );

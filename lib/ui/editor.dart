@@ -126,14 +126,13 @@ class _PageEditorState extends State<PageEditor> with WidgetsBindingObserver {
     if (_composing) return;
     focus.unfocus();
     final passages = _passages;
-    final route = paperPanelRoute<PageOriginalChoice>(
+    final route = paperSheetRoute<PageOriginalChoice>(
       (_) => PageOriginalsPanel(
         passages: passages,
         textLength: text.text.length,
         style: widget.style,
         selectedId: _activePassage?.id,
       ),
-      color: originalPanelColor,
     );
     final choice = await Navigator.of(context).push(route);
     await route.completed;

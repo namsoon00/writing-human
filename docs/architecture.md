@@ -102,8 +102,8 @@ JSON·SQLite·동기화·백업 스키마에는 카메라나 카페 상태를 �
   `original`은 본문·사진·출처 사본이다. `attached`는 현재 방식의 경계,
   `following`은 끼운 자리 뒤에 이미 있던 글의 경계다. 입력값을 읽어 경계만 이동하며
   본문·선택·조합을 리스너에서 되쓰지 않는다. 빈 원문 경계는 자유롭게 쓰는 구간이다.
-- `sourceOffset`과 `continued`로 다음 쪽의 남은 원문을 잇는다. 비교·밑글씨·하단
-  원문은 현재 구간의 본문만 사용한다. 이전 구간은 호환용이며 원문 번호는 화면에 표시하지 않는다.
+- `sourceOffset`과 `continued`는 기존 쪽의 원문 복원 호환을 위해 유지한다. 일반
+  addPage는 원문 없는 빈 쪽을 만들며 비교·밑글씨·하단 원문은 현재 쪽의 연결만 사용한다.
 - 이전 `guidedOriginalId`와 `originalSlip`은 읽을 때 구간으로 해석한다. 처음 구간을
   추가하거나 뺄 때 기존 연결을 함께 보존한다. SQLite의 기존 `passages` JSON 컬럼과
   웹·백업·동기화에 선택 필드를 추가하므로 DB 버전은 바꾸지 않는다. 연결 ID와 사본을
@@ -113,7 +113,7 @@ JSON·SQLite·동기화·백업 스키마에는 카메라나 카페 상태를 �
   Workspace의 ‘필사하기’는 같은 원문 여부에 관계없이 저장된 쪽을 보존하고
   새 recordId의 첫 쪽을 saveDraft로 저장한다. 미저장 첫 초안은 같은 ID로 첫 필사 쪽을 저장한다.
   saveDraft의 title은 원문 제목으로 시작하고, 책 없는 원문 목록은 새 글에도 보존한다.
-  ‘한 쪽 더’는 기존 addPage로 같은 recordId의 다음 쪽을 잇는다.
+  ‘한 쪽 더’는 addPage로 같은 recordId의 원문 없는 빈 쪽을 추가한다.
   기존 쪽으로 돌아가는 동작은 onOpenWriting → _openPassage로 분리한다.
   원문 선택 콜백은 경로가 현재인지 확인해 닫히는 중의 연속 탭을 무시한다.
   이전 `passages` 배열은 삭제하거나 자동 분할하지 않는다. 원문 패널은 선택된 사본
@@ -301,7 +301,7 @@ ID로 출처 링크를 만든다. 미리보기는 공개 저작물 표시를 확
 ‘담기’는 저장한 원문을 펼치고, ‘필사하기’는 같은 책에 새 기록의 첫 쪽을 만들어 연결한다.
 동일 원문을 쓰던 기록이나 저장된 빈 쪽도 재사용하지 않는다.
 아직 저장되지 않은 첫 초안만 새 쪽으로 저장한다. 명시한 guidedOriginalId로 원문
-전체를 sourceOffset 0부터 연결하며 ‘한 쪽 더’의 이어 쓰기 동작과 구분한다.
+전체를 sourceOffset 0부터 연결하며 원문 없는 빈 쪽을 추가하는 ‘한 쪽 더’와 구분한다.
 작품 목록은 제목이나 작가 이름과 갈래로 기기 안에서 좁힌다. 판본 ID에 연결한 갈래,
 첫 구절, 글자 수는 검색과 목록에서 사용한다. 갈래는 위키문헌의 작품 분류와 작가별
 작품 목록을 확인한다. 글자 수는 공백을 포함해 같은 판본에서 읽은 본문으로 구하며
@@ -1162,3 +1162,24 @@ idle/fade 뒤 source.onended, 쪽 넘김은 마지막 source 종료, 카페는 �
 근거: [WebKit의 playback 안내](https://bugs.webkit.org/show_bug.cgi?id=237322),
 [Audio Session API 초안](https://www.w3.org/TR/audio-session/),
 [Apple playback](https://developer.apple.com/documentation/avfaudio/avaudiosession/category-swift.struct/playback).
+
+
+## 공통 화면 복귀 구현 · 2026-11-25
+
+위 설계/재정리 뒤 사용자가 구현을 지시했다. 현재 `main.dart`의 `PaperNavigationScope`와
+인스턴스별 `PaperNavigation` observer가 route의 부모 이름/목록을 관리한다. 탐색은 작성
+쪽을 바꾸지 않으므로 복귀는 저장된 본문/커서를 다시 쓰는 대신 overlay를 정리한다.
+Workspace는 조합·저장·계정 가드를 등록하고 명시적 쪽 선택 이후에만 새 쪽을 펼친다.
+부모마다 maybePop을 통과하며 확인창/저장 실패에서 멈춘다. guard를 무시하는 popUntil은
+복귀 바로가기에 사용하지 않는다. source 결과 처리의 기존 소유자/route 검사도 유지한다.
+
+`paperPanelRoute`는 일반 페이지, `paperSheetRoute`는 비불투명 패널이다. 쪽 목록의 책
+옮기기는 같은 패널 단계와 PageStorage를 사용한다. 일반 페이지는 기본 iOS 뒤로,
+내부 목록/상세는 PopScope와 `PaperInternalBack`, 패널은 손잡이/버튼의 maybePop을 쓴다.
+`PaperHeaderRow`는 좁은/큰 글씨에서 제목과 행동을 줄바꿈하고, 공통 BackButton은 앱의
+글꼴과 대체 글꼴을 명시한다. 원문 수정과 등록의 조합/초안을 보존하며 복귀만으로
+키보드를 강제로 열지 않는다. 낭독 이탈의 중단 정책과 기록 모델은 변경하지 않았다.
+
+Flutter 웹의 기존 single-entry history가 보내는 popRoute도 같은 가드를 거친다.
+실제 Chrome의 history.back으로 확인했으며 앞으로 가기 재구성이나 다른 출처 iframe의
+이력 제어를 추가한 것은 아니다. [전체 동선의 현재 구현](navigation.md)을 신규 화면의 기준으로 삼는다.

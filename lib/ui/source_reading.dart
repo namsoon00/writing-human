@@ -582,254 +582,302 @@ class _SourceReadingState extends State<SourceReading> {
             editing: editing,
           );
     const panel = originalPanelColor;
+    final internalBack = original != null && _openedFromList;
+    final resume = original == null
+        ? null
+        : widget.writingLocations[original.id]?.passage;
+    final resumesOrigin =
+        resume != null &&
+        resume.page.id ==
+            PaperNavigationScope.maybeOf(context)?.currentWritingPageId?.call();
+    PaperNavigationScope.maybeOf(
+      context,
+    )?.name(context, original == null ? '원문 목록' : '원문');
     return PopScope(
-      canPop: _canLeave && !editing,
+      canPop: _canLeave && !editing && !internalBack,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && editing && !_composing && !failed) {
-          unawaited(_navigate(() => Navigator.pop(context)));
+        if (!didPop && !_composing && !failed) {
+          unawaited(
+            _navigate(() {
+              if (internalBack) {
+                _showList();
+              } else {
+                Navigator.pop(context);
+              }
+            }),
+          );
         }
       },
-      child: PaperPanel(
-        key: const ValueKey('source-paper'),
-        color: panel,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(24, original == null ? 12 : 2, 24, 12),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  if (original != null)
-                    IconButton(
-                      tooltip: '원문 목록',
-                      onPressed: () => _navigate(_showList),
-                      icon: const Icon(CupertinoIcons.chevron_left, size: 19),
+      child: PaperInternalBack(
+        enabled: internalBack && _canLeave && !editing,
+        onBack: () => _navigate(_showList),
+        child: PaperPanel(
+          key: const ValueKey('source-paper'),
+          color: panel,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(24, original == null ? 12 : 2, 24, 12),
+            child: Column(
+              children: [
+                PaperHeaderRow(
+                  children: [
+                    PaperBackButton(
+                      label: internalBack ? '원문 목록' : null,
+                      onPressed: () => _navigate(() {
+                        if (internalBack) {
+                          _showList();
+                        } else {
+                          Navigator.pop(context);
+                        }
+                      }),
                     ),
-                  Expanded(
-                    child: PaperPanelTitle(
-                      original != null &&
-                              !original.canTranscribe &&
-                              original.citation.trim().isNotEmpty
-                          ? original.citation
-                          : '원문',
-                      fontSize: original == null ? 27 : 22,
-                    ),
-                  ),
-                  if (original == null &&
-                      widget.originals.isNotEmpty &&
-                      widget.onRegister != null)
-                    ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: MediaQuery.sizeOf(context).width * .42,
+                    Expanded(
+                      child: PaperPanelTitle(
+                        original != null &&
+                                !original.canTranscribe &&
+                                original.citation.trim().isNotEmpty
+                            ? original.citation
+                            : '원문',
+                        fontSize: original == null ? 27 : 22,
                       ),
-                      child: TextButton.icon(
-                        onPressed: saving ? null : _register,
-                        icon: const Icon(CupertinoIcons.plus, size: 16),
-                        label: const Text('원문 담기', textAlign: TextAlign.center),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    if (original == null &&
+                        widget.originals.isNotEmpty &&
+                        widget.onRegister != null)
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.sizeOf(context).width * .42,
+                        ),
+                        child: TextButton.icon(
+                          onPressed: saving ? null : _register,
+                          icon: const Icon(CupertinoIcons.plus, size: 16),
+                          label: const Text(
+                            '원문 담기',
+                            textAlign: TextAlign.center,
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
                         ),
                       ),
-                    ),
-                  if (original != null &&
-                      !editing &&
-                      (widget.onRegister != null ||
-                          widget.onEdit != null ||
-                          widget.onDelete != null))
-                    _originalMenu(original),
-                  IconButton(
-                    tooltip: '닫기',
-                    onPressed: () => _navigate(() => Navigator.pop(context)),
-                    icon: const Icon(CupertinoIcons.xmark, size: 18),
-                  ),
-                ],
-              ),
-              if (searching) ...[
-                const SizedBox(height: 10),
-                if (bookTitle.isNotEmpty) ...[
+                    if (original != null &&
+                        !editing &&
+                        (widget.onRegister != null ||
+                            widget.onEdit != null ||
+                            widget.onDelete != null))
+                      _originalMenu(original),
+                    if (!editing && !resumesOrigin)
+                      PaperWritingReturn(force: internalBack),
+                  ],
+                ),
+                if (original != null && !internalBack)
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(
-                      bookTitle,
-                      style: const TextStyle(color: muted, fontSize: 14),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    child: Tooltip(
+                      message: '원문 목록',
+                      child: TextButton(
+                        onPressed: () => _navigate(_showList),
+                        child: const Text('원문 목록'),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                ],
-                const Divider(color: Color(0xffa58e70), height: 1),
-                const Divider(color: Color(0xffd1bda1), height: 5),
-                const SizedBox(height: 7),
-                LayoutBuilder(
-                  builder: (context, box) {
-                    final scale = MediaQuery.textScalerOf(context).scale(14);
-                    final search = Row(
-                      children: [
-                        Expanded(
-                          child: PaperSearchField(
-                            fieldKey: const ValueKey('saved-original-search'),
-                            controller: searchField,
-                            focusNode: searchFocus,
-                            hint: '담은 원문 찾기',
-                            onSubmitted: (_) => searchFocus.unfocus(),
-                            onChanged: (value) => setState(() => query = value),
-                          ),
-                        ),
-                        if (query.isNotEmpty)
-                          IconButton(
-                            tooltip: '검색 지우기',
-                            onPressed: _clearSearch,
-                            icon: const Icon(
-                              CupertinoIcons.xmark_circle,
-                              size: 17,
-                            ),
-                          ),
-                      ],
-                    );
-                    final marks = FilterChip(
-                      label: const Text('밑칠만 보기'),
-                      avatar: markedOnly
-                          ? null
-                          : const Icon(CupertinoIcons.pencil, size: 16),
-                      padding: const EdgeInsets.symmetric(horizontal: 5),
-                      side: BorderSide(
-                        color: markedOnly ? brandInk : const Color(0xffcab89f),
+                if (searching) ...[
+                  const SizedBox(height: 10),
+                  if (bookTitle.isNotEmpty) ...[
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        bookTitle,
+                        style: const TextStyle(color: muted, fontSize: 14),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      backgroundColor: Colors.transparent,
-                      selectedColor: panelSelectedColor(panel),
-                      selected: markedOnly,
-                      onSelected: (value) => setState(() => markedOnly = value),
-                    );
-                    if (box.maxWidth < 242 || scale > 20) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [search, marks],
-                      );
-                    }
-                    return Row(
-                      children: [
-                        Expanded(child: search),
-                        const SizedBox(width: 10),
-                        marks,
-                      ],
-                    );
-                  },
-                ),
-              ] else
-                const Divider(),
-              if (original == null && widget.originals.isNotEmpty)
-                const SizedBox(height: 14),
-              if (widget.onRetry != null && !editing)
-                _saveNotice('원문을 저장하지 못했어요.', widget.onRetry),
-              if (original == null && widget.previousCitations.isNotEmpty)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    onPressed: _showCitations,
-                    child: const Text('이 쪽에 남긴 출처'),
-                  ),
-                ),
-              Expanded(
-                child: original != null
-                    ? Padding(
-                        padding: const EdgeInsets.only(top: 20),
-                        child: original.canTranscribe
-                            ? originalText!
-                            : OriginalReadingLayout(
-                                original: original,
-                                onOpenPhoto: original.photoId == null || saving
-                                    ? null
-                                    : () => _showPhoto(original),
-                                child: originalText!,
-                              ),
-                      )
-                    : widget.originals.isEmpty
-                    ? _emptyLibrary()
-                    : CustomScrollView(
-                        key: const PageStorageKey('saved-original-list'),
-                        slivers: [
-                          SliverToBoxAdapter(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxHeight: 48),
-                              child: SearchCompletions(
-                                controller: searchField,
-                                focusNode: searchFocus,
-                                options: (query) => searchCompletions(
-                                  query.replaceAll(_previewWhitespace, ' '),
-                                  _searchFields(scopedOriginals),
-                                ),
-                                onSelected: (value) =>
-                                    setState(() => query = value),
-                              ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  const Divider(color: Color(0xffa58e70), height: 1),
+                  const Divider(color: Color(0xffd1bda1), height: 5),
+                  const SizedBox(height: 7),
+                  LayoutBuilder(
+                    builder: (context, box) {
+                      final scale = MediaQuery.textScalerOf(context).scale(14);
+                      final search = Row(
+                        children: [
+                          Expanded(
+                            child: PaperSearchField(
+                              fieldKey: const ValueKey('saved-original-search'),
+                              controller: searchField,
+                              focusNode: searchFocus,
+                              hint: '담은 원문 찾기',
+                              onSubmitted: (_) => searchFocus.unfocus(),
+                              onChanged: (value) =>
+                                  setState(() => query = value),
                             ),
                           ),
-                          if (visibleOriginals.isEmpty)
-                            SliverFillRemaining(
-                              hasScrollBody: false,
-                              child: Center(
-                                child: Text(
-                                  pattern != null
-                                      ? '일치하는 원문이 없어요.'
-                                      : '밑칠한 구절이 없어요.',
-                                ),
-                              ),
-                            )
-                          else
-                            SliverPadding(
-                              padding: const EdgeInsets.fromLTRB(0, 2, 2, 16),
-                              sliver: SliverList.builder(
-                                itemCount: visibleOriginals.length,
-                                itemBuilder: (context, index) {
-                                  final item = visibleOriginals[index].$2;
-                                  return OriginalListItem(
-                                    key: item.id == _readingId
-                                        ? readingItem
-                                        : ValueKey(item.id),
-                                    style: style,
-                                    title: _originalPreview(item, pattern),
-                                    subtitle:
-                                        item.citation.isEmpty ||
-                                            (!item.canTranscribe &&
-                                                item.photoId == null)
-                                        ? null
-                                        : item.citation,
-                                    indexCard: true,
-                                    photoId: item.photoId,
-                                    showDivider: index > 0,
-                                    onTap: () => _open(item.id, fromList: true),
-                                  );
-                                },
+                          if (query.isNotEmpty)
+                            IconButton(
+                              tooltip: '검색 지우기',
+                              onPressed: _clearSearch,
+                              icon: const Icon(
+                                CupertinoIcons.xmark_circle,
+                                size: 17,
                               ),
                             ),
                         ],
-                      ),
-              ),
-              if (original != null &&
-                  original.photoId != null &&
-                  !original.canTranscribe &&
-                  widget.onExtractPhoto != null &&
-                  !editing)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12, bottom: 6),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: saving ? null : () => _extractPhoto(original),
-                      icon: const Icon(
-                        CupertinoIcons.doc_text_viewfinder,
-                        size: 17,
-                      ),
-                      label: const Text(
-                        '사진에서 글자 읽기',
-                        textAlign: TextAlign.center,
+                      );
+                      final marks = FilterChip(
+                        label: const Text('밑칠만 보기'),
+                        avatar: markedOnly
+                            ? null
+                            : const Icon(CupertinoIcons.pencil, size: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 5),
+                        side: BorderSide(
+                          color: markedOnly
+                              ? brandInk
+                              : const Color(0xffcab89f),
+                        ),
+                        backgroundColor: Colors.transparent,
+                        selectedColor: panelSelectedColor(panel),
+                        selected: markedOnly,
+                        onSelected: (value) =>
+                            setState(() => markedOnly = value),
+                      );
+                      if (box.maxWidth < 242 || scale > 20) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [search, marks],
+                        );
+                      }
+                      return Row(
+                        children: [
+                          Expanded(child: search),
+                          const SizedBox(width: 10),
+                          marks,
+                        ],
+                      );
+                    },
+                  ),
+                ] else
+                  const Divider(),
+                if (original == null && widget.originals.isNotEmpty)
+                  const SizedBox(height: 14),
+                if (widget.onRetry != null && !editing)
+                  _saveNotice('원문을 저장하지 못했어요.', widget.onRetry),
+                if (original == null && widget.previousCitations.isNotEmpty)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: _showCitations,
+                      child: const Text('이 쪽에 남긴 출처'),
+                    ),
+                  ),
+                Expanded(
+                  child: original != null
+                      ? Padding(
+                          padding: const EdgeInsets.only(top: 20),
+                          child: original.canTranscribe
+                              ? originalText!
+                              : OriginalReadingLayout(
+                                  original: original,
+                                  onOpenPhoto:
+                                      original.photoId == null || saving
+                                      ? null
+                                      : () => _showPhoto(original),
+                                  child: originalText!,
+                                ),
+                        )
+                      : widget.originals.isEmpty
+                      ? _emptyLibrary()
+                      : CustomScrollView(
+                          key: const PageStorageKey('saved-original-list'),
+                          slivers: [
+                            SliverToBoxAdapter(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxHeight: 48,
+                                ),
+                                child: SearchCompletions(
+                                  controller: searchField,
+                                  focusNode: searchFocus,
+                                  options: (query) => searchCompletions(
+                                    query.replaceAll(_previewWhitespace, ' '),
+                                    _searchFields(scopedOriginals),
+                                  ),
+                                  onSelected: (value) =>
+                                      setState(() => query = value),
+                                ),
+                              ),
+                            ),
+                            if (visibleOriginals.isEmpty)
+                              SliverFillRemaining(
+                                hasScrollBody: false,
+                                child: Center(
+                                  child: Text(
+                                    pattern != null
+                                        ? '일치하는 원문이 없어요.'
+                                        : '밑칠한 구절이 없어요.',
+                                  ),
+                                ),
+                              )
+                            else
+                              SliverPadding(
+                                padding: const EdgeInsets.fromLTRB(0, 2, 2, 16),
+                                sliver: SliverList.builder(
+                                  itemCount: visibleOriginals.length,
+                                  itemBuilder: (context, index) {
+                                    final item = visibleOriginals[index].$2;
+                                    return OriginalListItem(
+                                      key: item.id == _readingId
+                                          ? readingItem
+                                          : ValueKey(item.id),
+                                      style: style,
+                                      title: _originalPreview(item, pattern),
+                                      subtitle:
+                                          item.citation.isEmpty ||
+                                              (!item.canTranscribe &&
+                                                  item.photoId == null)
+                                          ? null
+                                          : item.citation,
+                                      indexCard: true,
+                                      photoId: item.photoId,
+                                      showDivider: index > 0,
+                                      onTap: () =>
+                                          _open(item.id, fromList: true),
+                                    );
+                                  },
+                                ),
+                              ),
+                          ],
+                        ),
+                ),
+                if (original != null &&
+                    original.photoId != null &&
+                    !original.canTranscribe &&
+                    widget.onExtractPhoto != null &&
+                    !editing)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12, bottom: 6),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: saving
+                            ? null
+                            : () => _extractPhoto(original),
+                        icon: const Icon(
+                          CupertinoIcons.doc_text_viewfinder,
+                          size: 17,
+                        ),
+                        label: const Text(
+                          '사진에서 글자 읽기',
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              if (original != null && !editing) _readingActions(original),
-              if (failed && editing)
-                _saveNotice('느낀 점을 저장하지 못했어요.', _composing ? null : _flush),
-            ],
+                if (original != null && !editing) _readingActions(original),
+                if (failed && editing)
+                  _saveNotice('느낀 점을 저장하지 못했어요.', _composing ? null : _flush),
+              ],
+            ),
           ),
         ),
       ),

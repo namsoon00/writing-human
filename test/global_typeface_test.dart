@@ -164,7 +164,7 @@ void main() {
       await tester.tap(control);
       await tester.pumpAndSettle();
       expect(Library.decode(store.snapshot).style.fontSize, 23);
-      await tester.tap(find.byTooltip('닫기'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(field).controller, same(controller));
       expect(controller.value, before);
@@ -248,7 +248,7 @@ void main() {
       await tester.tap(slider);
       await tester.pumpAndSettle();
       expect(Library.decode(store.snapshot).style.fontSize, 23);
-      await tester.tap(find.byTooltip('닫기'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
       await tester.pumpAndSettle();
@@ -353,6 +353,8 @@ void main() {
       expect(input.style.fontFamily, appFontFamily);
       await tester.tap(find.text('취소'));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('쓰기 도구'));
       await tester.pumpAndSettle();
       expectTypeface('쓰는 인간체');
@@ -369,7 +371,7 @@ void main() {
       await tester.ensureVisible(find.text('나눔고딕'));
       await tester.tap(find.text('나눔고딕'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('닫기'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(field).controller, same(controller));
       expect(controller.text, '남겨 둔 문장');

@@ -42,7 +42,7 @@ void main() {
       await settleSourceSheets(tester);
       expect(find.text('작품 제목이나 작가'), findsOneWidget);
       expect(store.writes, 0);
-      await tester.tap(find.byTooltip('검색 닫기'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await settleSourceSheets(tester);
       expect(reading, findsOneWidget);
       expect(find.byType(SourceImportSheet), findsNothing);
@@ -99,6 +99,9 @@ void main() {
         tester.widget<Text>(readingText).textSpan!.toPlainText(),
         second.text,
       );
+      await tester.tap(closeIn(reading));
+      await tester.pumpAndSettle();
+      // Detail back restores its list; the following back restores paper.
       await tester.tap(closeIn(reading));
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(bodyField).controller, same(input));

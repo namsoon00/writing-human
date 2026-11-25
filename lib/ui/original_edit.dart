@@ -28,6 +28,42 @@ class _OriginalEditState extends State<OriginalEdit> {
   late final text = TextEditingController(text: widget.original.text);
   late final citation = TextEditingController(text: widget.original.citation);
   bool saving = false;
+  bool _allowLeave = false, _askingLeave = false;
+  bool get _dirty =>
+      text.text != widget.original.text ||
+      citation.text != widget.original.citation;
+
+  Future<void> _close() async {
+    if (saving || composing || _askingLeave) return;
+    if (_dirty) {
+      _askingLeave = true;
+      final discard = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('원문 수정을 취소할까요?'),
+          content: const Text('저장하지 않은 변경 내용이 사라져요.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('계속 수정'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('수정 취소'),
+            ),
+          ],
+        ),
+      );
+      _askingLeave = false;
+      if (!mounted || discard != true) return;
+    }
+    if (!mounted) return;
+    setState(() => _allowLeave = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.pop(context);
+    });
+  }
+
   bool failed = false;
 
   bool get composing => [
@@ -77,7 +113,10 @@ class _OriginalEditState extends State<OriginalEdit> {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: Listenable.merge([text, citation]),
     builder: (context, _) => PopScope(
-      canPop: !saving && !composing,
+      canPop: !saving && !composing && (_allowLeave || !_dirty),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _close();
+      },
       child: PaperPanel(
         color: widget.color,
         child: Padding(
@@ -85,7 +124,12 @@ class _OriginalEditState extends State<OriginalEdit> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              PaperPanelHeader('원문 수정', canClose: !saving && !composing),
+              PaperPanelHeader(
+                '원문 수정',
+                allowWritingReturn: false,
+                canClose: !saving && !composing,
+                onBack: _close,
+              ),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.only(top: 14, bottom: 12),

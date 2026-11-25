@@ -391,7 +391,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('writing-originals')));
       await tester.pumpAndSettle();
       expect(find.byType(SourceReading), findsOneWidget);
-      await tester.tap(find.byTooltip('닫기'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
       await tester.pumpAndSettle();
@@ -433,9 +433,11 @@ void main() {
       tester.view.physicalSize = const Size(320, 640);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      await tester.tap(find.byTooltip('닫기'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('닫기'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       tester.view.physicalSize = const Size(844, 390);
       await tester.pumpAndSettle();

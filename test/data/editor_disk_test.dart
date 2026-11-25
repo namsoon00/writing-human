@@ -108,13 +108,18 @@ void main() {
     await tester.tap(
       find.descendant(
         of: find.byType(SourceReading),
-        matching: find.byTooltip('닫기'),
+        matching: find.byKey(const ValueKey('paper-back')).hitTestable(),
       ),
     );
     await tester.pumpAndSettle();
     await tester.tap(
-      find.descendant(of: collection, matching: find.byTooltip('닫기')),
+      find.descendant(
+        of: collection,
+        matching: find.byKey(const ValueKey('paper-back')).hitTestable(),
+      ),
     );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
     await tester.pumpAndSettle();
     final text = tester.widget<TextField>(field).controller!;
     expect(
@@ -125,7 +130,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('쓰는 인간체'));
     await saved();
-    await tester.tap(find.byTooltip('닫기'));
+    await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(field).controller, same(text));
     expect(
@@ -174,7 +179,9 @@ void main() {
     await tester.enterText(titleInput, '  새 이름으로 남긴 책  ');
     await tester.tap(find.text('저장'));
     await saved();
-    await tester.tap(find.byTooltip('닫기'));
+    await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
     await tester.pumpAndSettle();
     expect(tester.widget<Text>(heading).data, '새 이름으로 남긴 책');
     expect(tester.widget<TextField>(field).controller!.value, committed);

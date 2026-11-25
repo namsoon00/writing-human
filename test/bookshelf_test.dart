@@ -297,7 +297,7 @@ void main() {
     expect(find.byKey(const ValueKey('shelf-recent')), findsNothing);
     expect(store.data.activePageId, 'p');
     expect(find.byKey(const ValueKey('book-contents-b1')), findsOneWidget);
-    await tester.tap(find.byTooltip('모든 책'));
+    await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
     await tester.pumpAndSettle();
     expect(find.text('모든 책'), findsOneWidget);
     expect(

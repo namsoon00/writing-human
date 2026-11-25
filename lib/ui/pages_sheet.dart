@@ -84,6 +84,7 @@ class PagesSheet extends StatelessWidget {
         ),
         Expanded(
           child: GridView.builder(
+            key: const PageStorageKey('page-overview'),
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
             gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
               maxCrossAxisExtent: 200,
@@ -107,15 +108,21 @@ class PagesSheet extends StatelessWidget {
                     builder: (context, box) => Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        ExcludeSemantics(
-                          child: MediaQuery.withNoTextScaling(
-                            child: BookCover(
-                              title: title,
-                              width: box.maxWidth * .72,
-                              variant: coverVariant,
-                              pageCount: pages.length,
-                              details: style.bookDetails,
-                              back: back,
+                        Expanded(
+                          child: Center(
+                            child: FittedBox(
+                              child: ExcludeSemantics(
+                                child: MediaQuery.withNoTextScaling(
+                                  child: BookCover(
+                                    title: title,
+                                    width: box.maxWidth * .72,
+                                    variant: coverVariant,
+                                    pageCount: pages.length,
+                                    details: style.bookDetails,
+                                    back: back,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),

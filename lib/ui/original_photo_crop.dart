@@ -56,7 +56,7 @@ class _OriginalPhotoCropState extends State<_OriginalPhotoCrop> {
       children: [
         const Padding(
           padding: EdgeInsets.fromLTRB(20, 8, 12, 0),
-          child: PaperPanelHeader('사진 범위'),
+          child: PaperPanelHeader('사진 범위', allowWritingReturn: false),
         ),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 20),

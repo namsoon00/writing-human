@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../cafe/cafe_atmosphere.dart';
 import 'paper.dart';
+import 'paper_panel.dart';
 
 class CafeAtmosphereSheet extends StatefulWidget {
   const CafeAtmosphereSheet({
@@ -74,9 +75,9 @@ class _CafeAtmosphereSheetState extends State<CafeAtmosphereSheet> {
 
   @override
   Widget build(BuildContext context) => PopScope(
-    canPop: !busy,
-    child: Dialog(
-      backgroundColor: const Color(0xfff7efdf),
+    canPop: !busy && error == null,
+    child: PaperPanel(
+      color: const Color(0xfff7efdf),
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: 460,
@@ -93,11 +94,7 @@ class _CafeAtmosphereSheetState extends State<CafeAtmosphereSheet> {
                   const Expanded(
                     child: Text('빛과 소리', style: TextStyle(fontSize: 22)),
                   ),
-                  IconButton(
-                    tooltip: '닫기',
-                    onPressed: busy ? null : () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
+                  PaperBackButton(label: '카페', enabled: !busy && error == null),
                 ],
               ),
               const Divider(height: 20),

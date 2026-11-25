@@ -449,7 +449,7 @@ void main() {
         original.dateStamp.toJson(),
       );
       expect(c.library.activePage!.text, specimen().activePage!.text);
-      await tester.tap(find.byTooltip('뒤로'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       expect(find.text('기본 장식'), findsOneWidget);
       expect(find.text('사선 끝 · 포도'), findsOneWidget);

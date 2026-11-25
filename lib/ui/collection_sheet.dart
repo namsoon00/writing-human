@@ -51,6 +51,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
   late bool books = widget.initialBookId == null;
   bool showSearch = false;
   bool returnToShelfOnBack = false;
+  ({bool books, bool search, String query})? _shelfState;
   late String? bookId = widget.initialBookId;
   String query = '';
   final searchField = TextEditingController();
@@ -523,13 +524,19 @@ class _CollectionSheetState extends State<CollectionSheet> {
   void _showShelf() {
     setState(() {
       bookId = null;
-      books = true;
+      books = _shelfState?.books ?? true;
       returnToShelfOnBack = false;
-      _clearSearch();
+      searchFocus.unfocus();
+      showSearch = _shelfState?.search ?? false;
+      query = _shelfState?.query ?? '';
+      searchField.text = query;
     });
   }
 
   void _openBook(Book book) {
+    if (bookId == null) {
+      _shelfState = (books: books, search: showSearch, query: query);
+    }
     setState(() {
       books = false;
       bookId = book.id;
@@ -546,6 +553,9 @@ class _CollectionSheetState extends State<CollectionSheet> {
       final paperIndex = book?.paperIndex ?? c.library.style.paperIndex;
       final bookPaper = paperColors[paperIndex];
       final topLevel = bookId == null;
+      PaperNavigationScope.maybeOf(
+        context,
+      )?.name(context, topLevel ? (books ? '책장' : '내 글') : '목차');
       final showingPractice =
           book?.id == LibraryController.defaultPracticeBook.id;
       final records =
@@ -569,14 +579,14 @@ class _CollectionSheetState extends State<CollectionSheet> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 6, 12, 8),
-            child: Row(
+            child: PaperHeaderRow(
               children: [
-                if (!topLevel)
-                  IconButton(
-                    tooltip: '모든 책',
-                    onPressed: _showShelf,
-                    icon: const Icon(CupertinoIcons.chevron_left, size: 18),
-                  ),
+                PaperBackButton(
+                  label: returnToShelfOnBack
+                      ? (_shelfState?.books == false ? '내 글' : '책장')
+                      : null,
+                  onPressed: returnToShelfOnBack ? _showShelf : null,
+                ),
                 if (topLevel) ...[
                   Expanded(child: PaperPanelTitle(shelf ? '책장' : '내 글')),
                   if (shelf && !showSearch && widget.onSettings != null)
@@ -630,11 +640,8 @@ class _CollectionSheetState extends State<CollectionSheet> {
                       size: 19,
                     ),
                   ),
-                IconButton(
-                  tooltip: '닫기',
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(CupertinoIcons.xmark, size: 18),
-                ),
+                if (!volume.any((p) => p.id == c.library.activePageId))
+                  PaperWritingReturn(force: returnToShelfOnBack),
               ],
             ),
           ),
@@ -765,26 +772,30 @@ class _CollectionSheetState extends State<CollectionSheet> {
         onPopInvokedWithResult: (didPop, _) {
           if (!didPop && returnToShelfOnBack) _showShelf();
         },
-        child: PageStorage(
-          bucket: scrollStorage,
-          child: PaperPanel(
-            color: book == null
-                ? shelf
-                      ? const Color(0xffeee0cd)
-                      : const Color(0xffe8dbca)
-                : bookPaper,
-            grainOpacity: book == null
-                ? panelGrainOpacity
-                : paperGrainOpacity[paperIndex],
-            child: book == null
-                ? sheet
-                : Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      BookBinding(choice: c.detailsFor(book).binding),
-                      sheet,
-                    ],
-                  ),
+        child: PaperInternalBack(
+          enabled: returnToShelfOnBack,
+          onBack: _showShelf,
+          child: PageStorage(
+            bucket: scrollStorage,
+            child: PaperPanel(
+              color: book == null
+                  ? shelf
+                        ? const Color(0xffeee0cd)
+                        : const Color(0xffe8dbca)
+                  : bookPaper,
+              grainOpacity: book == null
+                  ? panelGrainOpacity
+                  : paperGrainOpacity[paperIndex],
+              child: book == null
+                  ? sheet
+                  : Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        BookBinding(choice: c.detailsFor(book).binding),
+                        sheet,
+                      ],
+                    ),
+            ),
           ),
         ),
       );

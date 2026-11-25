@@ -517,7 +517,7 @@ void main() {
       await tester.tap(find.text('책장'));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('shelf-book-book')), findsOneWidget);
-      await tester.tap(find.byTooltip('닫기'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       expect(cover, findsOneWidget);
       await tester.tapAt(tester.getCenter(cover) + const Offset(80, 120));
@@ -545,6 +545,7 @@ void main() {
       await tester.tap(find.text('1'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('뒷표지'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('뒷표지'));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('book-back-cover')), findsOneWidget);
@@ -810,7 +811,7 @@ void main() {
       expect(store.data.trashedPages.single.id, 'one');
       expect(store.data.pages.single.id, 'two');
       expect(store.data.activePageId, 'two');
-      await tester.tap(find.byTooltip('닫기'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(field).controller!.text, '둘째 페이지');
       await tester.tap(find.byKey(const ValueKey('open-bookshelf')));

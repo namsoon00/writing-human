@@ -13,6 +13,7 @@ import 'ui/workspace.dart';
 import 'ui/paper.dart';
 import 'ui/control_theme.dart';
 import 'ui/typography.dart';
+import 'ui/paper_navigation.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,18 +24,35 @@ Future<void> main() async {
   runApp(const WritingHumanApp());
 }
 
-class WritingHumanApp extends StatelessWidget {
+class WritingHumanApp extends StatefulWidget {
   const WritingHumanApp({super.key, this.store, this.sourceIntake});
   final LibraryStore? store;
   final SourceIntake? sourceIntake;
   @override
+  State<WritingHumanApp> createState() => _WritingHumanAppState();
+}
+
+class _WritingHumanAppState extends State<WritingHumanApp> {
+  final navigation = PaperNavigation();
+
+  @override
+  void dispose() {
+    navigation.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) => MaterialApp(
+    navigatorObservers: [navigation],
     title: '쓰는 인간',
     builder: (context, child) {
       final media = MediaQuery.of(context);
-      return MediaQuery(
-        data: media.copyWith(textScaler: ReadingTextScaler(media.textScaler)),
-        child: child!,
+      return PaperNavigationScope(
+        navigation: navigation,
+        child: MediaQuery(
+          data: media.copyWith(textScaler: ReadingTextScaler(media.textScaler)),
+          child: child!,
+        ),
       );
     },
     debugShowCheckedModeBanner: false,
@@ -81,7 +99,7 @@ class WritingHumanApp extends StatelessWidget {
         ),
       ),
     ),
-    home: _Bootstrap(store: store, sourceIntake: sourceIntake),
+    home: _Bootstrap(store: widget.store, sourceIntake: widget.sourceIntake),
   );
 }
 

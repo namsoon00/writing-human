@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-25",
+  "type": "ui-mockup",
+  "status": "proposal-not-implemented",
+  "generator": "built-in image_gen",
+  "final": "navigation-concept-v2.png",
+  "sha256": "753923cdf88025bc04d5149d23931759b89876ed6c44ac16b1ff50bd75c2908c",
+  "prompts": [
+    "generation-prompt.txt",
+    "edit-prompt.txt"
+  ],
+  "references": [
+    "output/daily-review-20261125/01-writing-after-launch.png",
+    "output/tools-eraser-top-20261121/pen-390.png"
+  ],
+  "review": [
+    "four full representative screens visible",
+    "origin return distinct from selected-book resume",
+    "no root back annotation",
+    "tool sheet handle and named return shown"
+  ],
+  "not_verified": [
+    "actual bundled-font rendering",
+    "gesture operation",
+    "minimum touch dimensions",
+    "large text layout",
+    "native devices",
+    "deployment"
+  ]
+}

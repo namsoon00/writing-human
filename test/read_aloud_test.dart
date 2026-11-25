@@ -153,7 +153,7 @@ void main() {
 
     await tester.tap(find.text('재생'));
     await tester.pump();
-    await tester.tap(find.byTooltip('닫기'));
+    await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
     await tester.pumpAndSettle();
     speech.finish();
     await tester.pumpAndSettle();

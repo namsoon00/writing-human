@@ -82,8 +82,10 @@ TextSpan referenceText(WidgetTester tester) =>
 String remainingReference(WidgetTester tester) =>
     referenceText(tester).children!.last.toPlainText();
 
-Finder closeIn(Finder parent) =>
-    find.descendant(of: parent, matching: find.byTooltip('닫기'));
+Finder closeIn(Finder parent) => find.descendant(
+  of: parent,
+  matching: find.byKey(const ValueKey('paper-back')).hitTestable(),
+);
 
 Future<void> settleSourceSheets(WidgetTester tester) async {
   // App callbacks can open or dismiss another route after its first animation.
@@ -1189,7 +1191,10 @@ void main() {
       );
       await tester.tap(find.text('원문 열기'));
       await tester.pumpAndSettle();
-      expect(find.byTooltip('원문 브라우저 닫기'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('paper-back')).hitTestable(),
+        findsOneWidget,
+      );
       expect(clipboardReads, 0);
       final collect = find.text('복사한 글과 출처 가져오기');
       await tester.tap(collect);
@@ -1252,7 +1257,10 @@ void main() {
             if (fromBrowser) {
               await tester.tap(find.text('원문 열기'));
               await tester.pumpAndSettle();
-              expect(find.byTooltip('원문 브라우저 닫기'), findsOneWidget);
+              expect(
+                find.byKey(const ValueKey('paper-back')).hitTestable(),
+                findsOneWidget,
+              );
             }
           }
 
@@ -1613,7 +1621,9 @@ void main() {
             await tester.tap(find.widgetWithText(TextButton, '취소'));
             await tester.pumpAndSettle();
             expect(store.writes, writes);
-            await tester.tap(find.byTooltip('검색 닫기'));
+            await tester.tap(
+              find.byKey(const ValueKey('paper-back')).hitTestable(),
+            );
             await settleSourceSheets(tester);
             expect(
               tester.widget<TextField>(sourceField).controller!.text,
@@ -1867,6 +1877,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(bodyField).controller, same(body));
     expect(body.value, before);
+    expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isFalse);
+    expect(tester.testTextInput.isVisible, isFalse);
+    await tester.tap(bodyField);
+    await tester.pumpAndSettle();
     expect(tester.widget<TextField>(bodyField).focusNode!.hasFocus, isTrue);
     expect(store.data.activePage!.text, before.text);
     expect(tester.testTextInput.isVisible, isTrue);
@@ -1971,6 +1985,9 @@ void main() {
       expect(store.data.books.single.originals.first.reflection, isNull);
       await tester.tap(find.text('다른 날의 문장'));
       await tester.pumpAndSettle();
+      await tester.tap(closeIn(reading));
+      await tester.pumpAndSettle();
+      // Detail back returns to the original list, then to the writing page.
       await tester.tap(closeIn(reading));
       await tester.pumpAndSettle();
       await tester.tap(place);
@@ -2480,7 +2497,7 @@ void main() {
       same(field.controller),
     );
     expect(field.controller!.value, committed);
-    expect(field.focusNode!.hasFocus, isTrue);
+    expect(field.focusNode!.hasFocus, isFalse);
     expect(tester.getRect(bodyField), writingArea);
     final after = store.data.activePage!;
     expect(

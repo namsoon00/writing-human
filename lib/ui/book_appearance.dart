@@ -10,6 +10,7 @@ import 'book_detail_design.dart';
 import 'book_detail_tools.dart';
 import 'book_details.dart';
 import 'paper.dart';
+import 'paper_navigation.dart';
 import 'paper_choice.dart';
 
 Future<void> showBookAppearance(
@@ -200,153 +201,169 @@ class _BookAppearanceState extends State<BookAppearance> {
       final header = Column(
         children: [preview, const SizedBox(height: 16), tabs],
       );
+      PaperNavigationScope.maybeOf(context)?.name(context, '책 꾸미기');
       return PopScope(
-        canPop: opened == null,
+        canPop: opened == null && controller.saveError == null,
         onPopInvokedWithResult: (didPop, _) {
           if (!didPop && detail != null) _showDetail(null);
         },
-        child: Scaffold(
-          backgroundColor: paper,
-          appBar: AppBar(
-            title: const Text('책 꾸미기'),
-            centerTitle: true,
+        child: PaperInternalBack(
+          enabled: opened != null && controller.saveError == null,
+          onBack: () => _showDetail(null),
+          child: Scaffold(
             backgroundColor: paper,
-            surfaceTintColor: Colors.transparent,
-            leading: IconButton(
-              tooltip: '뒤로',
-              onPressed: () => Navigator.maybePop(context),
-              icon: const Icon(CupertinoIcons.chevron_left, size: 20),
+            appBar: AppBar(
+              title: const Text('책 꾸미기'),
+              centerTitle: true,
+              backgroundColor: paper,
+              surfaceTintColor: Colors.transparent,
+              leadingWidth: 130,
+              leading: PaperBackButton(
+                label: opened == null ? null : '책 꾸미기',
+                enabled: controller.saveError == null,
+              ),
+              actions: [
+                PaperWritingReturn(
+                  force: opened != null,
+                  enabled: controller.saveError == null,
+                ),
+              ],
             ),
-          ),
-          body: SafeArea(
-            top: false,
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 560),
-                child: Column(
-                  children: [
-                    if (opened == null && pinPreview)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                        child: header,
-                      ),
-                    if (opened == null)
-                      Expanded(
-                        child: ListView(
-                          key: PageStorageKey((section, opened)),
-                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-                          children: [
-                            if (!pinPreview) header,
-                            const SizedBox(height: 10),
-                            if (section == _Section.materials) ...[
-                              Semantics(
-                                header: true,
-                                child: const Text(
-                                  '표지',
-                                  style: TextStyle(color: muted),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Wrap(
-                                spacing: 8,
-                                children: [
-                                  for (final (i, name) in coverNames.indexed)
-                                    ChoiceChip(
-                                      label: Text(name),
-                                      selected: cover == i,
-                                      onSelected: (selected) {
-                                        setState(() => showCover = true);
-                                        if (selected) _save(coverIndex: i);
-                                      },
-                                    ),
-                                ],
-                              ),
-                              const Divider(height: 24, color: line),
-                              Semantics(
-                                header: true,
-                                child: const Text(
-                                  '내지',
-                                  style: TextStyle(color: muted),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Wrap(
-                                spacing: 8,
-                                children: [
-                                  ChoiceChip(
-                                    label: const Text('기본 종이 사용'),
-                                    selected: selectedPaper == null,
-                                    onSelected: (selected) {
-                                      setState(() => showCover = false);
-                                      if (selected) {
-                                        _save(useDefaultPaper: true);
-                                      }
-                                    },
-                                  ),
-                                  for (var i = 0; i < paperNames.length; i++)
-                                    PaperChoice(
-                                      index: i,
-                                      selected: selectedPaper == i,
-                                      onSelected: (selected) {
-                                        setState(() => showCover = false);
-                                        if (selected) _save(paperIndex: i);
-                                      },
-                                    ),
-                                ],
-                              ),
-                            ] else
-                              for (final kind in section.kinds)
-                                _detailRow(kind, details.choice(kind), book),
-                          ],
+            body: SafeArea(
+              top: false,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 560),
+                  child: Column(
+                    children: [
+                      if (opened == null && pinPreview)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                          child: header,
                         ),
-                      )
-                    else
-                      Expanded(
-                        child: LayoutBuilder(
-                          builder: (context, viewport) {
-                            const padding = EdgeInsets.fromLTRB(20, 12, 20, 12);
-                            return SingleChildScrollView(
-                              key: PageStorageKey((section, opened)),
-                              padding: padding,
-                              child: _DecorationFit(
-                                visibleHeight:
-                                    viewport.maxHeight - padding.vertical,
-                                preview: Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: preview,
+                      if (opened == null)
+                        Expanded(
+                          child: ListView(
+                            key: PageStorageKey((section, opened)),
+                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                            children: [
+                              if (!pinPreview) header,
+                              const SizedBox(height: 10),
+                              if (section == _Section.materials) ...[
+                                Semantics(
+                                  header: true,
+                                  child: const Text(
+                                    '표지',
+                                    style: TextStyle(color: muted),
+                                  ),
                                 ),
-                                controls: Column(
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 8,
                                   children: [
-                                    tabs,
-                                    const SizedBox(height: 4),
-                                    _detailEditor(
-                                      opened,
-                                      details.choice(opened),
-                                      book,
-                                    ),
+                                    for (final (i, name) in coverNames.indexed)
+                                      ChoiceChip(
+                                        label: Text(name),
+                                        selected: cover == i,
+                                        onSelected: (selected) {
+                                          setState(() => showCover = true);
+                                          if (selected) _save(coverIndex: i);
+                                        },
+                                      ),
                                   ],
                                 ),
-                              ),
-                            );
-                          },
+                                const Divider(height: 24, color: line),
+                                Semantics(
+                                  header: true,
+                                  child: const Text(
+                                    '내지',
+                                    style: TextStyle(color: muted),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 8,
+                                  children: [
+                                    ChoiceChip(
+                                      label: const Text('기본 종이 사용'),
+                                      selected: selectedPaper == null,
+                                      onSelected: (selected) {
+                                        setState(() => showCover = false);
+                                        if (selected) {
+                                          _save(useDefaultPaper: true);
+                                        }
+                                      },
+                                    ),
+                                    for (var i = 0; i < paperNames.length; i++)
+                                      PaperChoice(
+                                        index: i,
+                                        selected: selectedPaper == i,
+                                        onSelected: (selected) {
+                                          setState(() => showCover = false);
+                                          if (selected) _save(paperIndex: i);
+                                        },
+                                      ),
+                                  ],
+                                ),
+                              ] else
+                                for (final kind in section.kinds)
+                                  _detailRow(kind, details.choice(kind), book),
+                            ],
+                          ),
+                        )
+                      else
+                        Expanded(
+                          child: LayoutBuilder(
+                            builder: (context, viewport) {
+                              const padding = EdgeInsets.fromLTRB(
+                                20,
+                                12,
+                                20,
+                                12,
+                              );
+                              return SingleChildScrollView(
+                                key: PageStorageKey((section, opened)),
+                                padding: padding,
+                                child: _DecorationFit(
+                                  visibleHeight:
+                                      viewport.maxHeight - padding.vertical,
+                                  preview: Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: preview,
+                                  ),
+                                  controls: Column(
+                                    children: [
+                                      tabs,
+                                      const SizedBox(height: 4),
+                                      _detailEditor(
+                                        opened,
+                                        details.choice(opened),
+                                        book,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                    if (controller.saveError != null)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: TextButton(
-                          onPressed: controller.saving
-                              ? null
-                              : controller.retrySave,
-                          child: const Text('책 꾸밈을 저장하지 못했어요. 다시 저장'),
+                      if (controller.saveError != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: TextButton(
+                            onPressed: controller.saving
+                                ? null
+                                : controller.retrySave,
+                            child: const Text('책 꾸밈을 저장하지 못했어요. 다시 저장'),
+                          ),
+                        )
+                      else if (controller.saving)
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 8),
+                          child: Text('저장 중', style: TextStyle(color: muted)),
                         ),
-                      )
-                    else if (controller.saving)
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 8),
-                        child: Text('저장 중', style: TextStyle(color: muted)),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

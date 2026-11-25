@@ -61,8 +61,13 @@ Future<void> _enterCafe(
   WidgetTester tester, {
   LibraryController? controller,
 }) async {
-  await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
-  await tester.pumpAndSettle();
+  final shelfButton = find
+      .byKey(const ValueKey('open-bookshelf'))
+      .hitTestable();
+  if (shelfButton.evaluate().isNotEmpty) {
+    await tester.tap(shelfButton);
+    await tester.pumpAndSettle();
+  }
   await tester.tap(find.byKey(const ValueKey('open-cafe')));
   await tester.pumpAndSettle();
   if (controller != null) {
@@ -153,7 +158,7 @@ void main() {
     final store = MemoryStore();
     await _open(tester, store, size: const Size(320, 640));
     await _enterCafe(tester);
-    await tester.tap(find.byTooltip('닫기'));
+    await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
     await tester.pumpAndSettle();
     expect(store.writes, 0);
     await _enterCafe(tester);
@@ -225,7 +230,7 @@ void main() {
       await tester.tap(ledge);
       await tester.pumpAndSettle();
       expect(find.byType(ToolsScreen), findsOneWidget);
-      await tester.tap(find.byTooltip('닫기'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       expect(find.byType(CafeScreen), findsOneWidget);
       expect(store.data.encode(), before);

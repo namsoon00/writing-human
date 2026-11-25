@@ -17,6 +17,7 @@ import '../data/model.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'cafe_scene.dart';
 import 'paper.dart';
+import 'paper_panel.dart';
 
 /// A private, eye-height 3D room connected to the existing writing editor.
 class CafeScreen extends StatefulWidget {
@@ -440,37 +441,37 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     if (!await _putDown() || !mounted) return;
     view.inspect(null);
     setState(() => dialogOpen = true);
-    final result = await showDialog<Object>(
-      context: context,
-      builder: (context) => page == 'ambience'
-          ? CafeAtmosphereSheet(
-              value: view.space.atmosphere,
-              playing: soundState,
-              onPreview: (mix) {
-                if (sound) _updateSound(mix);
-                unawaited(
-                  calmAudio
-                      .setVolume(mix.actionVolume)
-                      .catchError(_soundFailed),
-                );
-              },
-              onSave: (mix) => _storeUse(view.space.copy(atmosphere: mix)),
-              onToggle: () async {
-                await _toggleSound();
-                return sound;
-              },
-            )
-          : CafeRitualSheet(
-              page: page,
-              home: view.space.home,
-              moment: moment,
-              currentSeat: view.seat,
-              chair: view.activeChairId,
-              lastSentence: widget.lastSentence,
-              canTranscribe: widget.onTranscribe != null,
-              onSave: (home) => _storeUse(view.space.copy(home: home)),
-            ),
-    );
+    Widget buildRitual(BuildContext routeContext) => page == 'ambience'
+        ? CafeAtmosphereSheet(
+            value: view.space.atmosphere,
+            playing: soundState,
+            onPreview: (mix) {
+              if (sound) _updateSound(mix);
+              unawaited(
+                calmAudio.setVolume(mix.actionVolume).catchError(_soundFailed),
+              );
+            },
+            onSave: (mix) => _storeUse(view.space.copy(atmosphere: mix)),
+            onToggle: () async {
+              await _toggleSound();
+              return sound;
+            },
+          )
+        : CafeRitualSheet(
+            page: page,
+            home: view.space.home,
+            moment: moment,
+            currentSeat: view.seat,
+            chair: view.activeChairId,
+            lastSentence: widget.lastSentence,
+            canTranscribe: widget.onTranscribe != null,
+            onSave: (home) => _storeUse(view.space.copy(home: home)),
+          );
+    if (!context.mounted) return;
+    final pending = page == 'ambience'
+        ? Navigator.of(context).push<Object>(paperSheetRoute(buildRitual))
+        : showDialog<Object>(context: context, builder: buildRitual);
+    final result = await pending;
     if (!mounted) return;
     setState(() => dialogOpen = false);
     if (sound) _updateSound();
@@ -1889,258 +1890,286 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope<void>(
-    canPop: !opening && !widget.saveFailed && !roomSaving && !roomDirty,
-    onPopInvokedWithResult: (didPop, result) {
-      if (!didPop) unawaited(_requestClose());
-    },
-    child: ColoredBox(
-      color: const Color(0xff392e25),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          CafeScene(
-            controller: view,
-            moment: moment,
-            interactive:
-                !opening && !widget.saveFailed && !roomLoading && !roomSaving,
-            editing: editing,
-            placingId: placing ? selectedObject : null,
-            onObjectSelected: (id) async {
-              if (view.using) return;
-              if (!editing) await _editRoom();
-              if (mounted && editing) setState(() => selectedObject = id);
-            },
-            onWalk: _walk,
-            onPutDown: () {
-              unawaited(_putDown());
-            },
-            onObjectPlaced: (point) {
-              if (selectedObject != null) {
-                _changeRoom(view.world.placed(selectedObject!, point));
-              }
-            },
-            onItemActivated: _activateItem,
-            onTargetSelected: _activate,
-            onWrite: _write,
-          ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 6, 8, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: const Color(0xeefaf5eb),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                MediaQuery.textScalerOf(context).scale(16) > 22
-                                    ? (view.inCourtyard ? '고요한 뜰' : '필사 카페')
-                                    : view.inCourtyard
-                                    ? '쓰는 인간 · 고요한 뜰'
-                                    : '쓰는 인간 · 필사 카페',
-                                style: TextStyle(color: brandInk, fontSize: 16),
-                              ),
-                            ),
-                            IconButton(
-                              tooltip: editing
-                                  ? '\uAFB8\uBBF8\uAE30 \uC644\uB8CC'
-                                  : '\uACF5\uAC04 \uAFB8\uBBF8\uAE30',
-                              key: const ValueKey('room-edit'),
-                              onPressed:
-                                  roomLoading ||
-                                      roomLoadFailed ||
-                                      roomSaving ||
-                                      view.travelling ||
-                                      view.using
-                                  ? null
-                                  : editing
-                                  ? _finishRoom
-                                  : _editRoom,
-                              icon: Icon(
-                                editing ? Icons.check : Icons.brush_outlined,
-                                color: brandInk,
-                              ),
-                            ),
-                            IconButton(
-                              tooltip: sound ? '소리 끄기' : '소리 켜기',
-                              onPressed: soundBusy ? null : _toggleSound,
-                              icon: Icon(
-                                sound
-                                    ? Icons.volume_up_outlined
-                                    : Icons.volume_off_outlined,
-                                color: brandInk,
-                              ),
-                            ),
-                            IconButton(
-                              tooltip: '공간 안내',
-                              onPressed:
-                                  opening ||
-                                      widget.saveFailed ||
-                                      view.travelling ||
-                                      view.using
-                                  ? null
-                                  : _guide,
-                              icon: const Icon(
-                                Icons.explore_outlined,
-                                color: brandInk,
-                              ),
-                            ),
-                            IconButton(
-                              tooltip: '닫기',
-                              onPressed: opening || widget.saveFailed
-                                  ? null
-                                  : _requestClose,
-                              icon: const Icon(Icons.close, color: brandInk),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (showIntro ||
-                        opening ||
-                        view.travelling ||
-                        calmHint != null ||
-                        view.resting ||
-                        view.seat != null)
-                      IgnorePointer(
-                        child: ColoredBox(
-                          color: const Color(0xccfaf5eb),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 2,
-                            ),
-                            child: Text(
-                              opening
-                                  ? '글 여는 중'
-                                  : view.travelling
-                                  ? '천천히 걸어가는 중'
-                                  : calmHint != null
-                                  ? calmHint!
-                                  : view.resting
-                                  ? '잠시 머물러도 좋아요.'
-                                  : view.seat != null
-                                  ? (view.space.home.mood > 0
-                                        ? '${view.space.home.mood == 2 ? '비 오는 저녁' : '해 질 무렵'} · 잠시 머물러도 좋아요.'
-                                        : '${view.seat!.label} · 노트를 눌러 써요')
-                                  : '바닥을 눌러 걷고, 끌어 둘러봐요',
-                              style: const TextStyle(
-                                color: Color(0xff62503f),
-                                fontSize: 14,
-                                height: 1.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    _arrivalNote(),
-                    _useControls(),
-                    if ((view.seat != null || view.resting) &&
-                        !view.travelling &&
-                        !view.using)
-                      TextButton(
-                        key: const ValueKey('cafe-stand'),
-                        onPressed: opening
-                            ? null
-                            : () async {
-                                if (!await _putDown() || !mounted) return;
-                                pending = null;
-                                view.stand();
-                              },
-                        style: TextButton.styleFrom(
-                          foregroundColor: brandInk,
-                          backgroundColor: const Color(0xccfaf5eb),
-                        ),
-                        child: const Text('일어나 둘러보기'),
-                      ),
-                  ],
-                ),
-              ),
+  Widget build(BuildContext context) {
+    PaperNavigationScope.maybeOf(context)?.name(context, '카페');
+    return PopScope<void>(
+      canPop:
+          !opening &&
+          !widget.saveFailed &&
+          !roomSaving &&
+          !roomDirty &&
+          !view.using,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) unawaited(_requestClose());
+      },
+      child: ColoredBox(
+        color: const Color(0xff392e25),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            CafeScene(
+              controller: view,
+              moment: moment,
+              interactive:
+                  !opening && !widget.saveFailed && !roomLoading && !roomSaving,
+              editing: editing,
+              placingId: placing ? selectedObject : null,
+              onObjectSelected: (id) async {
+                if (view.using) return;
+                if (!editing) await _editRoom();
+                if (mounted && editing) setState(() => selectedObject = id);
+              },
+              onWalk: _walk,
+              onPutDown: () {
+                unawaited(_putDown());
+              },
+              onObjectPlaced: (point) {
+                if (selectedObject != null) {
+                  _changeRoom(view.world.placed(selectedObject!, point));
+                }
+              },
+              onItemActivated: _activateItem,
+              onTargetSelected: _activate,
+              onWrite: _write,
             ),
-          ),
-          if (editing) _roomControls(),
-          if (!editing && (roomLoading || roomError != null))
             Positioned(
-              left: 16,
-              right: 16,
-              bottom: 16,
-              child: Card(
-                color: const Color(0xfff3eadb),
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.fromLTRB(16, 6, 8, 0),
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        roomLoading
-                            ? '\uACF5\uAC04 \uBD88\uB7EC\uC624\uB294 \uC911'
-                            : roomError!,
-                        key: const ValueKey('room-error'),
-                      ),
-                      if (!roomLoading)
-                        TextButton(
-                          onPressed: roomLoadFailed ? _loadRoom : _saveRoom,
-                          child: Text(
-                            roomLoadFailed
-                                ? '\uB2E4\uC2DC \uBD88\uB7EC\uC624\uAE30'
-                                : '\uB2E4\uC2DC \uC800\uC7A5',
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: const Color(0xeefaf5eb),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          child: PaperHeaderRow(
+                            children: [
+                              IconButton(
+                                tooltip:
+                                    PaperNavigationScope.maybeOf(
+                                      context,
+                                    )?.parentLabel(context) ??
+                                    '뒤로',
+                                key: const ValueKey('paper-back'),
+                                onPressed: opening || widget.saveFailed
+                                    ? null
+                                    : _requestClose,
+                                icon: const Icon(
+                                  Icons.arrow_back,
+                                  color: brandInk,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  MediaQuery.textScalerOf(context).scale(16) >
+                                          22
+                                      ? (view.inCourtyard ? '고요한 뜰' : '필사 카페')
+                                      : view.inCourtyard
+                                      ? '쓰는 인간 · 고요한 뜰'
+                                      : '쓰는 인간 · 필사 카페',
+                                  style: TextStyle(
+                                    color: brandInk,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: editing
+                                    ? '\uAFB8\uBBF8\uAE30 \uC644\uB8CC'
+                                    : '\uACF5\uAC04 \uAFB8\uBBF8\uAE30',
+                                key: const ValueKey('room-edit'),
+                                onPressed:
+                                    roomLoading ||
+                                        roomLoadFailed ||
+                                        roomSaving ||
+                                        view.travelling ||
+                                        view.using
+                                    ? null
+                                    : editing
+                                    ? _finishRoom
+                                    : _editRoom,
+                                icon: Icon(
+                                  editing ? Icons.check : Icons.brush_outlined,
+                                  color: brandInk,
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: sound ? '소리 끄기' : '소리 켜기',
+                                onPressed: soundBusy ? null : _toggleSound,
+                                icon: Icon(
+                                  sound
+                                      ? Icons.volume_up_outlined
+                                      : Icons.volume_off_outlined,
+                                  color: brandInk,
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: '공간 안내',
+                                onPressed:
+                                    opening ||
+                                        widget.saveFailed ||
+                                        view.travelling ||
+                                        view.using
+                                    ? null
+                                    : _guide,
+                                icon: const Icon(
+                                  Icons.explore_outlined,
+                                  color: brandInk,
+                                ),
+                              ),
+                              if (!editing && !roomSaving && !widget.saveFailed)
+                                PaperWritingReturn(
+                                  enabled:
+                                      !opening && !roomDirty && !view.using,
+                                ),
+                            ],
                           ),
                         ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          if (widget.saveFailed || error != null)
-            Center(
-              child: Card(
-                color: const Color(0xfff3eadb),
-                margin: const EdgeInsets.all(24),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Semantics(
-                        liveRegion: true,
-                        child: Text(
-                          widget.saveFailed
-                              ? '글을 저장하지 못했어요.\n앱을 닫기 전에 ‘다시 저장’을 눌러 주세요.'
-                              : error!,
-                          style: const TextStyle(height: 1.6, color: burgundy),
+                      ),
+                      if (showIntro ||
+                          opening ||
+                          view.travelling ||
+                          calmHint != null ||
+                          view.resting ||
+                          view.seat != null)
+                        IgnorePointer(
+                          child: ColoredBox(
+                            color: const Color(0xccfaf5eb),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 2,
+                              ),
+                              child: Text(
+                                opening
+                                    ? '글 여는 중'
+                                    : view.travelling
+                                    ? '천천히 걸어가는 중'
+                                    : calmHint != null
+                                    ? calmHint!
+                                    : view.resting
+                                    ? '잠시 머물러도 좋아요.'
+                                    : view.seat != null
+                                    ? (view.space.home.mood > 0
+                                          ? '${view.space.home.mood == 2 ? '비 오는 저녁' : '해 질 무렵'} · 잠시 머물러도 좋아요.'
+                                          : '${view.seat!.label} · 노트를 눌러 써요')
+                                    : '바닥을 눌러 걷고, 끌어 둘러봐요',
+                                style: const TextStyle(
+                                  color: Color(0xff62503f),
+                                  fontSize: 14,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                      TextButton(
-                        onPressed: widget.saveFailed
-                            ? widget.onRetry
-                            : () => setState(() {
-                                error = null;
-                                retrySentence = null;
-                              }),
-                        child: Text(widget.saveFailed ? '다시 저장' : '둘러보기'),
-                      ),
+                      _arrivalNote(),
+                      _useControls(),
+                      if ((view.seat != null || view.resting) &&
+                          !view.travelling &&
+                          !view.using)
+                        TextButton(
+                          key: const ValueKey('cafe-stand'),
+                          onPressed: opening
+                              ? null
+                              : () async {
+                                  if (!await _putDown() || !mounted) return;
+                                  pending = null;
+                                  view.stand();
+                                },
+                          style: TextButton.styleFrom(
+                            foregroundColor: brandInk,
+                            backgroundColor: const Color(0xccfaf5eb),
+                          ),
+                          child: const Text('일어나 둘러보기'),
+                        ),
                     ],
                   ),
                 ),
               ),
             ),
-        ],
+            if (editing) _roomControls(),
+            if (!editing && (roomLoading || roomError != null))
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 16,
+                child: Card(
+                  color: const Color(0xfff3eadb),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          roomLoading
+                              ? '\uACF5\uAC04 \uBD88\uB7EC\uC624\uB294 \uC911'
+                              : roomError!,
+                          key: const ValueKey('room-error'),
+                        ),
+                        if (!roomLoading)
+                          TextButton(
+                            onPressed: roomLoadFailed ? _loadRoom : _saveRoom,
+                            child: Text(
+                              roomLoadFailed
+                                  ? '\uB2E4\uC2DC \uBD88\uB7EC\uC624\uAE30'
+                                  : '\uB2E4\uC2DC \uC800\uC7A5',
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            if (widget.saveFailed || error != null)
+              Center(
+                child: Card(
+                  color: const Color(0xfff3eadb),
+                  margin: const EdgeInsets.all(24),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Semantics(
+                          liveRegion: true,
+                          child: Text(
+                            widget.saveFailed
+                                ? '글을 저장하지 못했어요.\n앱을 닫기 전에 ‘다시 저장’을 눌러 주세요.'
+                                : error!,
+                            style: const TextStyle(
+                              height: 1.6,
+                              color: burgundy,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: widget.saveFailed
+                              ? widget.onRetry
+                              : () => setState(() {
+                                  error = null;
+                                  retrySentence = null;
+                                }),
+                          child: Text(widget.saveFailed ? '다시 저장' : '둘러보기'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _CafeChoice extends StatelessWidget {

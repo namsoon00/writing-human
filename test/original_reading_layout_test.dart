@@ -125,7 +125,9 @@ void main() {
         expect(find.text('볼 부분 고르기'), findsNothing);
         expect(find.text('사진 전체 보기'), findsNothing);
         expect(find.text('글자 부분 보기'), findsNothing);
-        await tester.tap(find.byTooltip('닫기'));
+        await tester.tap(
+          find.byKey(const ValueKey('paper-back')).hitTestable(),
+        );
         await tester.pumpAndSettle();
         expect(body, findsOneWidget);
         expect(find.byType(OriginalPhoto), findsOneWidget);

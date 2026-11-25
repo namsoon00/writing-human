@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../cafe/cafe_home.dart';
 import '../cafe/cafe_visit.dart';
 import 'paper.dart';
+import 'paper_navigation.dart';
 
 enum CafeRitualAction { returnSeat, rainWindow }
 
@@ -106,11 +107,7 @@ class _CafeRitualSheetState extends State<CafeRitualSheet> {
                         _ => '나를 기다리는 자리',
                       }, style: const TextStyle(fontSize: 22)),
                     ),
-                    IconButton(
-                      tooltip: '닫기',
-                      onPressed: busy ? null : () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
-                    ),
+                    PaperBackButton(label: '카페', enabled: !busy),
                   ],
                 ),
                 const Divider(height: 22),

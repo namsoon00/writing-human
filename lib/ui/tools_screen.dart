@@ -152,31 +152,16 @@ class _ToolsScreenState extends State<ToolsScreen> {
           ],
         ),
       );
-      return PaperPanel(
+      final surface = PaperPanel(
         color: panel,
         child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 3, 12, 3),
-              child: Row(
-                children: [
-                  const SizedBox(width: 48),
-                  Expanded(
-                    child: Semantics(
-                      header: true,
-                      child: const Text(
-                        '쓰기 도구',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 20, color: ink),
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: '닫기',
-                    onPressed: () => Navigator.maybePop(context),
-                    icon: const Icon(CupertinoIcons.xmark, size: 18),
-                  ),
-                ],
+              child: PaperPanelHeader(
+                '쓰기 도구',
+                canClose: controller.saveError == null,
+                allowWritingReturn: false,
               ),
             ),
             Expanded(
@@ -185,7 +170,7 @@ class _ToolsScreenState extends State<ToolsScreen> {
                   // Keep the result in view while the controls scroll. Large
                   // accessibility text and short screens use one full scroll.
                   final pinPreview =
-                      box.maxHeight >= 560 &&
+                      box.maxHeight >= 460 &&
                       MediaQuery.textScalerOf(context).scale(16) <= 22;
                   if (pinPreview) {
                     return Column(
@@ -218,6 +203,7 @@ class _ToolsScreenState extends State<ToolsScreen> {
           ],
         ),
       );
+      return PopScope(canPop: controller.saveError == null, child: surface);
     },
   );
 

@@ -1,0 +1,60 @@
+{
+  "task": "navigation-implementation",
+  "date": "2026-11-25T04:35:14.395428+00:00",
+  "host_tests": 358,
+  "chrome_navigation_tests": 10,
+  "sqlite_reopen_test": 1,
+  "cafe_followup_tests": 23,
+  "flutter_render_test": 1,
+  "format": "208 files, 0 changes",
+  "source_analysis": "lib test tool hook: no issues",
+  "root_analysis": {
+    "result": "failed",
+    "diagnostics": 281,
+    "artifacts": 273,
+    "output_harnesses": 8,
+    "application_sources": 0
+  },
+  "web_build": {
+    "target": "tool/navigation_probe.dart",
+    "mode": "release",
+    "store": "synthetic memory store",
+    "main_js_sha256": "1f87e6305d183b5eb0b7c648b83bea313617f77d8b326fc11caa525c28b2241e"
+  },
+  "browser_verification": {
+    "scope": "Actual compiled Flutter app in headless Chrome, synthetic in-memory records. Real browser history.back and CDP pointer input. Not physical-device or disk verification.",
+    "browser_back": "detail to source list",
+    "origin_shortcut": "deep source to original writing",
+    "panel_return": "same writing",
+    "pages_and_cursor_unchanged": true,
+    "record_count": 2,
+    "url_unchanged": true
+  },
+  "browser_profile": "cleaned",
+  "temporary_build": "cleaned",
+  "source_sha256": {
+    "lib/main.dart": "a910ca8ce3efea26260d423a8fd2334076067ee803dd5f31cd13c8aad9630bcb",
+    "lib/data/library_controller.dart": "9173fec1579b937f8c2d18201c66c03a1163a87e41f40fb0f0e7f02daeaba9ea",
+    "lib/source/page_originals.dart": "16c098f5fb78f3ac1fd46c2c5dbcfce7247f2e1ecfa2e20b5c59abc1ff5ffbd2",
+    "lib/ui/book_appearance.dart": "ee9869df4b31568a40ee58e57a34b455e883720641e97808660c7db271cbdf6f",
+    "lib/ui/cafe_atmosphere_sheet.dart": "b4d21267bb2832f30937ad9f28daa7639ec926fcb5fe05f76fba33f44e41c85d",
+    "lib/ui/cafe_ritual.dart": "18004f3e4831e7c1ef7a373b2085109271c2be978b53f0b970523f03aa00c518",
+    "lib/ui/cafe_screen.dart": "61d43e01fe03630caf8c270015de060626fbe1a71f664a0e019014f2b1bfc45e",
+    "lib/ui/collection_sheet.dart": "6b72268c05a66b4069de0dbb8af42357478e0b3e40825169a5d811dc97dacdc2",
+    "lib/ui/editor.dart": "67722011b4fbd7ffbdc52f4f0a9a682a6e2b75a1e2d90cb6ee58be1e26690ad6",
+    "lib/ui/original_edit.dart": "fc90b62cf729f378531d908cd80119dfefdc4e0691ba2649a65086b0f53a411b",
+    "lib/ui/original_photo_crop.dart": "f7207f7bb159f2cfd22ec9834caa30224e42b8132edfe3e7761b7953a512c76c",
+    "lib/ui/pages_sheet.dart": "ba38365c656676b60ef32b3fd2891185e6dba594f4c0c48288205ba215a33749",
+    "lib/ui/paper_navigation.dart": "4817f56e2740c06958c48b672ea7040a8f5c2f0b859c6baf75eb1c29b5de8413",
+    "lib/ui/paper_panel.dart": "3a88f9ff069bce4145c3e9b3490acb932f091c6bb2796034ee41db4db6ed23f5",
+    "lib/ui/source_browser.dart": "8519dce43518919722385cc8b4b9665750fa1407cdf00382ccc253cf2a809c87",
+    "lib/ui/source_import_sheet.dart": "f5b1d48965c4fb83ff29e660fb9016fde188e8cea99fe9318807ad21f44b38f2",
+    "lib/ui/source_reading.dart": "61e3bafb6b0c0451f95d7d671e6847dbd1b658304e56732f2a6ee2c2334fb1ba",
+    "lib/ui/source_search.dart": "ebf2c895bfd27bf79bf76c1551eda15c1f0e042333a567948af34ed35e7d9edd",
+    "lib/ui/tools_screen.dart": "b10f0f5b90e6fb6e3427c578ac06efc328e0f3a579c445363f03c3099768a034",
+    "lib/ui/workspace.dart": "4a4e32d64ed973bfcdead85dd4db22e7a4abd74c9c136bd491504b97f59278b1"
+  },
+  "deployment": false,
+  "physical_device_verification": false,
+  "evidence_directory": "output/navigation-implementation-20261125"
+}

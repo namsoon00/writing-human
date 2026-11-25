@@ -195,31 +195,110 @@ void main() {
       c.dispose();
     },
   );
-  test(
-    'A new page continues only the unwritten part of the active source',
-    () async {
-      final data = fixture();
-      final c = LibraryController(TestStore(data), data);
-      attachArchivedSource(c, 'p', first);
-      const text = '내 생각\n첫 원문';
-      c.editPage('p', text, text.length, text.length, 0);
+  for (final (label, page) in [
+    (
+      'unfinished source',
+      WritingPage(
+        id: 'p',
+        recordId: 'r',
+        number: 1,
+        text: '첫 원문',
+        base: 4,
+        extent: 4,
+        passages: [
+          PagePassage(
+            id: 'source',
+            start: 0,
+            source: first.text,
+            citation: first.citation,
+            original: first,
+            attached: true,
+          ),
+        ],
+      ),
+    ),
+    (
+      'caret before completed text',
+      WritingPage(
+        id: 'p',
+        recordId: 'r',
+        number: 1,
+        text: first.text,
+        base: 0,
+        extent: 0,
+        guidedOriginalId: first.id,
+      ),
+    ),
+    (
+      'legacy guide',
+      WritingPage(
+        id: 'p',
+        recordId: 'r',
+        number: 1,
+        guidedOriginalId: first.id,
+      ),
+    ),
+    (
+      'reference only',
+      WritingPage(
+        id: 'p',
+        recordId: 'r',
+        number: 1,
+        originalSlip: first,
+        referenceOnly: true,
+      ),
+    ),
+    (
+      'saved continuation',
+      WritingPage(
+        id: 'p',
+        recordId: 'r',
+        number: 1,
+        text: '을',
+        base: 1,
+        extent: 1,
+        passages: [
+          PagePassage(
+            id: 'continued',
+            start: 0,
+            source: first.text,
+            citation: first.citation,
+            original: first,
+            attached: true,
+            sourceOffset: 4,
+            continued: true,
+          ),
+        ],
+      ),
+    ),
+  ]) {
+    test('A new page is blank and preserves the $label on its page', () async {
+      final data = fixture().copy(pages: [page]);
+      final store = TestStore(data);
+      final c = LibraryController(store, data);
+      addTearDown(c.dispose);
+      final before = page.toJson();
       c.addPage();
       final next = c.library.activePage!;
-      expect(next.passages.single.continued, isTrue);
-      expect(next.passages.single.sourceOffset, 4);
-      expect(
-        TranscriptionComparison(
-          next.passages.single.original!,
-          sourceOffset: 4,
-        ).remainderFor(''),
-        '을 씁니다.',
-      );
+      expect(next.recordId, page.recordId);
+      expect(next.number, 2);
       expect(next.text, isEmpty);
-      expect(c.library.pages.first.text, text);
+      expect(next.passages, isEmpty);
+      expect(next.guidedOriginalId, isNull);
+      expect(next.originalSlip, isNull);
+      expect(pageOriginals(next, const [first, second]), isEmpty);
+      c.openPage(page.id);
+      expect(c.library.activePage!.toJson(), before);
+      expect(
+        pageOriginals(c.library.activePage!, const [first, second]),
+        isNotEmpty,
+      );
       await c.settled;
-      c.dispose();
-    },
-  );
+      final restored = Library.decode(store.data.encode());
+      expect(restored.pages.last.toJson(), next.toJson());
+      expect(restored.pages.first.toJson(), before);
+    });
+  }
   test('Legacy guide and slip survive attaching another source', () async {
     final initial = fixture().copy(
       pages: [

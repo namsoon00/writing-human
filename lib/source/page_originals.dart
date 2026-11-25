@@ -135,42 +135,6 @@ int passageEnd(List<PagePassage> passages, PagePassage passage, int length) {
       : passages[index + 1].start;
 }
 
-PagePassage? continuedOriginal(
-  WritingPage page,
-  List<RegisteredOriginal> originals,
-  String id,
-) {
-  final links = pageOriginals(page, originals);
-  final caret = page.extent.clamp(0, page.text.length);
-  final active = passageAt(links, caret);
-  final original = active == null ? null : passageOriginal(active);
-  if (active == null || original == null) return null;
-  final written = page.text.substring(active.start, caret);
-  final consumed = active.referenceOnly || !original.canTranscribe
-      ? 0
-      : TranscriptionComparison(
-          original,
-          sourceOffset: active.sourceOffset,
-        ).sourceOffsetFor(written);
-  final offset = active.sourceOffset + consumed;
-  if (!active.referenceOnly &&
-      original.canTranscribe &&
-      offset >= original.text.trimLeft().length) {
-    return null;
-  }
-  return PagePassage(
-    id: id,
-    start: 0,
-    source: original.text,
-    citation: original.citation,
-    original: RegisteredOriginal.validList([original]) ? original : null,
-    attached: true,
-    sourceOffset: offset,
-    continued: true,
-    referenceOnly: active.referenceOnly,
-  );
-}
-
 /// An inserted source must not adopt text that was already after the caret.
 PagePassage resumeAfterInsertion(
   WritingPage page,

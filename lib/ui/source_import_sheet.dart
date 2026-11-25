@@ -112,7 +112,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
       _scan != null;
 
   Future<void> _close() async {
-    if (_savingPhoto || _askingToClose) return;
+    if (_savingPhoto || _askingToClose || _composing) return;
     if (_hasDraft) {
       _askingToClose = true;
       final discard = await showDialog<bool>(
@@ -1266,8 +1266,11 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
         textAlign: TextAlign.center,
       ),
     );
+    PaperNavigationScope.maybeOf(
+      context,
+    )?.name(context, _reviewing ? '원문 확인' : '원문 담기');
     return PopScope(
-      canPop: _allowClose || (!_savingPhoto && !_hasDraft),
+      canPop: !_composing && (_allowClose || (!_savingPhoto && !_hasDraft)),
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _close();
       },
@@ -1282,8 +1285,12 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 12, 0),
-                  child: Row(
+                  child: PaperHeaderRow(
                     children: [
+                      PaperBackButton(
+                        enabled: !_savingPhoto && !_composing,
+                        onPressed: _close,
+                      ),
                       Expanded(
                         child: PaperPanelTitle(
                           _reviewing
@@ -1315,11 +1322,6 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
                       ],
                       if (!_reviewing && !widget.shared && !_extractionOnly)
                         _otherImports(),
-                      IconButton(
-                        tooltip: '닫기',
-                        onPressed: _savingPhoto ? null : _close,
-                        icon: const Icon(CupertinoIcons.xmark, size: 19),
-                      ),
                     ],
                   ),
                 ),

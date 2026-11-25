@@ -1101,10 +1101,7 @@ class LibraryController extends ChangeNotifier {
         : library.records.where((item) => item.id == recordId).firstOrNull;
     if (record == null) return;
     final previous = library.activePage;
-    final continuation =
-        guidedOriginalId == null && previous?.recordId == record.id
-        ? continuedOriginal(previous!, _originalsForPage(previous), _linkId())
-        : null;
+    // Adding a page keeps the writing, but sources belong to their own page.
     final chosen = guidedOriginalId == null || previous == null
         ? null
         : _originalsForPage(
@@ -1126,12 +1123,8 @@ class LibraryController extends ChangeNotifier {
     final page = WritingPage(
       id: _id(),
       recordId: record.id,
-      passages: selectedLink != null
-          ? [selectedLink]
-          : continuation == null
-          ? const []
-          : [continuation],
-      guidedOriginalId: guidedOriginalId ?? continuation?.original?.id,
+      passages: selectedLink == null ? const [] : [selectedLink],
+      guidedOriginalId: guidedOriginalId,
       writtenOn: _today(),
       number:
           [...library.pages, ...library.trashedPages]

@@ -211,7 +211,7 @@ void main() {
       expect(find.byTooltip('앞으로 걷기'), findsNothing);
       expect(find.byKey(const ValueKey('cafe-start-writing')), findsNothing);
       expect(find.byTooltip('공간 안내'), findsOneWidget);
-      await tester.tap(find.byTooltip('닫기'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       expect(find.byType(CafeScreen), findsNothing);
       expect(tester.takeException(), isNull);

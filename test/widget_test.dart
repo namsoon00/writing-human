@@ -110,7 +110,9 @@ void main() {
         await tester.tap(choice);
         await tester.pumpAndSettle();
         expect(find.byType(ToolsScreen), findsOneWidget);
-        await tester.tap(find.byTooltip('닫기'));
+        await tester.tap(
+          find.byKey(const ValueKey('paper-back')).hitTestable(),
+        );
         await tester.pumpAndSettle();
         expect(find.byType(ToolsScreen), findsNothing);
       }
@@ -643,7 +645,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('글꼴'), findsOneWidget);
       expect(find.text('글씨 설정'), findsNothing);
-      await tester.tap(find.byTooltip('닫기'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
       await tester.pumpAndSettle();
@@ -693,7 +695,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.widget<SwitchListTile>(writingSound).value, isTrue);
       for (var screen = 0; screen < 2; screen++) {
-        await tester.tap(find.byTooltip('닫기'));
+        await tester.tap(
+          find.byKey(const ValueKey('paper-back')).hitTestable(),
+        );
         await tester.pumpAndSettle();
       }
       await tester.tap(writingTools);
@@ -716,7 +720,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      await tester.tap(find.byTooltip('닫기'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(editor).controller, same(controller));
       expect(controller.text, '끝까지 남아야 하는 문장');
@@ -829,7 +833,7 @@ void main() {
     expect(find.text('쪽 목록'), findsNothing);
     expect(find.text('기기 동기화'), findsNothing);
     expect(find.text('책에 넣기'), findsNothing);
-    await tester.tap(find.byTooltip('닫기'));
+    await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
     await tester.pumpAndSettle();
     await tester.tap(pageNumber);
     await tester.pumpAndSettle();
@@ -878,7 +882,9 @@ void main() {
     expect(background.coverIndex, isNull);
     expect(background.binding.enabled, isFalse);
     expect(
-      tester.getTopLeft(find.byTooltip('닫기')).dy,
+      tester
+          .getTopLeft(find.byKey(const ValueKey('paper-back')).hitTestable())
+          .dy,
       greaterThanOrEqualTo(47),
     );
     expect(find.text('전체 백업 내보내기'), findsOneWidget);

@@ -10,6 +10,7 @@ import 'package:writing_human/data/writing_title.dart';
 import 'package:writing_human/main.dart';
 import 'package:writing_human/sync/merge.dart';
 import 'package:writing_human/ui/collection_sheet.dart';
+import 'package:writing_human/ui/transcription_reference.dart';
 
 import 'widget_test.dart' show MemoryStore;
 
@@ -40,7 +41,7 @@ const bookFixture = Library(
 
 void main() {
   testWidgets(
-    'A transcription is one contents entry; continuation and rename preserve its pages',
+    'A transcription is one contents entry; a blank next page and rename preserve it',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
@@ -75,14 +76,19 @@ void main() {
         '한 줄을 옮겨 씁니다.\n',
       );
       await tester.pumpAndSettle();
+      final sourcePage = store.data.activePage!.toJson();
       await tester.tap(find.byTooltip('한 쪽 더'));
       await tester.pumpAndSettle();
       expect(store.data.records, hasLength(2));
       expect(store.data.activeRecord!.id, writing.id);
       expect(store.data.activePage!.number, 2);
       final continuation = store.data.activePage!;
-      expect(continuation.passages.single.continued, isTrue);
-      expect(continuation.passages.single.sourceOffset, greaterThan(0));
+      expect(continuation.text, isEmpty);
+      expect(continuation.passages, isEmpty);
+      expect(continuation.guidedOriginalId, isNull);
+      expect(continuation.originalSlip, isNull);
+      expect(find.byType(TranscriptionReference), findsNothing);
+      expect(store.data.pages[1].toJson(), sourcePage);
       await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('shelf-book-book')));

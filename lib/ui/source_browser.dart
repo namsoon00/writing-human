@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../source/source_intake.dart';
+import 'paper_panel.dart';
 import 'source_browser_native.dart'
     if (dart.library.js_interop) 'source_browser_web.dart'
     as browser;
@@ -28,7 +29,7 @@ Future<SourceBrowserChoice?> openSourceBrowser(
   Future<SourcePhoto?> Function()? pickScreenshot,
 }) => Navigator.of(context).push<SourceBrowserChoice>(
   MaterialPageRoute<SourceBrowserChoice>(
-    fullscreenDialog: true,
+    fullscreenDialog: false,
     builder: (_) => _SourceBrowser(
       url: url,
       title: title,
@@ -119,14 +120,12 @@ class _SourceBrowserState extends State<_SourceBrowser> {
 
   @override
   Widget build(BuildContext context) {
+    PaperNavigationScope.maybeOf(context)?.name(context, '원문 브라우저');
     final page = browser.embeddedSourcePage(widget.url);
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          tooltip: '원문 브라우저 닫기',
-          icon: const Icon(CupertinoIcons.xmark),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        leadingWidth: 120,
+        leading: const PaperBackButton(),
         title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
           if (page != null)

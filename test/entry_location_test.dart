@@ -111,7 +111,7 @@ void main() {
       expect(find.text('이 책의 내지'), findsNothing);
       expect(find.text('크림지'), findsNothing);
       expect(find.text('책 꾸미기'), findsNothing);
-      await tester.tap(find.byTooltip('닫기'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
       await tester.pumpAndSettle();
@@ -152,11 +152,11 @@ void main() {
         store.data.books.single.detailOverrides[BookDetailKind.ribbon]?.variant,
         1,
       );
-      await tester.tap(find.byTooltip('뒤로'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       expect(find.byType(BookAppearance), findsOneWidget);
       expect(ribbon, findsOneWidget);
-      await tester.tap(find.byTooltip('뒤로'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       expect(find.byType(BookAppearance), findsNothing);
       await tester.tap(find.text('책 꾸미기'));

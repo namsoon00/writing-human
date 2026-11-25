@@ -418,7 +418,7 @@ void main() {
       await tester.tap(find.text('장서표').last);
       await tester.pumpAndSettle();
       expect(find.byType(PressedFlower), findsOneWidget);
-      await tester.tap(find.byTooltip('닫기'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       expect(find.text('책 꾸미기').hitTestable(), findsOneWidget);
       await openAppearance();
@@ -443,7 +443,7 @@ void main() {
       await tester.tap(cover);
       await tester.pumpAndSettle();
       expect(coverPreview, findsOneWidget);
-      await tester.tap(find.byTooltip('뒤로'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       expect(c.library.books.first.coverIndex, 2);
       expect(c.library.books.first.paperIndex, 3);
@@ -456,7 +456,7 @@ void main() {
       await tester.ensureVisible(defaultPaper);
       await tester.tap(defaultPaper);
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('뒤로'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       expect(c.library.books.first.paperIndex, isNull);
       expect(c.library.books.first.coverIndex, 2);
@@ -524,7 +524,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(c.library.encode(), before);
-      await tester.tap(find.byTooltip('뒤로'));
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
       expect(tester.getTopLeft(flower), beforeEdit);
       expect(tester.takeException(), isNull);

@@ -87,7 +87,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   CafeSeat? _cafeSeat;
   bool _openingCafe = false;
   PaperTool _paperTool = PaperTool.writing;
-  String? _editingPageId;
   ({String pageId, int offset, int request})? _reveal;
   int _revealRequest = 0;
   ({String pageId, int request})? _firstPageView;
@@ -103,9 +102,52 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   bool _readingSource = false;
   bool _sourceBusy = false, _pollingSources = false, _pollAgain = false;
   bool _checkedPhotoRecovery = false;
-  MaterialPageRoute<void>? _activePanel;
+  PageRoute<void>? _activePanel;
+  Route<dynamic>? _sourceRoute;
   Future<void>? _sheetClosed;
   LibraryController? _sheetOwner;
+  PaperNavigation? _navigation;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = PaperNavigationScope.maybeOf(context);
+    if (_navigation != next) {
+      _navigation?.canReturnToWriting = null;
+      _navigation = next;
+      next?.canReturnToWriting = _canReturnToWriting;
+      next?.currentWritingPageId = () => page.id;
+    }
+  }
+
+  Future<bool> _canReturnToWriting() async {
+    final owner = c;
+    if (_accountLocked || !_canLeaveInput()) return false;
+    await owner.settled;
+    return mounted &&
+        c == owner &&
+        !_accountLocked &&
+        !_editorComposing &&
+        !c.composing &&
+        owner.saveError == null;
+  }
+
+  Future<void> _finishWritingNavigation() async {
+    final navigation = _navigation;
+    if (navigation != null) {
+      await navigation.returnToWriting();
+      return;
+    }
+    // Embedded Workspace tests/hosts may not install the app-wide observer.
+    // Only dismiss this owner's known exploration route, respecting its guard.
+    final panel = _activePanel;
+    if (await _canReturnToWriting() &&
+        panel?.isCurrent == true &&
+        _sheetOwner == c) {
+      await panel!.navigator?.maybePop();
+    }
+  }
+
   bool get _accountLocked =>
       (widget.sync?.accountMismatch ?? false) ||
       (widget.sync?.signInRequired == true && c.library.sync.accountId != null);
@@ -391,7 +433,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       c.addListener(_changed);
       widget.sync?.addListener(_changed);
       editorFocus.unfocus();
-      _editingPageId = null;
       _paperTool = PaperTool.writing;
       _cafeSeat = null;
       _originalByPage.clear();
@@ -434,6 +475,10 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    if (_navigation?.canReturnToWriting == _canReturnToWriting) {
+      _navigation?.canReturnToWriting = null;
+      _navigation?.currentWritingPageId = null;
+    }
     WidgetsBinding.instance.removeObserver(this);
     _incomingEvents?.cancel();
     if (widget.sourceIntake == null) _intake.dispose();
@@ -449,7 +494,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   }
 
   void _blur() {
-    _editingPageId = null;
     editorFocus.unfocus();
     c.setEditorState(focused: false, isComposing: _editorComposing);
   }
@@ -482,8 +526,14 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     });
   }, paperTurn: false);
 
-  Future<void> _openPanel(Widget child, {Color color = paper}) {
-    final route = paperPanelRoute<void>((_) => child, color: color);
+  Future<void> _openPanel(
+    Widget child, {
+    Color color = paper,
+    bool sheet = false,
+  }) {
+    final route = sheet
+        ? paperSheetRoute<void>((_) => child)
+        : paperPanelRoute<void>((_) => child, color: color);
     _activePanel = route;
     _sheetClosed = route.completed.then((_) {});
     _sheetOwner = c;
@@ -493,7 +543,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   Future<void> _afterSheet(Future<void> Function() action) async {
     final closed = _sheetClosed;
     final owner = _sheetOwner;
-    Navigator.pop(context);
+    final panel = _activePanel;
+    if (owner != c || panel?.isCurrent != true || _accountLocked) return;
+    panel!.navigator!.pop();
     await closed;
     if (mounted && c == owner && !_accountLocked) await action();
   }
@@ -517,6 +569,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       await WidgetsBinding.instance.endOfFrame;
       if (mounted && c == owner && !_accountLocked && route!.isCurrent) {
         route.navigator!.pop();
+        if (route != _sourceRoute) await _finishWritingNavigation();
       }
     } finally {
       _openingFromPanel = false;
@@ -549,9 +602,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         onNewWriting: (bookId) {
           _openFromCollection(() => _newWriting(bookId));
         },
-        onNewBook: () {
-          _afterSheet(_createBook);
-        },
+        onNewBook: _createBook,
         onContentsPage: (page) =>
             _openFromCollection(() => _openPage(page.id, paperTurn: false)),
         onBookOriginals: (book) => _showOriginals(bookDetails: book),
@@ -560,7 +611,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         onArchiveBook: (book) =>
             _afterSheet(() => _archive(selectedBook: book)),
         onSettings: _settings,
-        onCafe: () => _afterSheet(_cafe),
+        onCafe: _cafe,
       ),
     );
   }
@@ -674,6 +725,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 return false;
               }
               route!.navigator!.pop();
+              await _finishWritingNavigation();
               _focusTranscription(owner, candidate.page.id);
               return true;
             },
@@ -685,8 +737,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               final toolBook = owner.library.books
                   .where((item) => item.id == toolBookId)
                   .firstOrNull;
-              late final MaterialPageRoute<void> toolsRoute;
-              toolsRoute = paperPanelRoute<void>(
+              late final PageRoute<void> toolsRoute;
+              toolsRoute = paperSheetRoute<void>(
                 (_) => ToolsScreen(
                   controller: owner,
                   bookId: toolBookId,
@@ -748,6 +800,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               }
               setState(() => _cafeSeat = seat);
               if (route!.isCurrent) route.navigator!.pop();
+              await _finishWritingNavigation();
               return true;
             },
           ),
@@ -783,6 +836,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       fresh = false;
       userFresh = false;
       c.createBook(values.$1, values.$2);
+      await _finishWritingNavigation();
     }
   }
 
@@ -799,6 +853,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           setState(() => _paperTool = tool);
         },
       ),
+      sheet: true,
     );
   }
 
@@ -1332,10 +1387,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     final selectedPage = page;
     final selectedBook = unbound ? null : bookDetails ?? originalBook ?? book;
     final bookId = selectedBook?.id;
-    // Web accessibility can move focus to the button before its handler.
-    final wasEditing =
-        bookDetails == null &&
-        (editorFocus.hasFocus || _editingPageId == selectedPage.id);
     _blur();
     _readingSource = true;
     List<RegisteredOriginal> originals() => originalsFor(
@@ -1510,8 +1561,10 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         ),
         color: originalPanelColor,
       );
+      _sourceRoute = route;
       final action = await Navigator.of(context).push(route);
       await route.completed;
+      if (_sourceRoute == route) _sourceRoute = null;
       if (savedAfterPanel case final saved?) {
         _readingSource = false;
         if (mounted && c == owner && !_accountLocked) {
@@ -1536,19 +1589,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
           await _startTranscription(action, bookId, selectedPage);
         }
         return;
-      }
-      if (wasEditing &&
-          mounted &&
-          c == owner &&
-          !_accountLocked &&
-          selectedPage.id == page.id) {
-        final editable = editorFocus.context
-            ?.findAncestorStateOfType<EditableTextState>();
-        if (editable == null) {
-          editorFocus.requestFocus();
-        } else {
-          editable.requestKeyboard();
-        }
       }
     } finally {
       _readingSource = false;
@@ -1581,140 +1621,212 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     );
   }
 
-  Future<void> _bind() async {
-    _blur();
-    final selectedRecord = record;
-    userFresh = fresh;
-    final route = paperPanelRoute<String>(
-      (context) => PaperPanel(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            children: [
-              PaperPanelHeader(book == null ? '책에 넣기' : '다른 책으로 옮기기'),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.only(bottom: 20),
-                  children: [
-                    for (final b in c.library.books.where(
-                      (b) => b.id != book?.id,
-                    ))
-                      ListTile(
-                        leading: BookCover(
-                          title: '',
-                          width: 29,
-                          variant: c.coverIndexFor(b),
-                          details: c.detailsFor(b),
-                        ),
-                        title: Text(b.title),
-                        onTap: () => Navigator.pop(context, b.id),
-                      ),
-                    ListTile(
-                      leading: const Icon(CupertinoIcons.plus, size: 18),
-                      title: const Text('새 책 만들기'),
-                      onTap: () => Navigator.pop(context, 'new'),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-    String? id = await Navigator.of(context).push(route);
-    await route.completed;
-    if (id == null || !mounted) return;
-    if (id == 'new') {
-      final values = await showDialog<(String, String)>(
-        context: context,
-        builder: (_) => const NewBookDialog(),
-      );
-      if (values == null || !mounted) return;
-      id = c.addBook(values.$1, values.$2).id;
-    }
-    if (selectedRecord != null) {
-      c.bindRecord(selectedRecord.id, id);
-    } else {
-      setState(() => draftBookId = id);
-    }
-  }
-
   Future<void> _pages() async {
     if (_pageNavigationBusy || !_canLeaveInput()) return;
     _blur();
     final owner = c;
-    late final MaterialPageRoute<void> route;
-    route = paperPanelRoute<void>(
-      (_) => AnimatedBuilder(
-        animation: owner,
-        builder: (_, _) {
-          final pages = _volumePages;
-          final pageCounts = <String, int>{};
-          for (final page in owner.library.pages) {
-            pageCounts.update(
-              page.recordId,
-              (count) => count + 1,
-              ifAbsent: () => 1,
-            );
+    final selectedRecord = record;
+    bool choosingBook = false, binding = false;
+    late final PageRoute<void> route;
+    late StateSetter updatePanel;
+    Future<void> chooseBook(String id) async {
+      if (binding ||
+          !mounted ||
+          c != owner ||
+          _accountLocked ||
+          !route.isCurrent) {
+        return;
+      }
+      updatePanel(() => binding = true);
+      try {
+        String target = id;
+        if (target == 'new') {
+          final values = await showDialog<(String, String)>(
+            context: context,
+            builder: (_) => const NewBookDialog(),
+          );
+          if (values == null ||
+              !mounted ||
+              c != owner ||
+              _accountLocked ||
+              !route.isCurrent) {
+            return;
           }
-          final style = _paperStyle(book);
-          return PaperPanel(
-            color: panelPaperColor(paperColors[style.paperIndex]),
-            child: PagesSheet(
-              pages: pages,
-              currentId: page.id,
-              style: style,
-              coverTitle: book?.title,
-              coverVariant: _coverVariant,
-              onChoose: (choice) => _openPageFromPanel(route, owner, () async {
-                if (choice.append) {
-                  await _appendPage(paperTurn: false);
-                } else if (choice.cover) {
-                  await _openCover(back: choice.backCover, paperTurn: false);
-                } else if (choice.pageId case final id?) {
-                  await _openPage(id, paperTurn: false);
-                }
-              }),
-              onReadAloud: () {
-                if (route.isCurrent != true ||
-                    c != owner ||
-                    _accountLocked ||
-                    !_canLeaveInput()) {
-                  return;
-                }
-                showReadAloud(
-                  context,
-                  library: owner.library,
-                  book: book,
-                  page: page,
-                  color: panelPaperColor(paperColors[style.paperIndex]),
+          target = owner.addBook(values.$1, values.$2).id;
+        }
+        if (selectedRecord != null) {
+          owner.bindRecord(selectedRecord.id, target);
+        } else {
+          setState(() => draftBookId = target);
+        }
+        await owner.settled;
+        if (mounted &&
+            c == owner &&
+            !_accountLocked &&
+            owner.saveError == null &&
+            route.isCurrent) {
+          route.navigator!.pop();
+          await _finishWritingNavigation();
+        }
+      } finally {
+        if (mounted && route.isActive) updatePanel(() => binding = false);
+      }
+    }
+
+    route = paperSheetRoute<void>(
+      (_) => StatefulBuilder(
+        builder: (context, setPanelState) {
+          updatePanel = setPanelState;
+          return AnimatedBuilder(
+            animation: owner,
+            builder: (_, _) {
+              final pages = _volumePages;
+              final pageCounts = <String, int>{};
+              for (final page in owner.library.pages) {
+                pageCounts.update(
+                  page.recordId,
+                  (count) => count + 1,
+                  ifAbsent: () => 1,
                 );
-              },
-              onBind: () async {
-                if (route.isCurrent != true || c != owner || _accountLocked) {
-                  return;
-                }
-                route.navigator!.pop();
-                await route.completed;
-                if (mounted && c == owner && !_accountLocked) await _bind();
-              },
-              canTrash: (page) => (pageCounts[page.recordId] ?? 0) > 1,
-              onTrash: (target) async {
-                if (!mounted ||
-                    c != owner ||
-                    _accountLocked ||
-                    !_canLeaveInput()) {
-                  return false;
-                }
-                final previous = page.id;
-                final saved = await owner.trashPage(target);
-                if (saved && mounted && c == owner && page.id != previous) {
-                  setState(() => _directPageChange++);
-                }
-                return saved;
-              },
-            ),
+              }
+              final style = _paperStyle(book);
+              return PopScope(
+                canPop: !choosingBook && !binding && owner.saveError == null,
+                onPopInvokedWithResult: (didPop, _) {
+                  if (!didPop &&
+                      choosingBook &&
+                      !binding &&
+                      owner.saveError == null) {
+                    updatePanel(() => choosingBook = false);
+                  }
+                },
+                child: PaperPanel(
+                  color: panelPaperColor(paperColors[style.paperIndex]),
+                  child: choosingBook
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Column(
+                            children: [
+                              PaperPanelHeader(
+                                book == null ? '책에 넣기' : '다른 책으로 옮기기',
+                                backLabel: '쪽 목록',
+                                allowWritingReturn: false,
+                                canClose: !binding && owner.saveError == null,
+                                onBack: () =>
+                                    updatePanel(() => choosingBook = false),
+                              ),
+                              Expanded(
+                                child: ListView(
+                                  children: [
+                                    for (final target
+                                        in owner.library.books.where(
+                                          (b) => b.id != book?.id,
+                                        ))
+                                      ListTile(
+                                        title: Text(target.title),
+                                        leading: BookCover(
+                                          title: '',
+                                          width: 29,
+                                          variant: owner.coverIndexFor(target),
+                                          details: owner.detailsFor(target),
+                                        ),
+                                        enabled:
+                                            !binding && owner.saveError == null,
+                                        onTap: () => chooseBook(target.id),
+                                      ),
+                                    ListTile(
+                                      title: const Text('새 책 만들기'),
+                                      leading: const Icon(CupertinoIcons.plus),
+                                      enabled:
+                                          !binding && owner.saveError == null,
+                                      onTap: () => chooseBook('new'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (owner.saveError != null)
+                                PaperSettingsSaveNotice(
+                                  onRetry: () async {
+                                    owner.retrySave();
+                                    await owner.settled;
+                                    if (mounted &&
+                                        c == owner &&
+                                        !_accountLocked &&
+                                        owner.saveError == null &&
+                                        route.isCurrent) {
+                                      route.navigator!.pop();
+                                    }
+                                  },
+                                ),
+                            ],
+                          ),
+                        )
+                      : PagesSheet(
+                          pages: pages,
+                          currentId: page.id,
+                          style: style,
+                          coverTitle: book?.title,
+                          coverVariant: _coverVariant,
+                          onChoose: (choice) =>
+                              _openPageFromPanel(route, owner, () async {
+                                if (choice.append) {
+                                  await _appendPage(paperTurn: false);
+                                } else if (choice.cover) {
+                                  await _openCover(
+                                    back: choice.backCover,
+                                    paperTurn: false,
+                                  );
+                                } else if (choice.pageId case final id?) {
+                                  await _openPage(id, paperTurn: false);
+                                }
+                              }),
+                          onReadAloud: () {
+                            if (route.isCurrent != true ||
+                                c != owner ||
+                                _accountLocked ||
+                                !_canLeaveInput()) {
+                              return;
+                            }
+                            showReadAloud(
+                              context,
+                              library: owner.library,
+                              book: book,
+                              page: page,
+                              color: panelPaperColor(
+                                paperColors[style.paperIndex],
+                              ),
+                            );
+                          },
+                          onBind: () {
+                            if (route.isCurrent &&
+                                c == owner &&
+                                !_accountLocked) {
+                              updatePanel(() => choosingBook = true);
+                            }
+                          },
+                          canTrash: (page) =>
+                              (pageCounts[page.recordId] ?? 0) > 1,
+                          onTrash: (target) async {
+                            if (!mounted ||
+                                c != owner ||
+                                _accountLocked ||
+                                !_canLeaveInput()) {
+                              return false;
+                            }
+                            final previous = page.id;
+                            final saved = await owner.trashPage(target);
+                            if (saved &&
+                                mounted &&
+                                c == owner &&
+                                page.id != previous) {
+                              setState(() => _directPageChange++);
+                            }
+                            return saved;
+                          },
+                        ),
+                ),
+              );
+            },
           );
         },
       ),
@@ -2241,7 +2353,6 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         onHighlight: c.addPencilMark,
                         paperTool: tool,
                         onEditingState: (focused, composing) {
-                          if (focused) _editingPageId = currentPage.id;
                           _editorComposing = composing;
                           c.setEditorState(
                             focused: focused,

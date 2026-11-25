@@ -4208,3 +4208,23 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 - 생성 시안과 native 메시 캡처, 실제 GPU 웹 렌더를 구분한다. 본문·조합/커서·글 저장 형식,
   계정/접근 범위·번들 글꼴 자산·기존 비공개 Sites project_id를 변경하지 않았다.
   iPhone Safari와 실제 iOS/Android 앱의 터치·GPU 프레임 속도/메모리 한계는 별도 미검증이다.
+
+- 첫 원격 실행45606388989는375개 통과·2개 실패였다. 없앤 거리 출입문을 기대하던
+  안내/복귀 검사를 실제 부모로의 뒤로가기로 고쳤고, 영향 검사2개와 Chrome 안내 검사1개가
+  로컬에서 통과했다. 재실행 [45608343824](https://github.com/namsoon00/writing-human/actions/runs/45608343824)는
+  전체 native377개·음성 Chrome6개·통합 Chrome103개와 빌드·게시가 모두 통과했다.
+  이 원격 Chrome에서는 실제 WebGL 셰이더/깊이/잡은 물건/알파 컷아웃 검사도 통과했다.
+  앞서 기록한 GPU 미지원 건너뛰기1개는 로컬 macOS headless Chrome의 결과다.
+- 최종 게시 소스는 `b4f287d833ac6c80ca516c2f2c4363bdac7800e7`다. 공개 웹의 JS·GPU JS·
+  글꼴·목재/나무 이미지·음성 모듈6개는 최종 로컬 빌드와 같다. HTML의 GPU/로더 버전과
+  로더의 JS 버전도 실제 응답 해시와 같다. main.dart.js SHA-256은
+  `795af9fca16e7f24dfda26f7d36a3ea1db780e801f3684cdf242568297f8d6ef`다.
+- 최종 공개390×844와 기본1280×720에서도 카페 진입·끌기·베란다로 뜰 진입·
+  명상 자리 도착과 관찰 회전을 확인했다. WebGL2 활성 상태와 콘솔 경고/오류0개를 확인했다.
+  공개 회전 배치 준비17.3ms/GL 명령 제출0.2ms, 마지막 정원 관찰21.1ms/0.0ms는
+  앞서 명시한 부분 작업 시간이며 실제 휴대폰 FPS나 GPU 완료 시간을 뜻하지 않는다.
+  실제 공개 캡처는 `output/cafe-refinement-20261125/public-garden-desktop.jpg`와
+  `public-veranda-390.jpg` 등에 보관했다. 모바일 검수 크기를 복원하고 임시 로컬 탭을 닫았다.
+- [최종 검사·공개 자산·실제 조작 근거](evidence/20261125/cafe-refinement/verification.json)를
+  보관했다. 공유 루트의 사용자 변경과 인덱스는 유지했고, 원격 반영과 로컬 근거 보존 뒤
+  이번 작업의 전용 서버·worktree·빌드만 정리한다.

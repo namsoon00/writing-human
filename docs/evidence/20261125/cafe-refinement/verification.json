@@ -1,0 +1,126 @@
+{
+  "source": "b4f287d833ac6c80ca516c2f2c4363bdac7800e7",
+  "workflow_run": 45608343824,
+  "local_native_tests": 23,
+  "local_chrome_tests": 6,
+  "local_chrome_skipped": 1,
+  "skip_reason": "Flutter headless Chrome disables WebGL2; release browser checked separately.",
+  "root_focused_tests": 5,
+  "local_release": {
+    "viewport": "390x844",
+    "backend": "webgl2",
+    "actions": [
+      "enter cafe",
+      "shared table sit",
+      "pick up cup",
+      "sip",
+      "put down",
+      "walk through veranda",
+      "start/stop soil trail",
+      "return to cafe"
+    ],
+    "console_warnings_or_errors": 0
+  },
+  "unverified": [
+    "physical iPhone Safari touch and frame rate",
+    "physical iOS and Android renderer performance",
+    "GPU completion time and end-to-end latency"
+  ],
+  "deployment": "success",
+  "failed_first_run": {
+    "run": 45606388989,
+    "passed": 375,
+    "failed": 2,
+    "reason": "Removed street exit still expected by context-hint and cafe-return tests",
+    "repair": "Check no street target and return through real parent; local two affected tests passed"
+  },
+  "parent_context_chrome_tests": 1,
+  "ci": {
+    "native": 377,
+    "narration_chrome": 6,
+    "integration_chrome": 103,
+    "webgl_shader_depth_cutout_test": "passed on CI Chrome",
+    "run": 45608343824
+  },
+  "public_assets": {
+    "checked_at_utc": "2026-11-25T12:13:38Z",
+    "url": "https://namsoon00.github.io/writing-human/",
+    "source_commit": "b4f287d833ac6c80ca516c2f2c4363bdac7800e7",
+    "assets": [
+      {
+        "path": "main.dart.js",
+        "sha256": "795af9fca16e7f24dfda26f7d36a3ea1db780e801f3684cdf242568297f8d6ef",
+        "public_sha256": "795af9fca16e7f24dfda26f7d36a3ea1db780e801f3684cdf242568297f8d6ef",
+        "match": true
+      },
+      {
+        "path": "cafe_gpu.js",
+        "sha256": "dc310ee76717de796325cca956aad3e4adf49bd9b08020c0f2df327bacfa7615",
+        "public_sha256": "dc310ee76717de796325cca956aad3e4adf49bd9b08020c0f2df327bacfa7615",
+        "match": true
+      },
+      {
+        "path": "assets/assets/fonts/WritingHumanDevelopment-Regular.ttf",
+        "sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+        "public_sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+        "match": true
+      },
+      {
+        "path": "assets/assets/images/cafe-watercolor-oak.webp",
+        "sha256": "09e57d12c41a0c46e7ab91f03b873161daecf23fa79be9f9d1fabbad6c41c63b",
+        "public_sha256": "09e57d12c41a0c46e7ab91f03b873161daecf23fa79be9f9d1fabbad6c41c63b",
+        "match": true
+      },
+      {
+        "path": "assets/assets/images/cafe-watercolor-tree.webp",
+        "sha256": "bdc15a907213570558e2fb1887899c1143968a406ac05da95297ce1836319086",
+        "public_sha256": "bdc15a907213570558e2fb1887899c1143968a406ac05da95297ce1836319086",
+        "match": true
+      },
+      {
+        "path": "assets/assets/audio/dsp/voice_worker.mjs",
+        "sha256": "ef288c3f1b9f9db5b8dc1f2c1e66c34c3a210496ebdb8d80f576c4b602100391",
+        "public_sha256": "ef288c3f1b9f9db5b8dc1f2c1e66c34c3a210496ebdb8d80f576c4b602100391",
+        "match": true
+      }
+    ],
+    "loader_hash_matches_own_bytes": true,
+    "app_version_matches_public_js": true,
+    "loader_matches_except_generated_service_worker_version": true,
+    "gpu_version_matches_public_js": true,
+    "all_match": true
+  },
+  "public_browser": {
+    "url": "https://namsoon00.github.io/writing-human/?v=b4f287d",
+    "canvas": [
+      {
+        "cafeBuildMs": "21.10",
+        "cafeFrame": "588",
+        "cafeRenderer": "webgl2",
+        "cafeSubmitMs": "0.00"
+      }
+    ],
+    "console": []
+  },
+  "public_ui": {
+    "mobile_viewport": "390x844",
+    "desktop_viewport": "1280x720",
+    "actions": [
+      "enter cafe",
+      "drag view",
+      "walk through open veranda",
+      "reach meditation seat",
+      "orbit to cafe and planted yard"
+    ],
+    "screenshots": [
+      "public-cafe-390.jpg",
+      "public-veranda-390.jpg",
+      "public-meditation-390.jpg",
+      "public-cafe-desktop.jpg",
+      "public-garden-desktop.jpg"
+    ],
+    "viewport_restored": true,
+    "temporary_local_tab_closed": true
+  },
+  "performance_scope": "DOM timings measure batch preparation and GL command submission only, not total frame or GPU completion time."
+}

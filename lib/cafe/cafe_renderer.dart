@@ -54,6 +54,8 @@ class CafeRenderer extends CustomPainter {
     this.flowers,
     this.framedArt = const [],
     this.use,
+    this.useCamera,
+    this.avatar = const [],
     this.letterAtlas,
     this.time = 0,
     this.lightTime = 0,
@@ -64,6 +66,8 @@ class CafeRenderer extends CustomPainter {
   });
   final ui.Image? letterAtlas;
   final CafeUseFrame? use;
+  final CafeCamera? useCamera;
+  final List<CafeFace> avatar;
   final CafeWorld world;
   final CafeCamera camera;
   final ui.Image? wood,
@@ -104,7 +108,7 @@ class CafeRenderer extends CustomPainter {
     }
     final view = camera.toView(point);
     if (view.z < near) return null;
-    final f = focalLength(size);
+    final f = focalLength(size) * camera.lens;
     return Offset(
       size.width / 2 + view.x * f / view.z,
       size.height / 2 - view.y * f / view.z,
@@ -112,7 +116,7 @@ class CafeRenderer extends CustomPainter {
   }
 
   static CafePoint ray(Offset point, CafeCamera camera, Size size) {
-    final f = focalLength(size);
+    final f = focalLength(size) * camera.lens;
     return (camera.forward +
             camera.right * ((point.dx - size.width / 2) / f) +
             camera.up * ((size.height / 2 - point.dy) / f))
@@ -127,6 +131,7 @@ class CafeRenderer extends CustomPainter {
     Size size,
     CafeWorld world, {
     CafeUseFrame? use,
+    CafeCamera? useCamera,
   }) {
     if (!camera.isFinite ||
         size.isEmpty ||
@@ -138,7 +143,11 @@ class CafeRenderer extends CustomPainter {
     var closest = double.infinity;
     var foreground = false;
     CafeHit? result;
-    for (final face in world.presentedFaces(camera, use)) {
+    for (final face in world.presentedFaces(
+      useCamera ?? camera,
+      use,
+      thirdPerson: useCamera != null,
+    )) {
       // Floor light/shadow decals do not obstruct the physical surface.
       if (face.color.a < .99 && face.surface != CafeSurface.glass) continue;
       for (var i = 1; i + 1 < face.points.length; i++) {
@@ -204,6 +213,12 @@ class CafeRenderer extends CustomPainter {
   }
 
   ui.Image? _texture(CafeFace face) {
+    if (face.objectId == 'avatar.a.male') {
+      return face.part?.startsWith('linen') == true ||
+              face.part?.startsWith('trousers') == true
+          ? woven
+          : null;
+    }
     if (face.part == 'ritual.print') return letterAtlas;
     if (face.sign) return sign;
     return switch (face.surface) {
@@ -402,7 +417,12 @@ class CafeRenderer extends CustomPainter {
     }
 
     for (final face in [
-      ...world.presentedFaces(camera, use),
+      ...world.presentedFaces(
+        useCamera ?? camera,
+        use,
+        thirdPerson: useCamera != null,
+      ),
+      ...avatar,
       ...world.weatherFaces(camera, time),
       ...world.plantFaces(camera),
       ...world.lightFaces(camera),
@@ -433,7 +453,7 @@ class CafeRenderer extends CustomPainter {
           if (vertices.every((v) => v.point.z < near)) continue;
           if (vertices.any((v) => v.point.z < near)) vertices = _clip(vertices);
           if (vertices.length >= 3) {
-            final f = focalLength(size);
+            final f = focalLength(size) * camera.lens;
             portal.addPolygon(
               vertices
                   .map(
@@ -492,7 +512,7 @@ class CafeRenderer extends CustomPainter {
         continue;
       }
       // Do not partition the thousands of surfaces outside the current view.
-      final focal = focalLength(size);
+      final focal = focalLength(size) * camera.lens;
       var left = double.infinity, top = double.infinity;
       var rightEdge = double.negativeInfinity, bottom = double.negativeInfinity;
       for (final v in vertices) {
@@ -516,7 +536,7 @@ class CafeRenderer extends CustomPainter {
     }
     hasPortal = hasPortal && portal.getBounds().overlaps(Offset.zero & size);
     final orderedFaces = _depthOrder(faces);
-    final f = focalLength(size);
+    final f = focalLength(size) * camera.lens;
     final paint = Paint()
       ..isAntiAlias = true
       ..filterQuality = FilterQuality.medium;
@@ -695,6 +715,8 @@ class CafeRenderer extends CustomPainter {
   bool shouldRepaint(CafeRenderer oldDelegate) =>
       oldDelegate.letterAtlas != letterAtlas ||
       oldDelegate.use != use ||
+      oldDelegate.useCamera != useCamera ||
+      oldDelegate.avatar != avatar ||
       oldDelegate.allowPortal != allowPortal ||
       oldDelegate.time != time ||
       oldDelegate.lightTime != lightTime ||

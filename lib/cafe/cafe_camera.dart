@@ -22,15 +22,25 @@ class CafePoint {
 
 @immutable
 class CafeCamera {
-  const CafeCamera({required this.position, this.yaw = 0, this.pitch = -.06});
+  const CafeCamera({
+    required this.position,
+    this.yaw = 0,
+    this.pitch = -.06,
+    this.lens = 1,
+  });
   static const entrance = CafeCamera(
     position: CafePoint(.15, 1.62, 3.60),
     yaw: -.10,
     pitch: -.08,
   );
   final CafePoint position;
-  final double yaw, pitch;
-  bool get isFinite => position.isFinite && yaw.isFinite && pitch.isFinite;
+  final double yaw, pitch, lens;
+  bool get isFinite =>
+      position.isFinite &&
+      yaw.isFinite &&
+      pitch.isFinite &&
+      lens.isFinite &&
+      lens > 0;
   // Yaw zero faces into the cafe along -Z; pitch zero is a level human gaze.
   CafePoint get forward => CafePoint(
     math.sin(yaw) * math.cos(pitch),
@@ -48,6 +58,7 @@ class CafeCamera {
       ? this
       : CafeCamera(
           position: position,
+          lens: lens,
           yaw: (yaw - dx + math.pi) % (math.pi * 2) - math.pi,
           pitch: (pitch + dy).clamp(-.72, .65),
         );
@@ -61,6 +72,7 @@ class CafeCamera {
     final p = position + delta;
     return CafeCamera(
       position: CafePoint(p.x, position.y, p.z),
+      lens: lens,
       yaw: yaw,
       pitch: pitch,
     );
@@ -111,6 +123,7 @@ class CafeCamera {
     final turn = (b.yaw - a.yaw + math.pi) % (2 * math.pi) - math.pi;
     return CafeCamera(
       position: CafePoint.lerp(a.position, b.position, t),
+      lens: a.lens + (b.lens - a.lens) * t,
       yaw: a.yaw + turn * t,
       pitch: a.pitch + (b.pitch - a.pitch) * t,
     );

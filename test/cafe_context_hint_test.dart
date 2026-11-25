@@ -56,7 +56,13 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(labels, findsNothing);
+      // The observer now sees the entrance over the person's shoulder.
+      expect(
+        find.byKey(const ValueKey('cafe-object-recommendations')),
+        findsNothing,
+      );
+      expect(find.byKey(const ValueKey('cafe-object-exit')), findsOneWidget);
+      expect(labels, findsOneWidget);
       await tester.tap(find.byTooltip('공간 안내'));
       await tester.pumpAndSettle();
       for (final target in c.world.targets) {

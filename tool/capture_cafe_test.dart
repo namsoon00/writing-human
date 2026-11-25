@@ -102,7 +102,7 @@ void main() {
     await tester.pumpAndSettle();
     await capture('entrance-wide');
     await tester.drag(
-      find.byKey(const ValueKey('cafe-first-person-view')),
+      find.byKey(const ValueKey('cafe-third-person-view')),
       const Offset(-180, -35),
     );
     await tester.pumpAndSettle();

@@ -1,6 +1,6 @@
 part of 'cafe_world.dart';
 
-/// Temporary first-person gestures. These never enter the saved room payload.
+/// Temporary object gestures. These never enter the saved room payload.
 enum CafeUseKind {
   hold,
   pickUp,
@@ -29,6 +29,64 @@ class CafeUseFrame {
   final double progress;
   final bool held, open;
 }
+
+/// Shared prop/hand anchor, independent of the observer camera.
+CafePoint cafeHeldPoint(
+  CafeCamera camera,
+  CafeItemType type,
+  CafeUseFrame use, {
+  bool thirdPerson = false,
+}) {
+  final sip = use.kind == CafeUseKind.sip
+      ? math.sin(use.progress.clamp(0, 1) * math.pi)
+      : 0.0;
+  final cup = type == CafeItemType.cup, pen = type == CafeItemType.pencil;
+  if (thirdPerson) {
+    final forward = CafePoint(math.sin(camera.yaw), 0, -math.cos(camera.yaw));
+    return camera.position +
+        forward * (cup ? .35 - sip * .20 : .37) +
+        camera.right *
+            (cup
+                ? .13 - sip * .10
+                : pen
+                ? .13
+                : 0) +
+        CafePoint(
+          0,
+          cup
+              ? -.52 + sip * .36
+              : type == CafeItemType.volume
+              ? -.43
+              : -.59,
+          0,
+        );
+  }
+  return camera.position +
+      camera.forward *
+          (cup
+              ? .48 - sip * .17
+              : pen
+              ? .43
+              : .64) +
+      camera.right *
+          (cup
+              ? .13 - sip * .10
+              : pen
+              ? .13
+              : 0) +
+      camera.up *
+          (cup
+              ? -.05 + sip * .11
+              : type == CafeItemType.volume
+              ? -.30
+              : -.07);
+}
+
+CafePoint cafePourPoint(CafeCamera camera, CafePoint target, double progress) =>
+    target +
+    camera.right * (-.16) +
+    const CafePoint(0, .23, 0) +
+    camera.up * ((1 - math.sin(progress * math.pi)) * .28);
 
 CafePoint _useRotate(CafePoint p, double yaw, double pitch, [double roll = 0]) {
   final x = p.x * math.cos(roll) - p.y * math.sin(roll);
@@ -75,8 +133,9 @@ extension CafeUseGeometry on CafeWorld {
   /// Picking consumes this exact list too, including the lifted cup and handle.
   Iterable<CafeFace> presentedFaces(
     CafeCamera camera,
-    CafeUseFrame? use,
-  ) sync* {
+    CafeUseFrame? use, {
+    bool thirdPerson = false,
+  }) sync* {
     final obj = objects[use?.id];
     if (use == null || obj == null) {
       yield* faces;
@@ -95,28 +154,11 @@ extension CafeUseGeometry on CafeWorld {
     final volume = obj.type == CafeItemType.volume;
     final pen = obj.type == CafeItemType.pencil;
     final sip = use.kind == CafeUseKind.sip ? wave : 0.0;
-    final held =
-        camera.position +
-        camera.forward *
-            (cup
-                ? .48 - sip * .17
-                : pen
-                ? .43
-                : .64) +
-        camera.right *
-            (cup
-                ? .13 - sip * .1
-                : pen
-                ? .13
-                : 0) +
-        camera.up *
-            (cup
-                ? -.05 + sip * .11
-                : volume
-                ? -.30
-                : -.07);
+    final held = cafeHeldPoint(camera, obj.type, use, thirdPerson: thirdPerson);
     final yaw = camera.yaw - (volume ? math.pi / 2 : 0);
-    final pitch = volume ? 0.0 : camera.pitch + (pen ? .9 : .32 + sip * .72);
+    final pitch = volume
+        ? 0.0
+        : (thirdPerson ? 0.0 : camera.pitch) + (pen ? .9 : .32 + sip * .72);
     final roll = pen ? 1.9 : 0.0;
     final rotation = (yaw - obj.yaw + math.pi) % (2 * math.pi) - math.pi;
     CafePoint n(CafePoint d) =>
@@ -159,7 +201,12 @@ extension CafeUseGeometry on CafeWorld {
       if (openedVolume || foldingNote) continue;
       // Contact shadows belong on their support, never in mid-air.
       if (f.color.a < .99 && lift > 0) continue;
-      yield _useFace(f, at, n, layer: lift > .001 ? 5 : null);
+      yield _useFace(
+        f,
+        at,
+        n,
+        layer: lift > .001 ? (thirdPerson ? 2 : 5) : null,
+      );
     }
     if (foldingNote) {
       final openness = use.kind == CafeUseKind.open ? p : 1 - p;
@@ -179,16 +226,18 @@ extension CafeUseGeometry on CafeWorld {
           ? 1 - p
           : 1.0;
       final book = _useBook(use.id);
-      final anchor = camera.position + camera.forward * .66 + camera.up * -.14;
+      final anchor = thirdPerson
+          ? held
+          : camera.position + camera.forward * .66 + camera.up * -.14;
       CafePoint rotate(CafePoint q) =>
-          _useRotate(q, camera.yaw, camera.pitch + 1.12);
+          _useRotate(q, camera.yaw, (thirdPerson ? 0 : camera.pitch) + 1.12);
       for (final f in _foldBook(book, open)) {
         yield _useFace(
           f,
           (q) => anchor + rotate(q),
           rotate,
           id: use.id,
-          layer: 5,
+          layer: thirdPerson ? 2 : 5,
         );
       }
     }
@@ -200,7 +249,7 @@ extension CafeUseGeometry on CafeWorld {
         camera,
         destination,
         p,
-        foreground: use.kind == CafeUseKind.refill,
+        foreground: !thirdPerson && use.kind == CafeUseKind.refill,
       );
     }
   }
@@ -303,12 +352,8 @@ extension CafeUseGeometry on CafeWorld {
     double p, {
     bool foreground = false,
   }) {
-    final wave = math.sin(p * math.pi), start = faces.length;
-    final position =
-        target +
-        camera.right * (-.16) +
-        const CafePoint(0, .23, 0) +
-        camera.up * ((1 - wave) * .28);
+    final start = faces.length;
+    final position = cafePourPoint(camera, target, p);
     _turned(position.x, position.z, [
       (position.y, .04),
       (position.y + .03, .07),

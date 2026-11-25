@@ -742,6 +742,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
         yaw: camera.yaw,
         pitch: camera.pitch,
       ),
+      face: false,
     );
     return _saveRoom();
   }

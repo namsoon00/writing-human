@@ -17,7 +17,7 @@ import '../cafe/cafe_world.dart';
 import '../cafe/cafe_walk.dart';
 import 'paper.dart';
 
-/// A real, perspective-projected room seen through an eye-height camera.
+/// The same room geometry, observed behind the person with a collision-aware camera.
 class CafeScene extends StatefulWidget {
   const CafeScene({
     super.key,
@@ -623,7 +623,7 @@ class _CafeSceneState extends State<CafeScene>
     child: LayoutBuilder(
       builder: (context, constraints) {
         final size = constraints.biggest, c = widget.controller;
-        final camera = c.camera;
+        final camera = c.viewCamera;
         final markers = <Widget>[];
         if (widget.interactive &&
             !widget.editing &&
@@ -647,7 +647,7 @@ class _CafeSceneState extends State<CafeScene>
                 ? c.world.targetDesk(c.seat!)
                 : c.world.targetAnchor(target);
             final point = CafeRenderer.project(anchor, camera, size);
-            final distance = (anchor - camera.position).length;
+            final distance = (anchor - c.camera.position).length;
             if (point == null ||
                 point.dx < 35 ||
                 point.dx > size.width - 35 ||
@@ -675,10 +675,21 @@ class _CafeSceneState extends State<CafeScene>
             final target = nearest, point = nearestPoint;
             final writing = target.seat != null && c.seat == target.seat;
             final label = writing ? '노트 펼치기' : target.label;
-            final width = math.min(172.0, size.width - 32);
+            final width = math.min(152.0, size.width - 32);
+            final body = CafeRenderer.project(
+              CafePoint(c.camera.position.x, .95, c.camera.position.z),
+              camera,
+              size,
+            );
+            final markerX = body != null && (point.dx - body.dx).abs() < 75
+                ? (body.dx + 112).clamp(
+                    width / 2 + 8,
+                    size.width - width / 2 - 8,
+                  )
+                : point.dx;
             markers.add(
               Positioned(
-                left: (point.dx - width / 2).clamp(8, size.width - width - 8),
+                left: (markerX - width / 2).clamp(8, size.width - width - 8),
                 top: (point.dy + (writing ? 46 : 18)).clamp(
                   130.0,
                   size.height - 62,
@@ -721,9 +732,9 @@ class _CafeSceneState extends State<CafeScene>
           fit: StackFit.expand,
           children: [
             Semantics(
-              label: '1인칭 카페. 끌어 둘러보고, 바닥을 눌러 걷고, 책상과 서가를 눌러 이용해요.',
+              label: '3인칭 카페. 끌어 둘러보고, 바닥을 눌러 걷고, 책상과 서가를 눌러 이용해요.',
               child: GestureDetector(
-                key: const ValueKey('cafe-first-person-view'),
+                key: const ValueKey('cafe-third-person-view'),
                 behavior: HitTestBehavior.opaque,
                 onTapDown: widget.interactive
                     ? (_) => focus.requestFocus()
@@ -738,6 +749,7 @@ class _CafeSceneState extends State<CafeScene>
                           size,
                           c.world,
                           use: c.useFrame,
+                          useCamera: c.actorCamera,
                         );
                         if (widget.editing) {
                           final selected = c.world.objects[widget.placingId];
@@ -793,6 +805,7 @@ class _CafeSceneState extends State<CafeScene>
                           size,
                           c.world,
                           use: c.useFrame,
+                          useCamera: c.actorCamera,
                         );
                         if (hit?.objectId != null) {
                           widget.onObjectSelected?.call(hit!.objectId!);
@@ -811,6 +824,8 @@ class _CafeSceneState extends State<CafeScene>
                       letterAtlas: letterAtlas,
                       world: c.world,
                       use: c.useFrame,
+                      useCamera: c.actorCamera,
+                      avatar: c.avatar.faces,
                       camera: camera,
                       wood: wood,
                       sign: sign,

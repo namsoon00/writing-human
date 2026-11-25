@@ -36,15 +36,15 @@ void main() {
         CafeCamera(position: cup + const CafePoint(0, .65, .7), pitch: -.70),
       );
       await tester.pumpAndSettle();
-      final scene = find.byKey(const ValueKey('cafe-first-person-view'));
+      final scene = find.byKey(const ValueKey('cafe-third-person-view'));
       final size = tester.getSize(scene);
       final point = CafeRenderer.project(
         cup + const CafePoint(0, .055, 0),
-        c.camera,
+        c.viewCamera,
         size,
       )!;
       expect(
-        CafeRenderer.pick(point, c.camera, size, c.world)?.objectId,
+        CafeRenderer.pick(point, c.viewCamera, size, c.world)?.objectId,
         'shared.cup',
       );
       await tester.tapAt(tester.getTopLeft(scene) + point);

@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 
 import 'cafe_camera.dart';
+import 'cafe_avatar.dart';
+import 'cafe_chase_camera.dart';
 import 'cafe_visit.dart';
 import 'cafe_world.dart';
 import 'cafe_space.dart';
@@ -12,10 +14,12 @@ class CafeViewController extends ChangeNotifier {
     : camera = seat == null ? CafeCamera.entrance : CafeCamera.seated(seat),
       inCourtyard = seat == CafeSeat.garden,
       _cafe = CafeWorld(space: space) {
+    bodyYaw = camera.yaw;
     teaFilled = space.gardenTea;
     if (seat != null) {
       camera = world.seatedCamera(seat!, chairId: activeChairId);
     }
+    bodyYaw = camera.yaw;
   }
   String? heldId, contextId;
   bool heldBookOpen = false;
@@ -74,6 +78,7 @@ class CafeViewController extends ChangeNotifier {
         _dropToward!,
         progress.clamp(0, 1),
       );
+      bodyYaw = camera.yaw;
     }
     _use = CafeUseFrame(
       frame.id,
@@ -135,6 +140,46 @@ class CafeViewController extends ChangeNotifier {
       _travelDone?.future ?? Future.value(!travelling);
   Future<void> roomReady = Future<void>.value();
   double walkSpeed = 0;
+  double bodyYaw = 0, walkPhase = 0;
+  CafeAvatar? _avatar;
+  CafeCamera get actorCamera => CafeCamera(
+    position:
+        camera.position +
+        CafePoint(0, .12 * ((1.62 - camera.position.y) / .44).clamp(0, 1), 0),
+    yaw: bodyYaw,
+    pitch: camera.pitch,
+  );
+  CafeCamera get viewCamera => cafeChaseCamera(camera, world);
+  CafeAvatar get avatar {
+    final eye = actorCamera;
+    final previous = _avatar;
+    final frame = useFrame;
+    if (previous != null &&
+        previous.eye.position.x == eye.position.x &&
+        previous.eye.position.y == eye.position.y &&
+        previous.eye.position.z == eye.position.z &&
+        previous.eye.pitch == eye.pitch &&
+        previous.yaw == eye.yaw &&
+        previous.object == world.objects[frame?.id] &&
+        previous.phase == walkPhase &&
+        previous.stride == (walkSpeed / .65).clamp(0.0, 1.0) &&
+        previous.use?.id == frame?.id &&
+        previous.use?.kind == frame?.kind &&
+        previous.use?.progress == frame?.progress &&
+        previous.use?.held == frame?.held &&
+        previous.use?.open == frame?.open) {
+      return previous;
+    }
+    return _avatar = CafeAvatar(
+      eye: eye,
+      yaw: eye.yaw,
+      phase: walkPhase,
+      stride: (walkSpeed / .65).clamp(0.0, 1.0),
+      use: frame,
+      object: world.objects[frame?.id],
+    );
+  }
+
   CafeSeat? _pendingSeat;
   String? activeChairId, _pendingChairId;
   CafeTarget? _departure;
@@ -146,6 +191,13 @@ class CafeViewController extends ChangeNotifier {
     if (!value.isFinite || !dt.isFinite || dt <= 0) return;
     final delta = value.position - camera.position;
     camera = value;
+    final horizontal = CafePoint(delta.x, 0, delta.z).length;
+    if (walking && horizontal > .00001) {
+      final targetYaw = math.atan2(delta.x, -delta.z);
+      final turn = (targetYaw - bodyYaw + math.pi) % (2 * math.pi) - math.pi;
+      bodyYaw += turn * (dt * 12).clamp(0, 1);
+      walkPhase += horizontal * 2 * math.pi / .78;
+    }
     walkSpeed = walking ? CafePoint(delta.x, 0, delta.z).length / dt : 0;
     notifyListeners();
   }
@@ -167,9 +219,11 @@ class CafeViewController extends ChangeNotifier {
     teaFilled = next.gardenTea;
     if (seat != null) {
       camera = world.seatedCamera(seat!, chairId: activeChairId);
+      bodyYaw = camera.yaw;
     }
     if (!world.canStand(camera.position) && seat == null && !resting) {
       camera = inCourtyard ? CafeCamera.courtyardEntrance : CafeCamera.entrance;
+      bodyYaw = camera.yaw;
     }
     notifyListeners();
     return null;
@@ -341,6 +395,12 @@ class CafeViewController extends ChangeNotifier {
       );
       seat = null;
     }
+    if (seat != null ||
+        arrival == CafeTarget.courtyard ||
+        arrival == CafeTarget.cafeReturn ||
+        arrival == CafeTarget.bench) {
+      bodyYaw = camera.yaw;
+    }
     _departure = null;
     resting = arrival == CafeTarget.bench;
     arrival = null;
@@ -379,9 +439,10 @@ class CafeViewController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateCamera(CafeCamera value) {
+  void updateCamera(CafeCamera value, {bool face = true}) {
     if (!value.isFinite) return;
     camera = value;
+    if (face) bodyYaw = value.yaw;
     notifyListeners();
   }
 

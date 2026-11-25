@@ -143,6 +143,7 @@ class CafeWorld {
   }
 
   CafeCamera linkedCamera(CafeCamera camera) => CafeCamera(
+    lens: camera.lens,
     position: courtyard
         ? CafePoint(
             camera.position.z - 7.4,

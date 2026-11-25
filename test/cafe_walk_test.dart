@@ -74,7 +74,7 @@ void main() {
     expect(c.walkTo(const CafePoint(2.3, 0, 2)), isTrue);
   });
   testWidgets(
-    'Only first-person controls remain and clicking or holding W walks without writing',
+    'Third-person direct controls and clicking or holding W walks without writing',
     (tester) async {
       var writes = 0;
       await tester.pumpWidget(
@@ -102,12 +102,12 @@ void main() {
       expect(find.byTooltip('3인칭으로 보기'), findsNothing);
       expect(find.byTooltip('1인칭으로 보기'), findsNothing);
       expect(writes, 0);
-      // Rendering and floor picking both use the person's eye-height camera.
-      final surface = find.byKey(const ValueKey('cafe-first-person-view'));
+      // Rendering and floor picking both use the same following camera.
+      final surface = find.byKey(const ValueKey('cafe-third-person-view'));
       final rect = tester.getRect(surface);
       final destination = CafeRenderer.project(
         const CafePoint(2.8, 0, -.2),
-        c.camera,
+        c.viewCamera,
         rect.size,
       )!;
       expect((Offset.zero & rect.size).contains(destination), isTrue);

@@ -222,21 +222,34 @@ void main() {
     'Clicking empty floor walks there; dragging only turns the view',
     (tester) async {
       await _enter(tester);
-      final scene = find.byKey(const ValueKey('cafe-first-person-view'));
+      final scene = find.byKey(const ValueKey('cafe-third-person-view'));
       final c = tester.widget<CafeScene>(find.byType(CafeScene)).controller;
       final point = CafeRenderer.project(
-        const CafePoint(1.6, 0, 1.2),
-        c.camera,
+        const CafePoint(2.3, 0, 1.5),
+        c.viewCamera,
         tester.getSize(scene),
       )!;
       expect((Offset.zero & tester.getSize(scene)).contains(point), isTrue);
+      final hit = CafeRenderer.pick(
+        point,
+        c.viewCamera,
+        tester.getSize(scene),
+        c.world,
+      )!;
+      expect(hit.floor, isTrue);
       await tester.tapAt(tester.getTopLeft(scene) + point);
-      await tester.pumpAndSettle();
-      expect(c.camera.position.x, closeTo(1.6, .02));
-      expect(c.camera.position.z, closeTo(1.2, .02));
+      await tester.pump();
+      for (var i = 0; i < 120 && c.travelling; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(c.travelling, isFalse);
+      expect(c.camera.position.x, closeTo(hit.position.x, 1e-6));
+      expect(c.camera.position.z, closeTo(hit.position.z, 1e-6));
       final origin = c.camera.position, yaw = c.camera.yaw;
       await tester.dragFrom(const Offset(380, 250), const Offset(-70, 30));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      expect(c.travelling, isFalse);
+      await tester.pump(const Duration(milliseconds: 300));
       expect(c.camera.position, same(origin));
       expect(c.camera.yaw, isNot(yaw));
       expect(c.seat, isNull);
@@ -247,11 +260,11 @@ void main() {
     'A real table click sits, and a second notebook click opens writing',
     (tester) async {
       await _enter(tester);
-      final scene = find.byKey(const ValueKey('cafe-first-person-view'));
+      final scene = find.byKey(const ValueKey('cafe-third-person-view'));
       final c = tester.widget<CafeScene>(find.byType(CafeScene)).controller;
       final local = CafeRenderer.project(
         CafeWorld.anchor(CafeTarget.shared),
-        c.camera,
+        c.viewCamera,
         tester.getSize(scene),
       )!;
       await tester.tapAt(tester.getTopLeft(scene) + local);
@@ -271,7 +284,7 @@ void main() {
       // Hit the actual notebook surface away from its small attached label.
       final book = CafeRenderer.project(
         const CafePoint(.22, .81, .65),
-        c.camera,
+        c.viewCamera,
         tester.getSize(scene),
       )!;
       await tester.tapAt(tester.getTopLeft(scene) + book);

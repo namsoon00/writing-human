@@ -10,6 +10,7 @@ import 'cafe_visit.dart';
 import 'cafe_atmosphere.dart';
 
 part 'cafe_depth_order.dart';
+part 'cafe_scene_mesh.dart';
 
 class _Vertex {
   const _Vertex(this.point, this.u, this.v, this.color);
@@ -25,7 +26,9 @@ class _Vertex {
 }
 
 class _ProjectedFace {
-  const _ProjectedFace(this.face, this.vertices, this.depth);
+  _ProjectedFace(this.face, this.vertices, this.depth);
+  List<Offset>? screen;
+  Rect? screenBounds;
   final CafeFace face;
   final List<_Vertex> vertices;
   final double depth;
@@ -34,6 +37,27 @@ class _ProjectedFace {
 class _Illumination {
   const _Illumination(this.ambient, this.lamp);
   final CafePoint ambient, lamp;
+}
+
+/// Optional CPU measurements; no record or room state is changed.
+class CafeRenderTiming {
+  const CafeRenderTiming({
+    required this.courtyard,
+    required this.projectMicros,
+    required this.orderMicros,
+    required this.submitMicros,
+    required this.linkedMicros,
+    required this.visibleFaces,
+    required this.orderedFaces,
+    required this.cacheHit,
+  });
+  final bool courtyard, cacheHit;
+  final int projectMicros,
+      orderMicros,
+      submitMicros,
+      linkedMicros,
+      visibleFaces,
+      orderedFaces;
 }
 
 /// Perspective projection of 3D mesh surfaces into Flutter's Canvas renderer.
@@ -63,6 +87,9 @@ class CafeRenderer extends CustomPainter {
     this.bellAt,
     this.teaAt,
     this.allowPortal = true,
+    this.onTiming,
+    this.cacheGeometry = true,
+    this.viewportClip,
   });
   final ui.Image? letterAtlas;
   final CafeUseFrame? use;
@@ -82,6 +109,10 @@ class CafeRenderer extends CustomPainter {
       flowers;
   final List<ui.Image?> framedArt;
   final bool allowPortal;
+  final bool cacheGeometry;
+  final Rect? viewportClip;
+  final void Function(CafeRenderTiming)? onTiming;
+  static final _meshes = Expando<_SceneMesh>();
   final double time;
   final double lightTime;
   late final _lightFrame = CafeLightFrame(
@@ -383,11 +414,50 @@ class CafeRenderer extends CustomPainter {
     );
   }
 
+  List<_Vertex> _attributes(CafeFace face, ui.Image? image, double specular) {
+    final vertices = <_Vertex>[];
+    for (var i = 0; i < face.points.length; i++) {
+      final p = face.points[i];
+      var uv = materialUv(face, p);
+      var u = uv.dx * (image?.width ?? 1), v = uv.dy * (image?.height ?? 1);
+      if (image != null && face.textureCoordinates != null) {
+        u = face.textureCoordinates![i].dx * (image.width - 1);
+        v = face.textureCoordinates![i].dy * (image.height - 1);
+        if (face.artIndex != null &&
+            (framedArt.length <= face.artIndex! ||
+                framedArt[face.artIndex!] == null)) {
+          v =
+              (face.textureCoordinates![i].dy + face.artIndex!) /
+              3 *
+              (image.height - 1);
+        }
+      } else if ((face.garden || face.sign) && image != null) {
+        final a = face.points[0],
+            edgeU = face.points[1] - a,
+            edgeV = face.points[3] - a,
+            delta = p - a;
+        u = delta.dot(edgeU) / edgeU.dot(edgeU) * (image.width - 1);
+        v = (1 - delta.dot(edgeV) / edgeV.dot(edgeV)) * (image.height - 1);
+        if (face.sign) {
+          v = (face.signRow + v / (image.height - 1)) * image.height / 5;
+        }
+      }
+      vertices.add(_Vertex(p, u, v, _light(face, i, image != null, specular)));
+    }
+    return vertices;
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty || !camera.isFinite) return;
+    final watch = onTiming == null ? null : (Stopwatch()..start());
+    var linkedMicros = 0;
+    final clip = (viewportClip ?? (Offset.zero & size)).intersect(
+      Offset.zero & size,
+    );
+    if (clip.isEmpty) return;
     canvas.save();
-    canvas.clipRect(Offset.zero & size);
+    canvas.clipRect(clip);
     canvas.drawColor(
       world.courtyard
           ? Color.lerp(
@@ -416,23 +486,86 @@ class CafeRenderer extends CustomPainter {
       );
     }
 
-    for (final face in [
-      ...world.presentedFaces(
-        useCamera ?? camera,
-        use,
-        thirdPerson: useCamera != null,
-      ),
-      ...avatar,
-      ...world.weatherFaces(camera, time),
-      ...world.plantFaces(camera),
-      ...world.lightFaces(camera),
-      ...world.animatedFaces(
-        time,
-        teaFilled: teaFilled && use?.id != 'garden.cup',
-        bellAt: bellAt,
-        teaAt: teaAt,
-      ),
-    ]) {
+    final viewKey = (
+      camera.position.x,
+      camera.position.y,
+      camera.position.z,
+      camera.yaw,
+      camera.pitch,
+      camera.lens,
+      size,
+      clip,
+    );
+    final orderKey = (
+      viewKey,
+      avatar,
+      use?.id,
+      use?.kind,
+      use?.progress,
+      use?.held,
+      use?.open,
+      useCamera?.position.x,
+      useCamera?.position.y,
+      useCamera?.position.z,
+      useCamera?.yaw,
+      useCamera?.pitch,
+      world.courtyard || world.space.home.mood == 2 ? time : 0.0,
+      teaFilled,
+      bellAt,
+      teaAt,
+    );
+    var mesh = _meshes[world];
+    final cacheHit = cacheGeometry && mesh != null && mesh.matches(world.faces);
+    if (cacheGeometry && !cacheHit) {
+      mesh = _SceneMesh(world.faces);
+      _meshes[world] = mesh;
+    }
+    final orderedHit = cacheGeometry && mesh!.orderKey == orderKey;
+    final changing = orderedHit
+        ? const <CafeFace>[]
+        : <CafeFace>[
+            ...avatar,
+            ...world.weatherFaces(camera, time),
+            ...world.plantFaces(camera),
+            ...world.lightFaces(camera),
+            ...world.animatedFaces(
+              time,
+              teaFilled: teaFilled && use?.id != 'garden.cup',
+              bellAt: bellAt,
+              teaAt: teaAt,
+            ),
+          ];
+    Iterable<CafeFace> geometry;
+    if (cacheGeometry) {
+      if (use != null && !orderedHit) {
+        changing.addAll(
+          world
+              .presentedFaces(
+                useCamera ?? camera,
+                use,
+                thirdPerson: useCamera != null,
+              )
+              .where((f) => f.objectId == use!.id),
+        );
+      }
+      if (!orderedHit) {
+        mesh!.order = mesh.ordered(camera, clip, size, changing, use?.id);
+        mesh.orderKey = orderKey;
+      }
+      geometry = mesh.order!;
+    } else {
+      geometry = [
+        ...world.presentedFaces(
+          useCamera ?? camera,
+          use,
+          thirdPerson: useCamera != null,
+        ),
+        ...changing,
+      ];
+    }
+    final attributes = <CafeFace, List<_Vertex>>{};
+    for (final polygon in geometry) {
+      final face = polygon is _SceneFace ? polygon.triangle.face : polygon;
       if ((face.surface == CafeSurface.tree && tree == null) ||
           (face.surface == CafeSurface.flowers && flowers == null)) {
         continue;
@@ -472,37 +605,114 @@ class CafeRenderer extends CustomPainter {
       }
       final image = _texture(face);
       final specular = _specular(face);
-      var vertices = <_Vertex>[];
-      for (var i = 0; i < face.points.length; i++) {
-        final p = face.points[i];
-        var uv = materialUv(face, p);
-        var u = uv.dx * (image?.width ?? 1), v = uv.dy * (image?.height ?? 1);
-        if (image != null && face.textureCoordinates != null) {
-          u = face.textureCoordinates![i].dx * (image.width - 1);
-          v = face.textureCoordinates![i].dy * (image.height - 1);
-          if (face.artIndex != null &&
-              (framedArt.length <= face.artIndex! ||
-                  framedArt[face.artIndex!] == null)) {
-            v =
-                (face.textureCoordinates![i].dy + face.artIndex!) /
-                3 *
-                (image.height - 1);
-          }
-        } else if ((face.garden || face.sign) && image != null) {
-          final a = face.points[0],
-              edgeU = face.points[1] - a,
-              edgeV = face.points[3] - a,
-              delta = p - a;
-          u = delta.dot(edgeU) / edgeU.dot(edgeU) * (image.width - 1);
-          v = (1 - delta.dot(edgeV) / edgeV.dot(edgeV)) * (image.height - 1);
-          if (face.sign) {
-            v = (face.signRow + v / (image.height - 1)) * image.height / 5;
-          }
-        }
-        vertices.add(
-          _Vertex(toView(p), u, v, _light(face, i, image != null, specular)),
-        );
+      final key = (
+        identityHashCode(world),
+        _lightFrame.seconds,
+        polygon is _SceneFace &&
+                polygon.movingShadow &&
+                !world.courtyard &&
+                world.space.home.mood != 2 &&
+                world.space.atmosphere.flow
+            ? time
+            : 0.0,
+        image?.width,
+        image?.height,
+        face.materialTint,
+        face.artIndex != null &&
+            (framedArt.length <= face.artIndex! ||
+                framedArt[face.artIndex!] == null),
+        specular,
+      );
+      final projectionKey = (key, viewKey);
+      if (polygon is _SceneFace && polygon.projectionKey == projectionKey) {
+        final projected = polygon.projection;
+        if (projected != null) faces.add(projected);
+        continue;
       }
+      if (polygon is _SceneFace) {
+        polygon.projectionKey = projectionKey;
+        polygon.projection = null;
+      }
+      List<_Vertex> prepared;
+      if (polygon is _SceneFace && polygon.attributeKey == key) {
+        prepared = polygon.prepared!;
+      } else {
+        final source = attributes.putIfAbsent(
+          face,
+          () => _attributes(face, image, specular),
+        );
+        if (polygon is _SceneFace) {
+          prepared = <_Vertex>[];
+          for (var i = 0; i < polygon.points.length; i++) {
+            final (bi, ci, wb, wc) = polygon.blends[i];
+            final a = source[0], b = source[bi], c = source[ci];
+            final wa = 1 - wb - wc;
+            double component(double x, double y, double z) =>
+                (x * wa + y * wb + z * wc).clamp(0.0, 1.0);
+            prepared.add(
+              _Vertex(
+                polygon.points[i],
+                a.u * wa + b.u * wb + c.u * wc,
+                a.v * wa + b.v * wb + c.v * wc,
+                Color.from(
+                  alpha: component(a.color.a, b.color.a, c.color.a),
+                  red: component(a.color.r, b.color.r, c.color.r),
+                  green: component(a.color.g, b.color.g, c.color.g),
+                  blue: component(a.color.b, b.color.b, c.color.b),
+                ),
+              ),
+            );
+          }
+          polygon.attributeKey = key;
+          polygon.prepared = prepared;
+        } else {
+          prepared = source;
+        }
+      }
+      if (cacheGeometry) {
+        // The BSP has already ordered these world polygons. Project directly
+        // into screen coordinates; retain UV/colour samples without allocating
+        // a second set of view-space points and vertices on every drag frame.
+        final screen = <Offset>[];
+        var left = double.infinity, top = double.infinity;
+        var rightEdge = double.negativeInfinity, bottom = rightEdge;
+        var crossesNear = false;
+        final focal = focalLength(size) * camera.lens;
+        for (final vertex in prepared) {
+          final p = vertex.point;
+          final x = p.x - eye.x, y = p.y - eye.y, z = p.z - eye.z;
+          final depth = x * forward.x + y * forward.y + z * forward.z;
+          if (depth < near || !depth.isFinite) {
+            crossesNear = true;
+            break;
+          }
+          final sx =
+              size.width / 2 +
+              (x * right.x + y * right.y + z * right.z) * focal / depth;
+          final sy =
+              size.height / 2 -
+              (x * up.x + y * up.y + z * up.z) * focal / depth;
+          screen.add(Offset(sx, sy));
+          left = math.min(left, sx);
+          rightEdge = math.max(rightEdge, sx);
+          top = math.min(top, sy);
+          bottom = math.max(bottom, sy);
+        }
+        if (!crossesNear) {
+          final bounds = Rect.fromLTRB(left, top, rightEdge, bottom);
+          if (bounds.overlaps(clip)) {
+            final projected = _ProjectedFace(face, prepared, 0)
+              ..screen = screen
+              ..screenBounds = bounds;
+            if (polygon is _SceneFace) polygon.projection = projected;
+            faces.add(projected);
+          }
+          continue;
+        }
+      }
+      var vertices = prepared
+          .map((v) => _Vertex(toView(v.point), v.u, v.v, v.color))
+          .toList();
       if (vertices.every((p) => p.point.z < near)) continue;
       if (vertices.any((p) => p.point.z < near)) vertices = _clip(vertices);
       if (vertices.length < 3 ||
@@ -532,10 +742,14 @@ class CafeRenderer extends CustomPainter {
       final depth =
           vertices.fold<double>(0, (sum, v) => sum + v.point.z) /
           vertices.length;
-      faces.add(_ProjectedFace(face, vertices, depth));
+      final projected = _ProjectedFace(face, vertices, depth);
+      if (polygon is _SceneFace) polygon.projection = projected;
+      faces.add(projected);
     }
     hasPortal = hasPortal && portal.getBounds().overlaps(Offset.zero & size);
-    final orderedFaces = _depthOrder(faces);
+    final projectMicros = watch?.elapsedMicroseconds ?? 0;
+    final orderedFaces = cacheGeometry ? faces : _depthOrder(faces);
+    final orderMicros = (watch?.elapsedMicroseconds ?? 0) - projectMicros;
     final f = focalLength(size) * camera.lens;
     final paint = Paint()
       ..isAntiAlias = true
@@ -643,8 +857,12 @@ class CafeRenderer extends CustomPainter {
       flush();
       canvas.save();
       canvas.clipPath(portal, doAntiAlias: false);
+      final linkedStart = watch?.elapsedMicroseconds ?? 0;
       CafeRenderer(
         world: world.linkedWorld,
+        onTiming: onTiming,
+        cacheGeometry: cacheGeometry,
+        viewportClip: cacheGeometry ? portal.getBounds().intersect(clip) : null,
         letterAtlas: letterAtlas,
         camera: world.linkedCamera(camera),
         wood: wood,
@@ -665,25 +883,28 @@ class CafeRenderer extends CustomPainter {
         teaAt: teaAt,
         allowPortal: false,
       ).paint(canvas, size);
+      linkedMicros += (watch?.elapsedMicroseconds ?? 0) - linkedStart;
       canvas.restore();
     }
 
     for (final face in orderedFaces) {
       if (face.face.layer >= 1) paintLinked();
-      final projected = <Offset>[];
-      for (final v in face.vertices) {
-        projected.add(
+      final projected = face.screen ??= [
+        for (final v in face.vertices)
           Offset(
             size.width / 2 + v.point.x * f / v.point.z,
             size.height / 2 - v.point.y * f / v.point.z,
           ),
-        );
+      ];
+      var bounds = face.screenBounds;
+      if (bounds == null) {
+        bounds = Rect.fromPoints(projected.first, projected.first);
+        for (final p in projected.skip(1)) {
+          bounds = bounds!.expandToInclude(Rect.fromPoints(p, p));
+        }
+        face.screenBounds = bounds;
       }
-      var bounds = Rect.fromPoints(projected.first, projected.first);
-      for (final p in projected.skip(1)) {
-        bounds = bounds.expandToInclude(Rect.fromPoints(p, p));
-      }
-      if (!bounds.overlaps(Offset.zero & size)) continue;
+      if (!bounds!.overlaps(clip)) continue;
       final shader = shaders[_texture(face.face)];
       final aa = face.face.layer >= 2;
       if (shader != batchShader || aa != batchAA || positions.length > 12000) {
@@ -709,6 +930,24 @@ class CafeRenderer extends CustomPainter {
       shader.dispose();
     }
     canvas.restore();
+    if (watch != null) {
+      onTiming!(
+        CafeRenderTiming(
+          courtyard: world.courtyard,
+          projectMicros: projectMicros,
+          orderMicros: orderMicros,
+          submitMicros:
+              watch.elapsedMicroseconds -
+              projectMicros -
+              orderMicros -
+              linkedMicros,
+          linkedMicros: linkedMicros,
+          visibleFaces: faces.length,
+          orderedFaces: orderedFaces.length,
+          cacheHit: cacheHit,
+        ),
+      );
+    }
   }
 
   @override
@@ -718,6 +957,8 @@ class CafeRenderer extends CustomPainter {
       oldDelegate.useCamera != useCamera ||
       oldDelegate.avatar != avatar ||
       oldDelegate.allowPortal != allowPortal ||
+      oldDelegate.cacheGeometry != cacheGeometry ||
+      oldDelegate.viewportClip != viewportClip ||
       oldDelegate.time != time ||
       oldDelegate.lightTime != lightTime ||
       oldDelegate.teaFilled != teaFilled ||

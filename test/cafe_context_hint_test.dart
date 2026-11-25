@@ -48,6 +48,19 @@ void main() {
         findsOneWidget,
       );
       expect(labels, findsOneWidget);
+      // Gaze dragging gives the scene priority; release restores the label.
+      final gesture = await tester.startGesture(
+        tester.getTopLeft(
+              find.byKey(const ValueKey('cafe-third-person-view')),
+            ) +
+            const Offset(50, 300),
+      );
+      await gesture.moveBy(const Offset(20, 0));
+      await tester.pump();
+      expect(labels, findsNothing);
+      await gesture.up();
+      await tester.pump();
+      expect(labels, findsOneWidget);
       c.updateCamera(
         const CafeCamera(
           position: CafePoint(0, 1.62, 3.6),

@@ -34,7 +34,11 @@ class CafeScene extends StatefulWidget {
     this.onWalk,
     this.onPutDown,
     this.moment,
+    this.onRenderTiming,
+    this.cacheGeometry = true,
   });
+  final void Function(CafeRenderTiming)? onRenderTiming;
+  final bool cacheGeometry;
   final DateTime? moment;
   final CafeViewController controller;
   final bool interactive;
@@ -122,6 +126,16 @@ class _CafeSceneState extends State<CafeScene>
   Timer? lightClock;
   late int lightMood = widget.controller.space.home.mood;
   bool appActive = true;
+  bool looking = false;
+  Object? markerKey;
+  CafeTarget? markerTarget;
+  Offset? markerPoint;
+  void _looking(bool value) {
+    if (looking == value) return;
+    setState(() => looking = value);
+    _syncCalm();
+  }
+
   bool calmReady = true;
   Timer? calmResume;
   @override
@@ -151,9 +165,19 @@ class _CafeSceneState extends State<CafeScene>
         TickerMode.valuesOf(context).enabled;
     final animate =
         visible &&
+        !looking &&
+        !widget.controller.travelling &&
+        !widget.controller.using &&
+        heldKeys.isEmpty &&
         (widget.controller.inCourtyard ||
             widget.controller.camera.forward.x < -.5);
-    if (visible && widget.controller.space.atmosphere.flow && !widget.editing) {
+    if (visible &&
+        !looking &&
+        !widget.controller.travelling &&
+        !widget.controller.using &&
+        heldKeys.isEmpty &&
+        widget.controller.space.atmosphere.flow &&
+        !widget.editing) {
       lightClock ??= Timer.periodic(const Duration(seconds: 2), (_) {
         if (mounted) setState(() => lightTime += 2);
       });
@@ -618,6 +642,7 @@ class _CafeSceneState extends State<CafeScene>
                 heldKeys.add(key);
                 if (!keyboard.isActive) keyboard.start();
               }
+              _syncCalm();
               return;
             }
             if (event is! KeyDownEvent && event is! KeyRepeatEvent) return;
@@ -639,6 +664,7 @@ class _CafeSceneState extends State<CafeScene>
         final camera = c.viewCamera;
         final markers = <Widget>[];
         if (widget.interactive &&
+            !looking &&
             !widget.editing &&
             !c.travelling &&
             !c.using &&
@@ -648,42 +674,49 @@ class _CafeSceneState extends State<CafeScene>
                     c.world.objects[c.contextId]?.type ==
                         CafeItemType.chair)) &&
             !c.resting) {
-          CafeTarget? nearest;
-          Offset? nearestPoint;
-          var best = double.infinity;
-          for (final target in c.world.targets) {
-            if (c.seat != null && target.seat != c.seat && !c.inCourtyard) {
-              continue;
+          final nextMarkerKey = (camera, c.world, size, c.seat);
+          if (markerKey != nextMarkerKey) {
+            CafeTarget? nearest;
+            Offset? nearestPoint;
+            var best = double.infinity;
+            for (final target in c.world.targets) {
+              if (c.seat != null && target.seat != c.seat && !c.inCourtyard) {
+                continue;
+              }
+              final writing = target.seat == c.seat && c.seat != null;
+              final anchor = writing
+                  ? c.world.targetDesk(c.seat!)
+                  : c.world.targetAnchor(target);
+              final point = CafeRenderer.project(anchor, camera, size);
+              final distance = (anchor - c.camera.position).length;
+              if (point == null ||
+                  point.dx < 35 ||
+                  point.dx > size.width - 35 ||
+                  point.dy < 130 ||
+                  point.dy > size.height - 56 ||
+                  (!writing &&
+                      (distance > 3.5 ||
+                          (point.dx / size.width - .5).abs() > .32))) {
+                continue;
+              }
+              if (CafeRenderer.pick(point, camera, size, c.world)?.target !=
+                  target) {
+                continue;
+              }
+              final score = writing
+                  ? -1.0
+                  : (point.dx / size.width - .5).abs() * 3 + distance / 10;
+              if (score < best) {
+                best = score;
+                nearest = target;
+                nearestPoint = point;
+              }
             }
-            final writing = target.seat == c.seat && c.seat != null;
-            final anchor = writing
-                ? c.world.targetDesk(c.seat!)
-                : c.world.targetAnchor(target);
-            final point = CafeRenderer.project(anchor, camera, size);
-            final distance = (anchor - c.camera.position).length;
-            if (point == null ||
-                point.dx < 35 ||
-                point.dx > size.width - 35 ||
-                point.dy < 130 ||
-                point.dy > size.height - 56 ||
-                (!writing &&
-                    (distance > 3.5 ||
-                        (point.dx / size.width - .5).abs() > .32))) {
-              continue;
-            }
-            if (CafeRenderer.pick(point, camera, size, c.world)?.target !=
-                target) {
-              continue;
-            }
-            final score = writing
-                ? -1.0
-                : (point.dx / size.width - .5).abs() * 3 + distance / 10;
-            if (score < best) {
-              best = score;
-              nearest = target;
-              nearestPoint = point;
-            }
+            markerKey = nextMarkerKey;
+            markerTarget = nearest;
+            markerPoint = nearestPoint;
           }
+          final nearest = markerTarget, nearestPoint = markerPoint;
           if (nearest != null && nearestPoint != null) {
             final target = nearest, point = nearestPoint;
             final writing = target.seat != null && c.seat == target.seat;
@@ -828,6 +861,9 @@ class _CafeSceneState extends State<CafeScene>
                         }
                       }
                     : null,
+                onPanStart: widget.interactive ? (_) => _looking(true) : null,
+                onPanEnd: widget.interactive ? (_) => _looking(false) : null,
+                onPanCancel: widget.interactive ? () => _looking(false) : null,
                 onPanUpdate: widget.interactive
                     ? (details) => c.look(
                         details.delta.dx * .004,
@@ -837,6 +873,8 @@ class _CafeSceneState extends State<CafeScene>
                 child: RepaintBoundary(
                   child: CustomPaint(
                     painter: CafeRenderer(
+                      onTiming: widget.onRenderTiming,
+                      cacheGeometry: widget.cacheGeometry,
                       letterAtlas: letterAtlas,
                       world: c.world,
                       use: c.useFrame,

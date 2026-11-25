@@ -149,7 +149,18 @@ class CafeViewController extends ChangeNotifier {
     yaw: bodyYaw,
     pitch: camera.pitch,
   );
-  CafeCamera get viewCamera => cafeChaseCamera(camera, world);
+  CafeCamera? _viewSource, _view;
+  CafeWorld? _viewWorld;
+  CafeCamera get viewCamera {
+    final room = world;
+    if (!identical(_viewSource, camera) || !identical(_viewWorld, room)) {
+      _viewSource = camera;
+      _viewWorld = room;
+      _view = cafeChaseCamera(camera, room);
+    }
+    return _view!;
+  }
+
   CafeAvatar get avatar {
     final eye = actorCamera;
     final previous = _avatar;

@@ -4,7 +4,8 @@ import 'cafe_world.dart';
 
 /// A trapezoidal speed profile with quiet acceleration and a bounded top speed.
 class CafeWalkTiming {
-  CafeWalkTiming(this.distance) : seconds = distance / 1.2 + .32;
+  CafeWalkTiming(this.distance, {double speed = 1.2})
+    : seconds = distance / speed + .32;
   final double distance, seconds;
   double at(double progress) {
     final t = progress.clamp(0.0, 1.0) * seconds;

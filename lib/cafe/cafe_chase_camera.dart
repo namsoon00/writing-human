@@ -9,17 +9,12 @@ CafeCamera cafeChaseCamera(CafeCamera actor, CafeWorld world) {
   final shoulder = actor.right * (.18 + seated * .24);
   final rawFocus = CafePoint(
     actor.position.x + shoulder.x,
-    .98 + seated * .04,
+    actor.position.y < 1 ? .64 : .98 + seated * .04,
     actor.position.z + shoulder.z,
   );
   var yaw = actor.yaw;
   var pitch = (actor.pitch * .45 - .16 - seated * .17).clamp(-.62, .10);
-  final bounds = Rect.fromLTRB(
-    -(world.courtyard ? 4.4 : CafeWorld.halfWidth) + .14,
-    -(world.courtyard ? 2.8 : CafeWorld.halfDepth) + .14,
-    (world.courtyard ? 4.4 : CafeWorld.halfWidth) - .14,
-    (world.courtyard ? 2.8 : CafeWorld.halfDepth) - .14,
-  );
+  final bounds = world.walkBounds.inflate(.11);
   final focus = CafePoint(
     rawFocus.x.clamp(bounds.left + .02, bounds.right - .02),
     rawFocus.y,

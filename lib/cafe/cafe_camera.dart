@@ -88,6 +88,16 @@ class CafeCamera {
     yaw: -1.45,
     pitch: -.30,
   );
+  static const meditation = CafeCamera(
+    position: CafePoint(2.8, .78, -8.5),
+    yaw: -.45,
+    pitch: -.08,
+  );
+  static const trailRest = CafeCamera(
+    position: CafePoint(-11.5, 1.18, -8.55),
+    yaw: 2.45,
+    pitch: -.15,
+  );
   static CafeCamera seated(CafeSeat seat) => switch (seat) {
     CafeSeat.window => const CafeCamera(
       position: CafePoint(-3.00, 1.18, 1.9),

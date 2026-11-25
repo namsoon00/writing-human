@@ -260,6 +260,14 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
         CafeCamera(position: point, yaw: view.camera.yaw, pitch: -.12),
       );
     }
+    if (view.resting) {
+      final point = view.world.targetApproach(
+        view.restingTarget ?? CafeTarget.bench,
+      );
+      view.updateCamera(
+        CafeCamera(position: point, yaw: view.camera.yaw, pitch: -.12),
+      );
+    }
     view.resting = false;
     view.look(0, 0);
     setState(() {
@@ -1552,6 +1560,31 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
         editing) {
       return;
     }
+    if (target == CafeTarget.trail) {
+      pending = null;
+      if (view.startStroll()) {
+        setState(() => calmHint = null);
+      } else {
+        setState(() => calmHint = '빈 바닥을 눌러 길 가까이로 와 주세요.');
+      }
+      return;
+    }
+    if (target == CafeTarget.barefoot) {
+      final distance =
+          (view.camera.position - view.world.targetAnchor(target)).length;
+      pending = null;
+      if (distance < 2.0) {
+        view.toggleBarefoot();
+        setState(
+          () => calmHint = view.barefoot
+              ? '신발을 벗었어요. 황토길을 눌러 걸어요.'
+              : '신발을 신었어요. 편하게 둘러보세요.',
+        );
+      } else if (view.visit(target)) {
+        setState(() => calmHint = '벤치에 도착하면 한 번 더 눌러 주세요.');
+      }
+      return;
+    }
     if (target == CafeTarget.bell || target == CafeTarget.tea) {
       final distance =
           (view.camera.position - view.world.targetAnchor(target)).length;
@@ -1867,7 +1900,11 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
               onPressed: () => Navigator.pop(context, target),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text('${target.label} · ${target.action}'),
+                child: Text(
+                  target == CafeTarget.barefoot
+                      ? '${target.label} · ${view.barefoot ? '신발 신기' : '신발 벗기'}'
+                      : '${target.label} · ${target.action}',
+                ),
               ),
             ),
           TextButton(
@@ -2053,11 +2090,15 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                                 opening
                                     ? '글 여는 중'
                                     : view.travelling
-                                    ? '천천히 걸어가는 중'
+                                    ? (view.strolling
+                                          ? '황토길을 천천히 걷는 중'
+                                          : '천천히 걸어가는 중')
                                     : calmHint != null
                                     ? calmHint!
                                     : view.resting
-                                    ? '잠시 머물러도 좋아요.'
+                                    ? (view.meditating
+                                          ? '명상 자리 · 편하게 숨을 쉬어요.'
+                                          : '잠시 머물러도 좋아요.')
                                     : view.seat != null
                                     ? (view.space.home.mood > 0
                                           ? '${view.space.home.mood == 2 ? '비 오는 저녁' : '해 질 무렵'} · 잠시 머물러도 좋아요.'
@@ -2074,6 +2115,19 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                         ),
                       _arrivalNote(),
                       _useControls(),
+                      if (view.strolling)
+                        TextButton(
+                          key: const ValueKey('cafe-stroll-stop'),
+                          onPressed: () {
+                            pending = null;
+                            view.look(0, 0);
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: brandInk,
+                            backgroundColor: const Color(0xccfaf5eb),
+                          ),
+                          child: const Text('산책 멈추기'),
+                        ),
                       if ((view.seat != null || view.resting) &&
                           !view.travelling &&
                           !view.using)

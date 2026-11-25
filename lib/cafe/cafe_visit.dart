@@ -28,6 +28,10 @@ enum CafeTarget {
   bell('작은 종', '한 번 울리기'),
   tea('차 한 잔', '차 따르기'),
   gardenDesk('뜰의 책상', '앉기'),
+  meditation('명상 자리', '조용히 앉기'),
+  barefoot('신발 벤치', '신발 벗고 신기'),
+  trail('황토 산책로', '천천히 한 바퀴'),
+  trailRest('그늘 벤치', '잠시 쉬기'),
   cafeReturn('카페로', '카페로 돌아가기');
 
   const CafeTarget(this.label, this.action);
@@ -41,8 +45,18 @@ enum CafeTarget {
     gardenDesk => CafeSeat.garden,
     _ => null,
   };
-  bool get inCourtyard =>
-      const {pond, bench, bell, tea, gardenDesk, cafeReturn}.contains(this);
+  bool get inCourtyard => const {
+    pond,
+    bench,
+    bell,
+    tea,
+    gardenDesk,
+    cafeReturn,
+    meditation,
+    barefoot,
+    trail,
+    trailRest,
+  }.contains(this);
   static CafeTarget forSeat(CafeSeat seat) => switch (seat) {
     CafeSeat.window => window,
     CafeSeat.shared => shared,

@@ -302,62 +302,6 @@ extension _CourtyardGeometry on CafeWorld {
         );
       }
     }
-    wall(
-      const CafePoint(-4.65, 0, -3),
-      const CafePoint(4.65, 0, -3),
-      const CafePoint(4.65, 2.15, -3),
-      const CafePoint(-4.65, 2.15, -3),
-      CafeWorld.wall,
-    );
-    wall(
-      const CafePoint(4.65, 0, -3),
-      const CafePoint(4.65, 0, 3),
-      const CafePoint(4.65, 2.15, 3),
-      const CafePoint(4.65, 2.15, -3),
-      CafeWorld.wall,
-    );
-    wall(
-      const CafePoint(-4.65, 0, 3),
-      const CafePoint(-4.65, 0, -3),
-      const CafePoint(-4.65, 2.15, -3),
-      const CafePoint(-4.65, 2.15, 3),
-      CafeWorld.wall,
-    );
-    // Limestone coping and a low gravel margin give the plaster wall scale.
-    box(
-      0,
-      2.17,
-      -3,
-      9.3,
-      .07,
-      .18,
-      const Color(0xffddd2bc),
-      surface: CafeSurface.limestone,
-    );
-    for (final x in [-4.65, 4.65]) {
-      box(
-        x,
-        2.17,
-        0,
-        .18,
-        .07,
-        6.0,
-        const Color(0xffddd2bc),
-        surface: CafeSurface.limestone,
-      );
-    }
-    for (var i = 0; i < 16; i++) {
-      final x = -4.5 + i * .56;
-      quad(
-        CafePoint(x, .006, -2.98),
-        CafePoint(x, .006, -2.52),
-        CafePoint(x + .56, .006, -2.52),
-        CafePoint(x + .56, .006, -2.98),
-        const Color(0xffa99e88),
-        surface: CafeSurface.gravel,
-        layer: 0,
-      );
-    }
     // Same glazed facade as the cafe, viewed from the garden side.
     wall(
       const CafePoint(-4.65, 0, 3.165),
@@ -393,15 +337,6 @@ extension _CourtyardGeometry on CafeWorld {
         box(x, 1.70, 3.16, .04, 2.2, .12, CafeWorld.dark, wood: true);
       }
     }
-    quad(
-      const CafePoint(-4.65, 4, -3),
-      const CafePoint(-4.65, 4, 3),
-      const CafePoint(4.65, 4, 3),
-      const CafePoint(4.65, 4, -3),
-      space.home.mood == 0 ? const Color(0xffc5bfbd) : const Color(0xff677f8c),
-      unlit: true,
-      layer: -1,
-    );
     for (var i = 0; i < 23; i++) {
       box(
         3.65,
@@ -565,6 +500,7 @@ extension _CourtyardGeometry on CafeWorld {
       );
       _flower(x + .07, z + .04, const Color(0xfff0eee0));
     }
+    _buildFrontYard();
     // Separate plant groups keep the same quiet border, with real petals in 3D.
     for (var i = 0; i < 10; i++) {
       _flower(-4.0 + i * .84, -2.63 + (i % 3) * .07, const Color(0xfff0eee0));

@@ -122,8 +122,14 @@ extension CafeHomeGeometry on CafeWorld {
     // Fine exterior streaks; walls and plants occlude them normally.
     if (courtyard) {
       for (var i = 0; i < 100; i++) {
-        final x = -4.1 + random.nextDouble() * 8.2,
-            z = -2.5 + random.nextDouble() * 4.8;
+        final region = walkBounds.deflate(.12);
+        final cx = camera.position.x.clamp(
+              region.left + 4.1,
+              region.right - 4.1,
+            ),
+            cz = camera.position.z.clamp(region.top + 2.4, region.bottom - 2.4);
+        final x = cx - 4.1 + random.nextDouble() * 8.2,
+            z = cz - 2.4 + random.nextDouble() * 4.8;
         final y = (random.nextDouble() * 3.6 - time * 1.25) % 3.6;
         final a = room(CafePoint(x, y, z)),
             b = room(CafePoint(x + .014, y + .10, z));

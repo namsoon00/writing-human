@@ -4,8 +4,10 @@ import 'dart:ui';
 import 'cafe_camera.dart';
 import 'cafe_space.dart';
 import 'cafe_visit.dart';
+import 'cafe_yard.dart';
 
 part 'cafe_courtyard.dart';
+part 'cafe_yard_geometry.dart';
 part 'cafe_interior.dart';
 part 'cafe_objects.dart';
 part 'cafe_soft_geometry.dart';
@@ -115,11 +117,15 @@ class CafePlant {
     this.height,
     this.surface, {
     this.flip = false,
+    this.tint = const Color(0xffffffff),
+    this.objectId,
   });
   final CafePoint base;
   final double width, height;
   final CafeSurface surface;
   final bool flip;
+  final Color tint;
+  final String? objectId;
 }
 
 /// All geometry is in metres. The viewer stands inside the same room they visit.
@@ -223,7 +229,8 @@ class CafeWorld {
           final u = x / nx, v = y / ny, uu = (x + 1) / nx, vv = (y + 1) / ny;
           yield CafeFace(
             [point(u, vv), point(uu, vv), point(uu, v), point(u, v)],
-            const Color(0xffffffff),
+            plant.tint,
+            objectId: plant.objectId,
             surface: plant.surface,
             unlit: true,
             doubleSided: true,
@@ -268,6 +275,10 @@ class CafeWorld {
     CafeTarget.tea => const CafePoint(3.22, .84, .93),
     CafeTarget.gardenDesk => desk(CafeSeat.garden),
     CafeTarget.cafeReturn => const CafePoint(3.55, 1.3, 3.16),
+    CafeTarget.meditation => const CafePoint(2.8, .14, -8.5),
+    CafeTarget.barefoot => const CafePoint(-3, .5, -13.6),
+    CafeTarget.trail => const CafePoint(-5.65, .57, -14.5),
+    CafeTarget.trailRest => const CafePoint(-11.5, .6, -8.55),
   };
   static CafePoint approach(CafeTarget target) => switch (target) {
     CafeTarget.window => const CafePoint(-2.52, 1.62, 1.9),
@@ -285,6 +296,14 @@ class CafeWorld {
     CafeTarget.bell => const CafePoint(2.48, 1.62, 2.15),
     CafeTarget.tea || CafeTarget.gardenDesk => const CafePoint(2.1, 1.62, 1.6),
     CafeTarget.cafeReturn => const CafePoint(3.55, 1.62, 2.35),
+    CafeTarget.meditation => CafeYard.meditationApproach,
+    CafeTarget.barefoot => CafeYard.shoeApproach,
+    CafeTarget.trail => CafePoint(
+      CafeYard.trail.first.x,
+      1.62,
+      CafeYard.trail.first.z,
+    ),
+    CafeTarget.trailRest => CafeYard.readingApproach,
   };
   static Rect tableBounds(CafeSeat seat) => switch (seat) {
     CafeSeat.window => const Rect.fromLTWH(-4.12, 1.22, .72, 1.36),
@@ -294,10 +313,15 @@ class CafeWorld {
     CafeSeat.windowRear => const Rect.fromLTWH(-4.12, -2.53, .72, 1.36),
     CafeSeat.garden => const Rect.fromLTWH(2.68, .08, .9, 1.0),
   };
+  Rect get walkBounds => courtyard
+      ? CafeYard.bounds
+      : const Rect.fromLTRB(-4.15, -4.75, 4.15, 4.75);
   bool canStand(CafePoint p) =>
       p.isFinite &&
-      p.x.abs() < (courtyard ? 4.4 : halfWidth - .25) &&
-      p.z.abs() < (courtyard ? 2.8 : halfDepth - .25) &&
+      p.x > walkBounds.left &&
+      p.x < walkBounds.right &&
+      p.z > walkBounds.top &&
+      p.z < walkBounds.bottom &&
       !obstacles.any((r) => r.inflate(.22).contains(Offset(p.x, p.z)));
 
   bool clearSegment(CafePoint from, CafePoint to) {
@@ -313,28 +337,26 @@ class CafeWorld {
   List<CafePoint> path(CafePoint from, CafePoint to) {
     if (!canStand(from) || !canStand(to)) return [];
     if (clearSegment(from, to)) return [to];
-    const step = .22, columns = 39, rows = 44;
+    final step = courtyard ? .28 : .22;
+    final grid = walkBounds.deflate(.015);
+    final columns = (grid.width / step).ceil() + 1,
+        rows = (grid.height / step).ceil() + 1;
     CafePoint point(int id) => CafePoint(
-      -4.18 + (id % columns) * step,
+      grid.left + (id % columns) * step,
       1.62,
-      -4.73 + (id ~/ columns) * step,
+      grid.top + (id ~/ columns) * step,
     );
     int id(CafePoint p) =>
-        ((p.z + 4.73) / step).round().clamp(0, rows - 1) * columns +
-        ((p.x + 4.18) / step).round().clamp(0, columns - 1);
+        ((p.z - grid.top) / step).round().clamp(0, rows - 1) * columns +
+        ((p.x - grid.left) / step).round().clamp(0, columns - 1);
     final start = id(from), end = id(to);
-    final open = <int>{start},
+    final open = _CafePathHeap()..add(start, (from - to).length),
         came = <int, int>{},
         costs = <int, double>{start: 0};
-    var iterations = 0;
-    while (open.isNotEmpty && iterations++ < columns * rows) {
-      final current = open.reduce(
-        (a, b) =>
-            costs[a]! + (point(a) - to).length <
-                costs[b]! + (point(b) - to).length
-            ? a
-            : b,
-      );
+    final closed = <int>{};
+    while (open.isNotEmpty && closed.length < columns * rows) {
+      final current = open.remove();
+      if (!closed.add(current)) continue;
       if (current == end) {
         final route = <CafePoint>[to];
         var cursor = current;
@@ -356,7 +378,6 @@ class CafeWorld {
         }
         return result;
       }
-      open.remove(current);
       for (final dx in [-1, 0, 1]) {
         for (final dz in [-1, 0, 1]) {
           if (dx == 0 && dz == 0) continue;
@@ -370,7 +391,7 @@ class CafeWorld {
           if (cost >= (costs[neighbor] ?? double.infinity)) continue;
           came[neighbor] = current;
           costs[neighbor] = cost;
-          open.add(neighbor);
+          open.add(neighbor, cost + (b - to).length);
         }
       }
     }
@@ -1735,5 +1756,42 @@ class CafeWorld {
     _plant(3.77, -3.90, height: .9);
     _plant(-3.90, 3.75, height: .85);
     _interiorDetails();
+  }
+}
+
+/// Binary min heap keeps longer yard detours responsive without scanning the
+/// entire open set for every visited grid square.
+class _CafePathHeap {
+  final _entries = <(int, double)>[];
+  bool get isNotEmpty => _entries.isNotEmpty;
+  void add(int id, double score) {
+    _entries.add((id, score));
+    var i = _entries.length - 1;
+    while (i > 0) {
+      final parent = (i - 1) ~/ 2;
+      if (_entries[parent].$2 <= score) break;
+      _entries[i] = _entries[parent];
+      i = parent;
+    }
+    _entries[i] = (id, score);
+  }
+
+  int remove() {
+    final first = _entries.first, last = _entries.removeLast();
+    if (_entries.isNotEmpty) {
+      var i = 0;
+      while (i * 2 + 1 < _entries.length) {
+        var child = i * 2 + 1;
+        if (child + 1 < _entries.length &&
+            _entries[child + 1].$2 < _entries[child].$2) {
+          child++;
+        }
+        if (_entries[child].$2 >= last.$2) break;
+        _entries[i] = _entries[child];
+        i = child;
+      }
+      _entries[i] = last;
+    }
+    return first.$1;
   }
 }

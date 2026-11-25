@@ -127,12 +127,10 @@ void main() {
             final observer = c.viewCamera;
             expect(observer.isFinite, isTrue);
             expect(
-              observer.position.x.abs(),
-              lessThan(garden ? 4.4 : CafeWorld.halfWidth),
-            );
-            expect(
-              observer.position.z.abs(),
-              lessThan(garden ? 2.8 : CafeWorld.halfDepth),
+              c.world.walkBounds
+                  .inflate(.12)
+                  .contains(Offset(observer.position.x, observer.position.z)),
+              isTrue,
             );
             const size = Size(390, 844);
             final p =

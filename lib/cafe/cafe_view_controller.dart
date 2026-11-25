@@ -7,6 +7,7 @@ import 'cafe_avatar.dart';
 import 'cafe_chase_camera.dart';
 import 'cafe_visit.dart';
 import 'cafe_world.dart';
+import 'cafe_yard.dart';
 import 'cafe_space.dart';
 
 class CafeViewController extends ChangeNotifier {
@@ -165,6 +166,13 @@ class CafeViewController extends ChangeNotifier {
     final eye = actorCamera;
     final previous = _avatar;
     final frame = useFrame;
+    final meditation =
+        inCourtyard &&
+            (meditating ||
+                arrival == CafeTarget.meditation ||
+                _departure == CafeTarget.meditation)
+        ? ((1.3 - eye.position.y) / .4).clamp(0.0, 1.0)
+        : 0.0;
     if (previous != null &&
         previous.eye.position.x == eye.position.x &&
         previous.eye.position.y == eye.position.y &&
@@ -174,6 +182,8 @@ class CafeViewController extends ChangeNotifier {
         previous.object == world.objects[frame?.id] &&
         previous.phase == walkPhase &&
         previous.stride == (walkSpeed / .65).clamp(0.0, 1.0) &&
+        previous.barefoot == barefoot &&
+        previous.meditation == meditation &&
         previous.use?.id == frame?.id &&
         previous.use?.kind == frame?.kind &&
         previous.use?.progress == frame?.progress &&
@@ -187,6 +197,8 @@ class CafeViewController extends ChangeNotifier {
       phase: walkPhase,
       stride: (walkSpeed / .65).clamp(0.0, 1.0),
       use: frame,
+      barefoot: barefoot,
+      meditation: meditation,
       object: world.objects[frame?.id],
     );
   }
@@ -218,6 +230,16 @@ class CafeViewController extends ChangeNotifier {
   CafeSpace get space => _cafe.space;
   bool inCourtyard;
   bool resting = false, teaFilled = false;
+  bool barefoot = false, strolling = false;
+  CafeTarget? restingTarget;
+  CafeTarget get _restTarget => restingTarget ?? CafeTarget.bench;
+  bool get meditating => resting && _restTarget == CafeTarget.meditation;
+  void toggleBarefoot() {
+    if (!inCourtyard || travelling || using || heldId != null) return;
+    barefoot = !barefoot;
+    notifyListeners();
+  }
+
   double effectTime = 0;
   double? bellAt, teaAt;
   String? applySpace(CafeSpace next, {bool validate = true}) {
@@ -268,7 +290,7 @@ class CafeViewController extends ChangeNotifier {
       );
 
   CafePoint get _origin {
-    if (resting) return world.targetApproach(CafeTarget.bench);
+    if (resting) return world.targetApproach(_restTarget);
     if (seat != null) {
       return activeChairId == null
           ? world.targetApproach(CafeTarget.forSeat(seat!))
@@ -298,11 +320,12 @@ class CafeViewController extends ChangeNotifier {
     final path = world.path(origin, approach);
     if (path.isEmpty) return false;
     _departure = resting
-        ? CafeTarget.bench
+        ? _restTarget
         : seat == null
         ? _departure
         : CafeTarget.forSeat(seat!);
     arrival = target;
+    strolling = false;
     resting = false;
     final gaze = world.targetAnchor(target);
     journey = [
@@ -310,6 +333,8 @@ class CafeViewController extends ChangeNotifier {
       for (final p in path) _facing(p, gaze),
       if (next != null) world.seatedCamera(next, chairId: chairId),
       if (target == CafeTarget.bench) CafeCamera.gardenRest,
+      if (target == CafeTarget.meditation) CafeCamera.meditation,
+      if (target == CafeTarget.trailRest) CafeCamera.trailRest,
       if (target == CafeTarget.pond) _facing(approach, gaze, pitch: -.55),
     ];
     _pendingSeat = next;
@@ -328,13 +353,12 @@ class CafeViewController extends ChangeNotifier {
     if (selected == null && !resting) return;
     final p = activeChairId == null
         ? world.targetApproach(
-            selected == null ? CafeTarget.bench : CafeTarget.forSeat(selected),
+            selected == null ? _restTarget : CafeTarget.forSeat(selected),
           )
         : world.chairApproach(activeChairId!);
-    _departure = selected == null
-        ? CafeTarget.bench
-        : CafeTarget.forSeat(selected);
+    _departure = selected == null ? _restTarget : CafeTarget.forSeat(selected);
     resting = false;
+    strolling = false;
     arrival = null;
     _pendingSeat = null;
     _pendingChairId = null;
@@ -352,7 +376,7 @@ class CafeViewController extends ChangeNotifier {
     final path = world.path(origin, target);
     if (path.isEmpty) return false;
     _departure = resting
-        ? CafeTarget.bench
+        ? _restTarget
         : seat == null
         ? _departure
         : CafeTarget.forSeat(seat!);
@@ -361,6 +385,7 @@ class CafeViewController extends ChangeNotifier {
     _pendingChairId = null;
     activeChairId = null;
     resting = false;
+    strolling = false;
     arrival = null;
     journey = [
       if ((origin - camera.position).length > .1)
@@ -372,6 +397,47 @@ class CafeViewController extends ChangeNotifier {
           pitch: camera.pitch.clamp(-.22, .12),
         ),
     ];
+    _begin();
+    return true;
+  }
+
+  bool startStroll() {
+    if (!inCourtyard || using || heldId != null) return false;
+    final start = CafePoint(
+      CafeYard.trail.first.x,
+      1.62,
+      CafeYard.trail.first.z,
+    );
+    final lead = world.path(_origin, start);
+    if (lead.isEmpty) return false;
+    final loop = [for (final p in CafeYard.trail) CafePoint(p.x, 1.62, p.z)];
+    for (var i = 1; i < loop.length; i++) {
+      if (!world.clearSegment(loop[i - 1], loop[i])) return false;
+    }
+    final points = [...lead, ...loop.skip(1)];
+    _departure = resting
+        ? _restTarget
+        : seat == null
+        ? null
+        : CafeTarget.forSeat(seat!);
+    seat = null;
+    resting = false;
+    activeChairId = null;
+    _pendingSeat = null;
+    _pendingChairId = null;
+    arrival = null;
+    contextId = null;
+    journey = [
+      for (var i = 0; i < points.length; i++)
+        _facing(points[i], points[math.min(i + 1, points.length - 1)]),
+    ];
+    // Preserve the incoming heading at the closed loop's final point.
+    journey[journey.length - 1] = CafeCamera(
+      position: points.last,
+      yaw: journey[journey.length - 2].yaw,
+      pitch: -.10,
+    );
+    strolling = true;
     _begin();
     return true;
   }
@@ -399,6 +465,7 @@ class CafeViewController extends ChangeNotifier {
       seat = null;
     } else if (arrival == CafeTarget.cafeReturn) {
       inCourtyard = false;
+      barefoot = false;
       camera = CafeCamera(
         position: _cafe.targetApproach(CafeTarget.courtyard),
         yaw: math.pi / 2,
@@ -409,11 +476,19 @@ class CafeViewController extends ChangeNotifier {
     if (seat != null ||
         arrival == CafeTarget.courtyard ||
         arrival == CafeTarget.cafeReturn ||
-        arrival == CafeTarget.bench) {
+        arrival == CafeTarget.bench ||
+        arrival == CafeTarget.meditation ||
+        arrival == CafeTarget.trailRest) {
       bodyYaw = camera.yaw;
     }
     _departure = null;
-    resting = arrival == CafeTarget.bench;
+    resting = const {
+      CafeTarget.bench,
+      CafeTarget.meditation,
+      CafeTarget.trailRest,
+    }.contains(arrival);
+    restingTarget = resting ? arrival : null;
+    strolling = false;
     arrival = null;
     travelling = false;
     destination = null;
@@ -438,6 +513,7 @@ class CafeViewController extends ChangeNotifier {
       activeChairId = null;
     }
     walkSpeed = 0;
+    strolling = false;
     _pendingSeat = null;
     _pendingChairId = null;
     _departure = null;

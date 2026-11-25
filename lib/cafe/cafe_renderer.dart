@@ -458,18 +458,31 @@ class CafeRenderer extends CustomPainter {
     if (clip.isEmpty) return;
     canvas.save();
     canvas.clipRect(clip);
-    canvas.drawColor(
-      world.courtyard
-          ? Color.lerp(
-              (world.space.home.mood == 0
-                  ? const Color(0xffc5bfbd)
-                  : const Color(0xff617a89)),
-              const Color(0xff536b7b),
-              _lightFrame.dusk * .7,
-            )!
-          : const Color(0xfff3eadb),
-      BlendMode.srcOver,
-    );
+    if (world.courtyard) {
+      final mood = world.space.home.mood;
+      final dusk = _lightFrame.dusk;
+      final top = Color.lerp(
+        mood == 0 ? const Color(0xffb7c7c8) : const Color(0xff617a89),
+        const Color(0xff536b7b),
+        dusk * .7,
+      )!;
+      final horizon = Color.lerp(
+        mood == 0 ? const Color(0xffeee6d1) : const Color(0xffb7b2a4),
+        const Color(0xffb59b87),
+        dusk * .6,
+      )!;
+      canvas.drawRect(
+        clip,
+        Paint()
+          ..shader = ui.Gradient.linear(
+            Offset(0, -size.height * .2),
+            Offset(0, size.height * .65),
+            [top, horizon],
+          ),
+      );
+    } else {
+      canvas.drawColor(const Color(0xfff3eadb), BlendMode.srcOver);
+    }
     final faces = <_ProjectedFace>[];
     final portal = Path();
     var hasPortal = false;

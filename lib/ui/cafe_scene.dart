@@ -169,8 +169,14 @@ class _CafeSceneState extends State<CafeScene>
         !widget.controller.travelling &&
         !widget.controller.using &&
         heldKeys.isEmpty &&
-        (widget.controller.inCourtyard ||
-            widget.controller.camera.forward.x < -.5);
+        ((widget.controller.inCourtyard &&
+                ((widget.controller.camera.position -
+                                const CafePoint(-1.25, 1.62, 1))
+                            .length <
+                        7 ||
+                    widget.controller.space.home.mood == 2)) ||
+            (!widget.controller.inCourtyard &&
+                widget.controller.camera.forward.x < -.5));
     if (visible &&
         !looking &&
         !widget.controller.travelling &&
@@ -529,7 +535,7 @@ class _CafeSceneState extends State<CafeScene>
             lengths.add(length);
             total += length;
           }
-          timing = CafeWalkTiming(total);
+          timing = CafeWalkTiming(total, speed: c.strolling ? .85 : 1.2);
           travel.duration = Duration(
             milliseconds: (timing!.seconds * 1000).round(),
           );

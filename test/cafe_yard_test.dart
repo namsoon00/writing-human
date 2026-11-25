@@ -1,0 +1,179 @@
+import 'dart:math' as math;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:writing_human/cafe/cafe_camera.dart';
+import 'package:writing_human/cafe/cafe_avatar.dart';
+import 'package:writing_human/cafe/cafe_view_controller.dart';
+import 'package:writing_human/cafe/cafe_visit.dart';
+import 'package:writing_human/cafe/cafe_world.dart';
+import 'package:writing_human/cafe/cafe_yard.dart';
+
+void finish(CafeViewController c) {
+  c.updateCamera(c.destination!);
+  c.finishTravel();
+}
+
+CafeViewController enter() {
+  final c = CafeViewController();
+  expect(c.visit(CafeTarget.courtyard), isTrue);
+  finish(c);
+  return c;
+}
+
+void main() {
+  test(
+    'The sustained earthen loop closes inside the enclosure and stays clear',
+    () {
+      final yard = CafeWorld(courtyard: true);
+      expect(CafeYard.bounds.width, greaterThan(20));
+      expect(CafeYard.length, inInclusiveRange(50, 90));
+      expect(
+        (CafeYard.trail.first - CafeYard.trail.last).length,
+        lessThan(1e-9),
+      );
+      for (var i = 0; i < CafeYard.trail.length; i++) {
+        final p = CafeYard.trail[i];
+        expect(
+          yard.canStand(CafePoint(p.x, 1.62, p.z)),
+          isTrue,
+          reason: 'trail $i at ${p.x},${p.z}',
+        );
+        if (i > 0) {
+          expect(
+            yard.clearSegment(CafeYard.trail[i - 1], p),
+            isTrue,
+            reason: 'trail segment $i',
+          );
+        }
+      }
+      for (final face in yard.faces.where((f) => f.part == 'yard.earth')) {
+        for (final p in face.points) {
+          expect(p.x, inInclusiveRange(-18.2, 6.2));
+          expect(p.z, inInclusiveRange(-17.2, 3.165));
+        }
+      }
+      expect(yard.canStand(const CafePoint(-6, 1.62, -17.4)), isFalse);
+      expect(yard.faces.length, lessThan(35000));
+    },
+  );
+
+  test(
+    'Cafe access, resting places and longer detours share the same collision model',
+    () {
+      final yard = CafeWorld(courtyard: true);
+      expect(yard.validateLayout(), isNull);
+      for (final p in CafeYard.stone) {
+        expect(
+          yard.canStand(CafePoint(p.x, 1.62, p.z)),
+          isTrue,
+          reason: 'direct path ${p.x},${p.z}',
+        );
+      }
+      for (final t in [
+        CafeTarget.meditation,
+        CafeTarget.trailRest,
+        CafeTarget.barefoot,
+        CafeTarget.trail,
+        CafeTarget.cafeReturn,
+      ]) {
+        final path = yard.path(CafeYard.gate, yard.targetApproach(t));
+        expect(path, isNotEmpty, reason: t.name);
+        var start = CafeYard.gate;
+        for (final p in path) {
+          expect(yard.clearSegment(start, p), isTrue);
+          start = p;
+        }
+      }
+    },
+  );
+
+  test(
+    'Meditation lowers and folds the avatar; standing returns to clear ground',
+    () {
+      final c = enter();
+      addTearDown(c.dispose);
+      final room = c.space.encode();
+      expect(c.visit(CafeTarget.meditation), isTrue);
+      finish(c);
+      expect(c.resting, isTrue);
+      expect(c.meditating, isTrue);
+      expect(c.avatar.meditation, closeTo(1, 1e-8));
+      expect(c.avatar.faces.any((f) => f.part == 'foot.toe'), isTrue);
+      expect(
+        c.avatar.faces.any((f) => f.part?.startsWith('shoe') == true),
+        isFalse,
+      );
+      final head = c.avatar.faces
+          .where((f) => f.part == 'face')
+          .expand((f) => f.points);
+      expect(head.map((p) => p.y).reduce(math.max), lessThan(1.2));
+      c.stand();
+      finish(c);
+      expect(c.resting, isFalse);
+      expect(c.meditating, isFalse);
+      expect(c.world.canStand(c.camera.position), isTrue);
+      expect(c.avatar.meditation, 0);
+      expect(c.space.encode(), room);
+    },
+  );
+
+  test(
+    'Barefoot appearance is reversible session state, separate from saved items',
+    () {
+      final c = enter();
+      addTearDown(c.dispose);
+      final saved = c.space.encode();
+      c.toggleBarefoot();
+      expect(c.barefoot, isTrue);
+      expect(c.avatar.faces.any((f) => f.part == 'foot'), isTrue);
+      expect(c.avatar.faces.any((f) => f.part == 'shoe.sole'), isFalse);
+      c.toggleBarefoot();
+      expect(c.avatar.faces.any((f) => f.part == 'shoe.sole'), isTrue);
+      expect(c.space.encode(), saved);
+    },
+  );
+
+  test(
+    'A complete stroll follows clear loop segments and can be interrupted by looking',
+    () {
+      final c = enter();
+      addTearDown(c.dispose);
+      expect(c.startStroll(), isTrue);
+      expect(c.strolling, isTrue);
+      expect(c.journey.length, greaterThan(60));
+      var start = c.world.targetApproach(CafeTarget.cafeReturn);
+      for (final frame in c.journey) {
+        expect(c.world.clearSegment(start, frame.position), isTrue);
+        start = frame.position;
+      }
+      final future = c.travelFinished;
+      c.look(.1, 0);
+      expect(c.strolling, isFalse);
+      expect(c.travelling, isFalse);
+      expect(future, completion(isFalse));
+      expect(c.startStroll(), isTrue);
+      finish(c);
+      expect(c.strolling, isFalse);
+      expect(c.world.canStand(c.camera.position), isTrue);
+    },
+  );
+
+  test(
+    'Folded poses and bare feet remain finite throughout the seating transition',
+    () {
+      for (final amount in [0.0, .2, .5, .8, 1.0]) {
+        final a = CafeAvatar(
+          eye: const CafeCamera(position: CafePoint(0, 1.3, 0)),
+          yaw: .5,
+          meditation: amount,
+          barefoot: true,
+        );
+        expect(
+          a.faces.every(
+            (f) => f.points.every((p) => p.isFinite) && f.normal.isFinite,
+          ),
+          isTrue,
+        );
+      }
+    },
+  );
+}

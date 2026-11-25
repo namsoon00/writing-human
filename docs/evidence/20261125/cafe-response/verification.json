@@ -1,0 +1,180 @@
+{
+  "date": "2026-11-25",
+  "source": "1ec1b6d84aeaef2ee5271e6fe143b8c27e580e29",
+  "publicUrl": "https://namsoon00.github.io/writing-human/?v=1ec1b6d",
+  "ci": {
+    "runId": 45582869643,
+    "url": "https://github.com/namsoon00/writing-human/actions/runs/45582869643",
+    "buildJob": 139097010256,
+    "deployJob": 139110124679,
+    "conclusion": "success",
+    "formatFiles": 220,
+    "analyze": "passed",
+    "nativeTests": 366,
+    "voiceChromeTests": 6,
+    "browserTests": 91,
+    "evidence": [
+      "2026-11-25T09:11:00.1468178Z Formatted 220 files (0 changed) in 1.52 seconds.",
+      "2026-11-25T09:11:26.1951887Z No issues found! (ran in 25.6s)",
+      "2026-11-25T09:18:42.9519015Z 🎉 366 tests passed.",
+      "2026-11-25T09:19:08.2900490Z 🎉 6 tests passed.",
+      "2026-11-25T09:33:50.4265863Z 🎉 91 tests passed.",
+      "2026-11-25T09:34:40.0357589Z ✓ Built build/github-pages"
+    ]
+  },
+  "localChecks": {
+    "pixelOcclusionMaterialTests": 11,
+    "chromeCacheTests": 5,
+    "sharedWorkspaceFocusedTests": 11,
+    "sharedWorkspaceAnalyze": "passed",
+    "sharedWorkspaceIndexPreserved": true,
+    "interimLocalFullRun": {
+      "completed": 176,
+      "interrupted": true,
+      "passedFullSuite": false,
+      "reason": "Stopped the intermediate local duplicate after launching the final CI suite; shutdown compile-file errors retained separately."
+    }
+  },
+  "benchmark": {
+    "source": "1ec1b6d84aeaef2ee5271e6fe143b8c27e580e29",
+    "scope": "In-app browser release CafeScene CPU paint timings, not physical-device FPS or display latency",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "method": "10 sequential yaw frames per seat and path; frame 0 separate; medians use frames 1..9; no simultaneous local build or test during measurement.",
+    "results": [
+      {
+        "seat": "entrance",
+        "reference": {
+          "samples": 9,
+          "medianMs": 1784.401,
+          "minMs": 964.801,
+          "maxMs": 1986.901,
+          "initialMs": 1200.101
+        },
+        "cached": {
+          "samples": 9,
+          "medianMs": 576.899,
+          "minMs": 349.301,
+          "maxMs": 689.3,
+          "initialMs": 1620.7
+        },
+        "reductionPercent": 67.66987913591171
+      },
+      {
+        "seat": "window",
+        "reference": {
+          "samples": 9,
+          "medianMs": 1361.299,
+          "minMs": 1217.799,
+          "maxMs": 1448.2,
+          "initialMs": 1427.9
+        },
+        "cached": {
+          "samples": 9,
+          "medianMs": 465.5,
+          "minMs": 329.101,
+          "maxMs": 852.201,
+          "initialMs": 1474.0
+        },
+        "reductionPercent": 65.80472034431818
+      },
+      {
+        "seat": "shared",
+        "reference": {
+          "samples": 9,
+          "medianMs": 1880.6,
+          "minMs": 1685.599,
+          "maxMs": 2023.5,
+          "initialMs": 1794.0
+        },
+        "cached": {
+          "samples": 9,
+          "medianMs": 681.099,
+          "minMs": 541.3,
+          "maxMs": 1123.601,
+          "initialMs": 2062.199
+        },
+        "reductionPercent": 63.78288843985962
+      }
+    ]
+  },
+  "rawMeasurements": "browser-release-measurements.json",
+  "publicAssets": {
+    "source": "1ec1b6d84aeaef2ee5271e6fe143b8c27e580e29",
+    "url": "https://namsoon00.github.io/writing-human/",
+    "indexStatus": 200,
+    "loaderStatus": 200,
+    "loaderPath": "flutter_bootstrap.js?v=7ac3c85f95a0f036",
+    "loaderSha256": "7ac3c85f95a0f036127cdb54519007d83d1651d1060679b8dadf927d6b5c0448",
+    "normalizedLoaderMatchesLocal": true,
+    "htmlMatchesExceptGeneratedLoaderHash": true,
+    "assets": [
+      {
+        "path": "main.dart.js",
+        "status": 200,
+        "bytes": 5345296,
+        "sha256": "fb34d54fe37c4c1c0efa166c8f7180d7d39bc354593de27643f48e40954da1de",
+        "matchesLocal": true
+      },
+      {
+        "path": "assets/assets/fonts/WritingHumanDevelopment-Regular.ttf",
+        "status": 200,
+        "bytes": 895652,
+        "sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+        "matchesLocal": true
+      },
+      {
+        "path": "assets/assets/images/cafe-watercolor-oak.webp",
+        "status": 200,
+        "bytes": 373234,
+        "sha256": "09e57d12c41a0c46e7ab91f03b873161daecf23fa79be9f9d1fabbad6c41c63b",
+        "matchesLocal": true
+      },
+      {
+        "path": "assets/assets/images/cafe-watercolor-tree.webp",
+        "status": 200,
+        "bytes": 624236,
+        "sha256": "bdc15a907213570558e2fb1887899c1143968a406ac05da95297ce1836319086",
+        "matchesLocal": true
+      },
+      {
+        "path": "assets/assets/audio/dsp/voice_worker.mjs",
+        "status": 200,
+        "bytes": 1733,
+        "sha256": "ef288c3f1b9f9db5b8dc1f2c1e66c34c3a210496ebdb8d80f576c4b602100391",
+        "matchesLocal": true
+      }
+    ],
+    "verifiedAtUnix": 1795599331
+  },
+  "publicUI": {
+    "firstRelease": "f486c4265c8514b45ed56df84e6e9ea865c7a447",
+    "firstReleaseActions": [
+      "floor tap walking",
+      "drag gaze",
+      "window seating",
+      "return to the existing writing page without typing"
+    ],
+    "finalReleaseActions": [
+      "loaded the final public URL",
+      "entered the cafe",
+      "clicked the shared table",
+      "walked and seated",
+      "verified loaded plants and materials",
+      "no browser console errors"
+    ],
+    "mobileViewport": {
+      "width": 390,
+      "height": 844
+    },
+    "viewportRestored": true,
+    "localScreenshotSha256": "9c18d2f4bce66d1677e4eece92b1a4ab16e8ed6442a548e2a8fd38b8074cda63"
+  },
+  "limits": [
+    "CPU paint durations are not input-to-display latency or GPU FPS.",
+    "Initial scene preparation remains slower than the uncached first paint in this measured environment.",
+    "No physical iPhone Safari or iOS/Android device performance verification."
+  ]
+}

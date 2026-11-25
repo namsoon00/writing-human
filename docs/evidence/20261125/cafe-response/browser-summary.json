@@ -1,0 +1,65 @@
+{
+  "source": "1ec1b6d84aeaef2ee5271e6fe143b8c27e580e29",
+  "scope": "In-app browser release CafeScene CPU paint timings, not physical-device FPS or display latency",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "method": "10 sequential yaw frames per seat and path; frame 0 separate; medians use frames 1..9; no simultaneous local build or test during measurement.",
+  "results": [
+    {
+      "seat": "entrance",
+      "reference": {
+        "samples": 9,
+        "medianMs": 1784.401,
+        "minMs": 964.801,
+        "maxMs": 1986.901,
+        "initialMs": 1200.101
+      },
+      "cached": {
+        "samples": 9,
+        "medianMs": 576.899,
+        "minMs": 349.301,
+        "maxMs": 689.3,
+        "initialMs": 1620.7
+      },
+      "reductionPercent": 67.66987913591171
+    },
+    {
+      "seat": "window",
+      "reference": {
+        "samples": 9,
+        "medianMs": 1361.299,
+        "minMs": 1217.799,
+        "maxMs": 1448.2,
+        "initialMs": 1427.9
+      },
+      "cached": {
+        "samples": 9,
+        "medianMs": 465.5,
+        "minMs": 329.101,
+        "maxMs": 852.201,
+        "initialMs": 1474.0
+      },
+      "reductionPercent": 65.80472034431818
+    },
+    {
+      "seat": "shared",
+      "reference": {
+        "samples": 9,
+        "medianMs": 1880.6,
+        "minMs": 1685.599,
+        "maxMs": 2023.5,
+        "initialMs": 1794.0
+      },
+      "cached": {
+        "samples": 9,
+        "medianMs": 681.099,
+        "minMs": 541.3,
+        "maxMs": 1123.601,
+        "initialMs": 2062.199
+      },
+      "reductionPercent": 63.78288843985962
+    }
+  ]
+}

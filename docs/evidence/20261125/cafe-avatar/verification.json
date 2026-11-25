@@ -1,0 +1,149 @@
+{
+  "source": "1a6c25896653ac3bfebcb019b3f4c66201b2d51c",
+  "primaryAvatarCommit": "2e45a656c5128d2cf683d5870c85479865161aeb",
+  "buildMainJsSha256": "84318c85bb2649f9ef132cae339dc070c8c43fca2229430f1956178850148441",
+  "publicUrl": "https://namsoon00.github.io/writing-human/",
+  "physicalDeviceVerified": false,
+  "localChecks": {
+    "perspective": 19,
+    "modelAndRender": 6,
+    "idleAndActions": 10,
+    "chromeBeforeIdleFollowup": 24,
+    "rootBeforeIdle": 26,
+    "rootAfterIdle": 11
+  },
+  "ci": {
+    "initialRun": 45565410508,
+    "initialPassed": [
+      361,
+      6,
+      82
+    ],
+    "finalRun": 45566983753,
+    "finalPending": false,
+    "finalPassed": [
+      361,
+      6,
+      86
+    ],
+    "finalBuildJob": 139044872425,
+    "finalDeployJob": 139052666737,
+    "finalConclusion": "success"
+  },
+  "browserLocal": [
+    "floor click started walking",
+    "walk completed in the aisle",
+    "window seating",
+    "notebook returned to existing blank paper"
+  ],
+  "artifactKind": "Flutter mesh renders and actual browser screenshots; concept art is separate",
+  "screenshots": [
+    {
+      "path": "output/cafe-avatar-a-20261125/browser-local-seated-final-390.jpg",
+      "sha256": "0dd14fffdde99141f45e33e42e84ca4d43a385b88434c520bd3a50cdb02552d6"
+    },
+    {
+      "path": "output/cafe-avatar-a-20261125/browser-local-walk-390.jpg",
+      "sha256": "1136a79f06e137858ec862371a5c905cfd4f1139dd5821dea90966ee5c691b0f"
+    },
+    {
+      "path": "output/cafe-avatar-a-20261125/browser-local-writing-return-390.jpg",
+      "sha256": "81a36eb83e5b1f3121b286394f0d2b4f5c1eaa1cc902defbc0ca1c7a24f97dba"
+    },
+    {
+      "path": "output/cafe-avatar-a-20261125/browser-public-avatar-390.jpg",
+      "sha256": "0578cd9d25755665042c260a4a068304ae47284cded38b7e9be7ff34bfe2402e"
+    }
+  ],
+  "sourceHashes": {
+    ".github/workflows/github-pages.yml": "1eff7723d4ea76ea4105d561de1503c90a3c5a6c",
+    "docs/architecture.md": "1814e60725116ca154f83e9de217edd94e903881",
+    "docs/brand-personas.md": "9487be262ca7528daa534df71f2e2fe1aaff11e8",
+    "docs/navigation.md": "2c0c73cb689c926a60a8935ca4d39a11a8d2e37d",
+    "docs/product.md": "ebc65ede36661dac3387daa87d8a46e64244c1f0",
+    "lib/cafe/cafe_avatar.dart": "db1e1670fbad03b7bd83b6494c201dc9f2ef36a5",
+    "lib/cafe/cafe_camera.dart": "818fb8dabea54f8ea8fd03506f02a05761fcc95d",
+    "lib/cafe/cafe_chase_camera.dart": "b1a9eaeeadea26e181c640e28c45768a26fa50d2",
+    "lib/cafe/cafe_renderer.dart": "0a2e264e1d51514abb78478d0b16ea6f17299eb4",
+    "lib/cafe/cafe_use.dart": "0d5b0bac56d8e14b31ac6dec8f62d74f17bad9c4",
+    "lib/cafe/cafe_view_controller.dart": "618f915c8ed3e5b98313afa15cef5a6c6b4a4a80",
+    "lib/cafe/cafe_world.dart": "a9f6f7cfc7a74cc5560ba2ab62ebcfc441657e5c",
+    "lib/ui/cafe_scene.dart": "6c7578cbc98bd47dda600f9157efe661115b29fe",
+    "lib/ui/cafe_screen.dart": "c8b25e3a69cb63cae07a786ff0e09757bb57260b",
+    "test/cafe_avatar_test.dart": "7185726bd8e855989becc28bf5bd65c28a49e559",
+    "test/cafe_camera_test.dart": "4ee2a50d0d20e8db8f26193b21b4b1b4cfc2fc22",
+    "test/cafe_context_hint_test.dart": "04ecdac7ab0cd0377570853e66e29a106f94dccd",
+    "test/cafe_courtyard_test.dart": "a47fba1ec1b268f94524cc0da6cbcfddf08b32cd",
+    "test/cafe_item_controls_test.dart": "238e0fd1ed8192652158872e27945d959d08bf08",
+    "test/cafe_walk_test.dart": "0062d1d9d3c294bd26c20eec2d6e57fd7d8497d2",
+    "tool/capture_avatar_test.dart": "2486445c5d7f691f9b526f0044169f4848f13be9",
+    "tool/capture_cafe_test.dart": "15cb86766b1bfbf89271499b5bcb34a252c2582a"
+  },
+  "checkedAtUtc": "2026-11-25T07:24:06Z",
+  "limits": [
+    "iOS and Android physical devices are not verified",
+    "Native software painter CPU samples are not device FPS",
+    "The proposed expanded front yard and hwangto path are not implemented in this avatar change"
+  ],
+  "publicVerification": {
+    "verifiedAtUtc": "2026-11-25T07:41:25.693337+00:00",
+    "url": "https://namsoon00.github.io/writing-human/",
+    "source": "1a6c25896653ac3bfebcb019b3f4c66201b2d51c",
+    "bootstrap": "flutter_bootstrap.js?v=fda2c903bf37bcfc",
+    "mainEntry": "main.dart.js?v=84318c85bb2649f9",
+    "loaderMatchesLocalExceptGeneratedWorkerVersion": true,
+    "loaderCacheKeyMatchesBytes": true,
+    "localGeneratedWorkerVersion": "1810699623",
+    "publicGeneratedWorkerVersion": "3298680801",
+    "assets": [
+      {
+        "path": "main.dart.js",
+        "bytes": 5333756,
+        "sha256": "84318c85bb2649f9ef132cae339dc070c8c43fca2229430f1956178850148441",
+        "matchesLocal": true
+      },
+      {
+        "path": "assets/assets/fonts/WritingHumanDevelopment-Regular.ttf",
+        "bytes": 895652,
+        "sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+        "matchesLocal": true
+      },
+      {
+        "path": "assets/assets/images/cafe-watercolor-oak.webp",
+        "bytes": 373234,
+        "sha256": "09e57d12c41a0c46e7ab91f03b873161daecf23fa79be9f9d1fabbad6c41c63b",
+        "matchesLocal": true
+      },
+      {
+        "path": "assets/assets/images/cafe-watercolor-tree.webp",
+        "bytes": 624236,
+        "sha256": "bdc15a907213570558e2fb1887899c1143968a406ac05da95297ce1836319086",
+        "matchesLocal": true
+      },
+      {
+        "path": "assets/assets/audio/dsp/voice_worker.mjs",
+        "bytes": 1733,
+        "sha256": "ef288c3f1b9f9db5b8dc1f2c1e66c34c3a210496ebdb8d80f576c4b602100391",
+        "matchesLocal": true
+      }
+    ]
+  },
+  "browserPublic": {
+    "url": "https://namsoon00.github.io/writing-human/?v=1a6c258",
+    "avatarVisible": true,
+    "consoleErrors": 0,
+    "viewport": [
+      390,
+      844
+    ]
+  },
+  "rendersSource": "2e45a656c5128d2cf683d5870c85479865161aeb; same model mesh in final release",
+  "rootIndexUntouchedByTask": true,
+  "cleanupPolicy": "Remove owned release checkout after source, evidence and public release are retained; preserve other worktrees, caches and records.",
+  "verifiedAtUtc": "2026-11-25T07:43:28Z",
+  "approvedReference": {
+    "path": "design/cafe/20261125/avatar/avatar-directions-v1.png",
+    "sha256": "941c28fb1c07b5fce067c5fb81c1eb6892a511c17652da62842c0628076449f1",
+    "selection": "A male"
+  }
+}

@@ -28,6 +28,8 @@ enum CafeSurface {
   gravel,
   tree,
   flowers,
+  blossom,
+  lawn,
   water,
   glass,
 }
@@ -214,11 +216,23 @@ class CafeWorld {
     }
   }
 
-  Iterable<CafeFace> plantFaces(CafeCamera camera) sync* {
+  Iterable<CafeFace> plantFaces(
+    CafeCamera camera, {
+    Iterable<CafePlant>? source,
+  }) sync* {
     final across = CafePoint(camera.right.x, 0, camera.right.z).normalized;
-    for (final plant in plants) {
-      final nx = plant.surface == CafeSurface.tree ? 6 : 3,
-          ny = plant.surface == CafeSurface.tree ? 8 : 3;
+    for (final plant in source ?? plants) {
+      final nearPlant = (plant.base - camera.position).length < 4;
+      final nx =
+              (plant.surface == CafeSurface.tree ||
+                  plant.surface == CafeSurface.blossom)
+              ? (nearPlant ? 4 : 2)
+              : 1,
+          ny =
+              (plant.surface == CafeSurface.tree ||
+                  plant.surface == CafeSurface.blossom)
+              ? (nearPlant ? 6 : 3)
+              : 2;
       CafePoint point(double u, double v) =>
           plant.base +
           across * ((u - .5) * plant.width) +
@@ -267,8 +281,7 @@ class CafeWorld {
     CafeTarget.bookshelf => const CafePoint(3.92, 1.48, .30),
     CafeTarget.recommendations => const CafePoint(3.92, 1.30, -2.20),
     CafeTarget.stationery => const CafePoint(3.82, .94, 2.45),
-    CafeTarget.exit => const CafePoint(0, 1.25, 4.92),
-    CafeTarget.courtyard => const CafePoint(-4.18, 1.45, -3.55),
+    CafeTarget.courtyard => const CafePoint(-4.18, 1.45, -3.3),
     CafeTarget.pond => const CafePoint(-1.25, .08, 1.0),
     CafeTarget.bench => const CafePoint(4.0, .65, -.7),
     CafeTarget.bell => const CafePoint(2.48, 1.62, 3.03),
@@ -289,8 +302,7 @@ class CafeWorld {
     CafeTarget.bookshelf => const CafePoint(2.85, 1.62, .3),
     CafeTarget.recommendations => const CafePoint(2.85, 1.62, -2.20),
     CafeTarget.stationery => const CafePoint(2.85, 1.62, 2.45),
-    CafeTarget.exit => const CafePoint(0, 1.62, 4.10),
-    CafeTarget.courtyard => const CafePoint(-3.8, 1.62, -3.55),
+    CafeTarget.courtyard => const CafePoint(-3.8, 1.62, -3.3),
     CafeTarget.pond => const CafePoint(.3, 1.62, 1.0),
     CafeTarget.bench => const CafePoint(2.95, 1.62, -.7),
     CafeTarget.bell => const CafePoint(2.48, 1.62, 2.15),
@@ -1166,6 +1178,24 @@ class CafeWorld {
             CafePoint.lerp(d, c, u),
             v,
           );
+          final center = at((i + .5) / nx, (j + .5) / ny);
+          if (center.x < -4.35 &&
+              center.z > -4.6 &&
+              center.z < -2.1 &&
+              center.y < 2.70) {
+            continue;
+          }
+          if (center.x < -4.35 &&
+              center.y > .66 &&
+              center.y < 2.78 &&
+              [
+                -3.35,
+                -1.05,
+                1.25,
+                3.55,
+              ].any((z) => (center.z - z).abs() < 1.03)) {
+            continue;
+          }
           quad(
             at(i / nx, j / ny),
             at((i + 1) / nx, j / ny),
@@ -1236,21 +1266,12 @@ class CafeWorld {
       const CafePoint(w, h, -d),
       wall,
     );
-    // A real entrance opening, with only side piers and a lintel above it.
-    for (final range in [(-w, -1.22), (1.22, w)]) {
-      wallGrid(
-        CafePoint(range.$2, 0, d),
-        CafePoint(range.$1, 0, d),
-        CafePoint(range.$1, h, d),
-        CafePoint(range.$2, h, d),
-        wall,
-      );
-    }
+    // The former street door is now a continuous interior plaster wall.
     wallGrid(
-      const CafePoint(1.22, 2.765, d),
-      const CafePoint(-1.22, 2.765, d),
-      const CafePoint(-1.22, h, d),
-      const CafePoint(1.22, h, d),
+      const CafePoint(w, 0, d),
+      const CafePoint(-w, 0, d),
+      const CafePoint(-w, h, d),
+      const CafePoint(w, h, d),
       wall,
     );
     wallGrid(
@@ -1568,18 +1589,19 @@ class CafeWorld {
         unlit: true,
       ),
     );
+    // An always-open veranda bay. No sliding glass or raised threshold crosses it.
     _target = CafeTarget.courtyard;
-    for (final z in [-4.48, -2.62]) {
-      box(-4.15, 1.33, z, .12, 2.66, .075, dark, wood: true);
+    for (final z in [-4.48, -2.12]) {
+      box(-4.15, 1.37, z, .12, 2.74, .07, dark, wood: true);
     }
-    box(-4.15, 2.66, -3.55, .12, .075, 1.94, dark, wood: true);
+    box(-4.15, 2.74, -3.3, .12, .09, 2.44, dark, wood: true);
     faces.add(
       CafeFace(
         const [
           CafePoint(-4.19, 0, -4.45),
-          CafePoint(-4.19, 0, -2.65),
-          CafePoint(-4.19, 2.62, -2.65),
-          CafePoint(-4.19, 2.62, -4.45),
+          CafePoint(-4.19, 0, -2.15),
+          CafePoint(-4.19, 2.69, -2.15),
+          CafePoint(-4.19, 2.69, -4.45),
         ],
         cream,
         garden: true,
@@ -1588,32 +1610,6 @@ class CafeWorld {
         target: _target,
       ),
     );
-    _object(
-      'garden.door',
-      '\uC815\uC6D0 \uC720\uB9AC\uBB38',
-      CafeObjectKind.light,
-      const CafePoint(-4.12, 1.3, -3.55),
-      () {
-        final z = space.doorOpen ? -1.73 : -3.55;
-        quad(
-          CafePoint(-4.105, .03, z - .875),
-          CafePoint(-4.105, .03, z + .875),
-          CafePoint(-4.105, 2.57, z + .875),
-          CafePoint(-4.105, 2.57, z - .875),
-          const Color(0x109bc1b3),
-          unlit: true,
-        );
-
-        for (final edge in [z - .9, z + .9]) {
-          box(-4.11, 1.31, edge, .055, 2.62, .045, dark, wood: true);
-        }
-        for (final y in [.025, 2.60]) {
-          box(-4.11, y, z, .055, .045, 1.80, dark, wood: true);
-        }
-        box(-4.06, 1.12, z + .79, .035, .26, .03, brass);
-      },
-    );
-    box(-4.15, .008, -3.55, .28, .012, 1.85, brass);
     _target = null;
     _framedPrint(3.15, 1.91, -4.91, .84, 1.12, 0);
     _framedPrint(-3.23, 1.85, -4.91, .48, .64, 0, personal: true);

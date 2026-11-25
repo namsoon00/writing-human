@@ -188,7 +188,7 @@ extension _FrontYardGeometry on CafeWorld {
 
   void _yardCafeShell() {
     // Same building, with an exterior roof and side walls beyond the glazing.
-    for (final x in [-4.68, 4.68]) {
+    for (final x in [-5.08, 5.08]) {
       faces.add(
         CafeFace(
           [
@@ -207,10 +207,10 @@ extension _FrontYardGeometry on CafeWorld {
     faces.add(
       CafeFace(
         const [
-          CafePoint(-4.68, 0, 11.95),
-          CafePoint(4.68, 0, 11.95),
-          CafePoint(4.68, 3.02, 11.95),
-          CafePoint(-4.68, 3.02, 11.95),
+          CafePoint(-5.08, 0, 11.95),
+          CafePoint(5.08, 0, 11.95),
+          CafePoint(5.08, 3.02, 11.95),
+          CafePoint(-5.08, 3.02, 11.95),
         ],
         CafeWorld.wall,
         doubleSided: true,
@@ -223,8 +223,8 @@ extension _FrontYardGeometry on CafeWorld {
         CafeFace(
           [
             CafePoint(0, 4.05, 2.95),
-            CafePoint(s * 5.0, 3.0, 2.95),
-            CafePoint(s * 5.0, 3.0, 12.2),
+            CafePoint(s * 5.3, 3.0, 2.95),
+            CafePoint(s * 5.3, 3.0, 12.2),
             CafePoint(0, 4.05, 12.2),
           ],
           const Color(0xff716657),
@@ -234,7 +234,7 @@ extension _FrontYardGeometry on CafeWorld {
         ),
       );
       for (var i = 1; i < 12; i++) {
-        final x = s * i * .42, y = 4.05 - x.abs() * .21 + .012;
+        final x = s * i * .42, y = 4.05 - x.abs() * .198 + .012;
         _rod(
           CafePoint(x, y, 2.94),
           CafePoint(x, y, 12.2),
@@ -247,8 +247,8 @@ extension _FrontYardGeometry on CafeWorld {
     faces.add(
       CafeFace(
         const [
-          CafePoint(-4.68, 3.0, 3.17),
-          CafePoint(4.68, 3.0, 3.17),
+          CafePoint(-5.08, 3.0, 3.17),
+          CafePoint(5.08, 3.0, 3.17),
           CafePoint(0, 4.02, 3.17),
         ],
         CafeWorld.wall,
@@ -315,7 +315,7 @@ extension _FrontYardGeometry on CafeWorld {
               const Color(0xffb1b18b),
               random.nextDouble() * .20,
             )!,
-            surface: CafeSurface.plain,
+            surface: CafeSurface.lawn,
             layer: 0,
             part: 'yard.lawn',
           ),
@@ -357,14 +357,34 @@ extension _FrontYardGeometry on CafeWorld {
     ]) {
       _yardTree(tree.$1, tree.$2, tree.$3, (tree.$1 * 17).round());
     }
-    // Sparse painted flower banks, never across the two walking routes.
-    for (var i = 0; i < 28; i++) {
-      final p = CafePoint(
-        -17.3 + random.nextDouble() * 22.0,
-        0,
-        -16.3 + random.nextDouble() * 12.0,
-      );
-      if (CafeYard.distanceToTrail(p) < 1.05 ||
+    // Planted borders and curved islands leave both routes visibly open.
+    final banks = <CafePoint>[
+      for (var z = -15.5; z < 2.4; z += 1.05) CafePoint(-17.25, 0, z),
+      for (var x = -15.8; x < 4.7; x += 1.15) CafePoint(x, 0, -16.1),
+      for (var x = -16.2; x < -5.8; x += 1.15) CafePoint(x, 0, 2.05),
+      for (final center in [
+        const CafePoint(-8.5, 0, -5.8),
+        const CafePoint(-12.8, 0, -10.4),
+        const CafePoint(2.4, 0, -5.5),
+        const CafePoint(-1.4, 0, -11.7),
+      ])
+        for (var i = 0; i < 10; i++)
+          center +
+              CafePoint(
+                math.cos(i * 2.4) * (.7 + (i % 3) * .22),
+                0,
+                math.sin(i * 2.4) * (.6 + (i % 3) * .16),
+              ),
+    ];
+    for (var i = 2; i + 1 < CafeYard.trail.length; i += 5) {
+      final p = CafeYard.trail[i],
+          d = (CafeYard.trail[i + 1] - CafeYard.trail[i - 1]).normalized;
+      banks.add(p + CafePoint(d.z, 0, -d.x) * 1.25);
+    }
+    for (var i = 0; i < banks.length; i++) {
+      final p = banks[i];
+      if (CafeYard.distanceToTrail(p) < 1.0 ||
+          CafeYard.distanceToStone(p) < 1.10 ||
           (p.x > 1.1 && p.z > -10.6 && p.z < -6.8) ||
           (p.x > -13 && p.x < -9.8 && p.z > -10 && p.z < -7.2)) {
         continue;
@@ -372,11 +392,30 @@ extension _FrontYardGeometry on CafeWorld {
       plants.add(
         CafePlant(
           p,
-          .7 + random.nextDouble() * .20,
-          .46,
+          .95 + random.nextDouble() * .35,
+          .36 + random.nextDouble() * .20,
           CafeSurface.flowers,
           flip: i.isEven,
         ),
+      );
+      if (i % 9 == 0) {
+        _oval(
+          p + const CafePoint(.22, .09, .1),
+          const CafePoint(.30, .15, .22),
+          const Color(0xffc5bda6),
+          segments: 8,
+          rings: 4,
+          surface: CafeSurface.limestone,
+        );
+      }
+    }
+    for (final p in [
+      const CafePoint(-6.7, 0, -1.1),
+      const CafePoint(-11.8, 0, -.5),
+    ]) {
+      _yardTree(p.x, p.z, 3.4, 135);
+      plants.add(
+        CafePlant(p + const CafePoint(0, .6, 0), 3.1, 2.9, CafeSurface.blossom),
       );
     }
     // Shade platform: a rug and one central cushion, outside the through path.

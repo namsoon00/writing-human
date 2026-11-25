@@ -13,7 +13,8 @@ void main() {
       addTearDown(
         tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
       );
-      final store = MemoryCafeSpaceStore();
+      final store = MemoryCafeSpaceStore()
+        ..value = const CafeSpace(doorOpen: false);
       var writes = 0;
       final sounds = <String>[];
       await tester.pumpWidget(

@@ -50,6 +50,64 @@ abstract final class CafeWatercolor {
         }
       }, resolution: 768);
 
+  static Future<ui.Image> lawn() => _image((canvas) {
+    final random = math.Random(7421);
+    canvas.drawColor(const ui.Color(0xff9bac70), ui.BlendMode.src);
+    final paint = ui.Paint()..strokeCap = ui.StrokeCap.round;
+    for (var i = 0; i < 4200; i++) {
+      final x = random.nextDouble() * _size, y = random.nextDouble() * _size;
+      paint
+        ..color = [
+          const ui.Color(0xff83995c),
+          const ui.Color(0xffb8c58b),
+          const ui.Color(0xffa5b773),
+          const ui.Color(0xffd0cf98),
+        ][i % 4].withValues(alpha: .25 + random.nextDouble() * .35)
+        ..strokeWidth = .7 + random.nextDouble() * 1.3;
+      canvas.drawLine(
+        ui.Offset(x, y),
+        ui.Offset(
+          x + 2 + random.nextDouble() * 4,
+          y - 1 - random.nextDouble() * 5,
+        ),
+        paint,
+      );
+    }
+  });
+
+  static Future<ui.Image> blossom() => _image((canvas) {
+    final random = math.Random(135);
+    final paint = ui.Paint()..strokeCap = ui.StrokeCap.round;
+    for (var i = 0; i < 32; i++) {
+      final x = 256 + (random.nextDouble() - .5) * 410;
+      final y = 45 + random.nextDouble() * 360;
+      paint
+        ..color = const ui.Color(0xff82734f)
+        ..strokeWidth = 2.2;
+      canvas.drawLine(const ui.Offset(256, 505), ui.Offset(x, y), paint);
+      for (var j = 0; j < 13; j++) {
+        final px = x + (random.nextDouble() - .5) * 65;
+        final py = y + (random.nextDouble() - .5) * 58;
+        paint.color = j.isEven
+            ? const ui.Color(0xffd7a7ad)
+            : const ui.Color(0xfff3d1cd);
+        for (var petal = 0; petal < 5; petal++) {
+          final a = petal * math.pi * 2 / 5;
+          canvas.drawOval(
+            ui.Rect.fromCenter(
+              center: ui.Offset(px + math.cos(a) * 3, py + math.sin(a) * 3),
+              width: 6,
+              height: 5,
+            ),
+            paint,
+          );
+        }
+        paint.color = const ui.Color(0xffffe8b1);
+        canvas.drawCircle(ui.Offset(px, py), 1.3, paint);
+      }
+    }
+  });
+
   static Future<ui.Image> _image(
     void Function(ui.Canvas) draw, {
     int resolution = 512,

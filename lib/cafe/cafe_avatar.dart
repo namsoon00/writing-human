@@ -28,18 +28,12 @@ class CafeAvatar {
   late final double seated = ((1.62 - eye.position.y) / .32).clamp(0, 1);
   late final CafePoint origin = CafePoint(eye.position.x, 0, eye.position.z);
   late final List<CafeFace> faces = _build();
-  CafePoint _rotate(CafePoint p) => CafePoint(
-    p.x * math.cos(yaw) - p.z * math.sin(yaw),
-    p.y,
-    p.x * math.sin(yaw) + p.z * math.cos(yaw),
-  );
+  late final double _cos = math.cos(yaw), _sin = math.sin(yaw);
+  CafePoint _rotate(CafePoint p) =>
+      CafePoint(p.x * _cos - p.z * _sin, p.y, p.x * _sin + p.z * _cos);
   CafePoint _local(CafePoint p) {
     final d = p - origin;
-    return CafePoint(
-      d.x * math.cos(yaw) + d.z * math.sin(yaw),
-      d.y,
-      -d.x * math.sin(yaw) + d.z * math.cos(yaw),
-    );
+    return CafePoint(d.x * _cos + d.z * _sin, d.y, -d.x * _sin + d.z * _cos);
   }
 
   List<CafeFace> _build() {
@@ -281,7 +275,10 @@ class CafeAvatar {
       final swing = math.sin(phase + (s < 0 ? math.pi : 0)) * stride;
       final hip = CafePoint(
         s * .092,
-        .87 - seated * .37 - meditation * .28,
+        .87 -
+            seated * .37 -
+            meditation * .28 -
+            .035 * stride * (1 - seated) * math.cos(phase).abs(),
         .006,
       );
       final cycle = ((phase / (2 * math.pi) + (s < 0 ? .5 : 0)) % 1);
@@ -301,7 +298,7 @@ class CafeAvatar {
         meditation,
       );
       final knee = CafePoint.lerp(
-        _joint(hip, ankle, .405, .415, const CafePoint(0, 0, -1)),
+        _joint(hip, ankle, .389, .388, const CafePoint(0, 0, -1)),
         CafePoint(s * .30, .15, -.25),
         meditation,
       );
@@ -405,7 +402,7 @@ class CafeAvatar {
         );
       }
       final shoulder = torso(s * .166, 1.334, 0);
-      var wrist = torso(s * .253, .92, -.015 + swing * .10);
+      var wrist = torso(s * .245, .83, -.025 + swing * .075);
       final frame = use, obj = object;
       if (frame != null && obj != null) {
         final p = frame.progress.clamp(0.0, 1.0);
@@ -472,6 +469,15 @@ class CafeAvatar {
         .255,
         CafePoint(s * .15, -.05, 1),
       );
+      // A softly rounded shoulder closes the upper sleeve into the shirt.
+      m.ellipsoid(
+        shoulder,
+        const CafePoint(.078, .080, .083),
+        shirt,
+        'linen.shoulder',
+        slices: 10,
+        rings: 6,
+      );
       // Upper sleeve, visible folded cuff, lower forearm and shaped palm.
       final cuff = CafePoint.lerp(elbow, wrist, .24);
       m.tube(
@@ -496,37 +502,63 @@ class CafeAvatar {
         sides: 10,
       );
       final direction = (wrist - elbow).normalized;
+      var across =
+          (const CafePoint(1, 0, 0) - direction * direction.x).normalized;
+      var normal = across.cross(direction).normalized;
+      final gripping =
+          frame != null &&
+          obj != null &&
+          (frame.held ||
+              frame.kind == CafeUseKind.pickUp ||
+              frame.kind == CafeUseKind.putDown) &&
+          (s > 0 || obj.type == CafeItemType.volume);
+      if (gripping) {
+        final toward =
+            _local(cafeHeldPoint(eye, obj.type, frame, thirdPerson: true)) -
+            wrist;
+        final projected = toward - direction * toward.dot(direction);
+        if (projected.length > .015) {
+          normal = projected.normalized;
+          across = direction.cross(normal).normalized;
+          normal = across.cross(direction).normalized;
+        }
+      }
       final palm = wrist + direction * .035;
       m.ellipsoid(
         palm,
-        const CafePoint(.034, .047, .022),
+        const CafePoint(.031, .043, .016),
         skin,
         'hand',
         slices: 8,
-        rings: 6,
+        rings: 5,
+        axes: [across, direction, normal],
       );
       for (var f = 0; f < 4; f++) {
-        final start = palm + CafePoint((f - 1.5) * .015, -.025, -.004);
-        final length = f == 0 || f == 3 ? .034 : .041;
+        final start = palm + across * ((f - 1.5) * .014) + direction * .024;
+        final length = f == 0 || f == 3 ? .032 : .039;
+        final curl = gripping ? .027 : .010;
         m.tube(
           [
             start,
-            start + direction * (length * .6),
-            start + direction * length + const CafePoint(0, 0, -.009),
+            start + direction * (length * .60) + normal * (curl * .30),
+            start +
+                direction * (length * (gripping ? .63 : .94)) +
+                normal * curl,
           ],
-          [.008, .007, .0045],
+          [.0075, .0065, .0045],
           skin,
           'finger',
           sides: 6,
         );
       }
+      final thumb = palm - across * (s * .026) - direction * .007;
       m.tube(
         [
-          palm + CafePoint(-s * .026, .014, -.004),
-          palm + CafePoint(-s * .047, -.006, -.013),
-          palm + CafePoint(-s * .040, -.023, -.023),
+          thumb,
+          thumb - across * (s * .014) + direction * .019 + normal * .007,
+          thumb - across * (s * .005) + direction * .032 + normal * .018,
         ],
-        [.011, .009, .006],
+        [.010, .008, .0055],
         skin,
         'thumb',
         sides: 6,
@@ -596,7 +628,10 @@ class _AvatarMesh {
     String part, {
     int slices = 10,
     int rings = 6,
+    List<CafePoint>? axes,
   }) {
+    CafePoint orient(CafePoint q) =>
+        axes == null ? q : axes[0] * q.x + axes[1] * q.y + axes[2] * q.z;
     CafePoint n(int i, int j) {
       final v = math.pi * (i + .001) / (rings + .002),
           u = 2 * math.pi * j / slices;
@@ -608,7 +643,7 @@ class _AvatarMesh {
     }
 
     CafePoint p(CafePoint q) =>
-        center + CafePoint(q.x * radii.x, q.y * radii.y, q.z * radii.z);
+        center + orient(CafePoint(q.x * radii.x, q.y * radii.y, q.z * radii.z));
     for (var i = 0; i < rings; i++) {
       for (var j = 0; j < slices; j++) {
         final ns = [n(i, j), n(i + 1, j), n(i + 1, j + 1), n(i, j + 1)];
@@ -618,11 +653,13 @@ class _AvatarMesh {
           part,
           normals: ns
               .map(
-                (q) => CafePoint(
-                  q.x / radii.x,
-                  q.y / radii.y,
-                  q.z / radii.z,
-                ).normalized,
+                (q) => orient(
+                  CafePoint(
+                    q.x / radii.x,
+                    q.y / radii.y,
+                    q.z / radii.z,
+                  ).normalized,
+                ),
               )
               .toList(),
         );

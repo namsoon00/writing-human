@@ -305,12 +305,13 @@ extension _CourtyardGeometry on CafeWorld {
     // Same glazed facade as the cafe, viewed from the garden side.
     wall(
       const CafePoint(-4.65, 0, 3.165),
-      const CafePoint(4.65, 0, 3.165),
-      const CafePoint(4.65, .61, 3.165),
+      const CafePoint(2.15, 0, 3.165),
+      const CafePoint(2.15, .61, 3.165),
       const CafePoint(-4.65, .61, 3.165),
       CafeWorld.wall,
     );
     for (final x in [3.35, 1.05, -1.25, -3.55]) {
+      if (x == 3.35) continue;
       for (final dx in [-1.08, 1.08]) {
         if (x == 3.35 && dx > 0) continue;
         box(x + dx, 1.72, 3.165, .07, 2.25, .12, CafeWorld.dark, wood: true);
@@ -555,19 +556,19 @@ extension _CourtyardGeometry on CafeWorld {
       type: CafeItemType.table,
     );
     _pendant(3.28, .62, radius: .17);
-    // A glass door shares the cafe's rear-left window bay, with matching jambs.
+    // The same open veranda bay, seen from the garden side.
     _target = CafeTarget.cafeReturn;
-    for (final x in [2.62, 4.48]) {
-      box(x, 1.33, 3.17, .075, 2.66, .12, CafeWorld.dark, wood: true);
+    for (final x in [2.12, 4.48]) {
+      box(x, 1.37, 3.17, .07, 2.74, .12, CafeWorld.dark, wood: true);
     }
-    box(3.55, 2.66, 3.17, 1.94, .075, .12, CafeWorld.dark, wood: true);
+    box(3.3, 2.74, 3.17, 2.44, .09, .12, CafeWorld.dark, wood: true);
     faces.add(
       CafeFace(
         const [
-          CafePoint(2.65, 0, 3.16),
+          CafePoint(2.15, 0, 3.16),
           CafePoint(4.45, 0, 3.16),
-          CafePoint(4.45, 2.62, 3.16),
-          CafePoint(2.65, 2.62, 3.16),
+          CafePoint(4.45, 2.69, 3.16),
+          CafePoint(2.15, 2.69, 3.16),
         ],
         CafeWorld.cream,
         garden: true,
@@ -576,23 +577,17 @@ extension _CourtyardGeometry on CafeWorld {
         target: _target,
       ),
     );
-    final leaf = space.doorOpen ? 1.73 : 3.55;
-    quad(
-      CafePoint(leaf - .875, .03, 3.115),
-      CafePoint(leaf + .875, .03, 3.115),
-      CafePoint(leaf + .875, 2.57, 3.115),
-      CafePoint(leaf - .875, 2.57, 3.115),
-      const Color(0x109bc1b3),
-      unlit: true,
+    _roundedSlab(
+      3.3,
+      2.6,
+      2.65,
+      1.1,
+      top: .018,
+      thickness: .018,
+      radius: .04,
+      surface: CafeSurface.limestone,
+      color: const Color(0xffeee3cb),
     );
-
-    for (final x in [leaf - .9, leaf + .9]) {
-      box(x, 1.31, 3.12, .045, 2.62, .055, CafeWorld.dark, wood: true);
-    }
-    for (final y in [.025, 2.60]) {
-      box(leaf, y, 3.12, 1.80, .045, .055, CafeWorld.dark, wood: true);
-    }
-    box(leaf - .79, 1.12, 3.06, .03, .26, .035, CafeWorld.brass);
     _target = CafeTarget.bell;
     box(2.53, 1.9, 3.05, .30, .08, .22, CafeWorld.dark, wood: true);
     cylinder(

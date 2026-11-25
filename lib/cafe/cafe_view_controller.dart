@@ -152,12 +152,26 @@ class CafeViewController extends ChangeNotifier {
   );
   CafeCamera? _viewSource, _view;
   CafeWorld? _viewWorld;
+  double _viewHands = -1;
   CafeCamera get viewCamera {
     final room = world;
-    if (!identical(_viewSource, camera) || !identical(_viewWorld, room)) {
+    final frame = useFrame;
+    final hands = frame == null
+        ? 0.0
+        : frame.kind == CafeUseKind.pickUp
+        ? frame.progress
+        : frame.kind == CafeUseKind.putDown
+        ? 1 - frame.progress
+        : frame.held
+        ? 1.0
+        : 0.0;
+    if (!identical(_viewSource, camera) ||
+        !identical(_viewWorld, room) ||
+        _viewHands != hands) {
       _viewSource = camera;
       _viewWorld = room;
-      _view = cafeChaseCamera(camera, room);
+      _viewHands = hands;
+      _view = cafeChaseCamera(camera, room, hands: hands);
     }
     return _view!;
   }

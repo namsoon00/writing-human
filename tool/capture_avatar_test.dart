@@ -44,7 +44,9 @@ void main() {
                     as RenderRepaintBoundary)
                 .toImage(pixelRatio: 1.5);
         final data = await image.toByteData(format: ui.ImageByteFormat.png);
-        final file = File('output/cafe-avatar-a-20261125/$name.png');
+        final file = File(
+          '${const String.fromEnvironment('CAFE_CAPTURE', defaultValue: 'output/cafe-avatar-a-20261125')}/$name.png',
+        );
         await file.parent.create(recursive: true);
         await file.writeAsBytes(data!.buffer.asUint8List());
         image.dispose();

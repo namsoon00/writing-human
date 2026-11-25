@@ -109,6 +109,7 @@ class _ProbeState extends State<Probe> {
             key: ValueKey(controller),
             controller: controller,
             cacheGeometry: cached,
+            hardwareRendering: false,
             onRenderTiming: timing,
             moment: DateTime(2026, 11, 25, 18),
           ),

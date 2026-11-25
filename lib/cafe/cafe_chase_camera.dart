@@ -3,16 +3,57 @@ import 'dart:ui';
 import 'cafe_camera.dart';
 import 'cafe_world.dart';
 
+class _CameraBlock {
+  const _CameraBlock(this.bounds, this.height);
+  final Rect bounds;
+  final double height;
+}
+
+final _cameraBlocks = Expando<List<_CameraBlock>>();
+List<_CameraBlock> _blocks(CafeWorld world) => _cameraBlocks[world] ??= [
+  for (final rect in world.obstacles) _block(world, rect),
+];
+_CameraBlock _block(CafeWorld world, Rect rect) {
+  final owners =
+      world.objects.values
+          .where((o) => o.ownedObstacles.contains(rect))
+          .toList()
+        ..sort(
+          (a, b) => a.ownedObstacles.length.compareTo(b.ownedObstacles.length),
+        );
+  final owner = owners.isEmpty ? null : owners.first;
+  var height = 0.0;
+  for (final face in world.faces) {
+    if (owner != null
+        ? face.objectId != owner.id
+        : face.layer != 2 ||
+              face.center.y > 2.5 ||
+              !rect
+                  .inflate(.08)
+                  .contains(Offset(face.center.x, face.center.z))) {
+      continue;
+    }
+    for (final p in face.points) {
+      height = math.max(height, p.y);
+    }
+  }
+  return _CameraBlock(rect.inflate(.09), height > 0 ? height : 3.1);
+}
+
 /// Observer only: path finding and reach continue to use the actor's eye.
-CafeCamera cafeChaseCamera(CafeCamera actor, CafeWorld world) {
+CafeCamera cafeChaseCamera(
+  CafeCamera actor,
+  CafeWorld world, {
+  double hands = 0,
+}) {
   final seated = ((1.62 - actor.position.y) / .44).clamp(0.0, 1.0);
-  final shoulder = actor.right * (.18 + seated * .24);
+  final shoulder = actor.right * (.18 + seated * .24 + hands * .15);
   final rawFocus = CafePoint(
     actor.position.x + shoulder.x,
     actor.position.y < 1 ? .64 : .98 + seated * .04,
     actor.position.z + shoulder.z,
   );
-  var yaw = actor.yaw;
+  var yaw = actor.yaw - hands * .55;
   var pitch = (actor.pitch * .45 - .16 - seated * .17).clamp(-.62, .10);
   final bounds = world.walkBounds.inflate(.11);
   final focus = CafePoint(
@@ -24,16 +65,18 @@ CafeCamera cafeChaseCamera(CafeCamera actor, CafeWorld world) {
   final start = Offset(focus.x, focus.z);
   // A seated focus can be inside its chair/table bounds. Permit exiting that
   // support, then respect all other obstacles along the camera boom.
-  final obstacles = world.obstacles
-      .map((r) => r.inflate(.09))
-      .where((r) => !r.contains(start))
-      .toList();
+  final obstacles = _blocks(
+    world,
+  ).where((b) => !b.bounds.contains(start)).toList();
   double boom(CafePoint axis) {
     var distance = 0.0;
     for (var d = .05; d <= 2.25; d += .05) {
       final p = focus - axis * d;
       final point = Offset(p.x, p.z);
-      if (!bounds.contains(point) || obstacles.any((r) => r.contains(point))) {
+      if (!bounds.contains(point) ||
+          obstacles.any(
+            (b) => b.bounds.contains(point) && p.y < b.height + .08,
+          )) {
         break;
       }
       distance = d;

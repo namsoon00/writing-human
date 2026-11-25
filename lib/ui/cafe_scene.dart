@@ -11,6 +11,9 @@ import '../cafe/cafe_home.dart';
 import '../cafe/cafe_materials.dart';
 import '../cafe/cafe_watercolor.dart';
 import '../cafe/cafe_renderer.dart';
+import '../cafe/cafe_gpu_stub.dart'
+    if (dart.library.js_interop) '../cafe/cafe_gpu_web.dart'
+    as gpu;
 import '../cafe/cafe_view_controller.dart';
 import '../cafe/cafe_visit.dart';
 import '../cafe/cafe_world.dart';
@@ -36,9 +39,13 @@ class CafeScene extends StatefulWidget {
     this.moment,
     this.onRenderTiming,
     this.cacheGeometry = true,
+    this.detailCulling = true,
+    this.hardwareRendering = true,
   });
   final void Function(CafeRenderTiming)? onRenderTiming;
   final bool cacheGeometry;
+  final bool detailCulling;
+  final bool hardwareRendering;
   final DateTime? moment;
   final CafeViewController controller;
   final bool interactive;
@@ -220,7 +227,9 @@ class _CafeSceneState extends State<CafeScene>
       artwork,
       gravel,
       tree,
-      flowers;
+      flowers,
+      blossom,
+      lawn;
 
   @override
   void initState() {
@@ -452,6 +461,8 @@ class _CafeSceneState extends State<CafeScene>
       _texture('cafe-art-botanical.webp', width: 1024),
       _texture('cafe-art-pond.webp', width: 1024),
       _texture('cafe-art-book.webp', width: 1024),
+      CafeWatercolor.blossom(),
+      CafeWatercolor.lawn(),
     ]);
     if (!mounted) {
       for (final image in images) {
@@ -470,7 +481,9 @@ class _CafeSceneState extends State<CafeScene>
       gravel = images[7];
       tree = images[8];
       flowers = images[9];
-      framedArt = images.skip(10).toList();
+      framedArt = images.skip(10).take(3).toList();
+      blossom = images[13];
+      lawn = images[14];
     });
   }
 
@@ -612,6 +625,8 @@ class _CafeSceneState extends State<CafeScene>
     gravel?.dispose();
     tree?.dispose();
     flowers?.dispose();
+    blossom?.dispose();
+    lawn?.dispose();
     for (final image in framedArt) {
       image?.dispose();
     }
@@ -877,35 +892,40 @@ class _CafeSceneState extends State<CafeScene>
                       )
                     : null,
                 child: RepaintBoundary(
-                  child: CustomPaint(
-                    painter: CafeRenderer(
-                      onTiming: widget.onRenderTiming,
-                      cacheGeometry: widget.cacheGeometry,
-                      letterAtlas: letterAtlas,
-                      world: c.world,
-                      use: c.useFrame,
-                      useCamera: c.actorCamera,
-                      avatar: c.avatar.faces,
-                      camera: camera,
-                      wood: wood,
-                      sign: sign,
-                      walnut: walnut,
-                      limestone: limestone,
-                      woven: woven,
-                      plaster: plaster,
-                      artwork: artwork,
-                      gravel: gravel,
-                      tree: tree,
-                      flowers: flowers,
-                      framedArt: framedArt,
-                      time: sceneTime,
-                      lightTime: lightTime,
-                      teaFilled: c.teaFilled,
-                      bellAt: c.bellAt,
-                      teaAt: c.teaAt,
-                    ),
-                    size: Size.infinite,
-                  ),
+                  child:
+                      (widget.hardwareRendering
+                      ? gpu.cafeSurface
+                      : _canvasSurface)(
+                        CafeRenderer(
+                          onTiming: widget.onRenderTiming,
+                          cacheGeometry: widget.cacheGeometry,
+                          detailCulling: widget.detailCulling,
+                          letterAtlas: letterAtlas,
+                          world: c.world,
+                          use: c.useFrame,
+                          useCamera: c.actorCamera,
+                          avatar: c.avatar.faces,
+                          camera: camera,
+                          wood: wood,
+                          sign: sign,
+                          walnut: walnut,
+                          limestone: limestone,
+                          woven: woven,
+                          plaster: plaster,
+                          artwork: artwork,
+                          gravel: gravel,
+                          tree: tree,
+                          flowers: flowers,
+                          blossom: blossom,
+                          lawn: lawn,
+                          framedArt: framedArt,
+                          time: sceneTime,
+                          lightTime: lightTime,
+                          teaFilled: c.teaFilled,
+                          bellAt: c.bellAt,
+                          teaAt: c.teaAt,
+                        ),
+                      ),
                 ),
               ),
             ),
@@ -916,3 +936,6 @@ class _CafeSceneState extends State<CafeScene>
     ),
   );
 }
+
+Widget _canvasSurface(CafeRenderer painter) =>
+    CustomPaint(painter: painter, size: Size.infinite);

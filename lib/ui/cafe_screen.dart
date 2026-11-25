@@ -93,7 +93,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
       mix: mix ?? view.space.atmosphere,
       camera: view.camera,
       courtyard: view.inCourtyard,
-      doorOpen: view.space.doorOpen,
+      doorOpen: true,
     ),
   );
   @override
@@ -512,10 +512,6 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     }
 
     if ((seat == CafeSeat.garden) != view.inCourtyard) {
-      if (!view.space.doorOpen &&
-          !await _storeUse(view.space.copy(doorOpen: true))) {
-        return false;
-      }
       if (!await travel(
             view.inCourtyard ? CafeTarget.cafeReturn : CafeTarget.courtyard,
           ) ||
@@ -1434,16 +1430,6 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                       ],
                       (v) => _changeRoom(space.copy(warmth: v / 2)),
                     ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text(
-                        '\uC815\uC6D0 \uBB38 \uC5F4\uC5B4 \uB450\uAE30',
-                      ),
-                      value: space.doorOpen,
-                      onChanged: roomSaving
-                          ? null
-                          : (v) => _changeRoom(space.copy(doorOpen: v)),
-                    ),
                   ],
                   if (view.inCourtyard &&
                       (object == null || object.type == CafeItemType.group))
@@ -1533,9 +1519,6 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
         if (target == CafeTarget.bookshelf) _chooseBook();
         if (target == CafeTarget.recommendations) _recommendations();
         if (target == CafeTarget.stationery) widget.onTools?.call(bookId);
-        if (target == CafeTarget.exit && !widget.saveFailed) {
-          _requestClose(leaving: true);
-        }
       });
     }
   }
@@ -1613,12 +1596,6 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
           setState(() => calmHint = '가까이 가면 한 번 더 눌러 주세요.');
         }
       }
-      return;
-    }
-    if ((target == CafeTarget.courtyard || target == CafeTarget.cafeReturn) &&
-        !view.space.doorOpen) {
-      view.applySpace(view.space.copy(doorOpen: true));
-      unawaited(_saveRoom());
       return;
     }
     calmHint = null;

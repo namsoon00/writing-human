@@ -19,7 +19,6 @@ enum CafeTarget {
   bookshelf('나의 책장', '펼칠 책 고르기'),
   recommendations('추천 서가', '문장 살펴보기'),
   stationery('펜과 노트', '쓰기 도구 살펴보기'),
-  exit('출입문', '카페 나가기'),
   windowMiddle('가운데 창가', '앉기'),
   windowRear('안쪽 창가', '앉기'),
   courtyard('고요한 뜰', '뜰로 걷기'),

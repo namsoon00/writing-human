@@ -11,6 +11,7 @@ import 'cafe_atmosphere.dart';
 
 part 'cafe_depth_order.dart';
 part 'cafe_scene_mesh.dart';
+part 'cafe_gpu_geometry.dart';
 
 class _Vertex {
   const _Vertex(this.point, this.u, this.v, this.color);
@@ -76,6 +77,8 @@ class CafeRenderer extends CustomPainter {
     this.gravel,
     this.tree,
     this.flowers,
+    this.blossom,
+    this.lawn,
     this.framedArt = const [],
     this.use,
     this.useCamera,
@@ -89,6 +92,7 @@ class CafeRenderer extends CustomPainter {
     this.allowPortal = true,
     this.onTiming,
     this.cacheGeometry = true,
+    this.detailCulling = true,
     this.viewportClip,
   });
   final ui.Image? letterAtlas;
@@ -110,6 +114,8 @@ class CafeRenderer extends CustomPainter {
   final List<ui.Image?> framedArt;
   final bool allowPortal;
   final bool cacheGeometry;
+  final bool detailCulling;
+  final ui.Image? blossom, lawn;
   final Rect? viewportClip;
   final void Function(CafeRenderTiming)? onTiming;
   static final _meshes = Expando<_SceneMesh>();
@@ -265,6 +271,8 @@ class CafeRenderer extends CustomPainter {
       CafeSurface.gravel => gravel,
       CafeSurface.tree => tree,
       CafeSurface.flowers => flowers,
+      CafeSurface.blossom => blossom,
+      CafeSurface.lawn => lawn,
       CafeSurface.water => plaster,
       CafeSurface.glass => null,
       CafeSurface.plain ||
@@ -462,12 +470,12 @@ class CafeRenderer extends CustomPainter {
       final mood = world.space.home.mood;
       final dusk = _lightFrame.dusk;
       final top = Color.lerp(
-        mood == 0 ? const Color(0xffb7c7c8) : const Color(0xff617a89),
+        mood == 0 ? const Color(0xffbdd0d7) : const Color(0xff617a89),
         const Color(0xff536b7b),
         dusk * .7,
       )!;
       final horizon = Color.lerp(
-        mood == 0 ? const Color(0xffeee6d1) : const Color(0xffb7b2a4),
+        mood == 0 ? const Color(0xfff4e4c9) : const Color(0xffb7b2a4),
         const Color(0xffb59b87),
         dusk * .6,
       )!;
@@ -509,8 +517,35 @@ class CafeRenderer extends CustomPainter {
       size,
       clip,
     );
+    final distant = <String>{};
+    final substitutes = <CafePlant>[];
+    if (detailCulling && world.courtyard) {
+      for (final obj in world.objects.values) {
+        final isTree = obj.id.startsWith('garden.tree.');
+        final isFlower = obj.id.startsWith('garden.flowers.');
+        if ((!isTree && !isFlower) ||
+            (isTree ? tree == null : flowers == null)) {
+          continue;
+        }
+        final delta = obj.pivot - camera.position;
+        final distance2 = delta.x * delta.x + delta.z * delta.z;
+        if (distance2 <= (isTree ? 4.5 * 4.5 : 2.4 * 2.4)) continue;
+        distant.add(obj.id);
+        final h = isTree ? (obj.id.endsWith('.18') ? 2.55 : 2.30) : .36;
+        substitutes.add(
+          CafePlant(
+            obj.pivot,
+            isTree ? h * .85 : .43,
+            h,
+            isTree ? CafeSurface.tree : CafeSurface.flowers,
+            objectId: obj.id,
+          ),
+        );
+      }
+    }
     final orderKey = (
       viewKey,
+      distant.join(','),
       avatar,
       use?.id,
       use?.kind,
@@ -528,6 +563,7 @@ class CafeRenderer extends CustomPainter {
       teaAt,
       tree != null,
       flowers != null,
+      blossom != null,
     );
     var mesh = _meshes[world];
     final cacheHit = cacheGeometry && mesh != null && mesh.matches(world.faces);
@@ -542,11 +578,13 @@ class CafeRenderer extends CustomPainter {
             ...avatar,
             ...world.weatherFaces(camera, time),
             ...world
-                .plantFaces(camera)
+                .plantFaces(camera, source: [...world.plants, ...substitutes])
                 .where(
                   (face) =>
                       (face.surface != CafeSurface.tree || tree != null) &&
-                      (face.surface != CafeSurface.flowers || flowers != null),
+                      (face.surface != CafeSurface.flowers ||
+                          flowers != null) &&
+                      (face.surface != CafeSurface.blossom || blossom != null),
                 ),
             ...world.lightFaces(camera),
             ...world.animatedFaces(
@@ -570,7 +608,14 @@ class CafeRenderer extends CustomPainter {
         );
       }
       if (!orderedHit) {
-        mesh!.order = mesh.ordered(camera, clip, size, changing, use?.id);
+        mesh!.order = mesh.ordered(
+          camera,
+          clip,
+          size,
+          changing,
+          use?.id,
+          distant,
+        );
         mesh.orderKey = orderKey;
       }
       geometry = mesh.order!;
@@ -588,7 +633,8 @@ class CafeRenderer extends CustomPainter {
     for (final polygon in geometry) {
       final face = polygon is _SceneFace ? polygon.triangle.face : polygon;
       if ((face.surface == CafeSurface.tree && tree == null) ||
-          (face.surface == CafeSurface.flowers && flowers == null)) {
+          (face.surface == CafeSurface.flowers && flowers == null) ||
+          (face.surface == CafeSurface.blossom && blossom == null)) {
         continue;
       }
       // Closed solid meshes face outward. Thin leaves and translucent light
@@ -786,6 +832,8 @@ class CafeRenderer extends CustomPainter {
       gravel,
       tree,
       flowers,
+      blossom,
+      lawn,
       sign,
       ...framedArt,
       letterAtlas,
@@ -802,6 +850,7 @@ class CafeRenderer extends CustomPainter {
                 image == artwork ||
                 image == tree ||
                 image == flowers ||
+                image == blossom ||
                 framedArt.contains(image)
             ? TileMode.clamp
             : TileMode.repeated,
@@ -810,6 +859,7 @@ class CafeRenderer extends CustomPainter {
                 image == artwork ||
                 image == tree ||
                 image == flowers ||
+                image == blossom ||
                 framedArt.contains(image)
             ? TileMode.clamp
             : TileMode.repeated,
@@ -853,7 +903,8 @@ class CafeRenderer extends CustomPainter {
         ..colorFilter =
             batchShader != null &&
                 (batchShader == shaders[tree] ||
-                    batchShader == shaders[flowers])
+                    batchShader == shaders[flowers] ||
+                    batchShader == shaders[blossom])
             ? plantMask
             : null
         ..color = Colors.white
@@ -883,6 +934,7 @@ class CafeRenderer extends CustomPainter {
         world: world.linkedWorld,
         onTiming: onTiming,
         cacheGeometry: cacheGeometry,
+        detailCulling: detailCulling,
         viewportClip: cacheGeometry ? portal.getBounds().intersect(clip) : null,
         letterAtlas: letterAtlas,
         camera: world.linkedCamera(camera),
@@ -895,6 +947,8 @@ class CafeRenderer extends CustomPainter {
         gravel: gravel,
         tree: tree,
         flowers: flowers,
+        blossom: blossom,
+        lawn: lawn,
         framedArt: framedArt,
         sign: sign,
         time: time,

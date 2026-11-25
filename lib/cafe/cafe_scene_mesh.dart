@@ -66,8 +66,9 @@ class _SceneFace extends CafeFace {
 }
 
 class _SceneBounds {
-  const _SceneBounds(this.minimum, this.maximum);
+  const _SceneBounds(this.minimum, this.maximum, [this.detailId]);
   final CafePoint minimum, maximum;
+  final String? detailId;
   factory _SceneBounds.of(List<_SceneFace> faces) {
     var x = double.infinity,
         y = x,
@@ -75,6 +76,14 @@ class _SceneBounds {
         xx = double.negativeInfinity,
         yy = xx,
         zz = xx;
+    final firstId = faces.first.objectId;
+    final detailId =
+        firstId != null &&
+            (firstId.startsWith('garden.tree.') ||
+                firstId.startsWith('garden.flowers.')) &&
+            faces.every((f) => f.objectId == firstId)
+        ? firstId
+        : null;
     for (final face in faces) {
       for (final p in face.points) {
         x = math.min(x, p.x);
@@ -85,7 +94,7 @@ class _SceneBounds {
         zz = math.max(zz, p.z);
       }
     }
-    return _SceneBounds(CafePoint(x, y, z), CafePoint(xx, yy, zz));
+    return _SceneBounds(CafePoint(x, y, z), CafePoint(xx, yy, zz), detailId);
   }
   bool visible(List<_FacePlane> frustum) {
     for (final p in frustum) {
@@ -172,7 +181,11 @@ _FacePlane? _scenePlane(_SceneFace face) {
   return null;
 }
 
-_SceneNode? _sceneTree(List<_SceneFace> faces, {bool expandLeaf = false}) {
+_SceneNode? _sceneTree(
+  List<_SceneFace> faces, {
+  bool expandLeaf = false,
+  bool dynamic = false,
+}) {
   if (faces.isEmpty) return null;
   final bounds = _SceneBounds.of(faces);
   // Defer fine partitions outside the view. A turn only expands nearby leaves,
@@ -253,7 +266,13 @@ _SceneNode? _sceneTree(List<_SceneFace> faces, {bool expandLeaf = false}) {
         _sceneSplit(face, chosen, front, back);
     }
   }
-  return _SceneNode(chosen, on, _sceneTree(front), _sceneTree(back), bounds);
+  return _SceneNode(
+    chosen,
+    on,
+    _sceneTree(front, dynamic: dynamic),
+    _sceneTree(back, dynamic: dynamic),
+    bounds,
+  );
 }
 
 List<_SceneFace> _sceneTriangles(Iterable<CafeFace> source) {
@@ -319,6 +338,7 @@ class _SceneMesh {
     Size size,
     Iterable<CafeFace> dynamicFaces,
     String? omit,
+    Set<String> distant,
   ) {
     final result = <CafeFace>[...portals];
     final f = CafeRenderer.focalLength(size) * camera.lens;
@@ -336,7 +356,14 @@ class _SceneMesh {
       plane(u * f + v * (clip.bottom - size.height / 2)),
     ];
     final dynamic = <int, List<_SceneFace>>{};
-    for (final face in _sceneTriangles(dynamicFaces)) {
+    final facing = dynamicFaces.where(
+      (f) =>
+          f.doubleSided ||
+          f.unlit ||
+          f.color.a <= .99 ||
+          f.normal.dot(eye - f.center) >= -.015,
+    );
+    for (final face in _sceneTriangles(facing)) {
       if (face.bounds.visible(frustum)) {
         dynamic.putIfAbsent(face.layer, () => []).add(face);
       }
@@ -346,9 +373,11 @@ class _SceneMesh {
       List<_SceneFace> changing, {
       bool includeStatic = true,
     }) {
-      if (node == null || !node.bounds.visible(frustum)) {
+      if (node == null ||
+          !node.bounds.visible(frustum) ||
+          distant.contains(node.bounds.detailId)) {
         if (changing.isNotEmpty) {
-          visit(_sceneTree(changing), [], includeStatic: false);
+          visit(_sceneTree(changing, dynamic: true), [], includeStatic: false);
         }
         return;
       }
@@ -377,7 +406,9 @@ class _SceneMesh {
       final coplanar = [
         ...node.faces.where(
           (p) =>
-              (!includeStatic || omit == null || p.objectId != omit) &&
+              (!includeStatic ||
+                  ((omit == null || p.objectId != omit) &&
+                      !distant.contains(p.objectId))) &&
               p.bounds.visible(frustum),
         ),
         ...on,

@@ -62,10 +62,12 @@ class CafeYard {
     return List.unmodifiable(result);
   }
 
-  static double distanceToTrail(CafePoint p) {
+  static double distanceToTrail(CafePoint p) => _distance(trail, p);
+  static double distanceToStone(CafePoint p) => _distance(stone, p);
+  static double _distance(List<CafePoint> route, CafePoint p) {
     var nearest = double.infinity;
-    for (var i = 1; i < trail.length; i++) {
-      final a = trail[i - 1], b = trail[i], v = b - a;
+    for (var i = 1; i < route.length; i++) {
+      final a = route[i - 1], b = route[i], v = b - a;
       final t = ((p - a).dot(v) / v.dot(v)).clamp(0.0, 1.0);
       final q = a + v * t;
       nearest = math.min(

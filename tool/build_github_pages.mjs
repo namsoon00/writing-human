@@ -21,7 +21,7 @@ const result = spawnSync('flutter', [
   '--dart-define=WRITING_HUMAN_LOCAL_ONLY=true', '--output', output,
 ], {stdio: 'inherit'});
 if (result.status !== 0) process.exit(result.status ?? 1);
-const html = readFileSync(`${output}/index.html`, 'utf8');
+let html = readFileSync(`${output}/index.html`, 'utf8');
 if (!html.includes(`<base href="${base}">`)) {
   throw new Error('The generated index has an unexpected base path.');
 }
@@ -31,6 +31,7 @@ const bootstrapPath = `${output}/flutter_bootstrap.js`;
 const bootstrap = readFileSync(bootstrapPath, 'utf8');
 const appEntry = '"mainJsPath":"main.dart.js"';
 const loaderEntry = 'src="flutter_bootstrap.js"';
+html = html.replace('src="cafe_gpu.js"', `src="cafe_gpu.js?v=${version(readFileSync(`${output}/cafe_gpu.js`))}"`);
 if (!bootstrap.includes(appEntry) || !html.includes(loaderEntry)) {
   throw new Error('The generated Flutter loader has an unexpected entry path.');
 }

@@ -33,7 +33,7 @@ jobs:
       - name: Check the single narration voice DSP in Chrome
         run: node tool/test_narration_web.mjs
       - name: Check cafe image lifetime and room persistence in Chrome
-        run: flutter test --no-pub --platform chrome test/navigation_flow_test.dart test/navigation_platform_test.dart test/audio_session_policy_test.dart test/audio_session_web_test.dart test/cafe_avatar_test.dart test/cafe_context_hint_test.dart test/cafe_walk_test.dart test/cafe_item_controls_test.dart test/cafe_image_lifetime_test.dart test/cafe_space_web_test.dart test/cafe_watercolor_test.dart test/cafe_entry_test.dart test/cafe_items_test.dart test/cafe_material_test.dart test/cafe_actions_test.dart test/cafe_homecoming_test.dart test/cafe_homecoming_flow_test.dart test/cafe_occlusion_test.dart test/cafe_atmosphere_test.dart
+        run: flutter test --no-pub --platform chrome test/navigation_flow_test.dart test/navigation_platform_test.dart test/audio_session_policy_test.dart test/audio_session_web_test.dart test/cafe_avatar_test.dart test/cafe_courtyard_test.dart test/cafe_context_hint_test.dart test/cafe_walk_test.dart test/cafe_item_controls_test.dart test/cafe_image_lifetime_test.dart test/cafe_space_web_test.dart test/cafe_watercolor_test.dart test/cafe_entry_test.dart test/cafe_items_test.dart test/cafe_material_test.dart test/cafe_actions_test.dart test/cafe_homecoming_test.dart test/cafe_homecoming_flow_test.dart test/cafe_occlusion_test.dart test/cafe_atmosphere_test.dart
       - name: Build Flutter preview
         run: node tool/build_github_pages.mjs
       - uses: actions/upload-pages-artifact@v4

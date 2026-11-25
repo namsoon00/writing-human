@@ -122,6 +122,8 @@ class _CafeSceneState extends State<CafeScene>
   Timer? lightClock;
   late int lightMood = widget.controller.space.home.mood;
   bool appActive = true;
+  bool calmReady = true;
+  Timer? calmResume;
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -163,6 +165,8 @@ class _CafeSceneState extends State<CafeScene>
       calm.start();
     }
     if (!animate && calm.isActive) {
+      calmResume?.cancel();
+      calmReady = true;
       calm.stop();
       heldTime = sceneTime;
     }
@@ -196,10 +200,18 @@ class _CafeSceneState extends State<CafeScene>
     keyboard = createTicker(_keyFrame);
     calm = createTicker((elapsed) {
       final next = heldTime + elapsed.inMicroseconds / 1000000;
-      // A quiet 10Hz scene, only while the courtyard is visible.
-      if (next - sceneTime >= .1 && mounted) {
+      // Leave input time AFTER a completed decorative paint. Measuring only
+      // from frame start keeps slow renderers permanently busy with scenery.
+      if (calmReady && next - sceneTime >= .1 && mounted) {
+        calmReady = false;
         setState(() => sceneTime = next);
         widget.controller.effectTime = sceneTime;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || !calm.isActive) return;
+          calmResume = Timer(const Duration(milliseconds: 180), () {
+            calmReady = true;
+          });
+        });
       }
     });
     travel = AnimationController(
@@ -549,6 +561,7 @@ class _CafeSceneState extends State<CafeScene>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    calmResume?.cancel();
     calm.dispose();
     lightClock?.cancel();
     keyboard.dispose();
@@ -732,9 +745,12 @@ class _CafeSceneState extends State<CafeScene>
           fit: StackFit.expand,
           children: [
             Semantics(
+              container: true,
+              explicitChildNodes: true,
               label: '3인칭 카페. 끌어 둘러보고, 바닥을 눌러 걷고, 책상과 서가를 눌러 이용해요.',
               child: GestureDetector(
                 key: const ValueKey('cafe-third-person-view'),
+                excludeFromSemantics: true,
                 behavior: HitTestBehavior.opaque,
                 onTapDown: widget.interactive
                     ? (_) => focus.requestFocus()

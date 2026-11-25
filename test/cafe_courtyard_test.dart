@@ -33,6 +33,15 @@ void main() {
       final c = tester.widget<CafeScene>(find.byType(CafeScene)).controller;
       expect(c.inCourtyard, isFalse);
       expect(c.effectTime, greaterThan(0));
+      final painted = c.effectTime;
+      await tester.pump(const Duration(milliseconds: 120));
+      expect(
+        c.effectTime,
+        painted,
+        reason: 'Decorative paints leave an input interval',
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(c.effectTime, greaterThan(painted));
       tester.platformDispatcher.accessibilityFeaturesTestValue =
           const FakeAccessibilityFeatures(disableAnimations: true);
       addTearDown(

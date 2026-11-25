@@ -1,0 +1,156 @@
+{
+  "source_commit": "6a048b9752bd0335b664be9069c980c0cfafa9cf",
+  "run_id": 45592550891,
+  "run_url": "https://github.com/namsoon00/writing-human/actions/runs/45592550891",
+  "jobs": [
+    {
+      "id": 139130210184,
+      "name": "build",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 45592550891,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run subosito/flutter-action@v2",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Install SQLite test library",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Run flutter pub get",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Run dart format --output=none --set-exit-if-changed lib test tool/capture_preview_test.dart tool/capture_cafe_items_test.dart tool/capture_cafe_actions_test.dart tool/capture_cafe_homecoming_test.dart tool/capture_cafe_occlusion_test.dart tool/capture_cafe_atmosphere_test.dart tool/capture_avatar_test.dart tool/capture_cafe_yard_test.dart tool/benchmark_cafe_test.dart tool/cafe_response_probe.dart",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Run flutter analyze --no-pub",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Run flutter test --no-pub --concurrency=2",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Check the single narration voice DSP in Chrome",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9
+        },
+        {
+          "name": "Check cafe image lifetime and room persistence in Chrome",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10
+        },
+        {
+          "name": "Build Flutter preview",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Run actions/upload-pages-artifact@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12
+        },
+        {
+          "name": "Post Run subosito/flutter-action@v2",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 24
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 25
+        }
+      ]
+    },
+    {
+      "id": 139145590464,
+      "name": "deploy",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 45592550891,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Configure Pages",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Deploy to GitHub Pages",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        }
+      ]
+    }
+  ],
+  "summary": [
+    "2026-11-25T10:12:06.6902073Z Formatted 225 files (0 changed) in 1.60 seconds.",
+    "2026-11-25T10:12:33.4263981Z No issues found! (ran in 26.2s)",
+    "2026-11-25T10:20:34.5151246Z 🎉 373 tests passed.",
+    "2026-11-25T10:20:59.8633773Z 🎉 6 tests passed.",
+    "2026-11-25T10:38:04.4898151Z 🎉 98 tests passed.",
+    "2026-11-25T10:38:54.1038767Z ✓ Built build/github-pages",
+    "2026-11-25T10:38:54.1297069Z GitHub Pages build ready at build/github-pages, base /writing-human/, local storage only."
+  ],
+  "counts": {
+    "native": 373,
+    "narration_chrome": 6,
+    "integration_chrome": 98
+  },
+  "format_files": 225
+}

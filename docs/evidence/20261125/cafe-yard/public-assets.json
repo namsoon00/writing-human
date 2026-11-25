@@ -1,0 +1,46 @@
+{
+  "checked_at_utc": "2026-11-25T10:39:26Z",
+  "url": "https://namsoon00.github.io/writing-human/",
+  "source_commit": "6a048b9752bd0335b664be9069c980c0cfafa9cf",
+  "assets": [
+    {
+      "path": "main.dart.js",
+      "size": 5361146,
+      "sha256": "baff2f658f8e3a23b897d6fd61215a96daef994d699647032239fc0057f36649",
+      "public_sha256": "baff2f658f8e3a23b897d6fd61215a96daef994d699647032239fc0057f36649",
+      "match": true
+    },
+    {
+      "path": "assets/assets/fonts/WritingHumanDevelopment-Regular.ttf",
+      "size": 895652,
+      "sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+      "public_sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+      "match": true
+    },
+    {
+      "path": "assets/assets/images/cafe-watercolor-oak.webp",
+      "size": 373234,
+      "sha256": "09e57d12c41a0c46e7ab91f03b873161daecf23fa79be9f9d1fabbad6c41c63b",
+      "public_sha256": "09e57d12c41a0c46e7ab91f03b873161daecf23fa79be9f9d1fabbad6c41c63b",
+      "match": true
+    },
+    {
+      "path": "assets/assets/images/cafe-watercolor-tree.webp",
+      "size": 624236,
+      "sha256": "bdc15a907213570558e2fb1887899c1143968a406ac05da95297ce1836319086",
+      "public_sha256": "bdc15a907213570558e2fb1887899c1143968a406ac05da95297ce1836319086",
+      "match": true
+    },
+    {
+      "path": "assets/assets/audio/dsp/voice_worker.mjs",
+      "size": 1733,
+      "sha256": "ef288c3f1b9f9db5b8dc1f2c1e66c34c3a210496ebdb8d80f576c4b602100391",
+      "public_sha256": "ef288c3f1b9f9db5b8dc1f2c1e66c34c3a210496ebdb8d80f576c4b602100391",
+      "match": true
+    }
+  ],
+  "loader_hash_matches_own_bytes": true,
+  "app_version_matches_public_js": true,
+  "loader_matches_except_generated_service_worker_version": true,
+  "all_match": true
+}

@@ -1,0 +1,353 @@
+{
+  "source_commit": "6a048b9752bd0335b664be9069c980c0cfafa9cf",
+  "run_id": 45592550891,
+  "local_checks": {
+    "yard_model": 6,
+    "focused_model_render_cache": 20,
+    "controls_camera": 14,
+    "render_capture_tool": 1,
+    "analyze": "pass",
+    "format": "pass",
+    "release_build": "pass",
+    "shared_workspace_scoped_analyze": "pass",
+    "shared_workspace_yard_tests": 7
+  },
+  "root_whole_analyze": "Included unrelated pre-existing output harnesses: 281 issues; isolated release whole analyze and shared-workspace lib/test/capture-tool scope passed.",
+  "physical_device_verified": false,
+  "public_assets_verified": true,
+  "runtime_render_files": [
+    "gate-wide.png",
+    "meditation-390.png",
+    "long-trail.png",
+    "rest-390.png",
+    "barefoot-390.png"
+  ],
+  "ci": {
+    "source_commit": "6a048b9752bd0335b664be9069c980c0cfafa9cf",
+    "run_id": 45592550891,
+    "run_url": "https://github.com/namsoon00/writing-human/actions/runs/45592550891",
+    "jobs": [
+      {
+        "id": 139130210184,
+        "name": "build",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 45592550891,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run subosito/flutter-action@v2",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Install SQLite test library",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run flutter pub get",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run dart format --output=none --set-exit-if-changed lib test tool/capture_preview_test.dart tool/capture_cafe_items_test.dart tool/capture_cafe_actions_test.dart tool/capture_cafe_homecoming_test.dart tool/capture_cafe_occlusion_test.dart tool/capture_cafe_atmosphere_test.dart tool/capture_avatar_test.dart tool/capture_cafe_yard_test.dart tool/benchmark_cafe_test.dart tool/cafe_response_probe.dart",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Run flutter analyze --no-pub",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run flutter test --no-pub --concurrency=2",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Check the single narration voice DSP in Chrome",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Check cafe image lifetime and room persistence in Chrome",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Build Flutter preview",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Run actions/upload-pages-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Post Run subosito/flutter-action@v2",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 23
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 24
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 25
+          }
+        ]
+      },
+      {
+        "id": 139145590464,
+        "name": "deploy",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 45592550891,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Configure Pages",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Deploy to GitHub Pages",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          }
+        ]
+      }
+    ],
+    "summary": [
+      "2026-11-25T10:12:06.6902073Z Formatted 225 files (0 changed) in 1.60 seconds.",
+      "2026-11-25T10:12:33.4263981Z No issues found! (ran in 26.2s)",
+      "2026-11-25T10:20:34.5151246Z 🎉 373 tests passed.",
+      "2026-11-25T10:20:59.8633773Z 🎉 6 tests passed.",
+      "2026-11-25T10:38:04.4898151Z 🎉 98 tests passed.",
+      "2026-11-25T10:38:54.1038767Z ✓ Built build/github-pages",
+      "2026-11-25T10:38:54.1297069Z GitHub Pages build ready at build/github-pages, base /writing-human/, local storage only."
+    ],
+    "counts": {
+      "native": 373,
+      "narration_chrome": 6,
+      "integration_chrome": 98
+    },
+    "format_files": 225
+  },
+  "public_assets": {
+    "checked_at_utc": "2026-11-25T10:39:26Z",
+    "url": "https://namsoon00.github.io/writing-human/",
+    "source_commit": "6a048b9752bd0335b664be9069c980c0cfafa9cf",
+    "assets": [
+      {
+        "path": "main.dart.js",
+        "size": 5361146,
+        "sha256": "baff2f658f8e3a23b897d6fd61215a96daef994d699647032239fc0057f36649",
+        "public_sha256": "baff2f658f8e3a23b897d6fd61215a96daef994d699647032239fc0057f36649",
+        "match": true
+      },
+      {
+        "path": "assets/assets/fonts/WritingHumanDevelopment-Regular.ttf",
+        "size": 895652,
+        "sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+        "public_sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+        "match": true
+      },
+      {
+        "path": "assets/assets/images/cafe-watercolor-oak.webp",
+        "size": 373234,
+        "sha256": "09e57d12c41a0c46e7ab91f03b873161daecf23fa79be9f9d1fabbad6c41c63b",
+        "public_sha256": "09e57d12c41a0c46e7ab91f03b873161daecf23fa79be9f9d1fabbad6c41c63b",
+        "match": true
+      },
+      {
+        "path": "assets/assets/images/cafe-watercolor-tree.webp",
+        "size": 624236,
+        "sha256": "bdc15a907213570558e2fb1887899c1143968a406ac05da95297ce1836319086",
+        "public_sha256": "bdc15a907213570558e2fb1887899c1143968a406ac05da95297ce1836319086",
+        "match": true
+      },
+      {
+        "path": "assets/assets/audio/dsp/voice_worker.mjs",
+        "size": 1733,
+        "sha256": "ef288c3f1b9f9db5b8dc1f2c1e66c34c3a210496ebdb8d80f576c4b602100391",
+        "public_sha256": "ef288c3f1b9f9db5b8dc1f2c1e66c34c3a210496ebdb8d80f576c4b602100391",
+        "match": true
+      }
+    ],
+    "loader_hash_matches_own_bytes": true,
+    "app_version_matches_public_js": true,
+    "loader_matches_except_generated_service_worker_version": true,
+    "all_match": true
+  },
+  "browser": {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "local_release": [
+      "cafe to expanded yard",
+      "meditation sitting",
+      "shoe bench barefoot toggle",
+      "drag view",
+      "floor tap walking",
+      "stroll start and stopped state",
+      "shaded bench rest",
+      "return to cafe restores shoes",
+      "return to existing blank writing page"
+    ],
+    "public_release": [
+      "bookshelf to cafe",
+      "guide to expanded yard",
+      "meditation arrival and folded pose"
+    ],
+    "public_console_errors": 0,
+    "screenshot": "output/cafe-yard-20261125/public-meditation-390.jpg",
+    "viewport_restored": true,
+    "temporary_tabs_closed": true,
+    "notes": "One local stop click reported a browser-control focus timeout; the next observed screen showed walking stopped and controls re-enabled. Automated stop-button and controller cancellation checks also passed."
+  },
+  "root_index": {
+    "index_before": "a8f02d53b9340e34adae7e85ca60b74262abcaac222274126235e2264e635064",
+    "index_after": "a8f02d53b9340e34adae7e85ca60b74262abcaac222274126235e2264e635064",
+    "files": [
+      {
+        "path": ".github/workflows/github-pages.yml",
+        "preserved_user_changes": false
+      },
+      {
+        "path": "docs/architecture.md",
+        "preserved_user_changes": true
+      },
+      {
+        "path": "docs/brand-personas.md",
+        "preserved_user_changes": true
+      },
+      {
+        "path": "docs/navigation.md",
+        "preserved_user_changes": true
+      },
+      {
+        "path": "docs/product.md",
+        "preserved_user_changes": true
+      },
+      {
+        "path": "lib/cafe/cafe_avatar.dart",
+        "preserved_user_changes": false
+      },
+      {
+        "path": "lib/cafe/cafe_camera.dart",
+        "preserved_user_changes": false
+      },
+      {
+        "path": "lib/cafe/cafe_chase_camera.dart",
+        "preserved_user_changes": false
+      },
+      {
+        "path": "lib/cafe/cafe_courtyard.dart",
+        "preserved_user_changes": false
+      },
+      {
+        "path": "lib/cafe/cafe_home_geometry.dart",
+        "preserved_user_changes": false
+      },
+      {
+        "path": "lib/cafe/cafe_renderer.dart",
+        "preserved_user_changes": false
+      },
+      {
+        "path": "lib/cafe/cafe_view_controller.dart",
+        "preserved_user_changes": false
+      },
+      {
+        "path": "lib/cafe/cafe_visit.dart",
+        "preserved_user_changes": false
+      },
+      {
+        "path": "lib/cafe/cafe_walk.dart",
+        "preserved_user_changes": false
+      },
+      {
+        "path": "lib/cafe/cafe_world.dart",
+        "preserved_user_changes": false
+      },
+      {
+        "path": "lib/ui/cafe_scene.dart",
+        "preserved_user_changes": false
+      },
+      {
+        "path": "lib/ui/cafe_screen.dart",
+        "preserved_user_changes": true
+      },
+      {
+        "path": "test/cafe_avatar_test.dart",
+        "preserved_user_changes": false
+      },
+      {
+        "path": "lib/cafe/cafe_yard.dart",
+        "preserved_user_changes": false
+      },
+      {
+        "path": "lib/cafe/cafe_yard_geometry.dart",
+        "preserved_user_changes": false
+      },
+      {
+        "path": "test/cafe_yard_test.dart",
+        "preserved_user_changes": false
+      },
+      {
+        "path": "test/cafe_yard_controls_test.dart",
+        "preserved_user_changes": false
+      },
+      {
+        "path": "tool/capture_cafe_yard_test.dart",
+        "preserved_user_changes": false
+      }
+    ]
+  },
+  "hosting_manifest_unchanged": true
+}

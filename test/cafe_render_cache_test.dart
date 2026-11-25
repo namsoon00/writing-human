@@ -126,6 +126,60 @@ void main() {
     },
   );
 
+  testWidgets('Loading a plant image rebuilds the cached dynamic order', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      final world = fixture();
+      world.plants.clear();
+      world.plants.add(
+        const CafePlant(CafePoint(0, -1, -2), 2, 2, CafeSurface.tree),
+      );
+      final empty = await pixels(
+        CafeRenderer(world: world, camera: camera, allowPortal: false),
+      );
+      final recorder = ui.PictureRecorder();
+      ui.Canvas(
+        recorder,
+      ).drawColor(const ui.Color(0xff247a36), ui.BlendMode.src);
+      final picture = recorder.endRecording();
+      final texture = await picture.toImage(8, 8);
+      try {
+        final loaded = await pixels(
+          CafeRenderer(
+            world: world,
+            camera: camera,
+            tree: texture,
+            allowPortal: false,
+          ),
+        );
+        final center = (90 * 120 + 60) * 4;
+        expect(loaded, isNot(empty));
+        expect(loaded[center + 1], greaterThan(loaded[center]));
+        expect(
+          await pixels(
+            CafeRenderer(
+              world: world,
+              camera: camera,
+              tree: texture,
+              allowPortal: false,
+            ),
+          ),
+          loaded,
+        );
+        expect(
+          await pixels(
+            CafeRenderer(world: world, camera: camera, allowPortal: false),
+          ),
+          empty,
+        );
+      } finally {
+        texture.dispose();
+        picture.dispose();
+      }
+    });
+  });
+
   testWidgets(
     'Moving geometry still crosses behind and in front of a cached wall',
     (tester) async {

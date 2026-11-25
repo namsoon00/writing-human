@@ -513,6 +513,8 @@ class CafeRenderer extends CustomPainter {
       teaFilled,
       bellAt,
       teaAt,
+      tree != null,
+      flowers != null,
     );
     var mesh = _meshes[world];
     final cacheHit = cacheGeometry && mesh != null && mesh.matches(world.faces);
@@ -526,7 +528,13 @@ class CafeRenderer extends CustomPainter {
         : <CafeFace>[
             ...avatar,
             ...world.weatherFaces(camera, time),
-            ...world.plantFaces(camera),
+            ...world
+                .plantFaces(camera)
+                .where(
+                  (face) =>
+                      (face.surface != CafeSurface.tree || tree != null) &&
+                      (face.surface != CafeSurface.flowers || flowers != null),
+                ),
             ...world.lightFaces(camera),
             ...world.animatedFaces(
               time,

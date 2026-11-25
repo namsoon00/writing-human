@@ -307,9 +307,15 @@ List<_SceneFace> _sceneTriangles(Iterable<CafeFace> source) {
 }
 
 class _SceneMesh {
-  _SceneMesh(List<CafeFace> source) : originals = List.of(source) {
+  _SceneMesh(List<CafeFace> source, {Set<String> omit = const {}})
+    : originals = List.of(source),
+      omitted = Set.unmodifiable(omit) {
     final layers = <int, List<_SceneFace>>{};
     for (final face in source) {
+      // Distant plants already have watercolor substitutes. Exclude their
+      // detailed solids before building the BSP, rather than expanding and
+      // splitting those hidden branches on every view through the wide bay.
+      if (omitted.contains(face.objectId)) continue;
       if (face.garden) {
         portals.add(face);
         continue;
@@ -321,10 +327,14 @@ class _SceneMesh {
     }
   }
   final List<CafeFace> originals, portals = [];
+  final Set<String> omitted;
   final roots = <int, _SceneNode?>{};
   Object? orderKey;
   List<CafeFace>? order;
-  bool matches(List<CafeFace> source) {
+  bool matches(List<CafeFace> source, Set<String> exclude) {
+    if (exclude.length != omitted.length || !omitted.containsAll(exclude)) {
+      return false;
+    }
     if (source.length != originals.length) return false;
     for (var i = 0; i < source.length; i++) {
       if (!identical(source[i], originals[i])) return false;
@@ -375,7 +385,7 @@ class _SceneMesh {
     }) {
       if (node == null ||
           !node.bounds.visible(frustum) ||
-          distant.contains(node.bounds.detailId)) {
+          (includeStatic && distant.contains(node.bounds.detailId))) {
         if (changing.isNotEmpty) {
           visit(_sceneTree(changing, dynamic: true), [], includeStatic: false);
         }

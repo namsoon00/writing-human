@@ -5,6 +5,8 @@ import 'cafe_camera.dart';
 import 'cafe_space.dart';
 import 'cafe_visit.dart';
 import 'cafe_yard.dart';
+import 'cafe_layout.dart';
+import 'cafe_body.dart';
 
 part 'cafe_courtyard.dart';
 part 'cafe_yard_geometry.dart';
@@ -281,13 +283,13 @@ class CafeWorld {
     CafeTarget.bookshelf => const CafePoint(3.92, 1.48, .30),
     CafeTarget.recommendations => const CafePoint(3.92, 1.30, -2.20),
     CafeTarget.stationery => const CafePoint(3.82, .94, 2.45),
-    CafeTarget.courtyard => const CafePoint(-4.18, 1.45, -3.3),
-    CafeTarget.pond => const CafePoint(-1.25, .08, 1.0),
+    CafeTarget.courtyard => const CafePoint(-4.18, 1.45, 0),
+    CafeTarget.pond => const CafePoint(-2.05, .08, 1.0),
     CafeTarget.bench => const CafePoint(4.0, .65, -.7),
     CafeTarget.bell => const CafePoint(2.48, 1.62, 3.03),
     CafeTarget.tea => const CafePoint(3.22, .84, .93),
     CafeTarget.gardenDesk => desk(CafeSeat.garden),
-    CafeTarget.cafeReturn => const CafePoint(3.55, 1.3, 3.16),
+    CafeTarget.cafeReturn => const CafePoint(0, 1.3, 3.16),
     CafeTarget.meditation => const CafePoint(2.8, .14, -8.5),
     CafeTarget.barefoot => const CafePoint(-3, .5, -13.6),
     CafeTarget.trail => const CafePoint(-5.65, .57, -14.5),
@@ -302,12 +304,12 @@ class CafeWorld {
     CafeTarget.bookshelf => const CafePoint(2.85, 1.62, .3),
     CafeTarget.recommendations => const CafePoint(2.85, 1.62, -2.20),
     CafeTarget.stationery => const CafePoint(2.85, 1.62, 2.45),
-    CafeTarget.courtyard => const CafePoint(-3.8, 1.62, -3.3),
-    CafeTarget.pond => const CafePoint(.3, 1.62, 1.0),
+    CafeTarget.courtyard => const CafePoint(-3.7, 1.62, 0),
+    CafeTarget.pond => const CafePoint(-.5, 1.62, 1.0),
     CafeTarget.bench => const CafePoint(2.95, 1.62, -.7),
-    CafeTarget.bell => const CafePoint(2.48, 1.62, 2.15),
+    CafeTarget.bell => const CafePoint(2.75, 1.62, 2.40),
     CafeTarget.tea || CafeTarget.gardenDesk => const CafePoint(2.1, 1.62, 1.6),
-    CafeTarget.cafeReturn => const CafePoint(3.55, 1.62, 2.35),
+    CafeTarget.cafeReturn => CafeLayout.gardenEntry,
     CafeTarget.meditation => CafeYard.meditationApproach,
     CafeTarget.barefoot => CafeYard.shoeApproach,
     CafeTarget.trail => CafePoint(
@@ -319,7 +321,7 @@ class CafeWorld {
   };
   static Rect tableBounds(CafeSeat seat) => switch (seat) {
     CafeSeat.window => const Rect.fromLTWH(-4.12, 1.22, .72, 1.36),
-    CafeSeat.shared => const Rect.fromLTWH(-.575, -1.65, 1.15, 3),
+    CafeSeat.shared => const Rect.fromLTWH(-.575, -1.2, 1.15, 2.4),
     CafeSeat.quiet => const Rect.fromLTWH(-2.40, -4.42, 1.4, .8),
     CafeSeat.windowMiddle => const Rect.fromLTWH(-4.12, -.98, .72, 1.36),
     CafeSeat.windowRear => const Rect.fromLTWH(-4.12, -2.53, .72, 1.36),
@@ -1180,20 +1182,14 @@ class CafeWorld {
           );
           final center = at((i + .5) / nx, (j + .5) / ny);
           if (center.x < -4.35 &&
-              center.z > -4.6 &&
-              center.z < -2.1 &&
-              center.y < 2.70) {
+              center.z.abs() < 2.14 &&
+              center.y < CafeLayout.openingHeight) {
             continue;
           }
           if (center.x < -4.35 &&
               center.y > .66 &&
               center.y < 2.78 &&
-              [
-                -3.35,
-                -1.05,
-                1.25,
-                3.55,
-              ].any((z) => (center.z - z).abs() < 1.03)) {
+              [-3.35, 3.35].any((z) => (center.z - z).abs() < 1.03)) {
             continue;
           }
           quad(
@@ -1291,19 +1287,19 @@ class CafeWorld {
     box(0, .08, -4.96, 8.8, .16, .08, dark, wood: true);
     for (final x in [-4.36, 4.36]) {
       if (x < 0) {
-        box(x, .08, 1.15, .08, .16, 7.6, dark, wood: true);
-        box(x, .08, -4.725, .08, .16, .55, dark, wood: true);
+        for (final z in [-3.35, 3.35]) {
+          box(x, .08, z, .08, .16, 2.1, dark, wood: true);
+        }
       } else {
         box(x, .08, 0, .08, .16, 10, dark, wood: true);
       }
     }
     // One continuous outdoor panorama, wooden reveals and reflected daylight.
-    for (final z in [-3.35, -1.05, 1.25, 3.55]) {
+    for (final z in [-3.35, 3.35]) {
       for (final dz in [-1.08, 1.08]) {
-        if (z == -3.35 && dz < 0) continue;
         box(-4.31, 1.72, z + dz, .12, 2.25, .07, dark, wood: true);
       }
-      if (z != -3.35) box(-4.30, .61, z, .12, .07, 2.20, dark, wood: true);
+      box(-4.30, .61, z, .12, .07, 2.20, dark, wood: true);
       box(-4.30, 2.83, z, .12, .07, 2.20, dark, wood: true);
       // The renderer samples one distant garden plane in room coordinates.
       for (var i = 0; i < 8; i++) {
@@ -1323,8 +1319,8 @@ class CafeWorld {
           );
         }
       }
-      if (z != -3.35) box(-4.20, 1.70, z, .12, 2.2, .04, dark, wood: true);
-      if (z != -3.35) box(-4.20, .63, z, .30, .055, 2.20, oak, wood: true);
+      box(-4.20, 1.70, z, .12, 2.2, .04, dark, wood: true);
+      box(-4.20, .63, z, .30, .055, 2.20, oak, wood: true);
       quad(
         CafePoint(-4.1, .007, z - .9),
         CafePoint(-2.0, .007, z - .6),
@@ -1412,15 +1408,15 @@ class CafeWorld {
     }
     _object(
       'shared',
-      '중앙 자리 함께 옮기기',
+      '큰 책상 함께 옮기기',
       CafeObjectKind.group,
       const CafePoint(0, 0, 0),
       () {
         _tableItem('shared.table', '큰 책상', CafeSeat.shared, (support) {
-          _sentenceCard('ritual.letter', -.30, .770, 1.12, support, row: 1);
+          _sentenceCard('ritual.letter', -.30, .770, .96, support, row: 1);
           _noteItem(
             'shared.book',
-            '중앙 노트',
+            '큰 책상 노트',
             .24,
             .773,
             .75,
@@ -1436,25 +1432,32 @@ class CafeWorld {
             angle: -math.pi / 2,
             support: support,
           );
-          _pencilItem('shared.pen', '중앙 연필', .29, .806, .49, support: support);
+          _pencilItem(
+            'shared.pen',
+            '큰 책상 연필',
+            .29,
+            .806,
+            .49,
+            support: support,
+          );
           _cupItem(
             'shared.cup',
-            '중앙 찻잔',
+            '큰 책상 찻잔',
             -.2,
             .767,
             .18,
             support: support,
             filled: space.cupFull,
           );
-          _vaseItem('shared.vase', '중앙 화병', 0, .754, -.30, support: support);
+          _vaseItem('shared.vase', '큰 책상 화병', 0, .754, -.30, support: support);
           _sharedDetails();
         });
         _target = CafeTarget.shared;
         for (var i = 0; i < 3; i++) {
-          final z = -.95 + i;
+          final z = -.8 + i * .8;
           _chairItem(
             'shared.chair.right.$i',
-            '중앙 오른쪽 ${i + 1}번 의자',
+            '큰 책상 오른쪽 ${i + 1}번 의자',
             .98,
             z,
             angle: -math.pi / 2,
@@ -1462,7 +1465,7 @@ class CafeWorld {
           );
           _chairItem(
             'shared.chair.left.$i',
-            '중앙 왼쪽 ${i + 1}번 의자',
+            '큰 책상 왼쪽 ${i + 1}번 의자',
             -.98,
             z,
             angle: math.pi / 2,
@@ -1591,17 +1594,17 @@ class CafeWorld {
     );
     // An always-open veranda bay. No sliding glass or raised threshold crosses it.
     _target = CafeTarget.courtyard;
-    for (final z in [-4.48, -2.12]) {
+    for (final z in [-2.16, 2.16]) {
       box(-4.15, 1.37, z, .12, 2.74, .07, dark, wood: true);
     }
-    box(-4.15, 2.74, -3.3, .12, .09, 2.44, dark, wood: true);
+    box(-4.15, 2.79, 0, .12, .10, 4.42, dark, wood: true);
     faces.add(
       CafeFace(
         const [
-          CafePoint(-4.19, 0, -4.45),
-          CafePoint(-4.19, 0, -2.15),
-          CafePoint(-4.19, 2.69, -2.15),
-          CafePoint(-4.19, 2.69, -4.45),
+          CafePoint(-4.19, 0, -2.10),
+          CafePoint(-4.19, 0, 2.10),
+          CafePoint(-4.19, 2.74, 2.10),
+          CafePoint(-4.19, 2.74, -2.10),
         ],
         cream,
         garden: true,

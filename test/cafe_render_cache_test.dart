@@ -43,6 +43,76 @@ Future<Uint8List> pixels(CafeRenderer painter) async {
 }
 
 void main() {
+  testWidgets(
+    'Distant plant replacement remains visible and restores solids when approached',
+    (tester) async {
+      await tester.runAsync(() async {
+        final world = CafeWorld(courtyard: true);
+        world.faces.clear();
+        world.plants.clear();
+        world.objects.clear();
+        world.pendantLights.clear();
+        const id = 'garden.tree.probe';
+        world.objects[id] = CafeObject(
+          id,
+          'tree',
+          CafeObjectKind.garden,
+          const CafePoint(0, -1, -8),
+        );
+        final solid = CafeFace(
+          const [
+            CafePoint(-1, -1, -8),
+            CafePoint(1, -1, -8),
+            CafePoint(1, 1, -8),
+            CafePoint(-1, 1, -8),
+          ],
+          const ui.Color(0xffff0000),
+          objectId: id,
+          unlit: true,
+        );
+        world.faces.add(solid);
+        final recorder = ui.PictureRecorder();
+        ui.Canvas(
+          recorder,
+        ).drawColor(const ui.Color(0xff247a36), ui.BlendMode.src);
+        final picture = recorder.endRecording();
+        final texture = await picture.toImage(8, 8);
+        try {
+          Future<Uint8List> render(CafeCamera eye) => pixels(
+            CafeRenderer(
+              world: world,
+              camera: eye,
+              tree: texture,
+              allowPortal: false,
+            ),
+          );
+          final waiting = await pixels(
+            CafeRenderer(world: world, camera: camera, allowPortal: false),
+          );
+          final waitingCenter = (90 * 120 + 60) * 4;
+          expect(
+            waiting[waitingCenter + 1],
+            greaterThan(waiting[waitingCenter]),
+            reason:
+                'Loading must not expand distant detailed solids or leave a blank plant',
+          );
+          final far = await render(camera);
+          final center = (90 * 120 + 60) * 4;
+          expect(far[center + 1], greaterThan(far[center]));
+          expect(await render(camera), far);
+          const near = CafeCamera(position: CafePoint(0, 0, -5), pitch: 0);
+          final approached = await render(near);
+          expect(approached[center], greaterThan(approached[center + 1]));
+          expect(await render(camera), far);
+          expect(world.faces.single, same(solid));
+        } finally {
+          texture.dispose();
+          picture.dispose();
+        }
+      });
+    },
+  );
+
   testWidgets('Reuse static geometry and invalidate replacement faces', (
     tester,
   ) async {

@@ -89,10 +89,10 @@ void main() {
       final knee = body.faces
           .where((f) => f.part == 'trousers')
           .expand((f) => f.points)
-          .where((p) => p.y > .4 && p.y < .56)
+          .where((p) => p.y > .25 && p.y < .35)
           .toList();
       final origin = c.camera.position;
-      final forward = const CafePoint(0, 0, -1);
+      final forward = CafePoint(math.sin(c.bodyYaw), 0, -math.cos(c.bodyYaw));
       expect(
         knee.map((p) => (p - origin).dot(forward)).reduce(math.max),
         lessThan(.13),

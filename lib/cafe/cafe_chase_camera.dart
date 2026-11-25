@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'cafe_camera.dart';
 import 'cafe_world.dart';
+import 'cafe_body.dart';
 
 class _CameraBlock {
   const _CameraBlock(this.bounds, this.height);
@@ -10,6 +11,16 @@ class _CameraBlock {
 }
 
 final _cameraBlocks = Expando<List<_CameraBlock>>();
+
+/// The observer can cross the genuinely open bay into the connected room.
+/// Walking still uses the original room bounds and its own collision path.
+bool cafeCameraWithinRoom(CafeWorld world, CafePoint p) {
+  if (world.walkBounds.inflate(.12).contains(Offset(p.x, p.z))) return true;
+  return world.courtyard
+      ? p.x.abs() < 1.9 && p.z > 2.8 && p.z < 6.0
+      : p.z.abs() < 1.9 && p.x < -4.15 && p.x > -6.7;
+}
+
 List<_CameraBlock> _blocks(CafeWorld world) => _cameraBlocks[world] ??= [
   for (final rect in world.obstacles) _block(world, rect),
 ];
@@ -46,14 +57,14 @@ CafeCamera cafeChaseCamera(
   CafeWorld world, {
   double hands = 0,
 }) {
-  final seated = ((1.62 - actor.position.y) / .44).clamp(0.0, 1.0);
-  final shoulder = actor.right * (.18 + seated * .24 + hands * .15);
+  final seated = CafeBody.seated(actor);
+  final shoulder = actor.right * (.13 + seated * .13 + hands * .20);
   final rawFocus = CafePoint(
     actor.position.x + shoulder.x,
-    actor.position.y < 1 ? .64 : .98 + seated * .04,
+    actor.position.y < 1 ? .45 : .73 + seated * .04,
     actor.position.z + shoulder.z,
   );
-  var yaw = actor.yaw - hands * .55;
+  var yaw = actor.yaw - hands * .85;
   var pitch = (actor.pitch * .45 - .16 - seated * .17).clamp(-.62, .10);
   final bounds = world.walkBounds.inflate(.11);
   final focus = CafePoint(
@@ -73,11 +84,23 @@ CafeCamera cafeChaseCamera(
     for (var d = .05; d <= 2.25; d += .05) {
       final p = focus - axis * d;
       final point = Offset(p.x, p.z);
-      if (!bounds.contains(point) ||
+      if (!cafeCameraWithinRoom(world, p) ||
           obstacles.any(
             (b) => b.bounds.contains(point) && p.y < b.height + .08,
           )) {
         break;
+      }
+      if (!bounds.contains(point)) {
+        final linked = world.courtyard
+            ? CafePoint(p.z - 7.4, p.y, -p.x)
+            : CafePoint(-p.z, p.y, p.x + 7.4);
+        if (_blocks(world.linkedWorld).any(
+          (b) =>
+              b.bounds.contains(Offset(linked.x, linked.z)) &&
+              linked.y < b.height + .08,
+        )) {
+          break;
+        }
       }
       distance = d;
     }

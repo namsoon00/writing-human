@@ -30,9 +30,10 @@ class CafeYard {
     CafePoint(-2.8, 0, -8.4),
     CafePoint(.3, 0, -4.8),
     CafePoint(1.45, 0, -1.8),
-    CafePoint(1.45, 0, 1.5),
-    CafePoint(2.2, 0, 2.05),
-    CafePoint(3.55, 0, 2.35),
+    CafePoint(.8, 0, -.7),
+    CafePoint(.25, 0, .2),
+    CafePoint(0, 0, 1.5),
+    CafePoint(0, 0, 2.35),
   ]);
   static double get length => List.generate(
     trail.length - 1,

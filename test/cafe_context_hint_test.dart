@@ -63,7 +63,7 @@ void main() {
       expect(labels, findsOneWidget);
       c.updateCamera(
         const CafeCamera(
-          position: CafePoint(0, 1.62, 3.6),
+          position: CafePoint(.7, 1.62, 3.6),
           yaw: math.pi,
           pitch: .4,
         ),

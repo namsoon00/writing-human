@@ -114,7 +114,9 @@ void main() {
   test(
     'Tabletop does not paint across the seated notebook, pencil or cup',
     () async {
-      final world = CafeWorld(), camera = CafeCamera.seated(CafeSeat.shared);
+      final world = CafeWorld();
+      final camera = world.seatedCamera(CafeSeat.shared);
+      final base = world.objects['shared']!.pivot;
       const size = ui.Size(1000, 800);
       final recorder = ui.PictureRecorder();
       CafeRenderer(
@@ -140,7 +142,7 @@ void main() {
         // ferrule at x=.1915..2185 is deliberately brighter than the lacquer.
         for (final x in [.23, .25, .29, .34, .38]) {
           final spot = CafeRenderer.project(
-            CafePoint(x, .811, .49),
+            base + CafePoint(x, .811, .49),
             camera,
             size,
           )!;
@@ -152,27 +154,27 @@ void main() {
           );
           expect(hit?.objectId, 'shared.pen');
           expect(
-            brightness(CafePoint(x, .811, .49)),
+            brightness(base + CafePoint(x, .811, .49)),
             lessThan(350),
             reason: 'pencil hidden at x=$x',
           );
         }
         expect(
-          brightness(const CafePoint(.205, .814, .49)),
-          greaterThan(brightness(const CafePoint(.25, .811, .49)) + 90),
+          brightness(base + const CafePoint(.205, .814, .49)),
+          greaterThan(brightness(base + const CafePoint(.25, .811, .49)) + 90),
           reason:
               'the visible brass ferrule must not be covered by dark lacquer',
         );
         for (final z in [.64, .67, .83]) {
           expect(
-            brightness(CafePoint(.32, .8005, z)),
+            brightness(base + CafePoint(.32, .8005, z)),
             greaterThan(650),
             reason: 'paper hidden at z=$z',
           );
         }
         // Sample inside the narrow ring; its outside silhouette is antialiased.
-        final rim = brightness(const CafePoint(-.155, .869, .18));
-        final tea = brightness(const CafePoint(-.2, .866, .18));
+        final rim = brightness(base + const CafePoint(-.155, .869, .18));
+        final tea = brightness(base + const CafePoint(-.2, .866, .18));
         expect(
           rim,
           greaterThan(480),
@@ -198,8 +200,9 @@ void main() {
         CafeWorld(space: const CafeSpace(finishes: {id: 2})),
       ];
       final wood = await CafeWatercolor.wood(walnut: true);
-      const camera = CafeCamera(
-        position: CafePoint(1.53, 1.10, .85),
+      final camera = CafeCamera(
+        position:
+            worlds.first.objects[id]!.pivot + const CafePoint(.55, 1.10, .8),
         yaw: -.602,
         pitch: -.45,
       );

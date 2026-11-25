@@ -75,6 +75,7 @@ void main() {
       final c = CafeViewController();
       addTearDown(c.dispose);
       final oldCup = c.world.objects['shared.cup']!.pivot;
+      final oldDesk = c.world.targetDesk(CafeSeat.shared);
       final oldChair = c.world.objects['shared.chair.right.1']!.pivot;
       expect(
         c.applySpace(
@@ -86,7 +87,10 @@ void main() {
         c.world.objects['shared.cup']!.pivot.z,
         closeTo(oldCup.z + .15, 1e-8),
       );
-      expect(c.world.targetDesk(CafeSeat.shared).z, closeTo(.90, 1e-8));
+      expect(
+        c.world.targetDesk(CafeSeat.shared).z,
+        closeTo(oldDesk.z + .15, 1e-8),
+      );
       expect(
         (c.world.objects['shared.chair.right.1']!.pivot - oldChair).length,
         0,

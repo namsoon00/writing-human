@@ -84,21 +84,22 @@ void main() {
     'Nearest physical object owns a click; a desk hides the floor beneath it',
     () {
       final world = CafeWorld();
-      const c = CafeCamera.entrance, size = Size(1200, 800);
+      final c = world.seatedCamera(CafeSeat.shared);
+      const size = Size(1200, 800);
       final table = CafeRenderer.project(
-        CafeWorld.anchor(CafeTarget.shared),
+        world.targetAnchor(CafeTarget.shared),
         c,
         size,
       )!;
       final hit = CafeRenderer.pick(table, c, size, world)!;
       expect(hit.target, CafeTarget.shared);
       expect(hit.floor, isFalse);
-      final blank = CafeRenderer.project(const CafePoint(2, 0, .5), c, size)!;
+      final blank = CafeRenderer.project(const CafePoint(-2, 0, 0), c, size)!;
       expect(CafeRenderer.pick(blank, c, size, world)!.floor, isTrue);
       // A distant bookcase cannot be selected through the central table.
-      final down = CafeCamera.seated(CafeSeat.shared);
+      final down = world.seatedCamera(CafeSeat.shared);
       final notebook = CafeRenderer.project(
-        CafeWorld.desk(CafeSeat.shared),
+        world.targetDesk(CafeSeat.shared),
         down,
         size,
       )!;
@@ -113,8 +114,8 @@ void main() {
     const size = Size(390, 844);
     for (final target in CafeTarget.values) {
       final world = CafeWorld(courtyard: target.inCourtyard);
-      final origin = CafeWorld.approach(target);
-      final delta = CafeWorld.anchor(target) - origin;
+      final origin = world.targetApproach(target);
+      final delta = world.targetAnchor(target) - origin;
       final camera = CafeCamera(
         position: origin,
         yaw: math.atan2(delta.x, -delta.z),
@@ -135,7 +136,9 @@ void main() {
 
   test('Floor routes go around the table with no wall or corner cutting', () {
     final world = CafeWorld();
-    const from = CafePoint(-2.0, 1.62, 0), to = CafePoint(2.0, 1.62, 0);
+    final table = world.objects['shared.table']!.pivot;
+    final from = CafePoint(table.x - 2.0, 1.62, table.z),
+        to = CafePoint(table.x + 2.0, 1.62, table.z);
     expect(world.clearSegment(from, to), isFalse);
     final path = world.path(from, to);
     expect(path, isNotEmpty);
@@ -147,7 +150,7 @@ void main() {
       current = p;
     }
     expect(current.x, to.x);
-    expect(world.path(from, const CafePoint(0, 1.62, 0)), isEmpty);
+    expect(world.path(from, CafePoint(table.x, 1.62, table.z)), isEmpty);
     expect(world.clearSegment(from, const CafePoint(100, 1.62, 0)), isFalse);
   });
 
@@ -159,7 +162,7 @@ void main() {
         final entrance = target.inCourtyard
             ? CafeCamera.courtyardEntrance
             : CafeCamera.entrance;
-        final approach = CafeWorld.approach(target);
+        final approach = world.targetApproach(target);
         expect(world.canStand(approach), isTrue, reason: target.name);
         final path = world.path(entrance.position, approach);
         expect(path, isNotEmpty, reason: target.name);
@@ -262,8 +265,16 @@ void main() {
       await _enter(tester);
       final scene = find.byKey(const ValueKey('cafe-third-person-view'));
       final c = tester.widget<CafeScene>(find.byType(CafeScene)).controller;
+      c.updateCamera(
+        CafeCamera(
+          position: c.world.targetApproach(CafeTarget.shared),
+          yaw: -math.pi / 2,
+          pitch: -.4,
+        ),
+      );
+      await tester.pump();
       final local = CafeRenderer.project(
-        CafeWorld.anchor(CafeTarget.shared),
+        c.world.targetAnchor(CafeTarget.shared),
         c.viewCamera,
         tester.getSize(scene),
       )!;
@@ -283,7 +294,7 @@ void main() {
       );
       // Hit the actual notebook surface away from its small attached label.
       final book = CafeRenderer.project(
-        const CafePoint(.22, .81, .65),
+        c.world.objects['shared']!.pivot + const CafePoint(.22, .81, .65),
         c.viewCamera,
         tester.getSize(scene),
       )!;

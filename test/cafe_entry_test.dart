@@ -16,12 +16,12 @@ void main() {
         expect(room.targets.any((t) => t.label == '출입문'), isFalse);
         expect(room.objects.containsKey('garden.door'), isFalse);
         final eye = CafeCamera(
-          position: const CafePoint(-2, 1.62, -3.3),
+          position: const CafePoint(-2, 1.62, 0),
           yaw: -math.pi / 2,
         );
         const size = Size(390, 844);
         final p = CafeRenderer.project(
-          const CafePoint(-4.19, 1.35, -3.3),
+          const CafePoint(-4.19, 1.35, 0),
           eye,
           size,
         )!;
@@ -31,11 +31,11 @@ void main() {
         );
         final yard = room.linkedWorld;
         const outside = CafeCamera(
-          position: CafePoint(3.3, 1.62, 1.7),
+          position: CafePoint(0, 1.62, 1.7),
           yaw: math.pi,
         );
         final back = CafeRenderer.project(
-          const CafePoint(3.3, 1.35, 3.16),
+          const CafePoint(0, 1.35, 3.16),
           outside,
           size,
         )!;
@@ -53,20 +53,20 @@ void main() {
     },
   );
   test(
-    'The open bay is wider than two metres and has no opaque lower wall across it',
+    'The open bay is centered and wider than four metres and has no opaque lower wall across it',
     () {
       final yard = CafeWorld(courtyard: true);
       final bay = yard.faces.singleWhere(
         (f) => f.garden && f.target == CafeTarget.cafeReturn,
       );
       final xs = bay.points.map((p) => p.x);
-      expect(xs.reduce(math.max) - xs.reduce(math.min), greaterThan(2.2));
+      expect(xs.reduce(math.max) - xs.reduce(math.min), greaterThan(4.0));
       for (final face in yard.faces.where(
         (f) => !f.garden && f.color.a > .99,
       )) {
         if (face.points.every((p) => (p.z - 3.165).abs() < .001)) {
           expect(
-            face.points.any((p) => p.x > 2.16 && p.x < 4.44 && p.y < .6),
+            face.points.any((p) => p.x > -2.09 && p.x < 2.09 && p.y < .6),
             isFalse,
           );
         }

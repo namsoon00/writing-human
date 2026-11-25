@@ -238,7 +238,7 @@ extension _CourtyardGeometry on CafeWorld {
             const CafePoint(.017, .008, .017),
             const Color(0xffc5a65e),
             segments: 6,
-            rings: 3,
+            rings: 2,
           );
         }
       },
@@ -250,8 +250,8 @@ extension _CourtyardGeometry on CafeWorld {
 
   void _buildCourtyard() {
     void wall(CafePoint a, CafePoint b, CafePoint c, CafePoint d, Color color) {
-      for (var i = 0; i < 12; i++) {
-        for (var j = 0; j < 6; j++) {
+      for (var i = 0; i < 6; i++) {
+        for (var j = 0; j < 2; j++) {
           CafePoint at(double u, double v) => CafePoint.lerp(
             CafePoint.lerp(a, b, u),
             CafePoint.lerp(d, c, u),
@@ -303,22 +303,22 @@ extension _CourtyardGeometry on CafeWorld {
       }
     }
     // Same glazed facade as the cafe, viewed from the garden side.
-    wall(
-      const CafePoint(-4.65, 0, 3.165),
-      const CafePoint(2.15, 0, 3.165),
-      const CafePoint(2.15, .61, 3.165),
-      const CafePoint(-4.65, .61, 3.165),
-      CafeWorld.wall,
-    );
-    for (final x in [3.35, 1.05, -1.25, -3.55]) {
-      if (x == 3.35) continue;
+    for (final sign in [-1.0, 1.0]) {
+      final left = sign < 0 ? -4.65 : 2.2;
+      final right = sign < 0 ? -2.2 : 4.65;
+      wall(
+        CafePoint(left, 0, 3.165),
+        CafePoint(right, 0, 3.165),
+        CafePoint(right, .61, 3.165),
+        CafePoint(left, .61, 3.165),
+        CafeWorld.wall,
+      );
+    }
+    for (final x in [-3.35, 3.35]) {
       for (final dx in [-1.08, 1.08]) {
-        if (x == 3.35 && dx > 0) continue;
         box(x + dx, 1.72, 3.165, .07, 2.25, .12, CafeWorld.dark, wood: true);
       }
-      if (x != 3.35) {
-        box(x, .61, 3.165, 2.20, .07, .12, CafeWorld.dark, wood: true);
-      }
+      box(x, .61, 3.165, 2.20, .07, .12, CafeWorld.dark, wood: true);
       box(x, 2.83, 3.165, 2.20, .07, .12, CafeWorld.dark, wood: true);
       faces.add(
         CafeFace(
@@ -334,9 +334,7 @@ extension _CourtyardGeometry on CafeWorld {
           layer: 1,
         ),
       );
-      if (x != 3.35) {
-        box(x, 1.70, 3.16, .04, 2.2, .12, CafeWorld.dark, wood: true);
-      }
+      box(x, 1.70, 3.16, .04, 2.2, .12, CafeWorld.dark, wood: true);
     }
     for (var i = 0; i < 23; i++) {
       box(
@@ -354,11 +352,11 @@ extension _CourtyardGeometry on CafeWorld {
     box(4.45, 1.45, 2.4, .12, 2.9, .12, CafeWorld.dark, wood: true);
     // Low stone steps through fine gravel, shared by the window and garden view.
     for (final point in [
-      (3.5, 1.9),
-      (2.2, 1.65),
-      (1.2, 1.15),
-      (.48, .45),
-      (.40, -.35),
+      (0.0, 2.35),
+      (0.0, 1.65),
+      (0.0, .95),
+      (.08, .25),
+      (.25, -.45),
       (.60, -1.20),
       (1.5, -1.9),
     ]) {
@@ -436,10 +434,10 @@ extension _CourtyardGeometry on CafeWorld {
       }, type: CafeItemType.lamp);
     }
     // A planted bank and pond are a single blocked region, never a walking tile.
-    obstacles.add(const Rect.fromLTWH(-2.65, -.9, 2.55, 3.35));
+    obstacles.add(const Rect.fromLTWH(-3.45, -.9, 2.55, 3.35));
     final random = math.Random(22012);
     _target = CafeTarget.pond;
-    const center = CafePoint(-1.25, .095, 1.0);
+    const center = CafeLayout.pond;
     for (var i = 0; i < 36; i++) {
       final a = i * 2 * math.pi / 36, b = (i + 1) * 2 * math.pi / 36;
       CafePoint edge(double t) =>
@@ -486,10 +484,10 @@ extension _CourtyardGeometry on CafeWorld {
     _tree(-3.15, -1.55, 2.55, 18);
     _tree(3.25, -2.05, 2.30, 29);
     for (var i = 0; i < 18; i++) {
-      final x = -2.9 + random.nextDouble() * 3.2,
+      final x = -3.7 + random.nextDouble() * 3.2,
           z = -1.3 + random.nextDouble() * 3.7;
       // Flowers stay on the banks, leaving the water readable.
-      if (((x + 1.25) / 1.03) * ((x + 1.25) / 1.03) +
+      if (((x - CafeLayout.pond.x) / 1.03) * ((x - CafeLayout.pond.x) / 1.03) +
               ((z - 1.0) / 1.35) * ((z - 1.0) / 1.35) <
           1) {
         continue;
@@ -558,17 +556,17 @@ extension _CourtyardGeometry on CafeWorld {
     _pendant(3.28, .62, radius: .17);
     // The same open veranda bay, seen from the garden side.
     _target = CafeTarget.cafeReturn;
-    for (final x in [2.12, 4.48]) {
+    for (final x in [-2.16, 2.16]) {
       box(x, 1.37, 3.17, .07, 2.74, .12, CafeWorld.dark, wood: true);
     }
-    box(3.3, 2.74, 3.17, 2.44, .09, .12, CafeWorld.dark, wood: true);
+    box(0, 2.79, 3.17, 4.42, .10, .12, CafeWorld.dark, wood: true);
     faces.add(
       CafeFace(
         const [
-          CafePoint(2.15, 0, 3.16),
-          CafePoint(4.45, 0, 3.16),
-          CafePoint(4.45, 2.69, 3.16),
-          CafePoint(2.15, 2.69, 3.16),
+          CafePoint(-2.10, 0, 3.16),
+          CafePoint(2.10, 0, 3.16),
+          CafePoint(2.10, 2.74, 3.16),
+          CafePoint(-2.10, 2.74, 3.16),
         ],
         CafeWorld.cream,
         garden: true,
@@ -577,10 +575,41 @@ extension _CourtyardGeometry on CafeWorld {
         target: _target,
       ),
     );
+    for (final x in [-2.25, 2.25]) {
+      _rod(
+        CafePoint(x, 0, 2.03),
+        CafePoint(x, 2.86, 2.03),
+        .078,
+        CafeWorld.dark,
+        sides: 4,
+        surface: CafeSurface.walnut,
+      );
+      obstacles.add(
+        Rect.fromCenter(center: Offset(x, 2.03), width: .11, height: .11),
+      );
+    }
+    _rod(
+      const CafePoint(-2.31, 2.86, 2.03),
+      const CafePoint(2.31, 2.86, 2.03),
+      .085,
+      CafeWorld.oak,
+      sides: 4,
+      surface: CafeSurface.oak,
+    );
+    for (var i = 0; i < 14; i++) {
+      _rod(
+        CafePoint(-2.15 + i * .33, 2.96, 1.95),
+        CafePoint(-2.15 + i * .33, 2.96, 3.29),
+        .047,
+        CafeWorld.oak,
+        sides: 4,
+        surface: CafeSurface.oak,
+      );
+    }
     _roundedSlab(
-      3.3,
+      0,
       2.6,
-      2.65,
+      4.5,
       1.1,
       top: .018,
       thickness: .018,
@@ -618,7 +647,7 @@ extension CafeCourtyardMotion on CafeWorld {
     for (var i = 0; i < 3; i++) {
       final t = time * .17 + i * 2.1;
       final p = CafePoint(
-        -1.25 + math.cos(t) * (.4 + i * .04),
+        CafeLayout.pond.x + math.cos(t) * (.4 + i * .04),
         .13,
         1.0 + math.sin(t) * (.72 - i * .12),
       );

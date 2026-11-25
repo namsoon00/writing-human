@@ -13,6 +13,54 @@ part 'cafe_depth_order.dart';
 part 'cafe_scene_mesh.dart';
 part 'cafe_gpu_geometry.dart';
 
+// Lightweight, camera-facing foliage while CPU watercolor images are loading.
+// This is display LOD only; picking and GPU rendering keep the original solids.
+Iterable<CafeFace> _pendingPlant(CafePlant plant, CafeCamera camera) sync* {
+  final right = CafePoint(camera.right.x, 0, camera.right.z).normalized;
+  final tree = plant.surface == CafeSurface.tree;
+  CafeFace patch(List<CafePoint> points, Color color) => CafeFace(
+    points,
+    color,
+    objectId: plant.objectId,
+    part: 'plant.loading',
+    doubleSided: true,
+    unlit: true,
+  );
+  final base = plant.base, radius = tree ? plant.width * .018 : .007;
+  yield patch([
+    base - right * radius,
+    base + right * radius,
+    base + right * radius + CafePoint(0, plant.height * .85, 0),
+    base - right * radius + CafePoint(0, plant.height * .85, 0),
+  ], tree ? CafeWorld.dark : CafeWorld.sage);
+  for (var i = 0; i < 3; i++) {
+    final center =
+        base +
+        right * ((i - 1) * plant.width * (tree ? .12 : .23)) +
+        CafePoint(
+          0,
+          plant.height * (tree ? .56 + i * .12 : .65 + (i % 2) * .23),
+          0,
+        );
+    final width = plant.width * (tree ? .42 - i * .06 : .12);
+    final height = plant.height * (tree ? .24 - i * .025 : .13);
+    yield patch(
+      [
+        for (var j = 0; j < 16; j++)
+          center +
+              right *
+                  (math.cos(j * math.pi / 8) *
+                      width *
+                      (1 + .07 * math.sin(j * 2.4))) +
+              CafePoint(0, math.sin(j * math.pi / 8) * height, 0),
+      ],
+      tree
+          ? const [Color(0xff8f9c78), Color(0xffa1ac88), Color(0xffb2bb9a)][i]
+          : const [Color(0xffeee9d6), Color(0xffdac1c6), Color(0xfff3eedf)][i],
+    );
+  }
+}
+
 class _Vertex {
   const _Vertex(this.point, this.u, this.v, this.color);
   final CafePoint point;
@@ -519,28 +567,29 @@ class CafeRenderer extends CustomPainter {
     );
     final distant = <String>{};
     final substitutes = <CafePlant>[];
+    final pendingPlants = <CafeFace>[];
     if (detailCulling && world.courtyard) {
       for (final obj in world.objects.values) {
         final isTree = obj.id.startsWith('garden.tree.');
         final isFlower = obj.id.startsWith('garden.flowers.');
-        if ((!isTree && !isFlower) ||
-            (isTree ? tree == null : flowers == null)) {
-          continue;
-        }
+        if (!isTree && !isFlower) continue;
         final delta = obj.pivot - camera.position;
         final distance2 = delta.x * delta.x + delta.z * delta.z;
         if (distance2 <= (isTree ? 4.5 * 4.5 : 2.4 * 2.4)) continue;
         distant.add(obj.id);
         final h = isTree ? (obj.id.endsWith('.18') ? 2.55 : 2.30) : .36;
-        substitutes.add(
-          CafePlant(
-            obj.pivot,
-            isTree ? h * .85 : .43,
-            h,
-            isTree ? CafeSurface.tree : CafeSurface.flowers,
-            objectId: obj.id,
-          ),
+        final substitute = CafePlant(
+          obj.pivot,
+          isTree ? h * .85 : .43,
+          h,
+          isTree ? CafeSurface.tree : CafeSurface.flowers,
+          objectId: obj.id,
         );
+        if (isTree ? tree == null : flowers == null) {
+          pendingPlants.addAll(_pendingPlant(substitute, camera));
+        } else {
+          substitutes.add(substitute);
+        }
       }
     }
     final orderKey = (
@@ -566,15 +615,17 @@ class CafeRenderer extends CustomPainter {
       blossom != null,
     );
     var mesh = _meshes[world];
-    final cacheHit = cacheGeometry && mesh != null && mesh.matches(world.faces);
+    final cacheHit =
+        cacheGeometry && mesh != null && mesh.matches(world.faces, distant);
     if (cacheGeometry && !cacheHit) {
-      mesh = _SceneMesh(world.faces);
+      mesh = _SceneMesh(world.faces, omit: distant);
       _meshes[world] = mesh;
     }
     final orderedHit = cacheGeometry && mesh!.orderKey == orderKey;
     final changing = orderedHit
         ? const <CafeFace>[]
         : <CafeFace>[
+            ...pendingPlants,
             ...avatar,
             ...world.weatherFaces(camera, time),
             ...world

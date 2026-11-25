@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import 'cafe_camera.dart';
 import 'cafe_avatar.dart';
+import 'cafe_body.dart';
 import 'cafe_chase_camera.dart';
 import 'cafe_visit.dart';
 import 'cafe_world.dart';
@@ -143,13 +144,8 @@ class CafeViewController extends ChangeNotifier {
   double walkSpeed = 0;
   double bodyYaw = 0, walkPhase = 0;
   CafeAvatar? _avatar;
-  CafeCamera get actorCamera => CafeCamera(
-    position:
-        camera.position +
-        CafePoint(0, .12 * ((1.62 - camera.position.y) / .44).clamp(0, 1), 0),
-    yaw: bodyYaw,
-    pitch: camera.pitch,
-  );
+  CafeCamera get actorCamera =>
+      CafeCamera(position: camera.position, yaw: bodyYaw, pitch: camera.pitch);
   CafeCamera? _viewSource, _view;
   CafeWorld? _viewWorld;
   double _viewHands = -1;
@@ -233,7 +229,7 @@ class CafeViewController extends ChangeNotifier {
       final targetYaw = math.atan2(delta.x, -delta.z);
       final turn = (targetYaw - bodyYaw + math.pi) % (2 * math.pi) - math.pi;
       bodyYaw += turn * (dt * 12).clamp(0, 1);
-      walkPhase += horizontal * 2 * math.pi / .78;
+      walkPhase += horizontal * 2 * math.pi / CafeBody.gaitLength;
     }
     walkSpeed = walking ? CafePoint(delta.x, 0, delta.z).length / dt : 0;
     notifyListeners();

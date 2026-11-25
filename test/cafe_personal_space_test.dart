@@ -35,6 +35,7 @@ void main() {
       expect(c.world.validateLayout(), isNull);
       expect(c.world.linkedWorld.validateLayout(), isNull);
       final previousCup = c.world.objects['shared.cup']!.pivot;
+      final group = c.world.objects['shared']!.pivot;
       final next = c.space.copy(
         poses: const {
           'shared': CafePose(x: .20, z: .10, turn: math.pi / 12),
@@ -43,16 +44,18 @@ void main() {
       );
       expect(c.applySpace(next), isNull);
       final cup = c.world.objects['shared.cup']!.pivot;
-      final local = previousCup + const CafePoint(.05, 0, -.05);
-      final expected = CafePoint(
-        local.x * math.cos(math.pi / 12) -
-            local.z * math.sin(math.pi / 12) +
-            .20,
-        local.y,
-        local.x * math.sin(math.pi / 12) +
-            local.z * math.cos(math.pi / 12) +
-            .10,
-      );
+      final local = previousCup + const CafePoint(.05, 0, -.05) - group;
+      final expected =
+          group +
+          CafePoint(
+            local.x * math.cos(math.pi / 12) -
+                local.z * math.sin(math.pi / 12) +
+                .20,
+            local.y,
+            local.x * math.sin(math.pi / 12) +
+                local.z * math.cos(math.pi / 12) +
+                .10,
+          );
       expect((cup - expected).length, lessThan(1e-8));
       expect(c.world.targetApproach(CafeTarget.shared).x, greaterThan(1.5));
       final saved = c.space.encode();
@@ -68,7 +71,7 @@ void main() {
       expect(
         c.applySpace(
           c.space.copy(
-            poses: {...c.space.poses, 'quiet': const CafePose(x: -.7)},
+            poses: {...c.space.poses, 'quiet': const CafePose(z: -1.4)},
           ),
         ),
         isNotNull,

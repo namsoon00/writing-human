@@ -37,7 +37,7 @@ void main() {
           ? CafeCamera.courtyardEntrance
           : CafeCamera.entrance;
       for (final target in world.targets) {
-        final path = world.path(start.position, CafeWorld.approach(target));
+        final path = world.path(start.position, world.targetApproach(target));
         expect(path, isNotEmpty, reason: target.name);
         final route = cafeWalkRoute([
           start,

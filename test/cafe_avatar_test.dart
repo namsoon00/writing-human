@@ -2,6 +2,8 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/cafe/cafe_avatar.dart';
+import 'package:writing_human/cafe/cafe_body.dart';
+import 'package:writing_human/cafe/cafe_chase_camera.dart';
 import 'package:writing_human/cafe/cafe_camera.dart';
 import 'package:writing_human/cafe/cafe_renderer.dart';
 import 'package:writing_human/cafe/cafe_view_controller.dart';
@@ -15,7 +17,7 @@ void main() {
       for (final seated in [false, true]) {
         for (final phase in [0.0, math.pi / 2, math.pi, 3 * math.pi / 2]) {
           final a = CafeAvatar(
-            eye: CafeCamera(position: CafePoint(0, seated ? 1.30 : 1.62, 0)),
+            eye: CafeCamera(position: CafePoint(0, seated ? 1.18 : 1.62, 0)),
             yaw: .4,
             phase: phase,
             stride: 1,
@@ -100,7 +102,7 @@ void main() {
       dt: .1,
       walking: true,
     );
-    expect(c.walkPhase, closeTo(.1 * 2 * math.pi / .78, 1e-8));
+    expect(c.walkPhase, closeTo(.1 * 2 * math.pi / CafeBody.gaitLength, 1e-8));
     c.stopWalking();
     expect(c.avatar.stride, 0);
     expect(
@@ -126,12 +128,7 @@ void main() {
             );
             final observer = c.viewCamera;
             expect(observer.isFinite, isTrue);
-            expect(
-              c.world.walkBounds
-                  .inflate(.12)
-                  .contains(Offset(observer.position.x, observer.position.z)),
-              isTrue,
-            );
+            expect(cafeCameraWithinRoom(c.world, observer.position), isTrue);
             const size = Size(390, 844);
             final p =
                 observer.position + observer.forward * 2 + observer.right * .2;

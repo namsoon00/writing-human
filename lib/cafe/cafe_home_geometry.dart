@@ -146,7 +146,7 @@ extension CafeHomeGeometry on CafeWorld {
     // Deterministic beads live on the outside face of existing window panes.
     for (var i = 0; i < 90; i++) {
       final z = -4.35 + random.nextDouble() * 8.8;
-      if (z < -2.6) continue; // Keep the broad garden doorway entirely clear.
+      if (z.abs() < 2.2) continue; // Rain stays on the two glazed side bays.
       final yy = .72 + random.nextDouble() * 2.0;
       final y = yy - ((time * .016 + i * .07) % 1) * .05;
       final p = CafePoint(-4.215, y, z), r = .003 + random.nextDouble() * .003;

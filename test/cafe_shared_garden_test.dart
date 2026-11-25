@@ -110,10 +110,10 @@ void main() {
 
   test('Low garden stepping stones remain directly walkable', () {
     final world = CafeWorld(courtyard: true);
-    const camera = CafeCamera(position: CafePoint(1.2, 1.62, 2.2), pitch: -.5);
+    const camera = CafeCamera(position: CafePoint(0, 1.62, 2.2), pitch: -.5);
     const size = ui.Size(800, 600);
     final pixel = CafeRenderer.project(
-      const CafePoint(1.2, .028, 1.15),
+      const CafePoint(0, .028, .95),
       camera,
       size,
     )!;

@@ -43,23 +43,21 @@ CafePoint cafeHeldPoint(
   final cup = type == CafeItemType.cup, pen = type == CafeItemType.pencil;
   if (thirdPerson) {
     final forward = CafePoint(math.sin(camera.yaw), 0, -math.cos(camera.yaw));
-    return camera.position +
-        forward * (cup ? .35 - sip * .20 : .37) +
+    final seated = CafeBody.seated(camera),
+        meditation = CafeBody.meditation(camera);
+    final height = cup
+        ? .82 + seated * .02 - meditation * .20 + sip * (.17 - seated * .045)
+        : type == CafeItemType.volume
+        ? .81 - meditation * .20
+        : .78 + seated * .01 - meditation * .20;
+    return CafePoint(camera.position.x, height, camera.position.z) +
+        forward * (cup ? .24 - sip * .12 : .27) +
         camera.right *
             (cup
-                ? .13 - sip * .10
+                ? .105 - sip * .06
                 : pen
-                ? .13
-                : 0) +
-        CafePoint(
-          0,
-          cup
-              ? -.52 + sip * .36
-              : type == CafeItemType.volume
-              ? -.43
-              : -.59,
-          0,
-        );
+                ? .105
+                : 0);
   }
   return camera.position +
       camera.forward *

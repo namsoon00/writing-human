@@ -66,7 +66,8 @@ extension CafePersonalObjects on CafeWorld {
     build();
     _buildingObject = parent;
     final pose = space.pose(id);
-    CafePoint at(CafePoint p) => _transform(p, pivot, pose);
+    final base = CafeLayout.offset(id);
+    CafePoint at(CafePoint p) => _transform(p + base, pivot + base, pose);
     CafePoint normal(CafePoint n) => CafePoint(
       n.x * math.cos(pose.turn) - n.z * math.sin(pose.turn),
       n.y,
@@ -199,7 +200,8 @@ extension CafePersonalObjects on CafeWorld {
       'quiet' => const CafePoint(-1.70, 0, -4.02),
       _ => CafePoint(-3.4, 0, CafeWorld.desk(t.seat!).z),
     };
-    return _transform(p, pivot, space.pose(id));
+    final base = CafeLayout.offset(id);
+    return _transform(p + base, pivot + base, space.pose(id));
   }
 
   String? _tableId(CafeTarget t) =>
@@ -373,10 +375,7 @@ extension CafePersonalObjects on CafeWorld {
           b.bottom > 4.72) {
         return 'boundary';
       }
-      if (b.overlaps(const Rect.fromLTWH(-4.35, -4.5, 1.8, 1.85))) {
-        return 'door';
-      }
-      if (b.overlaps(const Rect.fromLTWH(-1.30, 3.70, 2.60, 1.30))) {
+      if (b.overlaps(const Rect.fromLTWH(-4.35, -2.1, 1.8, 4.2))) {
         return 'door';
       }
       final owned = objects.values
@@ -402,10 +401,11 @@ extension CafePersonalObjects on CafeWorld {
       if (p.x.abs() > 4.05 || p.z < -2.7 || p.z > 2.55) return 'boundary';
       if (item.type == CafeItemType.plant) {
         // Keep plants on the banks, away from pond, bench and returning door.
-        if (math.pow((p.x + 1.25) / 1.24, 2) + math.pow((p.z - 1) / 1.56, 2) <
+        if (math.pow((p.x - CafeLayout.pond.x) / 1.24, 2) +
+                    math.pow((p.z - 1) / 1.56, 2) <
                 1 ||
             (p.x > 2.5 && p.z > -.9) ||
-            (p.x > .8 && p.z > -.3)) {
+            (p.x.abs() < 1.1 && p.z > .6)) {
           return 'support';
         }
       }

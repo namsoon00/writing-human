@@ -75,8 +75,7 @@ extension _CafeInterior on CafeWorld {
     _entranceDetails();
 
     // Window hardware, recessed seals and a narrow rail above the glazing.
-    for (final z in [-3.35, -1.05, 1.25, 3.55]) {
-      if (z == -3.35) continue;
+    for (final z in [-3.35, 3.35]) {
       box(-4.185, 1.37, z + .07, .025, .14, .018, CafeWorld.brass);
       box(-4.17, 1.43, z + .105, .025, .025, .08, CafeWorld.brass);
       box(-4.31, 2.90, z, .15, .07, 2.26, CafeWorld.dark, wood: true);
@@ -142,15 +141,20 @@ extension _CafeInterior on CafeWorld {
     // A recessed perimeter joint lets ceiling and plaster read separately.
     for (final x in [-4.375, 4.375]) {
       box(x, 2.905, 0, .035, .028, 9.96, const Color(0xffb5a48b));
-      box(x, .173, 0, .04, .012, 9.96, const Color(0xff9a7955));
+      if (x > 0) {
+        box(x, .173, 0, .04, .012, 9.96, const Color(0xff9a7955));
+      } else {
+        for (final z in [-3.35, 3.35]) {
+          box(x, .173, z, .04, .012, 2.1, const Color(0xff9a7955));
+        }
+      }
     }
     for (final z in [-4.975, 4.975]) {
       box(0, 2.905, z, 8.75, .028, .035, const Color(0xffb5a48b));
     }
     // Inset panels below the glazing: real shadow gaps and oak rails at the
     // junctions, rather than a single flat strip painted the same wall colour.
-    for (final z in [-3.35, -1.05, 1.25, 3.55]) {
-      if (z == -3.35) continue;
+    for (final z in [-3.35, 3.35]) {
       for (final dz in [-.53, .53]) {
         box(
           -4.32,
@@ -848,15 +852,15 @@ extension _CafeInterior on CafeWorld {
     _target = CafeTarget.shared;
     _object(
       'shared.stack',
-      '중앙 테이블의 책 두 권',
+      '큰 책상의 책 두 권',
       CafeObjectKind.prop,
-      const CafePoint(.21, .754, -1.27),
+      const CafePoint(.21, .754, -1.00),
       () {
         for (var i = 0; i < 2; i++) {
           box(
             .21,
             .769 + i * .032,
-            -1.27,
+            -1.00,
             .31,
             .026,
             .22,
@@ -866,18 +870,18 @@ extension _CafeInterior on CafeWorld {
               CafeWorld.sage,
             ][(space.finish('shared.stack', fallback: 1) + 1 - i) % 3],
           );
-          box(.21, .767 + i * .032, -1.151, .275, .016, .004, CafeWorld.cream);
+          box(.21, .767 + i * .032, -.881, .275, .016, .004, CafeWorld.cream);
         }
-        box(.29, .799, -1.13, .017, .002, .08, CafeWorld.brass);
+        box(.29, .799, -.86, .017, .002, .08, CafeWorld.brass);
       },
       support: CafeWorld.tableBounds(CafeSeat.shared).deflate(.015),
-      footprint: const Rect.fromLTWH(.055, -1.38, .31, .22),
+      footprint: const Rect.fromLTWH(.055, -1.11, .31, .22),
       type: CafeItemType.stack,
       defaultFinish: 1,
     );
     _object(
       'shared.runner',
-      '중앙 테이블의 리넨',
+      '큰 책상의 리넨',
       CafeObjectKind.prop,
       const CafePoint(0, .754, -.30),
       () {

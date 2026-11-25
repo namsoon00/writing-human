@@ -29,8 +29,8 @@ class CafeCamera {
     this.lens = 1,
   });
   static const entrance = CafeCamera(
-    position: CafePoint(.15, 1.62, 3.60),
-    yaw: -.10,
+    position: CafePoint(0, 1.62, 0),
+    yaw: -math.pi / 2,
     pitch: -.08,
   );
   final CafePoint position;
@@ -79,8 +79,8 @@ class CafeCamera {
   }
 
   static const courtyardEntrance = CafeCamera(
-    position: CafePoint(3.55, 1.62, 2.35),
-    yaw: -.55,
+    position: CafePoint(0, 1.62, 2.35),
+    yaw: 0,
     pitch: -.17,
   );
   static const gardenRest = CafeCamera(

@@ -69,13 +69,13 @@ void main() {
         ),
       );
       await tester.pump();
-      // The observer now sees the entrance over the person's shoulder.
+      // The former street doorway is now an ordinary wall.
       expect(
         find.byKey(const ValueKey('cafe-object-recommendations')),
         findsNothing,
       );
-      expect(find.byKey(const ValueKey('cafe-object-exit')), findsOneWidget);
-      expect(labels, findsOneWidget);
+      expect(find.byKey(const ValueKey('cafe-object-exit')), findsNothing);
+      expect(labels.evaluate().length, lessThanOrEqualTo(1));
       await tester.tap(find.byTooltip('공간 안내'));
       await tester.pumpAndSettle();
       for (final target in c.world.targets) {

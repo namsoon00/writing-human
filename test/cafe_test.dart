@@ -140,13 +140,12 @@ void main() {
       await tester.tap(_return);
       await tester.pumpAndSettle();
       expect(find.text('노트 펼치기'), findsOneWidget);
-      await tester.tap(find.byTooltip('공간 안내'));
+      // Reopening from writing returns to that editor through its real parent.
+      await tester.tap(find.byKey(const ValueKey('paper-back')).hitTestable());
       await tester.pumpAndSettle();
-      final leave = find.byKey(const ValueKey('cafe-guide-exit'));
-      await tester.ensureVisible(leave);
-      await tester.tap(leave);
-      await tester.pumpAndSettle();
-      expect(_return, findsNothing);
+      expect(find.byType(CafeScreen), findsNothing);
+      expect(_field.hitTestable(), findsOneWidget);
+      expect(tester.widget<TextField>(_field).controller, same(original));
       expect(original.value, value);
       expect(store.data.encode(), snapshot);
     },

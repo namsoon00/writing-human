@@ -4334,3 +4334,22 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
 「고요한 뜰」이 유지되는 것을 확인했다. 드래그 회전으로 앞모습과 손/니트를 확인하고
 [실제 웹 캡처](evidence/20261127/cafe-cozy/browser-mobile.jpg)를 남겼다. 임시 viewport는
 기본값으로 복원했다. WebGL 오류는 관측되지 않았으며 최종 정적 분석도 오류 없음이다.
+
+### 같은 작업의 최종 원격 검증·공개 배포
+
+앱 소스 `24aac2aef2e0a0745468acacf79905d250b979f8`의
+[CI / 배포 실행](https://github.com/namsoon00/writing-human/actions/runs/45932655128)이
+성공했다. 포맷·정적 분석 뒤 전체 native 396개, 음성 DSP 6개, Chrome 122개 검사가
+통과했다. 로컬의 중단한 전체 실행을 성공 근거로 대신하지 않았다.
+
+공개 URL의 index/loader/main/GPU 자산은 모두 HTTP 200이었다. main.dart.js의
+SHA256은 `53af53d59599a235428ff0b49b1f701134ddc66b2d508289e442e4c183533fde`로
+로컬 최종 빌드와 같고, loader 쿼리 해시·GPU 자산도 일치했다.
+공개 웹에서 바닥 클릭→뜰 진입→도착 바닥 클릭 후 뜰 유지→드래그 회전을 확인하고
+[공개 화면 캡처](evidence/20261127/cafe-cozy/public-cafe.jpg)를 남겼다.
+
+로컬 실웹에서 착석→컵 집기→한 모금(두 모금 남음)→제자리에 놓기, 긴 황토길
+한 바퀴 완료, 쓰던 쪽 복귀를 확인했다. 이동 중 GPU 준비 샘플은 29.1/31.5/27.5ms였으며
+총 프레임 시간이나 실제 휴대폰 FPS로 보고하지 않는다. 자동 산책 중 CUA 드래그로는
+중단을 확인하지 못했고, controller의 look 취소 검사 통과와 실제 터치 검증을 구분한다.
+실기기의 드래그 중단·FPS·발열·장시간 상태 보존은 미검증이다.

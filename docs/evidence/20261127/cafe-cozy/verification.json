@@ -22,7 +22,7 @@
       "note": "includes probe plus avatar, cozy space, central bay and GPU geometry tests"
     },
     "nodeSyntax": "passed",
-    "fullNative": "Two local full-suite attempts interrupted; not reported as passed. Complete exact-source suite pending CI.",
+    "fullNative": "396 tests passed in exact-source CI",
     "landingRegression": {
       "before": "Failed: cafeReturn on arrival slab",
       "after": "4 cozy space tests passed",
@@ -42,16 +42,64 @@
     "physicalDevice": false,
     "screenshot": "browser-mobile.jpg",
     "stationaryPreparationMs": 6.6,
-    "note": "One final stationary CPU sample; not a FPS benchmark"
+    "note": "One final stationary CPU sample; not a FPS benchmark",
+    "additional": {
+      "localRelease": {
+        "cup": [
+          "sit at shared table",
+          "pick up shared cup",
+          "sip: two sips remain",
+          "put down: normal scene restored"
+        ],
+        "yard": [
+          "stroll status visible on extended path",
+          "full loop finished at gate approach with scene controls re-enabled"
+        ],
+        "movingGpuPreparationMs": [
+          29.1,
+          31.5,
+          27.5
+        ],
+        "note": "CPU geometry/upload preparation only, not total frame duration or device FPS",
+        "dragDuringStroll": "CUA drag did not cancel the ongoing stroll; native controller cancel-by-look test passed, physical gesture behavior remains unverified",
+        "physicalDevice": false
+      }
+    }
   },
   "deployment": {
-    "status": "pending",
-    "existingUrl": "https://namsoon00.github.io/writing-human/"
+    "status": "success",
+    "url": "https://namsoon00.github.io/writing-human/?v=24aac2a",
+    "http": {
+      "url": "https://namsoon00.github.io/writing-human/?v=24aac2a",
+      "status": 200,
+      "bootstrapStatus": 200,
+      "mainStatus": 200,
+      "gpuStatus": 200,
+      "mainPath": "main.dart.js?v=53af53d59599a235",
+      "mainSha256": "53af53d59599a235428ff0b49b1f701134ddc66b2d508289e442e4c183533fde",
+      "mainQueryMatchesHash": true,
+      "gpuMatchesSource": true,
+      "matchesLocalAppBuild": true,
+      "cozyPartStrings": true,
+      "siteProjectUnchanged": true
+    },
+    "publicUi": "Verified floor click, open bay, arrival floor stays in yard, orbit and new avatar",
+    "screenshot": "public-cafe.jpg"
   },
   "limitations": [
     "No physical iOS or Android run, FPS, heat or long-session checks",
     "GPU timing samples measure CPU preparation in this browser; not device FPS",
     "Earlier native software preview images predate final tessellation reduction; release screenshots will be separate",
     "Private Sites hosting project and access are unchanged"
-  ]
+  ],
+  "ci": {
+    "url": "https://github.com/namsoon00/writing-human/actions/runs/45932655128",
+    "runId": 45932655128,
+    "nativePassed": 396,
+    "voiceDspPassed": 6,
+    "chromePassed": 122,
+    "build": "success",
+    "deploy": "success",
+    "sourceCommit": "24aac2aef2e0a0745468acacf79905d250b979f8"
+  }
 }

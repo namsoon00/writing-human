@@ -4279,3 +4279,22 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   게시되지 않았음을 확인했다. 이번 UI 변경 전의 실패다. 테스트의 준비 조건과 바닥
   좌표 가정을 현재 상시 장면/카메라에 맞췄다. 걷기·선택·복귀·배치 보존의 동작은
   유지하며 카페 관련19개가 통과했다. 재검사가 끝난 뒤 최종 CI 결과를 별도로 남긴다.
+
+
+### 최종 웹 배포 확인 · 2026-11-27
+
+- [CI45916639504](https://github.com/namsoon00/writing-human/actions/runs/45916639504)의
+  포맷235파일0변경·정적 분석·네이티브391개·음성 DSP6개·Chrome117개·release 빌드와
+  Pages 게시가 모두 성공했다. 게시한 앱은 커밋 `b0e5f79eb229145398ebf3d2dc20cdd8d252c9ac`이며,
+  순차 배포 정책은 `d9f9c30cc8d301e36647692b7d776328b62ddbd9`에서 기존 false로 복원했다.
+- [공개 웹](https://namsoon00.github.io/writing-human/?v=b0e5f79)의 앱 본체는 SHA-256
+  `82b45285a5b51c06e938dea9e6b0ad775f84cbff4cd46663466e32034c6bc7f5`로 검증한 로컬 정식 빌드와 같다. 본체·글꼴·소리 등을 포함한27파일을 대조했다.
+  25파일은 바이트 단위로 같고 bootstrap의 serviceWorkerVersion 및 index의 그 해시만
+  달랐다. 그 두 캐시 값만 정규화하면 같으며 index→bootstrap→main의 실제 해시 연결도 유효하다.
+- 공개 HTTP 파일 대조와 컴파일된 실제 앱의 Chrome 조작을 구분한다. 후자는 앞선 로컬의
+  시험 기록2개로 history.back·깊은 원문에서 작성 복귀·전체 화면 도구의 가장자리 복귀를
+  확인한 범위다. 이번 공개 UI 추가 조작은 브라우저 연결 부재로 실행하지 않았고
+  iOS·Android 실기기 터치/키보드도 미검증이다. 상세 결과는
+  [최종 배포 근거](evidence/20261127/navigation-fullscreen/deployment.json)에 남겼다.
+- 기존 hosting project_id/비공개 접근·기록 저장 키와 계정 범위를 유지했다. 미완성 글꼴·
+  음성·카페 조명 작업을 복사하지 않고 기존 원격 main 위에 이번 변경과 검사 복구만 통합했다.

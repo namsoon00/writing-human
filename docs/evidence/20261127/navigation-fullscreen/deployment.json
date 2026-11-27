@@ -1,0 +1,461 @@
+{
+  "verified_at_utc": "2026-11-27T00:44:46.595501+00:00",
+  "publication": {
+    "commit": "b0e5f79eb229145398ebf3d2dc20cdd8d252c9ac",
+    "tree": "2a5a213bc278f44f758b86221787942adbb4c427",
+    "main_commit": "d9f9c30cc8d301e36647692b7d776328b62ddbd9",
+    "main_tree": "d3366817257cabb5df506b8736b1d6ca664d57e1",
+    "initial_navigation_commit": "d474006cbf5606a0f686fd760d1af9a419bcbe8e",
+    "method": "connected GitHub API with expected_sha leases; obsolete owned run cancelled and sequential policy restored",
+    "tree_matches_tested_local_commit": true,
+    "application_sources_unchanged_since_release_build": true,
+    "workflow_policy_restored": true,
+    "ci_run_id": 45916639504,
+    "cancelled_obsolete_run_id": 45915098578,
+    "url": "https://namsoon00.github.io/writing-human/"
+  },
+  "ci": {
+    "run_id": 45916639504,
+    "url": "https://github.com/namsoon00/writing-human/actions/runs/45916639504",
+    "jobs": {
+      "jobs": [
+        {
+          "id": 140237420056,
+          "name": "build",
+          "status": "completed",
+          "conclusion": "success",
+          "run_id": 45916639504,
+          "logs_url": null,
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1
+            },
+            {
+              "name": "Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2
+            },
+            {
+              "name": "Run subosito/flutter-action@v2",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3
+            },
+            {
+              "name": "Install SQLite test library",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4
+            },
+            {
+              "name": "Run node --check web/cafe_gpu.js",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5
+            },
+            {
+              "name": "Run flutter pub get",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 6
+            },
+            {
+              "name": "Run dart format --output=none --set-exit-if-changed lib test tool/capture_preview_test.dart tool/capture_cafe_items_test.dart tool/capture_cafe_actions_test.dart tool/capture_cafe_homecoming_test.dart tool/capture_cafe_occlusion_test.dart tool/capture_cafe_atmosphere_test.dart tool/capture_avatar_test.dart tool/capture_cafe_yard_test.dart tool/benchmark_cafe_test.dart tool/benchmark_cafe_motion_test.dart tool/cafe_response_probe.dart",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 7
+            },
+            {
+              "name": "Run flutter analyze --no-pub",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 8
+            },
+            {
+              "name": "Run flutter test --no-pub --concurrency=2",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9
+            },
+            {
+              "name": "Check the single narration voice DSP in Chrome",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 10
+            },
+            {
+              "name": "Check cafe image lifetime and room persistence in Chrome",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 11
+            },
+            {
+              "name": "Build Flutter preview",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 12
+            },
+            {
+              "name": "Run actions/upload-pages-artifact@v4",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 13
+            },
+            {
+              "name": "Post Run subosito/flutter-action@v2",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 25
+            },
+            {
+              "name": "Post Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 26
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 27
+            }
+          ]
+        },
+        {
+          "id": 140242416668,
+          "name": "deploy",
+          "status": "completed",
+          "conclusion": "success",
+          "run_id": 45916639504,
+          "logs_url": null,
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1
+            },
+            {
+              "name": "Configure Pages",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2
+            },
+            {
+              "name": "Deploy to GitHub Pages",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4
+            }
+          ]
+        }
+      ]
+    },
+    "check_result_lines": [
+      "2026-11-27T00:26:04.0476789Z ##[end-action id=__subosito_flutter-action.__run;outcome=skipped;conclusion=skipped;duration_ms=0]",
+      "2026-11-27T00:27:09.8880590Z Formatted 235 files (0 changed) in 1.08 seconds.",
+      "2026-11-27T00:27:29.0492531Z No issues found! (ran in 18.9s)",
+      "2026-11-27T00:31:48.0166611Z 🎉 391 tests passed.",
+      "2026-11-27T00:32:17.5483493Z 🎉 6 tests passed.",
+      "2026-11-27T00:40:53.1283956Z 🎉 117 tests passed.",
+      "2026-11-27T00:41:28.3125651Z ##[end-action id=__actions_upload-pages-artifact.__run_2;outcome=skipped;conclusion=skipped;duration_ms=0]",
+      "2026-11-27T00:41:28.3129426Z ##[end-action id=__actions_upload-pages-artifact.__run_3;outcome=skipped;conclusion=skipped;duration_ms=0]"
+    ]
+  },
+  "public_files": {
+    "cache_version_chain_valid": true,
+    "url": "https://namsoon00.github.io/writing-human/?v=b0e5f79",
+    "commit": "b0e5f79eb229145398ebf3d2dc20cdd8d252c9ac",
+    "compared_with": "local release built from identical published Git tree",
+    "files": [
+      {
+        "normalized_match": true,
+        "path": "index.html",
+        "status": 200,
+        "bytes": 8207,
+        "sha256": "b4d42effb4bb0f3469bfd323c71f847bd407489d7823aaa3cd3271ec794d4791",
+        "expected_sha256": "81f2430828621bcfcf87445f77d2ae0c3370e4ffb7095d00fcf343592e72bfcf",
+        "matches": false
+      },
+      {
+        "normalized_match": true,
+        "path": "flutter_bootstrap.js",
+        "status": 200,
+        "bytes": 10016,
+        "sha256": "4ffc508cd12f09b0ace2bd4ebfc8c6e39ddeee6cc8bc9fd2dc5b7513a2ed2d79",
+        "expected_sha256": "6ab9f093a72714fc39d935296e17b3a64d9778f35eea4ed6cbbedd9c933ba054",
+        "matches": false
+      },
+      {
+        "normalized_match": false,
+        "path": "main.dart.js",
+        "status": 200,
+        "bytes": 5376468,
+        "sha256": "82b45285a5b51c06e938dea9e6b0ad775f84cbff4cd46663466e32034c6bc7f5",
+        "expected_sha256": "82b45285a5b51c06e938dea9e6b0ad775f84cbff4cd46663466e32034c6bc7f5",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "version.json",
+        "status": 200,
+        "bytes": 96,
+        "sha256": "0dcc11699afcac20da1bcd3dbc790b5cee3d7a92f1c4b8d8a04051813ef8e25d",
+        "expected_sha256": "0dcc11699afcac20da1bcd3dbc790b5cee3d7a92f1c4b8d8a04051813ef8e25d",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/FontManifest.json",
+        "status": 200,
+        "bytes": 639,
+        "sha256": "59d2bbd28f1068364d4e0054b81dcde0da04cacf3e19f403efe8697edacc451e",
+        "expected_sha256": "59d2bbd28f1068364d4e0054b81dcde0da04cacf3e19f403efe8697edacc451e",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/AssetManifest.bin",
+        "status": 200,
+        "bytes": 3788,
+        "sha256": "27af39c2122b91e7af5b057bcbf7ff2deba36d4bde910e546e603eef724c8935",
+        "expected_sha256": "27af39c2122b91e7af5b057bcbf7ff2deba36d4bde910e546e603eef724c8935",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/audio/supertonic-code-license.txt",
+        "status": 200,
+        "bytes": 1070,
+        "sha256": "0dfe0d0ba84416fe3879d9a34f4909d8d0137c78d1e95834177b0414ac096fa2",
+        "expected_sha256": "0dfe0d0ba84416fe3879d9a34f4909d8d0137c78d1e95834177b0414ac096fa2",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/audio/cafe-tea.wav",
+        "status": 200,
+        "bytes": 97064,
+        "sha256": "a5c241b30a12232b77c0c6a4033cf48934398d49d0d139da27ffd45b81cc5e13",
+        "expected_sha256": "a5c241b30a12232b77c0c6a4033cf48934398d49d0d139da27ffd45b81cc5e13",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/audio/cafe-page.wav",
+        "status": 200,
+        "bytes": 15478,
+        "sha256": "5d3a3887cb6a3d3d9ce9d216433bb38311666d1cf132b37e969d8d934e21c133",
+        "expected_sha256": "5d3a3887cb6a3d3d9ce9d216433bb38311666d1cf132b37e969d8d934e21c133",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/audio/cafe-sip.wav",
+        "status": 200,
+        "bytes": 26504,
+        "sha256": "140161a2a3b38c5ac28a3277e83a0c05100842f882687617ca626025b7b0605d",
+        "expected_sha256": "140161a2a3b38c5ac28a3277e83a0c05100842f882687617ca626025b7b0605d",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/audio/cafe-place.wav",
+        "status": 200,
+        "bytes": 9746,
+        "sha256": "75fd0af97a7d510fca9bfd909a3a61a625533b08b9afeee846c98420b41353ac",
+        "expected_sha256": "75fd0af97a7d510fca9bfd909a3a61a625533b08b9afeee846c98420b41353ac",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/audio/pencil-on-paper-original-info.json",
+        "status": 200,
+        "bytes": 1318,
+        "sha256": "794a10dd647aef989a1e105cf9950191c2cea1b028c25c4968dcab9903cc6165",
+        "expected_sha256": "794a10dd647aef989a1e105cf9950191c2cea1b028c25c4968dcab9903cc6165",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/audio/cafe-bell.wav",
+        "status": 200,
+        "bytes": 220544,
+        "sha256": "3e79620dc1f6aa73bbf927991e15ecece8ea68611a0b11ef0760bdfecb6a22b2",
+        "expected_sha256": "3e79620dc1f6aa73bbf927991e15ecece8ea68611a0b11ef0760bdfecb6a22b2",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/audio/cafe-touch.wav",
+        "status": 200,
+        "bytes": 5336,
+        "sha256": "6de5a8ed938aa69dfb63292736f277e3dc9894e1f533f55edffd2411af5843ec",
+        "expected_sha256": "6de5a8ed938aa69dfb63292736f277e3dc9894e1f533f55edffd2411af5843ec",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/audio/page-turn.mp3",
+        "status": 200,
+        "bytes": 15603,
+        "sha256": "41f51725007894483999812091faf74d0d341092c0a24c55c0778fe245ea45f4",
+        "expected_sha256": "41f51725007894483999812091faf74d0d341092c0a24c55c0778fe245ea45f4",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/audio/pencil-on-paper-original.wav",
+        "status": 200,
+        "bytes": 643464,
+        "sha256": "10f5de0304ddfe461a19e57a5963bd7f1c973deadc3db1d5d7e632d18bb18360",
+        "expected_sha256": "10f5de0304ddfe461a19e57a5963bd7f1c973deadc3db1d5d7e632d18bb18360",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/audio/supertonic-license.txt",
+        "status": 200,
+        "bytes": 15007,
+        "sha256": "0d944a9110fed9a9602d60e0423a272903e7bd21ab060490774efc77c2275e9f",
+        "expected_sha256": "0d944a9110fed9a9602d60e0423a272903e7bd21ab060490774efc77c2275e9f",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/audio/signalsmith-code-license.txt",
+        "status": 200,
+        "bytes": 7353,
+        "sha256": "440d14acdcfa78b4dac595c2dd0033d2e92694f1c9fe96cf7e695464e090da40",
+        "expected_sha256": "440d14acdcfa78b4dac595c2dd0033d2e92694f1c9fe96cf7e695464e090da40",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/audio/dsp/voice_worker.mjs",
+        "status": 200,
+        "bytes": 1733,
+        "sha256": "ef288c3f1b9f9db5b8dc1f2c1e66c34c3a210496ebdb8d80f576c4b602100391",
+        "expected_sha256": "ef288c3f1b9f9db5b8dc1f2c1e66c34c3a210496ebdb8d80f576c4b602100391",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/audio/dsp/signalsmith_factory.mjs",
+        "status": 200,
+        "bytes": 98413,
+        "sha256": "7b821567177096f1e4df05e236366bd2241f0a38e7a601840fd7e30e5d712d77",
+        "expected_sha256": "7b821567177096f1e4df05e236366bd2241f0a38e7a601840fd7e30e5d712d77",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/fonts/WritingHumanDevelopment-Regular.ttf",
+        "status": 200,
+        "bytes": 895652,
+        "sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+        "expected_sha256": "d759a18486b430fdb74c9b6192915e2456f99c31aa4416c89ec23e8bb75c0d05",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/fonts/NanumMyeongjo-Bold.ttf",
+        "status": 200,
+        "bytes": 3074720,
+        "sha256": "bc9ed8e60d93fe6db054b8fb988481b625f2eef8cb2317ad0e9834681b8fe3f3",
+        "expected_sha256": "bc9ed8e60d93fe6db054b8fb988481b625f2eef8cb2317ad0e9834681b8fe3f3",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/fonts/NanumMyeongjo-Regular.ttf",
+        "status": 200,
+        "bytes": 3058408,
+        "sha256": "7ed9e8653a8ed04285d51dc343ffea6eb3d9c73afc27383ea8929ee4ffd03205",
+        "expected_sha256": "7ed9e8653a8ed04285d51dc343ffea6eb3d9c73afc27383ea8929ee4ffd03205",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/fonts/NanumPenScript-Regular.ttf",
+        "status": 200,
+        "bytes": 3201664,
+        "sha256": "6f0d1ab29c7894010dc88831fb7a0a51edb79136e450344183de5b1a8b52bd43",
+        "expected_sha256": "6f0d1ab29c7894010dc88831fb7a0a51edb79136e450344183de5b1a8b52bd43",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/fonts/NanumPenScript-OFL.txt",
+        "status": 200,
+        "bytes": 4532,
+        "sha256": "90f6a909ffb2af7f6422ea20042a26180fe5520cba80bbbf75a5e660320d7924",
+        "expected_sha256": "90f6a909ffb2af7f6422ea20042a26180fe5520cba80bbbf75a5e660320d7924",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/fonts/NanumGothic-Regular.ttf",
+        "status": 200,
+        "bytes": 2054744,
+        "sha256": "76f45ef4a6bcff344c837c95a7dcc26e017e38b5846d5ae0cdcb5b86be2e2d31",
+        "expected_sha256": "76f45ef4a6bcff344c837c95a7dcc26e017e38b5846d5ae0cdcb5b86be2e2d31",
+        "matches": true
+      },
+      {
+        "normalized_match": false,
+        "path": "assets/assets/fonts/WritingHumanDevelopment-info.json",
+        "status": 200,
+        "bytes": 36337,
+        "sha256": "3d78ee33c60c8d1ea30e8d8e7ff0ca6a7ecbf334f0d0da5a0d784598a27586cf",
+        "expected_sha256": "3d78ee33c60c8d1ea30e8d8e7ff0ca6a7ecbf334f0d0da5a0d784598a27586cf",
+        "matches": true
+      }
+    ],
+    "all_match": true,
+    "exact_matches": 25,
+    "normalization": "Only serviceWorkerVersion and its bootstrap digest in index may differ between local and server builds; every other byte must match."
+  },
+  "app_source_sha256": {
+    "lib/main.dart": "c451ca736374ee12cc22861511d8b6e8b07b79b92181d18c7b398b25dac995dd",
+    "lib/ui/book_appearance.dart": "78a8fad166e9016e6fa6181c4d306f7f662ea55c196d31499050400ac6ed0ada",
+    "lib/ui/collection_sheet.dart": "218848b5add692b2ac31e35a9c1ea285155f24bdd11b60faeb01d6a0c2e2cf97",
+    "lib/ui/paper_navigation.dart": "547df47fd3369d80c2541cbfca6ba53a7bed639aeac07e4d4f9340e483b345c2",
+    "lib/ui/paper_panel.dart": "eca70b706b75942ec7d9efa1bc4aae5e68fcd5fd68ee8867ef1e5b31ca631cc0",
+    "lib/ui/source_browser.dart": "de6895b8187aa2e6f79ad3ae516ac5ba4886fc736705574d328e3b3bfc56e9e4",
+    "lib/ui/source_search.dart": "9c4c188d13f1ba7268e30caa661f83652d82b1b0a2bfb65ec342771d67690453",
+    "lib/ui/source_import_sheet.dart": "cc2d325822738a7a179ed22a0d0de49c1a1e1aff55bd23f6d96bf2e1096eb589"
+  },
+  "compiled_local_browser": {
+    "scope": "Actual compiled Flutter app in headless Chrome, synthetic in-memory records. Real browser history.back and CDP pointer input. Not physical-device or disk verification.",
+    "browser_back": "detail to source list",
+    "origin_shortcut": "deep source to original writing",
+    "full_screen_edge_return": "same writing",
+    "pages_and_cursor_unchanged": true,
+    "record_count": 2,
+    "url_unchanged": true
+  },
+  "local_focused_tests": 17,
+  "local_writing_widget_tests": 17,
+  "release_writing_widget_tests": 17,
+  "release_cafe_regression_tests": 19,
+  "flutter_renders": 7,
+  "limits": [
+    "Public release files verified over HTTP; no additional public UI automation after browser-control access proved unavailable.",
+    "Compiled Flutter navigation was exercised in headless Chrome with synthetic in-memory records; real browser history and pointer edge gesture verified.",
+    "No iOS or Android physical-device gesture or keyboard verification.",
+    "Interrupted local full suite is documented separately and is not reported as passing; exact release CI passed391 native,6 DSP,117 Chrome."
+  ],
+  "existing_hosting_project_and_private_access_preserved": true,
+  "temporary_deployment_sequence_policy_restored": true
+}

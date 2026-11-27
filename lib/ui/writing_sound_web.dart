@@ -177,11 +177,18 @@ class PaperSoundOutput implements PaperSoundPlayback {
   void pause() {
     _clearPending();
     final context = _context;
-    if (_voices.isEmpty || context?.state != 'running') {
+    if (_voices.isEmpty || context == null) {
       _session.release();
       return;
     }
-    final at = context!.currentTime;
+    if (context.state != 'running') {
+      for (final source in _voices) {
+        source.stop();
+      }
+      _session.release();
+      return;
+    }
+    final at = context.currentTime;
     final end = at + _exitFade.inMilliseconds / 1000;
     final gain = _gain!.gain;
     gain.cancelScheduledValues(at);

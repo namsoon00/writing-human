@@ -1335,7 +1335,7 @@ void main() {
   }
 
   testWidgets(
-    'The catalog combines genre and author filters and imports prose',
+    'A catalog novel offers multiple excerpts and retries only the selected text',
     (tester) async {
       final requests = <Uri>[];
       final client = MockClient((request) async {
@@ -1351,8 +1351,9 @@ void main() {
                 ],
                 'text':
                     '<div class="mw-parser-output"><div class="ws-header">'
-                    '<p>작품 머리말</p></div><p>첫 문단<sup>각주</sup></p>'
-                    '<p>둘째 문단</p></div>',
+                    '<p>작품 머리말</p></div><p>새침하게 흐린 품에 비가 온다.<sup>각주</sup></p>'
+                    '<p>인제 설렁탕을 사줄 수도 있다.</p>'
+                    '<p>취중에도 설렁탕을 사가지고 집에 다달았다.</p></div>',
               },
             }),
           ),
@@ -1384,14 +1385,17 @@ void main() {
         expect(tester.widget<ChoiceChip>(novelFilter).selected, isTrue);
         final card = tester.widget<OriginalListItem>(novel);
         expect(card.indexCard, isTrue);
-        expect(card.subtitle, contains('현진건 · 소설 · 약 '));
+        expect(card.subtitle, '현진건 · 소설 · 필사할 구절');
         expect(card.preview, startsWith('새침하게'));
-        store.fail = true;
         await tester.tap(novel);
         await tester.pumpAndSettle();
         expect(requests.single.queryParameters['oldid'], '468924');
-        expect(find.text('원문과 필사 쪽을 저장하지 못했어요.'), findsOneWidget);
+        expect(find.text('필사할 구절'), findsOneWidget);
+        expect(find.text('비가 내리는 아침'), findsOneWidget);
+        expect(find.text('설렁탕을 사줄 수도 있다'), findsOneWidget);
         expect(store.data.records, isEmpty);
+        Navigator.of(tester.element(find.text('필사할 구절'))).maybePop();
+        await tester.pumpAndSettle();
         expect(tester.widget<ChoiceChip>(novelFilter).selected, isTrue);
         expect(
           tester
@@ -1402,20 +1406,80 @@ void main() {
               .text,
           '현 진 건',
         );
+        await tester.tap(novel);
+        await tester.pumpAndSettle();
+        expect(requests, hasLength(2));
 
+        final passage = find.byKey(const ValueKey('catalog-passage-2'));
+        final transcribe = find.descendant(
+          of: passage,
+          matching: find.widgetWithText(TextButton, '필사하기'),
+        );
+        store.fail = true;
+        await tester.ensureVisible(transcribe);
+        await tester.tap(transcribe);
+        await tester.pumpAndSettle();
+        expect(find.text('원문과 필사 쪽을 저장하지 못했어요.'), findsOneWidget);
+        expect(store.data.records, isEmpty);
         store.fail = false;
-        await tester.tap(find.text('다시 시도'));
+        await tester.tap(find.text('다시 저장'));
         await settleSourceSheets(tester);
-        expect(requests, hasLength(1));
+        expect(requests, hasLength(2));
         expect(find.byType(SourceImportSheet), findsNothing);
         final saved = store.data.activeRecord!.originals.single;
-        expect(saved.text, '첫 문단\n\n둘째 문단');
+        expect(saved.text, '인제 설렁탕을 사줄 수도 있다.');
         expect(saved.citation, contains('운수 좋은 날 · 현진건 · 위키문헌'));
         expect(store.data.activePage!.guidedOriginalId, saved.id);
         expect(remainingInline(tester), saved.text);
       }, () => client);
     },
   );
+
+  testWidgets('A translated novel saves just one excerpt with its license', (
+    tester,
+  ) async {
+    final store = MemoryStore();
+    await open(tester, store, FakeIntake());
+    await openRegistration(tester);
+    await openSourceSearch(tester);
+    await tester.enterText(
+      find.byKey(const ValueKey('source-catalog-query')),
+      '앨리스',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('translated-novel-23000')));
+    await tester.pumpAndSettle();
+    expect(find.text('흰 토끼를 따라'), findsOneWidget);
+    final passages = find.byKey(const ValueKey('catalog-novel-passages'));
+    await tester.scrollUntilVisible(
+      find.text('체셔 고양이에게 길을 묻다'),
+      200,
+      scrollable: find.descendant(
+        of: passages,
+        matching: find.byType(Scrollable),
+      ),
+    );
+    final card = find.byKey(const ValueKey('catalog-passage-3'));
+    final start = find.descendant(
+      of: card,
+      matching: find.widgetWithText(TextButton, '필사하기'),
+    );
+    expect(store.data.records, isEmpty);
+    await Scrollable.ensureVisible(tester.element(start), alignment: 0.75);
+    await tester.pumpAndSettle();
+    await tester.tap(start);
+    await settleSourceSheets(tester);
+    final saved = store.data.activeRecord!.originals.single;
+    expect(saved.text, startsWith('“체셔 고양이님,”'));
+    expect(saved.text, isNot(contains('토끼 굴 속으로')));
+    expect(saved.citation, contains('Dao Consulting (lib.txid.uk) 한국어판'));
+    expect(
+      saved.citation,
+      contains('https://creativecommons.org/licenses/by/4.0/'),
+    );
+    expect(saved.citation, contains('체셔 고양이에게 길을 묻다'));
+    expect(store.data.activePage!.guidedOriginalId, saved.id);
+  });
 
   testWidgets('Reviewed poem imports all stanzas and keeps line breaks', (
     tester,

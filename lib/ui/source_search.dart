@@ -11,6 +11,7 @@ import '../data/library_search.dart';
 import '../data/model.dart';
 
 import '../source/source_intake.dart';
+import '../source/novel_passages.dart';
 import '../source/wikisource_preview.dart';
 import 'original_list_item.dart';
 import 'paper.dart';
@@ -264,6 +265,13 @@ class _SourceSearch extends StatefulWidget {
   State<_SourceSearch> createState() => _SourceSearchState();
 }
 
+typedef _CatalogNovel = ({
+  String title,
+  String author,
+  String citation,
+  Future<List<NovelPassage>?> Function() load,
+});
+
 class _SourceSearchState extends State<_SourceSearch> {
   final _query = TextEditingController();
   final _client = http.Client();
@@ -278,6 +286,9 @@ class _SourceSearchState extends State<_SourceSearch> {
   WikisourceGenre? _catalogGenre;
   _SearchMode _mode = _SearchMode.title;
   _SourceHit? _selected;
+  _CatalogNovel? _novel;
+  Future<List<NovelPassage>?>? _passages;
+  int? _failedPassage;
   Future<List<String>?>? _preview;
   List<(_Collection, List<_SourceHit>?)> _results = const [];
 
@@ -453,8 +464,158 @@ class _SourceSearchState extends State<_SourceSearch> {
     }
   }
 
+  void _showNovel(_CatalogNovel novel) {
+    _catalogFocus.unfocus();
+    setState(() {
+      _novel = novel;
+      _passages = novel.load();
+      _failedPassage = null;
+      _linkError = null;
+    });
+  }
+
+  Future<void> _selectPassage(
+    _CatalogNovel novel,
+    NovelPassage passage,
+    int index,
+  ) async {
+    if (_importing) return;
+    final label = passage.label.isEmpty ? '구절 ${index + 1}' : passage.label;
+    final citation = '${novel.citation} · $label';
+    final transcribe = widget.onCatalogTranscription;
+    if (transcribe == null) {
+      Navigator.pop(
+        context,
+        SourceSearchChoice(text: passage.text, citation: citation),
+      );
+      return;
+    }
+    setState(() {
+      _importing = true;
+      _failedPassage = null;
+    });
+    bool? saved;
+    try {
+      saved = await transcribe(passage.text, citation);
+      if (mounted && saved == true && ModalRoute.isCurrentOf(context) == true) {
+        Navigator.pop(context);
+      }
+    } on Exception {
+      saved = false;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _importing = false;
+          _failedPassage = saved == false ? index : null;
+        });
+      }
+    }
+  }
+
+  Widget _novelPassageList(
+    _CatalogNovel novel,
+  ) => FutureBuilder<List<NovelPassage>?>(
+    future: _passages,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState != ConnectionState.done) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      final passages = snapshot.data;
+      if (passages == null || passages.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('구절을 불러오지 못했어요.'),
+              TextButton(
+                onPressed: () => _showNovel(novel),
+                child: const Text('다시 불러오기'),
+              ),
+            ],
+          ),
+        );
+      }
+      final theme = Theme.of(context);
+      return ListView.builder(
+        key: const ValueKey('catalog-novel-passages'),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        itemCount: passages.length + 2,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(novel.title, style: theme.textTheme.titleLarge),
+                Text(novel.author, style: const TextStyle(color: muted)),
+                const SizedBox(height: 14),
+              ],
+            );
+          }
+          if (index > passages.length) {
+            return Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(novel.citation, style: const TextStyle(color: muted)),
+            );
+          }
+          final passage = passages[index - 1];
+          final failed = _failedPassage == index - 1;
+          return Column(
+            key: ValueKey('catalog-passage-$index'),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (passage.label.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(passage.label, style: theme.textTheme.titleSmall),
+                ),
+              Text(
+                passage.text,
+                style: theme.textTheme.bodyLarge?.copyWith(height: 1.75),
+              ),
+              if (failed)
+                Semantics(
+                  liveRegion: true,
+                  child: const Text('원문과 필사 쪽을 저장하지 못했어요.'),
+                ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: _importing
+                      ? null
+                      : () => _selectPassage(novel, passage, index - 1),
+                  child: Text(
+                    failed
+                        ? '다시 저장'
+                        : widget.onCatalogTranscription == null
+                        ? '구절 가져오기'
+                        : '필사하기',
+                  ),
+                ),
+              ),
+              const Divider(height: 22),
+            ],
+          );
+        },
+      );
+    },
+  );
+
   Future<void> _selectCatalogWork(WikisourceWork work, {String? text}) async {
     if (_importing) return;
+    if (work.catalogInfo?.genre == WikisourceGenre.fiction) {
+      _showNovel((
+        title: work.title,
+        author: work.author,
+        citation: '${work.citation} · 발췌',
+        load: () async {
+          final paragraphs = await _loadPreview(work);
+          return paragraphs == null
+              ? null
+              : novelPassages(work.pageId, paragraphs);
+        },
+      ));
+      return;
+    }
     final transcribe = widget.onCatalogTranscription;
     if (transcribe == null) {
       _showHit(_SourceHit(_Collection.works, work.title, work.pageId));
@@ -640,9 +801,12 @@ class _SourceSearchState extends State<_SourceSearch> {
     ],
   );
 
-  String _workDetails(WikisourceWork work) {
+  String _workDetails(WikisourceWork work, {bool excerpts = false}) {
     final info = work.catalogInfo;
     if (info == null) return work.author;
+    if (excerpts && info.genre == WikisourceGenre.fiction) {
+      return '${work.author} · 소설 · 필사할 구절';
+    }
     final unit = info.characters < 1000 ? 10 : 100;
     final rounded = (info.characters / unit).round() * unit;
     final count = rounded.toString().replaceAllMapped(
@@ -659,11 +823,23 @@ class _SourceSearchState extends State<_SourceSearch> {
   Widget _catalog() {
     final query = _compact(_catalogQuery.text);
     final genre = _catalogGenre;
+    bool matches(String title, String author) =>
+        _compact(title).contains(query) || _compact(author).contains(query);
     final works = WikisourceWork.reviewed.values.where((work) {
       return (genre == null || work.catalogInfo?.genre == genre) &&
-          (_compact(work.title).contains(query) ||
-              _compact(work.author).contains(query));
+          matches(work.title, work.author);
     }).toList();
+    final translations = [
+      if (genre == null || genre == WikisourceGenre.fiction)
+        for (final novel in translatedNovels)
+          if (matches(novel.title, novel.author)) novel,
+    ];
+    final firstWorks = works.take(3).toList();
+    final entries = [
+      ...firstWorks,
+      ...translations,
+      ...works.skip(firstWorks.length),
+    ];
 
     return CustomScrollView(
       key: const PageStorageKey('source-catalog-list'),
@@ -726,7 +902,7 @@ class _SourceSearchState extends State<_SourceSearch> {
             padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
             sliver: SliverToBoxAdapter(
               child: Text(
-                '작품을 누르면 바로 필사를 시작해요.',
+                '소설은 작품을 열고 필사할 구절을 골라요.',
                 style: TextStyle(color: muted, fontSize: 13),
               ),
             ),
@@ -742,7 +918,7 @@ class _SourceSearchState extends State<_SourceSearch> {
               ),
             ),
           ),
-        if (works.isEmpty)
+        if (entries.isEmpty)
           SliverToBoxAdapter(
             child: ListTile(
               title: Text(
@@ -756,15 +932,36 @@ class _SourceSearchState extends State<_SourceSearch> {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             sliver: SliverList.builder(
-              itemCount: works.length,
+              itemCount: entries.length,
               itemBuilder: (_, index) {
-                final work = works[index];
+                final entry = entries[index];
+                if (entry is TranslatedNovel) {
+                  return OriginalListItem(
+                    key: ValueKey('translated-novel-${entry.id}'),
+                    style: widget.style,
+                    title: entry.title,
+                    preview: entry.passages.first.text,
+                    subtitle:
+                        '${entry.author} · 소설 · 구절 ${entry.passages.length}개',
+                    indexCard: true,
+                    showDivider: index > 0,
+                    onTap: _importing
+                        ? null
+                        : () => _showNovel((
+                            title: entry.title,
+                            author: entry.author,
+                            citation: entry.citation,
+                            load: () async => entry.passages,
+                          )),
+                  );
+                }
+                final work = entry as WikisourceWork;
                 return OriginalListItem(
                   key: ValueKey('wikisource-work-${work.pageId}'),
                   style: widget.style,
                   title: work.title,
                   preview: work.catalogInfo?.excerpt,
-                  subtitle: _workDetails(work),
+                  subtitle: _workDetails(work, excerpts: true),
                   indexCard: true,
                   showDivider: index > 0,
                   onTap: _importing ? null : () => _selectCatalogWork(work),
@@ -794,23 +991,33 @@ class _SourceSearchState extends State<_SourceSearch> {
   Widget build(BuildContext context) {
     final searched = _searched;
     final selected = _selected;
+    final novel = _novel;
     final preview = _preview;
     final hasHits = _results.any((entry) => entry.$2?.isNotEmpty ?? false);
-    PaperNavigationScope.maybeOf(
-      context,
-    )?.name(context, selected == null ? '새 원문 찾기' : '원문 미리보기');
+    final atDetails = selected != null || novel != null;
+    final title = novel != null
+        ? '필사할 구절'
+        : selected == null
+        ? '새 원문 찾기'
+        : preview != null
+        ? '원문 미리보기'
+        : '자료 가져오기';
+    PaperNavigationScope.maybeOf(context)?.name(context, title);
     void backToResults() => setState(() {
       _selected = null;
       _preview = null;
+      _novel = null;
+      _passages = null;
+      _failedPassage = null;
       _linkError = null;
     });
     return PopScope(
-      canPop: !_importing && selected == null,
+      canPop: !_importing && !atDetails,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && !_importing && selected != null) backToResults();
+        if (!didPop && !_importing && atDetails) backToResults();
       },
       child: PaperInternalBack(
-        enabled: selected != null && !_importing,
+        enabled: atDetails && !_importing,
         onBack: backToResults,
         child: PaperPanel(
           color: originalPanelColor,
@@ -821,30 +1028,20 @@ class _SourceSearchState extends State<_SourceSearch> {
                 child: PaperHeaderRow(
                   children: [
                     PaperBackButton(
-                      label: selected == null
-                          ? null
-                          : (_webSearch ? '검색 결과' : '작품 목록'),
+                      label: atDetails
+                          ? (_webSearch ? '검색 결과' : '작품 목록')
+                          : null,
                       enabled: !_importing,
-                      onPressed: selected == null ? null : backToResults,
+                      onPressed: atDetails ? backToResults : null,
                     ),
-                    Expanded(
-                      child: PaperPanelTitle(
-                        selected == null
-                            ? '새 원문 찾기'
-                            : preview != null
-                            ? '원문 미리보기'
-                            : '자료 가져오기',
-                        fontSize: 22,
-                      ),
-                    ),
-                    PaperWritingReturn(
-                      enabled: !_importing,
-                      force: selected != null,
-                    ),
+                    Expanded(child: PaperPanelTitle(title, fontSize: 22)),
+                    PaperWritingReturn(enabled: !_importing, force: atDetails),
                   ],
                 ),
               ),
-              if (selected != null)
+              if (novel != null)
+                Expanded(child: _novelPassageList(novel))
+              else if (selected != null)
                 Expanded(
                   child: preview == null
                       ? _details(selected)

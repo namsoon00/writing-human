@@ -131,29 +131,103 @@ extension _FrontYardGeometry on CafeWorld {
           doubleSided: true,
           surface: CafeSurface.plaster,
           layer: 0,
+          part: 'yard.wall.plaster',
         ),
       );
-      _rod(
-        a + const CafePoint(0, 1.17, 0),
-        b + const CafePoint(0, 1.17, 0),
-        .055,
-        const Color(0xffd9cdb5),
-        surface: CafeSurface.limestone,
-        sides: 6,
-      );
+      final delta = b - a, length = delta.length, axis = delta.normalized;
+      final horizontal = axis.x.abs() > .5;
+      void stone(CafePoint p, double w, double h, double depth, Color color) {
+        box(
+          p.x,
+          p.y,
+          p.z,
+          horizontal ? w : depth,
+          h,
+          horizontal ? depth : w,
+          color,
+          surface: CafeSurface.limestone,
+          layer: 1,
+        );
+      }
+
+      // Two staggered courses, individual coping stones, and shallow piers
+      // give the enclosure thickness without putting dense brickwork on it.
+      for (var row = 0; row < 2; row++) {
+        var start = 0.0;
+        while (start < length - .01) {
+          final w = math.min(
+            row == 1 && start == 0 ? .56 : 1.12,
+            length - start,
+          );
+          stone(
+            a + axis * (start + w / 2) + CafePoint(0, .075 + row * .135, 0),
+            math.max(.02, w - .018),
+            .126,
+            .23,
+            Color.lerp(
+              const Color(0xffc4b69d),
+              const Color(0xffdbcfb7),
+              ((start * 3 + row).floor() % 4) / 4,
+            )!,
+          );
+          start += w;
+        }
+      }
+      final count = (length / .95).ceil();
+      for (var i = 0; i < count; i++) {
+        final w = length / count, p = a + axis * ((i + .5) * w);
+        stone(
+          p + const CafePoint(0, 1.16, 0),
+          w - .012,
+          .09,
+          .32,
+          const Color(0xffd5c6aa),
+        );
+        stone(
+          p + const CafePoint(0, 1.21, 0),
+          w - .020,
+          .035,
+          .26,
+          const Color(0xffe1d5bf),
+        );
+      }
+      for (var d = 0.0; d < length; d += 3.0) {
+        final p = a + axis * d;
+        box(
+          p.x,
+          .63,
+          p.z,
+          .26,
+          1.26,
+          .26,
+          CafeWorld.wall,
+          surface: CafeSurface.plaster,
+          layer: 1,
+        );
+        stone(
+          p + const CafePoint(0, 1.28, 0),
+          .34,
+          .09,
+          .34,
+          const Color(0xffd5c6aa),
+        );
+      }
     }
 
-    panel(-18.2, -17.2, -7.25, -17.2);
-    panel(-4.75, -17.2, 6.2, -17.2);
-    panel(-18.2, -17.2, -18.2, 3.165);
-    panel(6.2, -17.2, 6.2, 3.165);
-    panel(-18.2, 3.165, -4.65, 3.165);
-    panel(4.65, 3.165, 6.2, 3.165);
+    final left = CafeYard.bounds.left - .2,
+        right = CafeYard.bounds.right + .2,
+        top = CafeYard.bounds.top - .2;
+    panel(left, top, -7.25, top);
+    panel(-4.75, top, right, top);
+    panel(left, top, left, 3.165);
+    panel(right, top, right, 3.165);
+    panel(left, 3.165, -4.65, 3.165);
+    panel(4.65, 3.165, right, 3.165);
     for (final x in [-7.25, -4.75]) {
       box(
         x,
         .68,
-        -17.15,
+        top + .05,
         .30,
         1.36,
         .32,
@@ -163,19 +237,20 @@ extension _FrontYardGeometry on CafeWorld {
       box(
         x,
         1.37,
-        -17.15,
+        top + .05,
         .38,
         .08,
         .40,
         const Color(0xffd8cbb2),
         surface: CafeSurface.limestone,
+        layer: 1,
       );
       // Open gate leaves stay inside the garden; there is no exterior road.
       for (var j = 0; j < 6; j++) {
         box(
           x,
           .60,
-          -17.05 + j * .16,
+          top + .15 + j * .16,
           .065,
           1.14,
           .125,
@@ -300,8 +375,12 @@ extension _FrontYardGeometry on CafeWorld {
 
   void _buildFrontYard() {
     final random = math.Random(2534);
-    for (var x = -18.2; x < 6.2; x += 1.4) {
-      for (var z = -17.2; z < -2.95; z += 1.4) {
+    for (
+      var x = CafeYard.bounds.left - .2;
+      x < CafeYard.bounds.right + .2;
+      x += 1.4
+    ) {
+      for (var z = CafeYard.bounds.top - .2; z < -2.95; z += 1.4) {
         faces.add(
           CafeFace(
             [
@@ -354,14 +433,18 @@ extension _FrontYardGeometry on CafeWorld {
       (-12.8, -10.4, 3.7),
       (-16.9, -14.9, 3.3),
       (-16.8, -2.1, 3.5),
+      (-20.5, -18.6, 3.3),
+      (-21.2, -10.7, 3.4),
+      (.5, -20.0, 2.9),
     ]) {
       _yardTree(tree.$1, tree.$2, tree.$3, (tree.$1 * 17).round());
     }
     // Planted borders and curved islands leave both routes visibly open.
     final banks = <CafePoint>[
-      for (var z = -15.5; z < 2.4; z += 1.05) CafePoint(-17.25, 0, z),
-      for (var x = -15.8; x < 4.7; x += 1.15) CafePoint(x, 0, -16.1),
-      for (var x = -16.2; x < -5.8; x += 1.15) CafePoint(x, 0, 2.05),
+      for (var z = -19.8; z < 2.4; z += 1.05) CafePoint(-21.25, 0, z),
+      for (var x = -20.8; x < 6.7; x += 1.15) CafePoint(x, 0, -20.1),
+      for (var z = -18.8; z < 1.5; z += 1.3) CafePoint(7.25, 0, z),
+      for (var x = -20.2; x < -5.8; x += 1.15) CafePoint(x, 0, 2.05),
       for (final center in [
         const CafePoint(-8.5, 0, -5.8),
         const CafePoint(-12.8, 0, -10.4),

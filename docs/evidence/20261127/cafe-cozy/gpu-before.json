@@ -1,0 +1,25 @@
+{
+  "scope": "Local release browser last-frame CPU packing/submit timings, not display FPS",
+  "samples": [
+    {
+      "buildMs": 32.6,
+      "frame": 116,
+      "submitMs": 0.2
+    },
+    {
+      "buildMs": 39.7,
+      "frame": 125,
+      "submitMs": 0.3
+    },
+    {
+      "buildMs": 39.2,
+      "frame": 134,
+      "submitMs": 0.3
+    },
+    {
+      "buildMs": 30.3,
+      "frame": 143,
+      "submitMs": 1.9
+    }
+  ]
+}

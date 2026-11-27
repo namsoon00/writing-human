@@ -5,6 +5,8 @@ import 'cafe_camera.dart';
 import 'cafe_body.dart';
 import 'cafe_world.dart';
 
+part 'cafe_cozy_avatar.dart';
+
 /// The approved A outfit. All dimensions are metres; the mesh shares the room's
 /// lighting and depth ordering. No character state is written into a record.
 class CafeAvatar {
@@ -37,572 +39,7 @@ class CafeAvatar {
     return CafePoint(d.x * _cos + d.z * _sin, d.y, -d.x * _sin + d.z * _cos);
   }
 
-  List<CafeFace> _build() {
-    CafePoint body(CafePoint p) => CafePoint(
-      p.x * CafeBody.width,
-      p.y * CafeBody.torsoScale + seated * .19 - meditation * .10,
-      p.z * CafeBody.width,
-    );
-    CafePoint bodyNormal(CafePoint n) => CafePoint(
-      n.x / CafeBody.width,
-      n.y / CafeBody.torsoScale,
-      n.z / CafeBody.width,
-    );
-    final m = _AvatarMesh(
-      (p) => origin + _rotate(body(p)),
-      (n) => _rotate(bodyNormal(n)),
-    );
-    final limbs = _AvatarMesh((p) => origin + _rotate(p), _rotate);
-    final drop = .0245 * seated + .3145 * meditation;
-    final h = _AvatarMesh(
-      (p) =>
-          origin +
-          _rotate(
-            CafePoint(
-              p.x * CafeBody.headWidth,
-              .95 + (p.y - 1.46) * CafeBody.headScale - drop,
-              p.z * CafeBody.headWidth,
-            ),
-          ),
-      (n) => _rotate(
-        CafePoint(
-          n.x / CafeBody.headWidth,
-          n.y / CafeBody.headScale,
-          n.z / CafeBody.headWidth,
-        ),
-      ),
-    );
-    const skin = Color(0xffe2b794), hair = Color(0xff5b4233);
-    const shirt = Color(0xffe8ddc9), seam = Color(0xffc8bca5);
-    const pants = Color(0xff766051), shoe = Color(0xffe3d8c3);
-    final down = seated * .33 + meditation * .33;
-    final bob = (1 - seated) * stride * .009 * (1 - math.cos(phase * 2));
-    CafePoint torso(double x, double y, double z) =>
-        CafePoint(x, y - down + bob, z);
-    m.loft(
-      [
-        (torso(0, .86, 0), .196, .125),
-        (torso(0, .92, 0), .196, .125),
-        (torso(0, 1.08, 0), .180, .115),
-        (torso(0, 1.25, 0), .208, .127),
-        (torso(0, 1.37, .006), .223, .112),
-        (torso(0, 1.43, .006), .157, .080),
-        (torso(0, 1.46, .005), .072, .060),
-      ],
-      shirt,
-      'linen',
-      sides: 16,
-    );
-    h.ellipsoid(
-      CafePoint(0, 1.475, 0),
-      const CafePoint(.061, .09, .057),
-      skin,
-      'neck',
-      slices: 10,
-      rings: 5,
-    );
-    h.ellipsoid(
-      CafePoint(0, 1.624, -.008),
-      const CafePoint(.111, .145, .104),
-      skin,
-      'face',
-      slices: 16,
-      rings: 10,
-    );
-    // Ears, small nose, eyelids, irises and a quiet neutral mouth.
-    for (final side in [-1.0, 1.0]) {
-      h.ellipsoid(
-        CafePoint(side * .110, 1.616, -.002),
-        const CafePoint(.018, .029, .014),
-        skin,
-        'ear',
-        slices: 8,
-        rings: 5,
-      );
-      h.ellipsoid(
-        CafePoint(side * .111, 1.616, -.014),
-        const CafePoint(.009, .017, .004),
-        const Color(0xffba8b6e),
-        'ear.fold',
-        slices: 6,
-        rings: 4,
-      );
-      h.ellipsoid(
-        CafePoint(side * .043, 1.642, -.101),
-        const CafePoint(.022, .010, .005),
-        skin,
-        'eyelid',
-        slices: 8,
-        rings: 4,
-      );
-      h.ellipsoid(
-        CafePoint(side * .043, 1.641, -.106),
-        const CafePoint(.010, .013, .003),
-        hair,
-        'iris',
-        slices: 8,
-        rings: 4,
-      );
-      h.tube(
-        [
-          CafePoint(side * .023, 1.668, -.098),
-          CafePoint(side * .043, 1.673, -.099),
-          CafePoint(side * .065, 1.667, -.090),
-        ],
-        [.003, .004, .002],
-        hair,
-        'brow',
-        sides: 5,
-      );
-    }
-    h.ellipsoid(
-      CafePoint(0, 1.619, -.111),
-      const CafePoint(.011, .015, .013),
-      skin,
-      'nose',
-      slices: 8,
-      rings: 6,
-    );
-    h.tube(
-      [
-        CafePoint(-.022, 1.571, -.095),
-        CafePoint(0, 1.568, -.102),
-        CafePoint(.022, 1.571, -.095),
-      ],
-      [.0018, .0023, .0018],
-      const Color(0xff9c6f59),
-      'mouth',
-      sides: 5,
-    );
-    // A continuous cap has a lower nape and higher hairline, then swept locks.
-    h.hairCap(CafePoint(0, 1.64, .002), hair);
-    for (var i = 0; i < 7; i++) {
-      final x = -.085 + i * .023;
-      h.tube(
-        [
-          CafePoint(x, 1.735 - x.abs() * .15, .035),
-          CafePoint(x + .008, 1.785 - math.pow(x + .015, 2) * 4, -.018),
-          CafePoint(x + .022, 1.744 - x.abs() * .16, -.080),
-          CafePoint(x + .027, 1.691 + i * .003, -.109),
-        ],
-        [.010, .017, .014, .002],
-        i.isEven ? const Color(0xff70513b) : hair,
-        'hair.lock',
-        sides: 7,
-      );
-    }
-    for (final side in [-1.0, 1.0]) {
-      for (var i = 0; i < 3; i++) {
-        h.tube(
-          [
-            CafePoint(side * .084, 1.722, .022 + i * .023),
-            CafePoint(side * .116, 1.672, .008 + i * .021),
-            CafePoint(side * .108, 1.614, .023 + i * .019),
-          ],
-          [.016, .017, .002],
-          i.isEven ? hair : const Color(0xff654936),
-          'hair.lock',
-          sides: 6,
-        );
-      }
-    }
-    m.loft(
-      [(torso(0, 1.435, 0), .081, .071), (torso(0, 1.468, 0), .065, .058)],
-      const Color(0xffe1d3ba),
-      'linen.collar.band',
-      sides: 16,
-    );
-    // Separate collar leaves, placket, pocket opening and the tucked pen.
-    for (final s in [-1.0, 1.0]) {
-      m.patch(
-        [
-          torso(s * .064, 1.46, -.065),
-          torso(s * .106, 1.413, -.113),
-          torso(s * .066, 1.349, -.144),
-          torso(s * .012, 1.403, -.121),
-        ],
-        const Color(0xffeee4d1),
-        'linen.collar',
-      );
-    }
-    m.tube(
-      [
-        torso(0, 1.397, -.136),
-        torso(0, 1.24, -.136),
-        torso(0, 1.08, -.136),
-        torso(0, .877, -.136),
-      ],
-      [.006, .006, .006, .006],
-      seam,
-      'linen.placket',
-      sides: 5,
-    );
-    for (var i = 0; i < 5; i++) {
-      m.ellipsoid(
-        torso(0, 1.34 - i * .096, -.144),
-        const CafePoint(.005, .005, .002),
-        const Color(0xff9c8161),
-        'button',
-        slices: 6,
-        rings: 4,
-      );
-    }
-    m.patch(
-      [
-        torso(-.146, 1.265, -.104),
-        torso(-.065, 1.272, -.128),
-        torso(-.067, 1.174, -.126),
-        torso(-.106, 1.16, -.118),
-        torso(-.145, 1.175, -.105),
-      ],
-      const Color(0xffe0d4bd),
-      'linen.pocket',
-    );
-    m.tube(
-      [torso(-.147, 1.267, -.107), torso(-.066, 1.274, -.131)],
-      [.002, .002],
-      seam,
-      'pocket.seam',
-      sides: 5,
-    );
-    m.tube(
-      [torso(-.091, 1.25, -.131), torso(-.094, 1.312, -.129)],
-      [.004, .004],
-      const Color(0xff69503a),
-      'pocket.pen',
-      sides: 6,
-    );
-    m.tube(
-      [torso(-.101, 1.308, -.132), torso(-.101, 1.281, -.135)],
-      [.0017, .0017],
-      const Color(0xffb89a5f),
-      'pen.clip',
-      sides: 5,
-    );
-    m.tube(
-      [
-        torso(-.175, 1.365, .074),
-        torso(0, 1.357, .126),
-        torso(.175, 1.365, .074),
-      ],
-      [.002, .002, .002],
-      seam,
-      'linen.yoke',
-      sides: 5,
-    );
-    m.tube(
-      [torso(0, 1.35, .121), torso(.007, 1.21, .120), torso(.004, 1.08, .115)],
-      [.003, .002, .001],
-      const Color(0xffd4c7b0),
-      'linen.pleat',
-      sides: 5,
-    );
-    m.ellipsoid(
-      CafePoint(0, .875 - seated * .37 - meditation * .285, .014),
-      const CafePoint(.177, .10, .111),
-      pants,
-      'trousers',
-      slices: 12,
-      rings: 5,
-    );
-    for (final s in [-1.0, 1.0]) {
-      final swing = math.sin(phase + (s < 0 ? math.pi : 0)) * stride;
-      final hip = CafePoint(
-        s * .082,
-        .565 -
-            seated * .045 -
-            meditation * .29 -
-            .040 * stride * (1 - seated) * math.cos(phase).abs(),
-        .006,
-      );
-      final cycle = ((phase / (2 * math.pi) + (s < 0 ? .5 : 0)) % 1);
-      final swingTime = ((cycle - .6) / .4).clamp(0.0, 1.0);
-      final eased = swingTime * swingTime * (3 - 2 * swingTime);
-      final footZ = cycle < .6 ? -.20 + .40 * cycle / .6 : .20 - .40 * eased;
-      final standingAnkle = CafePoint(
-        s * .092,
-        (barefoot ? .071 : .083) +
-            math.sin(swingTime * math.pi) * .055 * stride * (1 - seated),
-        footZ * stride * (1 - seated) - seated * .28,
-      );
-      final ankle = CafePoint.lerp(
-        standingAnkle,
-        CafePoint(-s * .10, .20, -.23),
-        meditation,
-      );
-      final knee = CafePoint.lerp(
-        _joint(hip, ankle, .245, .244, const CafePoint(0, 0, -1)),
-        CafePoint(s * .26, .21, -.24),
-        meditation,
-      );
-      limbs.tube(
-        [
-          hip,
-          CafePoint.lerp(hip, knee, .44),
-          knee,
-          CafePoint.lerp(knee, ankle, .53),
-          ankle + const CafePoint(0, .082, 0),
-        ],
-        [.078, .073, .057, .052, .050],
-        pants,
-        'trousers',
-        sides: 12,
-        flatten: .90,
-      );
-      limbs.tube(
-        [
-          ankle + const CafePoint(0, .082, 0),
-          ankle + const CafePoint(0, .102, 0),
-        ],
-        [.051, .051],
-        const Color(0xff685345),
-        'trousers.cuff',
-        sides: 12,
-        flatten: .90,
-      );
-      limbs.tube(
-        [
-          ankle + const CafePoint(0, .015, 0),
-          ankle + const CafePoint(0, .083, 0),
-        ],
-        [.034, .035],
-        skin,
-        'ankle',
-        sides: 10,
-      );
-      if (ankle.y < .11) {
-        for (var j = 0; j < 20; j++) {
-          CafePoint edge(int k) => CafePoint(
-            ankle.x + .10 * math.cos(k * math.pi / 10),
-            .018,
-            ankle.z - .035 + .17 * math.sin(k * math.pi / 10),
-          );
-          limbs.patch(
-            [CafePoint(ankle.x, .018, ankle.z - .035), edge(j), edge(j + 1)],
-            const Color(0x16000000),
-            'contact.shadow',
-            normals: List.filled(3, const CafePoint(0, 1, 0)),
-          );
-        }
-      }
-      if (barefoot || meditating) {
-        limbs.ellipsoid(
-          ankle + const CafePoint(0, -.045, -.036),
-          const CafePoint(.044, .026, .102),
-          skin,
-          'foot',
-          slices: 12,
-          rings: 5,
-        );
-        for (var toe = 0; toe < 5; toe++) {
-          limbs.ellipsoid(
-            ankle + CafePoint((toe - 2) * .016, -.048, -.118 + toe * .005),
-            CafePoint(.012 - toe * .0007, .016, .023 - toe * .0015),
-            skin,
-            'foot.toe',
-            slices: 6,
-            rings: 4,
-          );
-        }
-      } else {
-        // Rounded last, separate welt, light rubber sole and vamp sealimbs.
-        limbs.ellipsoid(
-          CafePoint(ankle.x, .043 + ankle.y - .095, ankle.z - .036),
-          const CafePoint(.060, .031, .121),
-          const Color(0xffd6c9ae),
-          'shoe.sole',
-          slices: 12,
-          rings: 5,
-        );
-        limbs.ellipsoid(
-          CafePoint(ankle.x, .078 + ankle.y - .095, ankle.z - .039),
-          const CafePoint(.057, .041, .111),
-          shoe,
-          'shoe',
-          slices: 12,
-          rings: 6,
-        );
-        limbs.tube(
-          [
-            CafePoint(ankle.x - .049, ankle.y + .002, ankle.z - .069),
-            CafePoint(ankle.x, ankle.y + .023, ankle.z - .093),
-            CafePoint(ankle.x + .049, ankle.y + .002, ankle.z - .069),
-          ],
-          [.0015, .0015, .0015],
-          const Color(0xffd4b28b),
-          'shoe.stitch',
-          sides: 5,
-        );
-      }
-      final shoulder = body(torso(s * .166, 1.334, 0));
-      var wrist = CafePoint(
-        s * .21,
-        .535 - .0245 * seated - .3145 * meditation,
-        -.02 + swing * .055,
-      );
-      final frame = use, obj = object;
-      if (frame != null && obj != null) {
-        final p = frame.progress.clamp(0.0, 1.0);
-        final lift = frame.kind == CafeUseKind.pickUp
-            ? p
-            : frame.kind == CafeUseKind.putDown
-            ? 1 - p
-            : frame.held
-            ? 1.0
-            : 0.0;
-        final volume = obj.type == CafeItemType.volume;
-        final opening = frame.kind == CafeUseKind.open
-            ? p
-            : frame.kind == CafeUseKind.close
-            ? 1 - p
-            : frame.open
-            ? 1.0
-            : 0.0;
-        final bookGrip = .085 + opening * .14;
-        if (s > 0 || volume) {
-          final grip = cafeHeldPoint(eye, obj.type, frame, thirdPerson: true);
-          final target = lift > 0
-              ? CafePoint.lerp(
-                  obj.pivot + const CafePoint(0, .07, 0),
-                  grip +
-                      eye.right * (volume ? s * bookGrip : .055) +
-                      CafePoint(0, volume ? -.06 : .065, 0) -
-                      (volume ? eye.forward * .04 : const CafePoint(0, 0, 0)),
-                  lift,
-                )
-              : obj.pivot + const CafePoint(0, .07, 0);
-          final reach = lift > 0 ? 1.0 : math.sin(p * math.pi);
-          wrist = CafePoint.lerp(wrist, _local(target), reach);
-        }
-        if (s < 0 &&
-            (frame.kind == CafeUseKind.refill ||
-                frame.kind == CafeUseKind.water)) {
-          final target = frame.kind == CafeUseKind.refill
-              ? cafeHeldPoint(eye, obj.type, frame, thirdPerson: true) +
-                    const CafePoint(0, .10, 0)
-              : obj.pivot + const CafePoint(0, .32, 0);
-          final handle =
-              cafePourPoint(eye, target, p) -
-              eye.right * .08 +
-              const CafePoint(0, .10, 0);
-          wrist = CafePoint.lerp(wrist, _local(handle), math.sin(p * math.pi));
-        }
-      } else if (meditating) {
-        wrist = CafePoint.lerp(
-          CafePoint(s * .145, .775, -.23),
-          CafePoint(s * .23, .27, -.21),
-          meditation,
-        );
-      } else if (seated > .1) {
-        wrist = CafePoint.lerp(wrist, CafePoint(s * .145, .775, -.23), seated);
-      }
-      if ((wrist - shoulder).length > .345) {
-        wrist = shoulder + (wrist - shoulder).normalized * .345;
-      }
-      final elbow = _joint(
-        shoulder,
-        wrist,
-        .180,
-        .170,
-        CafePoint(s * .15, -.05, 1),
-      );
-      // A softly rounded shoulder closes the upper sleeve into the shirt.
-      limbs.ellipsoid(
-        shoulder,
-        const CafePoint(.065, .067, .070),
-        shirt,
-        'linen.shoulder',
-        slices: 10,
-        rings: 6,
-      );
-      // Upper sleeve, visible folded cuff, lower forearm and shaped pallimbs.
-      final cuff = CafePoint.lerp(elbow, wrist, .24);
-      limbs.tube(
-        [shoulder, CafePoint.lerp(shoulder, elbow, .4), elbow, cuff],
-        [.065, .062, .054, .049],
-        shirt,
-        'linen.sleeve',
-        sides: 12,
-      );
-      limbs.tube(
-        [CafePoint.lerp(elbow, cuff, .68), cuff],
-        [.054, .054],
-        const Color(0xffded0b8),
-        'linen.cuff',
-        sides: 12,
-      );
-      limbs.tube(
-        [cuff, CafePoint.lerp(cuff, wrist, .65), wrist],
-        [.041, .029, .024],
-        skin,
-        'forearm',
-        sides: 10,
-      );
-      final direction = (wrist - elbow).normalized;
-      var across =
-          (const CafePoint(1, 0, 0) - direction * direction.x).normalized;
-      var normal = across.cross(direction).normalized;
-      final gripping =
-          frame != null &&
-          obj != null &&
-          (frame.held ||
-              frame.kind == CafeUseKind.pickUp ||
-              frame.kind == CafeUseKind.putDown) &&
-          (s > 0 || obj.type == CafeItemType.volume);
-      if (gripping) {
-        final toward =
-            _local(cafeHeldPoint(eye, obj.type, frame, thirdPerson: true)) -
-            wrist;
-        final projected = toward - direction * toward.dot(direction);
-        if (projected.length > .015) {
-          normal = projected.normalized;
-          across = direction.cross(normal).normalized;
-          normal = across.cross(direction).normalized;
-        }
-      }
-      final palm = wrist + direction * .035;
-      limbs.ellipsoid(
-        palm,
-        const CafePoint(.027, .036, .014),
-        skin,
-        'hand',
-        slices: 8,
-        rings: 5,
-        axes: [across, direction, normal],
-      );
-      for (var f = 0; f < 4; f++) {
-        final start = palm + across * ((f - 1.5) * .014) + direction * .024;
-        final length = f == 0 || f == 3 ? .032 : .039;
-        final curl = gripping ? .027 : .010;
-        limbs.tube(
-          [
-            start,
-            start + direction * (length * .60) + normal * (curl * .30),
-            start +
-                direction * (length * (gripping ? .63 : .94)) +
-                normal * curl,
-          ],
-          [.0075, .0065, .0045],
-          skin,
-          'finger',
-          sides: 6,
-        );
-      }
-      final thumb = palm - across * (s * .026) - direction * .007;
-      limbs.tube(
-        [
-          thumb,
-          thumb - across * (s * .014) + direction * .019 + normal * .007,
-          thumb - across * (s * .005) + direction * .032 + normal * .018,
-        ],
-        [.010, .008, .0055],
-        skin,
-        'thumb',
-        sides: 6,
-      );
-    }
-    return [...m.faces, ...h.faces, ...limbs.faces];
-  }
+  List<CafeFace> _build() => _cozyBuild();
 }
 
 /// Two-bone IK; unreachable targets are clamped instead of stretching limbs.
@@ -650,13 +87,17 @@ class _AvatarMesh {
         color,
         objectId: CafeAvatar.id,
         part: part,
-        surface: part.startsWith('linen')
+        surface: (part.startsWith('linen') || part.startsWith('knit'))
             ? CafeSurface.cord
             : CafeSurface.plain,
         materialTint: color,
         vertexNormals: normals.map((n) => normal(n).normalized).toList(),
         textureCoordinates: points
-            .map((p) => Offset(p.x * 5 + p.z * 2, p.y * 5))
+            .map(
+              (p) => part.startsWith('knit')
+                  ? Offset(p.x * 1.2 + p.z * .4, p.y * 2)
+                  : Offset(p.x * 5 + p.z * 2, p.y * 5),
+            )
             .toList(),
       ),
     );
@@ -671,6 +112,30 @@ class _AvatarMesh {
     int rings = 6,
     List<CafePoint>? axes,
   }) {
+    // Fine facial features and cloth trim need their shape, not dozens of
+    // sub-pixel patches. Keep the head silhouette and articulated fingers.
+    final budget = switch (part) {
+      'face' => (24, 12),
+      'iris' => (8, 5),
+      'eye.glint' => (4, 2),
+      'nose' => (10, 5),
+      'ear' => (10, 5),
+      'knit.pocket' => (10, 4),
+      'knit.hem' => (16, 3),
+      'knit.shoulder' => (8, 4),
+      'shirt' => (12, 5),
+      'neck' => (10, 4),
+      'hand' => (8, 5),
+      'hand.web' => (6, 4),
+      'shoe.sole' => (12, 4),
+      'shoe' => (12, 5),
+      'trousers' => (12, 4),
+      'knit.button' => (8, 3),
+      'button.hole' => (3, 2),
+      _ => (slices, rings),
+    };
+    slices = budget.$1;
+    rings = budget.$2;
     CafePoint orient(CafePoint q) =>
         axes == null ? q : axes[0] * q.x + axes[1] * q.y + axes[2] * q.z;
     CafePoint n(int i, int j) {

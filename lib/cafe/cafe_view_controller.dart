@@ -187,7 +187,7 @@ class CafeViewController extends ChangeNotifier {
         previous.eye.position.x == eye.position.x &&
         previous.eye.position.y == eye.position.y &&
         previous.eye.position.z == eye.position.z &&
-        previous.eye.pitch == eye.pitch &&
+        (frame == null || previous.eye.pitch == eye.pitch) &&
         previous.yaw == eye.yaw &&
         previous.object == world.objects[frame?.id] &&
         previous.phase == walkPhase &&

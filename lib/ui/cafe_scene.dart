@@ -223,6 +223,7 @@ class _CafeSceneState extends State<CafeScene>
       walnut,
       limestone,
       woven,
+      knit,
       plaster,
       artwork,
       gravel,
@@ -463,6 +464,7 @@ class _CafeSceneState extends State<CafeScene>
       _texture('cafe-art-book.webp', width: 1024),
       CafeWatercolor.blossom(),
       CafeWatercolor.lawn(),
+      CafeMaterials.knit(),
     ]);
     if (!mounted) {
       for (final image in images) {
@@ -484,6 +486,7 @@ class _CafeSceneState extends State<CafeScene>
       framedArt = images.skip(10).take(3).toList();
       blossom = images[13];
       lawn = images[14];
+      knit = images[15];
     });
   }
 
@@ -620,6 +623,7 @@ class _CafeSceneState extends State<CafeScene>
     walnut?.dispose();
     limestone?.dispose();
     woven?.dispose();
+    knit?.dispose();
     plaster?.dispose();
     artwork?.dispose();
     gravel?.dispose();
@@ -720,7 +724,13 @@ class _CafeSceneState extends State<CafeScene>
                           (point.dx / size.width - .5).abs() > .32))) {
                 continue;
               }
-              if (CafeRenderer.pick(point, camera, size, c.world)?.target !=
+              if (CafeRenderer.pick(
+                    point,
+                    camera,
+                    size,
+                    c.world,
+                    useCamera: c.actorCamera,
+                  )?.target !=
                   target) {
                 continue;
               }
@@ -911,6 +921,7 @@ class _CafeSceneState extends State<CafeScene>
                           walnut: walnut,
                           limestone: limestone,
                           woven: woven,
+                          knit: knit,
                           plaster: plaster,
                           artwork: artwork,
                           gravel: gravel,

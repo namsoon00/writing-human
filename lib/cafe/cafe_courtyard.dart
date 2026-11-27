@@ -78,8 +78,8 @@ extension _CourtyardGeometry on CafeWorld {
         side * (sideSign * math.sin(t * math.pi)) +
         CafePoint(0, .012 * math.sin(t * math.pi), 0);
     for (final sign in [-1.0, 1.0]) {
-      for (var i = 0; i < 3; i++) {
-        final a = i / 3, b = (i + 1) / 3;
+      for (var i = 0; i < 2; i++) {
+        final a = i / 2, b = (i + 1) / 2;
         quad(
           CafePoint.lerp(start, tip, a),
           at(a, sign),
@@ -606,6 +606,8 @@ extension _CourtyardGeometry on CafeWorld {
         surface: CafeSurface.oak,
       );
     }
+    // Arrival ground remains walkable; only the upright bay is a return target.
+    _target = null;
     _roundedSlab(
       0,
       2.6,

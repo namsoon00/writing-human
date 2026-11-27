@@ -1,0 +1,57 @@
+{
+  "date": "2026-11-27",
+  "scope": [
+    "approved slim cozy male A and low-volume side part",
+    "relaxed hands and shared two-hand cup axes",
+    "planted short-step gait",
+    "portal pick excludes the bay behind the arrived actor",
+    "30 x 23.8m yard and detailed enclosure",
+    "cached avatar GPU arrays and buffer reuse",
+    "drawing-only web platform view yields tap input to Flutter"
+  ],
+  "local": {
+    "format": "227 files, no changes",
+    "analyze": "No issues found",
+    "focusedNative": {
+      "passed": 31,
+      "failed": 0,
+      "log": "output/cafe-cozy-implementation-20261127/focused-production.log"
+    },
+    "geometryProbe": {
+      "passed": 21,
+      "note": "includes probe plus avatar, cozy space, central bay and GPU geometry tests"
+    },
+    "nodeSyntax": "passed",
+    "fullNative": "Two local full-suite attempts interrupted; not reported as passed. Complete exact-source suite pending CI.",
+    "landingRegression": {
+      "before": "Failed: cafeReturn on arrival slab",
+      "after": "4 cozy space tests passed",
+      "note": "Walkable points on either side of arrival; pond exclusion remains"
+    },
+    "releaseBuild": "passed",
+    "finalAnalyze": "Analyzing writing-cafe-cozy-20261127...                         \nNo issues found! (ran in 5.9s)",
+    "releaseAppSha256": "53af53d59599a235428ff0b49b1f701134ddc66b2d508289e442e4c183533fde"
+  },
+  "browser": {
+    "status": "Compiled release verified: floor tap walks, bay reaches yard, tapping arrival slab stays in yard, drag orbits",
+    "sizes": [
+      "1280x720",
+      "390x844"
+    ],
+    "gpuError": "none observed",
+    "physicalDevice": false,
+    "screenshot": "browser-mobile.jpg",
+    "stationaryPreparationMs": 6.6,
+    "note": "One final stationary CPU sample; not a FPS benchmark"
+  },
+  "deployment": {
+    "status": "pending",
+    "existingUrl": "https://namsoon00.github.io/writing-human/"
+  },
+  "limitations": [
+    "No physical iOS or Android run, FPS, heat or long-session checks",
+    "GPU timing samples measure CPU preparation in this browser; not device FPS",
+    "Earlier native software preview images predate final tessellation reduction; release screenshots will be separate",
+    "Private Sites hosting project and access are unchanged"
+  ]
+}

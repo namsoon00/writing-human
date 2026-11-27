@@ -7,6 +7,32 @@ import 'package:writing_human/cafe/cafe_visit.dart';
 import 'package:writing_human/cafe/cafe_world.dart';
 
 void main() {
+  test('Orbit reuses stationary avatar buffers but walking updates them', () {
+    final c = CafeViewController();
+    addTearDown(c.dispose);
+    CafeRenderer painter() => CafeRenderer(
+      world: c.world,
+      camera: c.viewCamera,
+      avatar: c.avatar.faces,
+    );
+    final first = painter(), g = CafeGpuGeometry(first);
+    List<CafeGpuBatch> body(CafeRenderer p) =>
+        g.moving(p).where((b) => b.key.endsWith(':avatar')).toList();
+    final before = body(first), avatar = c.avatar;
+    c.look(.2, .08);
+    expect(c.avatar, same(avatar));
+    final after = body(painter());
+    expect(after.length, before.length);
+    for (var i = 0; i < before.length; i++) {
+      expect(after[i].data, same(before[i].data));
+    }
+    c.advanceCamera(
+      CafeCamera(position: c.camera.position + const CafePoint(.1, 0, 0)),
+      dt: .1,
+      walking: true,
+    );
+    expect(body(painter()).first.data, isNot(same(before.first.data)));
+  });
   test('GPU batches retain shared world coordinates, IDs and saved values', () {
     final c = CafeViewController();
     addTearDown(c.dispose);
@@ -101,7 +127,7 @@ void main() {
           .where((f) => f.part == 'finger')
           .expand((f) => f.points);
       expect(fingers.map((p) => p.y).reduce(math.max), lessThan(.87));
-      expect(body.faces.any((f) => f.part == 'linen.shoulder'), isTrue);
+      expect(body.faces.any((f) => f.part == 'knit.shoulder'), isTrue);
       c.sit(CafeSeat.shared);
       c.updateCamera(c.destination!);
       c.finishTravel();

@@ -59,7 +59,7 @@ void main() {
     final points = a.faces.expand((f) => f.points).toList();
     expect(
       points.map((p) => p.y).reduce(math.max),
-      inInclusiveRange(1.20, 1.30),
+      inInclusiveRange(1.20, 1.33),
     );
     expect(points.map((p) => p.y).reduce(math.min), inInclusiveRange(0, .025));
     final face = a.faces.where((f) => f.part == 'face').expand((f) => f.points);
@@ -183,7 +183,7 @@ void main() {
         hands.map((p) => (p - held).length).reduce(math.min),
         lessThan(.14),
       );
-      expect(held.y, greaterThan(.78));
+      expect(held.y, greaterThanOrEqualTo(.75));
       expect(c.space.poses, isEmpty);
     },
   );

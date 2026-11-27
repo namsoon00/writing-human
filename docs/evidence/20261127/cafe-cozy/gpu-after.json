@@ -1,0 +1,29 @@
+{
+  "scope": "Same 1280x720 local release browser last-frame CPU packing/submit timings, not display FPS",
+  "samples": [
+    {
+      "buildMs": 13.3,
+      "error": null,
+      "frame": 52,
+      "submitMs": 0.3
+    },
+    {
+      "buildMs": 20.8,
+      "error": null,
+      "frame": 63,
+      "submitMs": 0.6
+    },
+    {
+      "buildMs": 18.4,
+      "error": null,
+      "frame": 74,
+      "submitMs": 0.5
+    },
+    {
+      "buildMs": 16.6,
+      "error": null,
+      "frame": 86,
+      "submitMs": 0.3
+    }
+  ]
+}

@@ -486,6 +486,7 @@ class CafeWorld {
     CafeSurface? surface,
     CafeGrain? grain,
     bool topFace = true,
+    int layer = 2,
   }) {
     final axis =
         grain ??
@@ -510,6 +511,7 @@ class CafeWorld {
         wood: wood,
         surface: surface,
         grain: axis,
+        layer: layer,
       );
     }
     quad(
@@ -521,6 +523,7 @@ class CafeWorld {
       wood: wood,
       surface: surface,
       grain: axis,
+      layer: layer,
     );
     quad(
       CafePoint(l, b, f),
@@ -531,6 +534,7 @@ class CafeWorld {
       wood: wood,
       surface: surface,
       grain: axis,
+      layer: layer,
     );
     quad(
       CafePoint(r, b, n),
@@ -541,6 +545,7 @@ class CafeWorld {
       wood: wood,
       surface: surface,
       grain: axis,
+      layer: layer,
     );
     quad(
       CafePoint(r, b, f),
@@ -551,6 +556,7 @@ class CafeWorld {
       wood: wood,
       surface: surface,
       grain: axis,
+      layer: layer,
     );
     quad(
       CafePoint(l, b, n),
@@ -561,6 +567,7 @@ class CafeWorld {
       wood: wood,
       surface: surface,
       grain: axis,
+      layer: layer,
     );
   }
 

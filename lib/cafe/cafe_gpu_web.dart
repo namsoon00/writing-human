@@ -2,6 +2,7 @@ import 'dart:js_interop';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
+import 'package:flutter/rendering.dart' show PlatformViewHitTestBehavior;
 import 'package:web/web.dart' as web;
 import 'cafe_renderer.dart';
 import 'cafe_world.dart';
@@ -71,6 +72,7 @@ class _SurfaceState extends State<_Surface> {
     p.walnut,
     p.limestone,
     p.woven,
+    p.knit,
     p.plaster,
     p.artwork,
     p.gravel,
@@ -231,6 +233,8 @@ class _SurfaceState extends State<_Surface> {
           children: [
             HtmlElementView.fromTagName(
               tagName: 'canvas',
+              // This view only draws; Flutter owns walking and orbit gestures.
+              hitTestBehavior: PlatformViewHitTestBehavior.transparent,
               onElementCreated: (element) {
                 final canvas = element as web.HTMLCanvasElement;
                 canvas.style

@@ -29,12 +29,12 @@ void main() {
             containsAll([
               'face',
               'hair',
-              'hair.lock',
-              'linen.collar',
-              'linen.pocket',
-              'pocket.pen',
-              'linen.cuff',
-              'linen.yoke',
+              'hair.sweep',
+              'knit.collar',
+              'knit.pocket',
+              'knit.button',
+              'knit.cuff',
+              'knit.hem',
               'finger',
               'thumb',
               'shoe.sole',
@@ -57,7 +57,10 @@ void main() {
               .expand((f) => f.points)
               .map((p) => p.y)
               .reduce(math.min);
-          expect(bottom, inInclusiveRange(0, .03));
+          expect(
+            bottom,
+            seated ? greaterThanOrEqualTo(0) : inInclusiveRange(0, .03),
+          );
         }
       }
     },

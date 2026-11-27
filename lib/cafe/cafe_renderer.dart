@@ -120,6 +120,7 @@ class CafeRenderer extends CustomPainter {
     this.walnut,
     this.limestone,
     this.woven,
+    this.knit,
     this.plaster,
     this.artwork,
     this.gravel,
@@ -154,6 +155,7 @@ class CafeRenderer extends CustomPainter {
       walnut,
       limestone,
       woven,
+      knit,
       plaster,
       artwork,
       gravel,
@@ -235,6 +237,14 @@ class CafeRenderer extends CustomPainter {
     )) {
       // Floor light/shadow decals do not obstruct the physical surface.
       if (face.color.a < .99 && face.surface != CafeSurface.glass) continue;
+      // The chase camera can be across the open bay while the person has
+      // already arrived. That intervening portal is behind the person, not a
+      // return action in front of them; let the ray reach their room's floor.
+      if (face.garden && useCamera != null) {
+        final observerSide = (camera.position - face.center).dot(face.normal);
+        final actorSide = (useCamera.position - face.center).dot(face.normal);
+        if (observerSide * actorSide < -1e-7) continue;
+      }
       for (var i = 1; i + 1 < face.points.length; i++) {
         final a = face.points[0], b = face.points[i], c = face.points[i + 1];
         final edge1 = b - a, edge2 = c - a;
@@ -299,6 +309,7 @@ class CafeRenderer extends CustomPainter {
 
   ui.Image? _texture(CafeFace face) {
     if (face.objectId == 'avatar.a.male') {
+      if (face.part?.startsWith('knit') == true) return knit ?? woven;
       return face.part?.startsWith('linen') == true ||
               face.part?.startsWith('trousers') == true
           ? woven
@@ -878,6 +889,7 @@ class CafeRenderer extends CustomPainter {
       walnut,
       limestone,
       woven,
+      knit,
       plaster,
       artwork,
       gravel,
@@ -993,6 +1005,7 @@ class CafeRenderer extends CustomPainter {
         walnut: walnut,
         limestone: limestone,
         woven: woven,
+        knit: knit,
         plaster: plaster,
         artwork: artwork,
         gravel: gravel,
@@ -1096,6 +1109,7 @@ class CafeRenderer extends CustomPainter {
       oldDelegate.walnut != walnut ||
       oldDelegate.limestone != limestone ||
       oldDelegate.woven != woven ||
+      oldDelegate.knit != knit ||
       oldDelegate.plaster != plaster ||
       oldDelegate.artwork != artwork ||
       oldDelegate.gravel != gravel ||

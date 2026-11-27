@@ -4,6 +4,47 @@ import 'dart:ui' as ui;
 /// Small, deterministic material atlases; generated once per visit, not frame.
 /// The wall art is drawn locally and contains no visitor text or remote images.
 abstract final class CafeMaterials {
+  /// Neutral yarn atlas; the garment supplies its own oatmeal tint.
+  static Future<ui.Image> knit() async {
+    final recorder = ui.PictureRecorder(), canvas = ui.Canvas(recorder);
+    canvas.drawColor(const ui.Color(0xfff3f0e7), ui.BlendMode.src);
+    final paint = ui.Paint()
+      ..style = ui.PaintingStyle.stroke
+      ..strokeCap = ui.StrokeCap.round;
+    for (var x = -16.0; x < 528; x += 16) {
+      for (var y = -22.0; y < 534; y += 22) {
+        final path = ui.Path()
+          ..moveTo(x + 2, y)
+          ..quadraticBezierTo(x + 7, y + 7, x + 8, y + 17)
+          ..quadraticBezierTo(x + 10, y + 7, x + 14, y);
+        paint
+          ..strokeWidth = 3.1
+          ..color = const ui.Color(0x368b806e);
+        canvas.drawPath(path.shift(const ui.Offset(.8, 1.0)), paint);
+        paint
+          ..strokeWidth = 1.8
+          ..color = const ui.Color(0x99ffffff);
+        canvas.drawPath(path, paint);
+      }
+    }
+    final random = math.Random(516);
+    paint.style = ui.PaintingStyle.fill;
+    for (var i = 0; i < 11000; i++) {
+      paint.color = i.isEven
+          ? const ui.Color(0x13ffffff)
+          : const ui.Color(0x0c716451);
+      canvas.drawCircle(
+        ui.Offset(random.nextDouble() * 512, random.nextDouble() * 512),
+        .45,
+        paint,
+      );
+    }
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(512, 512);
+    picture.dispose();
+    return image;
+  }
+
   static Future<ui.Image> plaster() async {
     final recorder = ui.PictureRecorder(), canvas = ui.Canvas(recorder);
     canvas.drawColor(const ui.Color(0xfff4eee2), ui.BlendMode.src);

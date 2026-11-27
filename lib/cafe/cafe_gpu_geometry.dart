@@ -8,7 +8,7 @@ class CafeGpuBatch {
   final int room;
   final bool alpha, cutout;
   final values = <double>[];
-  Float32List get data => Float32List.fromList(values);
+  late final Float32List data = Float32List.fromList(values);
 }
 
 class CafeGpuGeometry {
@@ -16,6 +16,9 @@ class CafeGpuGeometry {
   final CafeRenderer painter;
   final images = <ui.Image>[];
   final objectIds = <String, int>{};
+  List<CafeFace>? _avatarFaces;
+  int? _avatarRoom;
+  List<CafeGpuBatch> _avatarBatches = [];
   int id(String? value) => value == null
       ? 0
       : objectIds.putIfAbsent(value, () => objectIds.length + 1);
@@ -42,6 +45,7 @@ class CafeGpuGeometry {
     Iterable<CafeFace> faces,
     int room, {
     bool moving = false,
+    String namespace = '',
   }) {
     final groups = <String, CafeGpuBatch>{};
     for (final f in faces) {
@@ -58,7 +62,8 @@ class CafeGpuGeometry {
           f.surface == CafeSurface.flowers ||
           f.surface == CafeSurface.blossom;
       final alpha = f.color.a < .99 && !cutout;
-      final key = '${imageId(image)}:$room:$alpha:$cutout';
+      final key =
+          '${imageId(image)}:$room:$alpha:$cutout${namespace.isEmpty ? '' : ':$namespace'}';
       final b = groups.putIfAbsent(
         key,
         () => CafeGpuBatch(key, room, alpha, cutout),
@@ -142,13 +147,23 @@ class CafeGpuGeometry {
   List<CafeGpuBatch> moving(CafeRenderer p) {
     final result = <CafeGpuBatch>[];
     final activeRoom = identical(p.world, painter.world) ? 0 : 1;
+    if (!identical(_avatarFaces, p.avatar) || _avatarRoom != activeRoom) {
+      _avatarFaces = p.avatar;
+      _avatarRoom = activeRoom;
+      _avatarBatches = batches(
+        p.avatar,
+        activeRoom,
+        moving: true,
+        namespace: 'avatar',
+      );
+    }
+    result.addAll(_avatarBatches);
     for (final room in [0, 1]) {
       final world = room == 0 ? painter.world : painter.world.linkedWorld;
       final camera = identical(p.world, world)
           ? p.camera
           : p.world.linkedCamera(p.camera);
       final faces = <CafeFace>[
-        if (room == activeRoom) ...p.avatar,
         ...world.plantFaces(camera),
         ...world.lightFaces(camera),
         ...world.weatherFaces(camera, p.time),
@@ -167,7 +182,7 @@ class CafeGpuGeometry {
               )
               .where((f) => f.objectId == p.use!.id),
       ];
-      result.addAll(batches(faces, room, moving: true));
+      result.addAll(batches(faces, room, moving: true, namespace: 'effects'));
     }
     return result;
   }

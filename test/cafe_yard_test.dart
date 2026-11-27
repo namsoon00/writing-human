@@ -24,7 +24,7 @@ void main() {
     'The sustained earthen loop closes inside the enclosure and stays clear',
     () {
       final yard = CafeWorld(courtyard: true);
-      expect(CafeYard.bounds.width, greaterThan(20));
+      expect(CafeYard.bounds.width, greaterThanOrEqualTo(30));
       expect(CafeYard.length, inInclusiveRange(50, 90));
       expect(
         (CafeYard.trail.first - CafeYard.trail.last).length,
@@ -47,11 +47,11 @@ void main() {
       }
       for (final face in yard.faces.where((f) => f.part == 'yard.earth')) {
         for (final p in face.points) {
-          expect(p.x, inInclusiveRange(-18.2, 6.2));
-          expect(p.z, inInclusiveRange(-17.2, 3.165));
+          expect(p.x, inInclusiveRange(-22.2, 8.2));
+          expect(p.z, inInclusiveRange(-21.2, 3.165));
         }
       }
-      expect(yard.canStand(const CafePoint(-6, 1.62, -17.4)), isFalse);
+      expect(yard.canStand(const CafePoint(-6, 1.62, -21.4)), isFalse);
       expect(yard.faces.length, lessThan(35000));
     },
   );

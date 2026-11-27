@@ -46,15 +46,15 @@ CafePoint cafeHeldPoint(
     final seated = CafeBody.seated(camera),
         meditation = CafeBody.meditation(camera);
     final height = cup
-        ? .82 + seated * .02 - meditation * .20 + sip * (.17 - seated * .045)
+        ? .76 + seated * .02 - meditation * .20 + sip * (.17 - seated * .045)
         : type == CafeItemType.volume
         ? .81 - meditation * .20
         : .78 + seated * .01 - meditation * .20;
     return CafePoint(camera.position.x, height, camera.position.z) +
-        forward * (cup ? .24 - sip * .12 : .27) +
+        forward * (cup ? .27 + sip * .025 : .27) +
         camera.right *
             (cup
-                ? .105 - sip * .06
+                ? 0
                 : pen
                 ? .105
                 : 0);
@@ -78,6 +78,25 @@ CafePoint cafeHeldPoint(
               : type == CafeItemType.volume
               ? -.30
               : -.07);
+}
+
+/// Prop-local axes shared by the visible mug and its two hand contact poses.
+CafePoint cafeHeldVector(
+  CafeCamera camera,
+  CafeItemType type,
+  CafeUseFrame use,
+  CafePoint offset, {
+  bool thirdPerson = false,
+}) {
+  final sip = use.kind == CafeUseKind.sip
+      ? math.sin(use.progress.clamp(0.0, 1.0) * math.pi)
+      : 0.0;
+  final volume = type == CafeItemType.volume, pen = type == CafeItemType.pencil;
+  final yaw = camera.yaw - (volume ? math.pi / 2 : 0);
+  final pitch = volume
+      ? 0.0
+      : (thirdPerson ? 0.0 : camera.pitch) + (pen ? .9 : .32 + sip * .72);
+  return _useRotate(offset, yaw, pitch, pen ? 1.9 : 0);
 }
 
 CafePoint cafePourPoint(CafeCamera camera, CafePoint target, double progress) =>

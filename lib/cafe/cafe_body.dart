@@ -5,7 +5,7 @@ import 'cafe_camera.dart';
 abstract final class CafeBody {
   static const width = .84, torsoScale = .65;
   static const headWidth = 1.27, headScale = .96;
-  static const gaitLength = .66;
+  static const gaitLength = .48;
   static double seated(CafeCamera rig) =>
       ((1.62 - rig.position.y) / .44).clamp(0.0, 1.0);
   static double meditation(CafeCamera rig) =>

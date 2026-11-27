@@ -4298,3 +4298,39 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   [최종 배포 근거](evidence/20261127/navigation-fullscreen/deployment.json)에 남겼다.
 - 기존 hosting project_id/비공개 접근·기록 저장 키와 계정 범위를 유지했다. 미완성 글꼴·
   음성·카페 조명 작업을 복사하지 않고 기존 원격 main 위에 이번 변경과 검사 복구만 통합했다.
+
+## 2026-11-27 · 포근한 니트 A / 넓은 뜰 구현
+
+승인한 조금 슬림한 A와 낮은 옆가르마를 Flutter 메시로 옮겼다. 쉬는 손과 양손 찻잔,
+짧은 보폭·착석·명상·맨발을 기존 물건 ID/저장 구조 위에서 유지했다. 뜰은 30×23.8m로
+넓히고 담장·황토 순환길·식재를 함께 조정했다. 관찰 카메라가 반대편에 남았을 때
+통로 면을 눌러 되돌아가던 선택 오류를 수정했다. 웹 표시용 플랫폼 뷰는 입력을
+부모 Flutter 제스처에 넘긴다. GPU 아바타 배치와 typed array는 자세가 같으면 재사용한다.
+
+- dart format: lib/test와 새 geometry probe 포함 227개 파일 변경 없음.
+- flutter analyze --no-pub: No issues found.
+- 최종 관련 native 검사: 31 passed, 0 failed. 머리/옷 메시 예산, 심하게 늘어나지 않는
+  착석 다리, 발 지지 구간, 컵의 손 위치, 통로 3회 왕복, 뜰 경계/길/상태, 웹 배치 캐시를 검사했다.
+- geometry probe 및 관련 검사: 21 passed. 최종 실내 40968면, 뜰 34879면, 아바타 3480면.
+  native debug CPU 생성 시간은 릴리스 GPU FPS와 구분한다.
+- node --check web/cafe_gpu.js: 통과.
+- 로컬 전체 native 검사는 두 번 중단했다. 중간 통과 수와 정리 중 오류를 전체 성공으로
+  보고하지 않는다. 최종 전체 검사는 원격 CI 결과로 별도 기록한다.
+- 실제 iPhone/Android의 발열·장시간 조작·FPS는 미검증이다. CPU 준비 시간의 소규모
+  브라우저 비교도 실제 휴대폰 프레임 속도 보장은 아니다. 기존 Sites project/access는 유지한다.
+
+웹 빌드·직접 입력 검수·최종 게시 결과는 같은 작업의 후속 검증에 이어 기록한다.
+근거: [검증 메타데이터](evidence/20261127/cafe-cozy/verification.json),
+[최종 면 수](evidence/20261127/cafe-cozy/geometry.json).
+
+추가 실웹 검수에서 도착 석재 슬랩에 남은 cafeReturn 대상을 재현했다. 바닥의 대상을
+해제하고 보행 가능한 좌우 도착 지점을 회귀 검사에 추가했다. 수정 전 실패 1회와
+수정 후 cozy space 검사 4개 통과를 기록한다. 연못 가장자리의 보행 금지는 유지한다.
+표시 전용 HtmlElementView를 transparent로 바꾼 웹 빌드에서 실제 바닥 클릭이
+「천천히 걸어가는 중」으로 이어지고 중앙 통로로 뜰에 도착하는 것을 확인했다.
+최종 슬랩 수정 후 웹 확인과 배포 결과는 후속 기록으로 남긴다.
+
+최종 웹 확인: 390×844 브라우저에서 뜰 도착 후 석재 바닥을 눌러 걷고, 정지 뒤에도
+「고요한 뜰」이 유지되는 것을 확인했다. 드래그 회전으로 앞모습과 손/니트를 확인하고
+[실제 웹 캡처](evidence/20261127/cafe-cozy/browser-mobile.jpg)를 남겼다. 임시 viewport는
+기본값으로 복원했다. WebGL 오류는 관측되지 않았으며 최종 정적 분석도 오류 없음이다.

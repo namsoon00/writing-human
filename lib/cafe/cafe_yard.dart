@@ -5,27 +5,28 @@ import 'cafe_camera.dart';
 /// Metre-based layout shared by soil geometry, walking, picking and the camera.
 /// The cafe glazing stays on z=3.165; the complete loop is inside the walls.
 class CafeYard {
-  static const bounds = Rect.fromLTRB(-18, -17, 6, 2.8);
-  static const gate = CafePoint(-6, 1.62, -14.8);
+  static const bounds = Rect.fromLTRB(-22, -21, 8, 2.8);
+  static const gate = CafePoint(-6, 1.62, -18.8);
   static const shoeApproach = CafePoint(-3, 1.62, -12.6);
   static const meditationApproach = CafePoint(2.8, 1.62, -6.65);
   static const meditation = CafePoint(2.8, .78, -8.5);
   static const readingApproach = CafePoint(-11.5, 1.62, -7.5);
   static const reading = CafePoint(-11.5, 1.18, -8.55);
   static final trail = smooth(const [
-    CafePoint(-5.5, 0, -14.8),
-    CafePoint(.5, 0, -14.3),
-    CafePoint(5.0, 0, -11),
-    CafePoint(5.0, 0, -5.5),
+    CafePoint(-5.5, 0, -18.8),
+    CafePoint(.5, 0, -18.3),
+    CafePoint(6.6, 0, -14),
+    CafePoint(6.6, 0, -6),
     CafePoint(1.7, 0, -3.1),
     CafePoint(-4, 0, -3.7),
     CafePoint(-11.8, 0, -3.2),
-    CafePoint(-15.5, 0, -5.8),
-    CafePoint(-15.4, 0, -12.8),
-    CafePoint(-11, 0, -15),
+    CafePoint(-19.2, 0, -5.8),
+    CafePoint(-19.3, 0, -16.8),
+    CafePoint(-11, 0, -19.1),
   ], closed: true);
   static final stone = smooth(const [
-    CafePoint(-6, 0, -16.8),
+    CafePoint(-6, 0, -20.7),
+    CafePoint(-5.8, 0, -17.4),
     CafePoint(-5.5, 0, -12.8),
     CafePoint(-2.8, 0, -8.4),
     CafePoint(.3, 0, -4.8),

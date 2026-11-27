@@ -114,6 +114,9 @@
       let b=list.find(x=>x.key===key);
       if(!b){b={key,buffer:gl.createBuffer(),vao:gl.createVertexArray()};list.push(b);}
       b.room=room;b.alpha=alpha;b.cutout=cutout;b.count=data.length/16;
+      // Stationary avatar batches keep their typed array across camera turns.
+      if(b.data===data)return;
+      b.data=data;
       gl.bindVertexArray(b.vao);gl.bindBuffer(gl.ARRAY_BUFFER,b.buffer);
       gl.bufferData(gl.ARRAY_BUFFER,data,list===statics?gl.STATIC_DRAW:gl.DYNAMIC_DRAW);
       for(const [loc,count,offset] of [[0,3,0],[1,3,3],[2,2,6],[3,4,8],[4,4,12]]) {
@@ -133,7 +136,7 @@
         gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.generateMipmap(gl.TEXTURE_2D);
       },
       keepTextures(ids){for(const [key,t] of textures){if(!ids.includes(key)){gl.deleteTexture(t);textures.delete(key);}}},
-      clear(){remove(statics);},
+      clear(){remove(statics);remove(dynamics);},
       batch(key,data,room,alpha,cutout){batch(statics,key,data,room,alpha,cutout);},
       begin(){for(const b of dynamics)b.count=0;},
       dynamic(key,data,room,alpha,cutout){batch(dynamics,key,data,room,alpha,cutout);},

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/ui/handwriting_strokes.dart';
@@ -46,9 +47,10 @@ class _Playback implements PaperSoundPlayback {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test(
-    'Contacts preserve the chosen recording at its original speed',
-    () async {
+  testWidgets('Contacts preserve the chosen recording at its original speed', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
       const source = 'assets/audio/pencil-on-paper-original';
       final info =
           jsonDecode(await rootBundle.loadString('$source-info.json'))
@@ -107,8 +109,8 @@ void main() {
             original.getInt16(originalIndex, .little);
         expect(referenceStep, closeTo(originalStep * .84, 1));
       }
-    },
-  );
+    });
+  }, skip: kIsWeb);
 
   test('Each modern Hangul syllable has the constituent stroke counts', () {
     const initialCounts = [
@@ -230,6 +232,12 @@ void main() {
       (input('갑', 1, first), input('값', 1, first), [sweep, straight]),
       (input('값', 1, first), input('갑사', 2, second), [straight, short]),
       (input('고', 1, first), input('과', 1, first), [straight, short]),
+      (input('가ㄱ', 2), input('가가', 2), [straight, short]),
+      (input('앞간뒤', 2), input('앞가나뒤', 3), [straight, short]),
+      (input('고', 1), input('과', 1), [straight, short]),
+      (input('간', 1), input('가', 1), <PaperSoundEffect>[]),
+      (input('가', 1), input('다', 1), <PaperSoundEffect>[]),
+      (input('a', 1), input('가', 1), <PaperSoundEffect>[]),
       (input('한', 1, first), input('한ㄱ', 2, second), [bend]),
       (input('간', 1, first), input('가', 1, first), <PaperSoundEffect>[]),
       (input('간', 1, first), input('갇', 1, first), <PaperSoundEffect>[]),

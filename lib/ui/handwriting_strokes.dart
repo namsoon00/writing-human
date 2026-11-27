@@ -107,6 +107,9 @@ Iterable<String> _jamo(String unit) sync* {
   }
 }
 
+bool _isHangul(int unit) =>
+    (unit >= 0xac00 && unit <= 0xd7a3) || (unit >= 0x3131 && unit <= 0x3163);
+
 List<PaperSoundEffect> newWritingStrokes(
   TextEditingValue before,
   TextEditingValue after,
@@ -121,24 +124,39 @@ List<PaperSoundEffect> newWritingStrokes(
   final wasComposing =
       before.isComposingRangeValid && !before.composing.isCollapsed;
   final composing = after.isComposingRangeValid && !after.composing.isCollapsed;
-  final start = wasComposing ? before.composing.start : before.selection.start;
+  var start = wasComposing ? before.composing.start : before.selection.start;
   final oldEnd = wasComposing ? before.composing.end : before.selection.end;
   final newEnd = composing ? after.composing.end : after.selection.end;
   if (start < 0 ||
       oldEnd > before.text.length ||
-      (composing && after.composing.start < start) ||
-      newEnd <= start ||
-      newEnd - start > 24) {
+      (composing && after.composing.start < start)) {
     return const [];
   }
 
-  if (after.text.length - newEnd != before.text.length - oldEnd ||
-      !after.text.startsWith(before.text.substring(0, start)) ||
-      !after.text.endsWith(before.text.substring(oldEnd))) {
-    return const [];
+  bool matchesEdit(int offset) =>
+      newEnd > offset &&
+      newEnd - offset <= 24 &&
+      after.text.length - newEnd == before.text.length - oldEnd &&
+      after.text.startsWith(before.text.substring(0, offset)) &&
+      after.text.endsWith(before.text.substring(oldEnd));
+
+  var extendsJamo = wasComposing;
+  if (!matchesEdit(start)) {
+    // Some web IME updates supply a collapsed selection without a composing
+    // range. Check the preceding syllable for an appended jamo in that case.
+    if (wasComposing ||
+        composing ||
+        !before.selection.isCollapsed ||
+        start == 0 ||
+        !_isHangul(before.text.codeUnitAt(start - 1)) ||
+        !matchesEdit(start - 1)) {
+      return const [];
+    }
+    start--;
+    extendsJamo = true;
   }
   final inserted = after.text.substring(start, newEnd).characters;
-  final previous = wasComposing
+  final previous = extendsJamo
       ? before.text.substring(start, oldEnd).characters
       : ''.characters;
   if (inserted.length > previous.length + 1) return const [];

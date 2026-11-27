@@ -5,21 +5,25 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:web/web.dart' as web;
 
-import 'paper_sound_effect.dart';
 import '../audio/user_audio.dart';
+import 'paper_sound_effect.dart';
 
 class PaperSoundOutput implements PaperSoundPlayback {
-  PaperSoundOutput(this.effect) {
-    _bytes = _readAsset();
+  PaperSoundOutput(List<PaperSoundEffect> effects)
+    : _volume = effects.first.volume {
+    for (final effect in effects) {
+      _bytes[effect] = _readAsset(effect);
+    }
     for (final event in _activationEvents) {
       web.document.addEventListener(event, _interaction, true.toJS);
     }
   }
 
-  final PaperSoundEffect effect;
+  final double _volume;
   final _session = UserAudioSession();
   final _voices = <web.AudioBufferSourceNode>{};
-  late final Future<ByteData?> _bytes;
+  final _bytes = <PaperSoundEffect, Future<ByteData?>>{};
+  final _buffers = <PaperSoundEffect, web.AudioBuffer>{};
 
   static const _activationEvents = [
     'pointerdown',
@@ -27,6 +31,7 @@ class PaperSoundOutput implements PaperSoundPlayback {
     'touchend',
     'keydown',
   ];
+  static const _exitFade = Duration(milliseconds: 18);
   late final JSFunction _interaction = ((web.Event event) {
     if (_closed || !event.isTrusted) return;
     if (event.type == 'pointerdown' &&
@@ -38,15 +43,11 @@ class PaperSoundOutput implements PaperSoundPlayback {
 
   web.AudioContext? _context;
   web.GainNode? _gain;
-  web.AudioBuffer? _buffer;
-  web.AudioBufferSourceNode? _rhythm;
-  Timer? _fadeStop;
   bool _resuming = false, _closed = false;
-  double _offset = writingPencilLeadIn.inMicroseconds / 1000000;
-  double _startedAt = 0;
   PaperSoundRequest? _pending;
+  Timer? _pendingExpiry;
 
-  Future<ByteData?> _readAsset() async {
+  Future<ByteData?> _readAsset(PaperSoundEffect effect) async {
     try {
       return await rootBundle.load('assets/${effect.asset}');
     } catch (error) {
@@ -57,16 +58,18 @@ class PaperSoundOutput implements PaperSoundPlayback {
 
   void _activate() {
     try {
-      if (_pending?.canPlay == true || _rhythm != null) _session.activate();
+      if (_pending?.canPlay == true) _session.activate();
       var context = _context;
       if (context == null) {
         context = _context = web.AudioContext();
         final gain = _gain = context.createGain();
-        gain.gain.value = effect.volume;
+        gain.gain.value = _volume;
         gain.connect(context.destination);
-        unawaited(_decode(context));
+        for (final entry in _bytes.entries) {
+          unawaited(_decode(context, entry.key, entry.value));
+        }
       }
-      // Resume inside the trusted event, before page storage or IME awaits.
+      // Resume inside the trusted event, before storage or IME awaits.
       if (context.state != 'running' && !_resuming) {
         unawaited(_resume(context));
       }
@@ -89,13 +92,14 @@ class PaperSoundOutput implements PaperSoundPlayback {
     }
   }
 
-  Future<void> _decode(web.AudioContext context) async {
+  Future<void> _decode(
+    web.AudioContext context,
+    PaperSoundEffect effect,
+    Future<ByteData?> loaded,
+  ) async {
     try {
-      final bytes = await _bytes;
-      if (_closed || bytes == null) {
-        if (_voices.isEmpty) _session.release();
-        return;
-      }
+      final bytes = await loaded;
+      if (_closed || bytes == null) return;
       final data = bytes.buffer.asUint8List(
         bytes.offsetInBytes,
         bytes.lengthInBytes,
@@ -104,11 +108,10 @@ class PaperSoundOutput implements PaperSoundPlayback {
           .decodeAudioData(Uint8List.fromList(data).buffer.toJS)
           .toDart;
       if (!_closed) {
-        _buffer = buffer;
+        _buffers[effect] = buffer;
         _playPending();
       }
     } catch (error) {
-      _session.release();
       if (!_closed) debugPrint('Could not decode paper sound: $error');
     }
   }
@@ -116,60 +119,50 @@ class PaperSoundOutput implements PaperSoundPlayback {
   @override
   void play(PaperSoundRequest request) {
     if (_closed || !request.canPlay) return;
-    _session.activate();
-    if (_rhythm != null) {
-      if (_fadeStop != null) {
-        _fadeStop?.cancel();
-        _fadeStop = null;
-        _rampRhythm(effect.volume, writingRhythmResumeFade);
-      }
-      return;
-    }
     _pending = request;
+    _session.activate();
+    _pendingExpiry?.cancel();
+    _pendingExpiry = Timer(PaperSoundRequest.lifetime, () {
+      _clearPending();
+      if (_voices.isEmpty) _session.release();
+    });
     _playPending();
+  }
+
+  void _clearPending() {
+    _pending = null;
+    _pendingExpiry?.cancel();
+    _pendingExpiry = null;
   }
 
   void _playPending() {
     final context = _context;
-    final buffer = _buffer;
-    if (_closed ||
-        context == null ||
-        context.state != 'running' ||
-        buffer == null) {
-      return;
-    }
     final request = _pending;
-    _pending = null;
+    if (_closed || context == null || context.state != 'running') return;
     if (request == null || !request.canPlay) {
+      _clearPending();
       if (_voices.isEmpty) _session.release();
       return;
     }
+    final buffer = _buffers[request.effect];
+    if (buffer == null) return;
+    _clearPending();
     web.AudioBufferSourceNode? created;
     try {
       _session.activate();
       final source = created = context.createBufferSource();
       source.buffer = buffer;
-      if (effect.loops) {
-        source.loop = true;
-        _gain!.gain.cancelScheduledValues(context.currentTime);
-        _gain!.gain.setValueAtTime(0, context.currentTime);
-      }
-      source.connect(_gain!);
+      final gain = _gain!;
+      gain.gain.cancelScheduledValues(context.currentTime);
+      gain.gain.setValueAtTime(_volume, context.currentTime);
+      source.connect(gain);
       source.onended = ((web.Event _) {
         source.disconnect();
-        if (_rhythm == source) _rhythm = null;
         _voices.remove(source);
         if (_voices.isEmpty) _session.release();
       }).toJS;
       _voices.add(source);
-      if (effect.loops) {
-        _startedAt = context.currentTime;
-        source.start(0, _offset);
-        _rhythm = source;
-        _rampRhythm(effect.volume, writingRhythmResumeFade);
-      } else {
-        source.start();
-      }
+      source.start();
     } catch (error) {
       if (created != null) {
         _voices.remove(created);
@@ -180,52 +173,35 @@ class PaperSoundOutput implements PaperSoundPlayback {
     }
   }
 
-  void _rampRhythm(double volume, Duration duration) {
-    final context = _context;
-    final gain = _gain?.gain;
-    if (context == null || gain == null) return;
-    final at = context.currentTime;
-    final from = gain.value;
-    gain.cancelScheduledValues(at);
-    gain.setValueAtTime(from, at);
-    gain.linearRampToValueAtTime(volume, at + duration.inMilliseconds / 1000);
-  }
-
   @override
   void pause() {
-    _pending = null;
-    final source = _rhythm;
-    if (source == null) {
-      if (_voices.isEmpty) _session.release();
+    _clearPending();
+    final context = _context;
+    if (_voices.isEmpty || context?.state != 'running') {
+      _session.release();
       return;
     }
-    if (_closed || _fadeStop != null) return;
-    _rampRhythm(0, writingRhythmFade);
-    _fadeStop = Timer(writingRhythmFade, () {
-      _fadeStop = null;
-      final context = _context;
-      final buffer = _buffer;
-      if (context != null && buffer != null) {
-        _offset =
-            (_offset + context.currentTime - _startedAt) % buffer.duration;
-      }
-      _rhythm = null;
-      source.stop();
-    });
+    final at = context!.currentTime;
+    final end = at + _exitFade.inMilliseconds / 1000;
+    final gain = _gain!.gain;
+    gain.cancelScheduledValues(at);
+    gain.setValueAtTime(gain.value, at);
+    gain.linearRampToValueAtTime(0, end);
+    for (final source in _voices) {
+      source.stop(end);
+    }
   }
 
   @override
   Future<void> dispose() async {
     _closed = true;
-    _pending = null;
-    _fadeStop?.cancel();
     for (final event in _activationEvents) {
       web.document.removeEventListener(event, _interaction, true.toJS);
     }
     try {
-      if (_rhythm != null && _context?.state == 'running') {
-        _rampRhythm(0, writingRhythmExitFade);
-        await Future<void>.delayed(writingRhythmExitFade);
+      pause();
+      if (_voices.isNotEmpty && _context?.state == 'running') {
+        await Future<void>.delayed(_exitFade);
       }
       await _context?.close().toDart;
     } catch (error) {

@@ -15,6 +15,7 @@ import 'paper_tool.dart';
 import 'paper_text_zoom.dart';
 import 'paper_selection_menu.dart';
 import 'writing_pen.dart';
+import 'handwriting_strokes.dart';
 import 'writing_sound.dart';
 import 'pencil_marks.dart';
 import 'transcription_reference.dart';
@@ -359,11 +360,11 @@ class _PageEditorState extends State<PageEditor> with WidgetsBindingObserver {
     }
     _save();
     final sound = _sound;
-    if (sound != null &&
-        !restoring &&
-        focus.hasFocus &&
-        hasNewWrittenCharacter(previous, next)) {
-      sound.play(() => mounted && focus.hasFocus);
+    if (sound != null && !restoring && focus.hasFocus) {
+      sound.write(
+        newWritingStrokes(previous, next),
+        () => mounted && focus.hasFocus,
+      );
     }
   }
 

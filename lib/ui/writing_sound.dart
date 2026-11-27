@@ -1,100 +1,86 @@
 import 'dart:async';
-
-import 'package:flutter/material.dart';
+import 'dart:collection';
 
 import 'paper_sound_effect.dart';
 import 'writing_sound_native.dart'
     if (dart.library.js_interop) 'writing_sound_web.dart';
 
-/// Gate one pencil source to current input, or play page-turn samples.
 class PaperSound {
   PaperSound.writing({PaperSoundPlayback? playback})
-    : this._(PaperSoundEffect.writingRhythm, playback: playback);
-  PaperSound.pageTurn() : this._(PaperSoundEffect.pageTurn);
-  PaperSound._(this._effect, {PaperSoundPlayback? playback})
-    : _output = playback ?? PaperSoundOutput(_effect);
+    : _output = playback ?? PaperSoundOutput(PaperSoundEffect.pencilContacts);
 
-  final PaperSoundEffect _effect;
+  PaperSound.pageTurn()
+    : _output = PaperSoundOutput(const [PaperSoundEffect.pageTurn]);
+
   final PaperSoundPlayback _output;
-  PaperSoundRequest? _pending;
+  PaperSoundRequest? _page;
+  final _strokes = ListQueue<PaperSoundEffect>();
+  bool Function()? _isStillWriting;
   Timer? _timer;
   bool _closed = false;
 
   void play(bool Function() isCurrent) {
     if (_closed || !isCurrent()) return;
-    final request = PaperSoundRequest(isCurrent);
-    if (_effect.loops) {
-      _timer?.cancel();
-      _timer = Timer(writingRhythmIdle, pause);
-      _output.play(request);
+    _page = PaperSoundRequest(PaperSoundEffect.pageTurn, isCurrent);
+    if (_timer == null) _turnPage();
+  }
+
+  void _turnPage() {
+    _timer = null;
+    final request = _page;
+    _page = null;
+    if (request == null || !request.canPlay) return;
+    _output.play(request);
+    _timer = Timer(request.effect.interval, _turnPage);
+  }
+
+  void write(List<PaperSoundEffect> strokes, bool Function() isCurrent) {
+    if (_closed || strokes.isEmpty || !isCurrent()) return;
+    _isStillWriting = isCurrent;
+
+    // Retain short sequences during IME composition. When input runs ahead
+    // of the recorded hand, let the sounding contact finish and catch up with
+    // the latest gesture, so old contacts do not build up behind the text.
+    final queuedTime = _strokes.fold<Duration>(
+      Duration.zero,
+      (time, stroke) => time + stroke.interval + _penLift,
+    );
+    if (queuedTime > _maximumQueuedTime) _strokes.clear();
+    _strokes.addAll(strokes);
+    if (_timer == null) _writeStroke();
+  }
+
+  static const _penLift = Duration(milliseconds: 24);
+  static const _maximumQueuedTime = Duration(milliseconds: 450);
+
+  void _writeStroke() {
+    _timer = null;
+    final isCurrent = _isStillWriting;
+    if (_strokes.isEmpty || isCurrent == null || !isCurrent()) {
+      _strokes.clear();
+      _isStillWriting = null;
       return;
     }
-    _pending = request;
-    if (_timer == null) _flush();
+    final effect = _strokes.removeFirst();
+    _output.play(PaperSoundRequest(effect, isCurrent));
+    _timer = Timer(effect.interval + _penLift, _writeStroke);
   }
 
   void pause() {
-    if (_closed || !_effect.loops) return;
+    if (_closed) return;
     _timer?.cancel();
     _timer = null;
+    _strokes.clear();
+    _isStillWriting = null;
     _output.pause();
-  }
-
-  void _flush() {
-    _timer = null;
-    final request = _pending;
-    if (request == null || !request.canPlay) {
-      _pending = null;
-      return;
-    }
-    _pending = null;
-    _timer = Timer(_effect.minimumInterval, _flush);
-    _output.play(request);
   }
 
   Future<void> dispose() {
     _closed = true;
     _timer?.cancel();
-    _pending = null;
+    _page = null;
+    _strokes.clear();
+    _isStillWriting = null;
     return _output.dispose();
   }
-}
-
-/// Play once when a visible letter is inserted or starts composing. As an IME
-/// updates a syllable in place or commits it, that syllable already had a sound.
-bool hasNewWrittenCharacter(TextEditingValue before, TextEditingValue after) {
-  if (before.text == after.text ||
-      !after.selection.isValid ||
-      !after.selection.isCollapsed ||
-      after.selection.end > after.text.length) {
-    return false;
-  }
-  final wasComposing =
-      before.isComposingRangeValid && !before.composing.isCollapsed;
-  final composing = after.isComposingRangeValid && !after.composing.isCollapsed;
-  final start = wasComposing ? before.composing.start : before.selection.start;
-  final oldEnd = wasComposing ? before.composing.end : before.selection.end;
-  if (wasComposing &&
-      (!composing || after.composing.start <= before.composing.start)) {
-    return false;
-  }
-  final insertedStart = composing ? after.composing.start : start;
-  final newEnd = composing ? after.composing.end : after.selection.end;
-  if (start < 0 ||
-      oldEnd > before.text.length ||
-      insertedStart < start ||
-      newEnd <= insertedStart ||
-      newEnd - insertedStart > 24) {
-    return false;
-  }
-
-  // Check the edited range, including when input happens in the middle.
-  final tailLength = before.text.length - oldEnd;
-  if (after.text.length - newEnd != tailLength ||
-      !after.text.startsWith(before.text.substring(0, start)) ||
-      !after.text.endsWith(before.text.substring(oldEnd))) {
-    return false;
-  }
-  final inserted = after.text.substring(insertedStart, newEnd);
-  return inserted.trim().isNotEmpty && inserted.characters.length == 1;
 }

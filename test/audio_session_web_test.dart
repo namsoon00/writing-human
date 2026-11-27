@@ -41,16 +41,22 @@ void main() {
         'flutter/assets',
         (_) async => ByteData(1),
       );
-      final output = PaperSoundOutput(PaperSoundEffect.writingRhythm);
+      final output = PaperSoundOutput(PaperSoundEffect.pencilContacts);
       try {
         expect(audio.getProperty<JSString>('type'.toJS).toDart, 'auto');
-        output.play(PaperSoundRequest(() => false));
+        output.play(
+          PaperSoundRequest(PaperSoundEffect.pencilShort, () => false),
+        );
         expect(audio.getProperty<JSString>('type'.toJS).toDart, 'auto');
-        output.play(PaperSoundRequest(() => true));
+        output.play(
+          PaperSoundRequest(PaperSoundEffect.pencilShort, () => true),
+        );
         expect(audio.getProperty<JSString>('type'.toJS).toDart, 'playback');
         output.pause();
         expect(audio.getProperty<JSString>('type'.toJS).toDart, 'auto');
-        output.play(PaperSoundRequest(() => true));
+        output.play(
+          PaperSoundRequest(PaperSoundEffect.pencilShort, () => true),
+        );
         expect(audio.getProperty<JSString>('type'.toJS).toDart, 'playback');
       } finally {
         await output.dispose();

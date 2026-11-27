@@ -1,34 +1,41 @@
-const _requestLifetime = Duration(milliseconds: 240);
-const writingPencilLeadIn = Duration(milliseconds: 600);
-const writingRhythmIdle = Duration(milliseconds: 120);
-const writingRhythmFade = Duration(milliseconds: 60);
-const writingRhythmExitFade = Duration(milliseconds: 60);
-const writingRhythmResumeFade = Duration(milliseconds: 25);
-
 enum PaperSoundEffect {
-  writingRhythm('pencil-on-paper-original.wav', 1, Duration.zero),
+  pencilShort('pencil-contact-short.wav', 1, Duration(milliseconds: 97)),
+  pencilStraight('pencil-contact-straight.wav', 1, Duration(milliseconds: 189)),
+  pencilSweep('pencil-contact-sweep.wav', 1, Duration(milliseconds: 205)),
+  pencilBend('pencil-contact-bend.wav', 1, Duration(milliseconds: 272)),
   pageTurn('page-turn.mp3', .42, Duration(milliseconds: 105));
 
-  const PaperSoundEffect(this.file, this.volume, this.minimumInterval);
+  const PaperSoundEffect(this.file, this.volume, this.interval);
+
+  static const pencilContacts = [
+    pencilShort,
+    pencilStraight,
+    pencilSweep,
+    pencilBend,
+  ];
 
   final String file;
   final double volume;
-  final Duration minimumInterval;
+
+  // For pencil contacts, this is the clip length. For pages it is the
+  // minimum interval between turning sounds, whose tails can overlap.
+  final Duration interval;
 
   String get asset => 'audio/$file';
-  bool get loops => this == writingRhythm;
 }
 
 class PaperSoundRequest {
-  PaperSoundRequest(this.isCurrent) : _age = Stopwatch()..start();
+  PaperSoundRequest(this.effect, this.isCurrent) : _age = Stopwatch()..start();
 
+  static const lifetime = Duration(milliseconds: 240);
+
+  final PaperSoundEffect effect;
   final bool Function() isCurrent;
   final Stopwatch _age;
 
-  bool get canPlay => _age.elapsed < _requestLifetime && isCurrent();
+  bool get canPlay => _age.elapsed < lifetime && isCurrent();
 }
 
-/// A shared playback boundary lets activity timing be tested without a device.
 abstract interface class PaperSoundPlayback {
   void play(PaperSoundRequest request);
   void pause();

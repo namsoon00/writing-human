@@ -118,6 +118,10 @@ flutter:
     - assets/audio/page-turn.mp3
     - assets/audio/pencil-on-paper-original.wav
     - assets/audio/pencil-on-paper-original-info.json
+    - assets/audio/pencil-contact-short.wav
+    - assets/audio/pencil-contact-straight.wav
+    - assets/audio/pencil-contact-sweep.wav
+    - assets/audio/pencil-contact-bend.wav
     - assets/audio/cafe-bell.wav
     - assets/audio/cafe-tea.wav
     - assets/audio/cafe-touch.wav

@@ -4275,3 +4275,7 @@ flutter run -d chrome --dart-define=WRITING_HUMAN_LOCAL_ONLY=true
   열고 history.back·깊은 원문에서 쓰던 쪽 복귀·도구의 전체 화면과 왼쪽 가장자리 복귀를
   확인했다. 본문·커서·현재 쪽·기록2개·URL이 그대로이며 시험 프로필은 정리했다.
   [집중 검증 근거](evidence/20261127/navigation-fullscreen/verification.json)에 범위를 남겼다.
+- 기존 main1450e51의 CI45618555646도 카페5건의 pumpAndSettle 시간 초과로 실패해
+  게시되지 않았음을 확인했다. 이번 UI 변경 전의 실패다. 테스트의 준비 조건과 바닥
+  좌표 가정을 현재 상시 장면/카메라에 맞췄다. 걷기·선택·복귀·배치 보존의 동작은
+  유지하며 카페 관련19개가 통과했다. 재검사가 끝난 뒤 최종 CI 결과를 별도로 남긴다.

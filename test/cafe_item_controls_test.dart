@@ -111,6 +111,12 @@ void main() {
   testWidgets(
     'A pre-upgrade overhanging layout is retained and can be corrected',
     (tester) async {
+      // This case checks persisted layout correction, not ambient animation.
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
       final store = MemoryCafeSpaceStore()
         ..value = const CafeSpace(poses: {'shared.cup': CafePose(x: -.30)});
       await tester.pumpWidget(

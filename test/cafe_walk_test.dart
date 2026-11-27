@@ -91,10 +91,12 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      // Live entrance scenery never settles; render the ready scene directly.
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
       final c = tester.widget<CafeScene>(find.byType(CafeScene)).controller;
       c.updateCamera(const CafeCamera(position: CafePoint(2.8, 1.62, 2.8)));
-      await tester.pumpAndSettle();
+      await tester.pump();
       expect(
         find.byKey(const ValueKey('cafe-toggle-perspective')),
         findsNothing,
@@ -111,11 +113,18 @@ void main() {
         rect.size,
       )!;
       expect((Offset.zero & rect.size).contains(destination), isTrue);
+      final floorHit = CafeRenderer.pick(
+        destination,
+        c.viewCamera,
+        rect.size,
+        c.world,
+      )!;
+      expect(floorHit.floor, isTrue);
       await tester.tapAt(rect.topLeft + destination);
       await tester.pump();
       expect(c.travelling, isTrue);
-      expect(c.destination!.position.x, closeTo(2.8, .03));
-      expect(c.destination!.position.z, closeTo(-.2, .03));
+      expect(c.destination!.position.x, closeTo(floorHit.position.x, 1e-6));
+      expect(c.destination!.position.z, closeTo(floorHit.position.z, 1e-6));
       // Focus the physical scene, without tapping a walk destination.
       tester
           .widget<KeyboardListener>(

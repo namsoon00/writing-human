@@ -19,7 +19,18 @@ Future<void> _enter(WidgetTester tester) async {
   await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(const ValueKey('open-cafe')));
-  await tester.pumpAndSettle();
+  // Fish and changing light intentionally keep scheduling frames at the new
+  // entrance. Wait for the usable screen, not for all scenery to become idle.
+  for (var i = 0; i < 100; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+    final edit = find.byKey(const ValueKey('room-edit'));
+    if (edit.evaluate().isNotEmpty &&
+        tester.widget<IconButton>(edit).onPressed != null) {
+      await tester.pump(const Duration(milliseconds: 400));
+      return;
+    }
+  }
+  fail('Cafe did not become ready');
 }
 
 void main() {
@@ -227,18 +238,24 @@ void main() {
       await _enter(tester);
       final scene = find.byKey(const ValueKey('cafe-third-person-view'));
       final c = tester.widget<CafeScene>(find.byType(CafeScene)).controller;
-      final point = CafeRenderer.project(
-        const CafePoint(2.3, 0, 1.5),
-        c.viewCamera,
-        tester.getSize(scene),
-      )!;
-      expect((Offset.zero & tester.getSize(scene)).contains(point), isTrue);
-      final hit = CafeRenderer.pick(
-        point,
-        c.viewCamera,
-        tester.getSize(scene),
-        c.world,
-      )!;
+      final size = tester.getSize(scene);
+      // The entrance camera changed with the wide central passage. Choose a
+      // visible, reachable patch of actual floor rather than an old world point
+      // that may now be outside the viewport.
+      final point =
+          [
+            for (final y in [.8, .7, .6])
+              for (final x in [.5, .6, .4, .7, .3])
+                Offset(size.width * x, size.height * y),
+          ].firstWhere((point) {
+            final hit = CafeRenderer.pick(point, c.viewCamera, size, c.world);
+            return hit != null &&
+                hit.floor &&
+                c.world.canStand(hit.position) &&
+                (hit.position - c.camera.position).length > .5 &&
+                c.world.path(c.camera.position, hit.position).isNotEmpty;
+          });
+      final hit = CafeRenderer.pick(point, c.viewCamera, size, c.world)!;
       expect(hit.floor, isTrue);
       await tester.tapAt(tester.getTopLeft(scene) + point);
       await tester.pump();

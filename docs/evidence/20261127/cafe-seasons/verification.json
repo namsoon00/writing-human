@@ -20,6 +20,17 @@
     "saveRetry": {
       "passed": 2,
       "failed": 0
+    },
+    "keyboardWeather": {
+      "passed": 1,
+      "failed": 0
+    },
+    "analyze": "No issues found (110.5s)",
+    "format": "230 files, 0 changed",
+    "releaseBuild": {
+      "source": "d2f74f32572b2ea4289ec2320f792723335b54c3",
+      "compileSeconds": 281.9,
+      "success": true
     }
   },
   "browser": {
@@ -29,13 +40,30 @@
       "Sound off restores muted state",
       "Yard stroll interrupted by actual CUA drag"
     ],
-    "finalRelease": "pending",
+    "finalRelease": "Final re-check unavailable: browser transport closed and native Chrome window unavailable. Earlier local release playback, mute, choice persistence and drag interruption verified; final rain/snow/mobile/public visual check not completed.",
     "physicalDevices": false,
     "auditoryQuality": "No physical speaker/headphone audition; codec/levels and playback request verified separately"
   },
-  "ci": "pending",
-  "deployment": "pending",
-  "base": "90e493f68266949ba10fd57ca370d9de8155e4ae",
+  "ci": {
+    "run": 45947396320,
+    "commit": "2d59d21c55782813e70c1204853c01763413c7a1",
+    "includesSource": "d2f74f32572b2ea4289ec2320f792723335b54c3",
+    "nativeTests": 406,
+    "dspChromeTests": 6,
+    "chromeTests": 130,
+    "format": "success",
+    "analyze": "success",
+    "build": "success",
+    "deploy": "success"
+  },
+  "deployment": {
+    "url": "https://namsoon00.github.io/writing-human/?v=2d59d21c",
+    "publicHttp": "public-http.json",
+    "verifiedFiles": 10,
+    "audioMatchesSource": true
+  },
+  "base": "99afecd9915c8aa2266c11dc4d8bf3c8b5b6dc24",
   "audio": "audio-qa.json",
-  "gestureScreenshot": "stroll-drag-stop.jpg"
+  "gestureScreenshot": "stroll-drag-stop.jpg",
+  "sourceCommit": "d2f74f32572b2ea4289ec2320f792723335b54c3"
 }

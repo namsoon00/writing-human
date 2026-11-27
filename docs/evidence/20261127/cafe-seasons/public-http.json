@@ -1,0 +1,69 @@
+{
+  "deployedCommit": "2d59d21c55782813e70c1204853c01763413c7a1",
+  "sourceCommit": "d2f74f32572b2ea4289ec2320f792723335b54c3",
+  "ciRun": 45947396320,
+  "cacheVersionsMatch": true,
+  "allSeasonAudioMatches": true,
+  "files": {
+    "index.html": {
+      "status": 200,
+      "bytes": 8207,
+      "sha256": "81d3efa7ac679fca1d0e6962f3ea1ed59cbbaa2d83c115091227ad896dbd1bbc",
+      "url": "https://namsoon00.github.io/writing-human/?v=2d59d21c"
+    },
+    "flutter_bootstrap.js?v=ad08a6f03e9a78fa": {
+      "status": 200,
+      "bytes": 10016,
+      "sha256": "ad08a6f03e9a78fa61192ccbdd6735a83100094703dac4a2c1953d11be619887",
+      "url": "https://namsoon00.github.io/writing-human/flutter_bootstrap.js?v=ad08a6f03e9a78fa"
+    },
+    "main.dart.js?v=e842e56e81df4ea3": {
+      "status": 200,
+      "bytes": 5451694,
+      "sha256": "e842e56e81df4ea3abb2d7d35bfc6a5b79284f089d5319a4db2b2608de075c76",
+      "url": "https://namsoon00.github.io/writing-human/main.dart.js?v=e842e56e81df4ea3"
+    },
+    "cafe_gpu.js?v=eb523e91b551563d": {
+      "status": 200,
+      "bytes": 10598,
+      "sha256": "eb523e91b551563df97b52968a5923b5363d23736fc2eb0ce063a4809be94458",
+      "url": "https://namsoon00.github.io/writing-human/cafe_gpu.js?v=eb523e91b551563d"
+    },
+    "assets/assets/audio/cafe-score-dusk.m4a": {
+      "status": 200,
+      "bytes": 324320,
+      "sha256": "31d9acafa525ae75be6a0154304957656681c2000825f0b0defbad312309f430",
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-score-dusk.m4a"
+    },
+    "assets/assets/audio/cafe-score-paper.m4a": {
+      "status": 200,
+      "bytes": 338945,
+      "sha256": "012771b60b41e305d249fa1c5e099690769693922f3e6d93876157e4a2484f7c",
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-score-paper.m4a"
+    },
+    "assets/assets/audio/cafe-season-leaf.wav": {
+      "status": 200,
+      "bytes": 20204,
+      "sha256": "eb392d74fa3c35c2bc6fffb4e3fcb8821ad78d53e25a5597983301f99ee87bef",
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-season-leaf.wav"
+    },
+    "assets/assets/audio/cafe-season-rain.m4a": {
+      "status": 200,
+      "bytes": 251327,
+      "sha256": "76d56123d9b563c5c3b35e37c865fc54567794e33a2f5eea3a700a5d9851e51e",
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-season-rain.m4a"
+    },
+    "assets/assets/audio/cafe-season-snow.wav": {
+      "status": 200,
+      "bytes": 20204,
+      "sha256": "d78d50028da5d0472045b6385bb457650804747fd5dae690c33186a7073ddf8e",
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-season-snow.wav"
+    },
+    "assets/assets/audio/cafe-seasons-credits.json": {
+      "status": 200,
+      "bytes": 887,
+      "sha256": "9f042e57f6ea68f2c972c1319c8281a370b01dfce6d3a5c87764109edbcfb5f6",
+      "url": "https://namsoon00.github.io/writing-human/assets/assets/audio/cafe-seasons-credits.json"
+    }
+  }
+}

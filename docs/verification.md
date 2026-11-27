@@ -4400,3 +4400,28 @@ SHA256은 `53af53d59599a235428ff0b49b1f701134ddc66b2d508289e442e4c183533fde`로
   공개 HTML·loader·실행 파일이 HTTP 200을 반환했다. `main.dart.js` SHA-256
   `003a508420083125fff328464f40a152edb5f44b84fe43a00208fffb9646bace`가
   로컬 웹 빌드 및 공개 loader의 버전값과 일치했다.
+
+
+### 계절·선율 최종 검증과 공개 반영 · 2026-11-27
+
+- 구현 소스 `d2f74f32572b2ea4289ec2320f792723335b54c3`는 함께 반영된 입력음 수정의
+  부모로 보존됐다. 최종 공개 소스 `2d59d21c55782813e70c1204853c01763413c7a1`의
+  [배포 검사 45947396320](https://github.com/namsoon00/writing-human/actions/runs/45947396320)이 성공했다.
+  포맷·분석, native 406개, 음성 DSP Chrome 6개, 카페·내비게이션 Chrome 130개와
+  release 웹 빌드·GitHub Pages 배포가 통과했다. 중간 대기 실행은 최신 실행으로 대체됐으며
+  성공한 검사로 집계하지 않는다.
+- 로컬 추가 키보드 걷기 검사 1개가 통과했다. 포맷 230파일 변경 없음, 분석 문제 없음,
+  `d2f74f3`와 같은 트리의 release 웹 빌드 성공(컴파일 281.9초)을 확인했다.
+- 공개 HTML·loader·main·GPU 스크립트와 새 오디오/크레딧 6개가 HTTP 200을 반환했다.
+  loader/main/GPU의 버전값은 해당 파일 SHA-256과 일치했고 새 오디오 파일은 소스 바이트와
+  일치했다. 공개 main SHA-256은
+  `e842e56e81df4ea3abb2d7d35bfc6a5b79284f089d5319a4db2b2608de075c76`이다.
+  이후 입력음 수정이 포함되어 로컬 `d2f74f3` main과의 동일성은 주장하지 않는다.
+- 실제 로컬 웹에서 가을·곡 선택 저장, 직접 소리 켜기/끄기, 뜰 산책 중 드래그로 즉시
+  멈추기를 확인했다. 최종 재검수 때 브라우저 연결이 끊겨 최종 비·눈·모바일·공개 화면의
+  시각 검수를 완료하지 못했다. 자동 Chrome 검사를 이 시각 검수나 실기기 검증으로
+  대체해 보고하지 않는다. 실물 스피커/헤드폰 청음, iOS·Android 실기기 성능은 미검증이다.
+- 근거: [검증 요약](evidence/20261127/cafe-seasons/verification.json),
+  [공개 HTTP 확인](evidence/20261127/cafe-seasons/public-http.json),
+  [실제 로컬 산책 중지 화면](evidence/20261127/cafe-seasons/stroll-drag-stop.jpg).
+  기존 비공개 Sites project 설정과 사용자 기록은 변경하지 않았다.

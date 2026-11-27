@@ -8,6 +8,7 @@ import 'package:flutter/scheduler.dart';
 
 import '../cafe/cafe_camera.dart';
 import '../cafe/cafe_home.dart';
+import '../cafe/cafe_atmosphere.dart';
 import '../cafe/cafe_materials.dart';
 import '../cafe/cafe_watercolor.dart';
 import '../cafe/cafe_renderer.dart';
@@ -176,7 +177,9 @@ class _CafeSceneState extends State<CafeScene>
         !widget.controller.travelling &&
         !widget.controller.using &&
         heldKeys.isEmpty &&
-        ((widget.controller.inCourtyard &&
+        ((widget.controller.world.weather != CafeWeather.clear &&
+                widget.controller.space.atmosphere.weatherMotion) ||
+            (widget.controller.inCourtyard &&
                 ((widget.controller.camera.position -
                                 const CafePoint(-1.25, 1.62, 1))
                             .length <
@@ -248,7 +251,10 @@ class _CafeSceneState extends State<CafeScene>
         widget.controller.effectTime = sceneTime;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted || !calm.isActive) return;
-          calmResume = Timer(const Duration(milliseconds: 180), () {
+          final weather =
+              widget.controller.world.weather != CafeWeather.clear &&
+              widget.controller.space.atmosphere.weatherMotion;
+          calmResume = Timer(Duration(milliseconds: weather ? 45 : 180), () {
             calmReady = true;
           });
         });
@@ -570,6 +576,11 @@ class _CafeSceneState extends State<CafeScene>
     final seconds = travel.value * (travel.duration!.inMicroseconds / 1000000);
     final dt = (seconds - lastTravelTime).clamp(.001, .2);
     lastTravelTime = seconds;
+    if (!MediaQuery.disableAnimationsOf(context)) {
+      sceneTime += dt;
+      heldTime = sceneTime;
+      widget.controller.effectTime = sceneTime;
+    }
     var distance = timing!.at(travel.value);
     var segment = 0;
     while (segment < lengths.length - 1 && distance > lengths[segment]) {
@@ -877,7 +888,8 @@ class _CafeSceneState extends State<CafeScene>
                         }
                       }
                     : null,
-                onLongPressStart: widget.interactive && !widget.editing
+                onLongPressStart:
+                    widget.interactive && !widget.editing && !c.travelling
                     ? (details) {
                         final hit = CafeRenderer.pick(
                           details.localPosition,
@@ -892,7 +904,12 @@ class _CafeSceneState extends State<CafeScene>
                         }
                       }
                     : null,
-                onPanStart: widget.interactive ? (_) => _looking(true) : null,
+                onPanStart: widget.interactive
+                    ? (_) {
+                        _looking(true);
+                        if (c.travelling) c.look(0, 0);
+                      }
+                    : null,
                 onPanEnd: widget.interactive ? (_) => _looking(false) : null,
                 onPanCancel: widget.interactive ? () => _looking(false) : null,
                 onPanUpdate: widget.interactive

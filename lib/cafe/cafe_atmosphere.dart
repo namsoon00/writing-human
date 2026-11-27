@@ -4,6 +4,10 @@ import 'cafe_camera.dart';
 // Retained only to read existing room preferences without discarding data.
 enum CafeSound { rain, water, leaves, music }
 
+enum CafeWeather { clear, rain, autumn, snow }
+
+enum CafeMelody { none, paper, dusk }
+
 /// Preferences only. Playing/muted state and animation progress are not saved.
 class CafeAtmosphere {
   const CafeAtmosphere({
@@ -13,10 +17,20 @@ class CafeAtmosphere {
     this.water = 0,
     this.leaves = 0,
     this.music = 0,
+    this.weather,
+    this.melody = CafeMelody.none,
+    this.environment = 0,
+    this.musicVolume = .35,
+    this.actions = 1,
+    this.weatherMotion = true,
   });
+  final CafeWeather? weather;
+  final CafeMelody melody;
+  final double environment, musicVolume, actions;
+  final bool weatherMotion;
   final bool flow;
   final double volume, rain, water, leaves, music;
-  double get actionVolume => .20 * volume;
+  double get actionVolume => .20 * volume * actions;
   double level(CafeSound sound) => switch (sound) {
     CafeSound.rain => rain,
     CafeSound.water => water,
@@ -28,6 +42,12 @@ class CafeAtmosphere {
     double? volume,
     CafeSound? sound,
     double? level,
+    CafeWeather? weather,
+    CafeMelody? melody,
+    double? environment,
+    double? musicVolume,
+    double? actions,
+    bool? weatherMotion,
   }) => CafeAtmosphere(
     flow: flow ?? this.flow,
     volume: volume ?? this.volume,
@@ -35,11 +55,23 @@ class CafeAtmosphere {
     water: sound == CafeSound.water ? level! : water,
     leaves: sound == CafeSound.leaves ? level! : leaves,
     music: sound == CafeSound.music ? level! : music,
+    weather: weather ?? this.weather,
+    melody: melody ?? this.melody,
+    environment: environment ?? this.environment,
+    musicVolume: musicVolume ?? this.musicVolume,
+    actions: actions ?? this.actions,
+    weatherMotion: weatherMotion ?? this.weatherMotion,
   );
   Map<String, dynamic> toJson() => {
     'flow': flow,
     'volume': volume,
     for (final sound in CafeSound.values) sound.name: level(sound),
+    if (weather != null) 'weather': weather!.name,
+    'melody': melody.name,
+    'environment': environment,
+    'musicVolume': musicVolume,
+    'actions': actions,
+    'weatherMotion': weatherMotion,
   };
   factory CafeAtmosphere.read(dynamic value, {bool legacy = false}) {
     if (value is! Map<String, dynamic> || value['flow'] is! bool) {
@@ -53,6 +85,17 @@ class CafeAtmosphere {
       return n.toDouble();
     }
 
+    T? choice<T extends Enum>(String key, List<T> choices) {
+      if (!value.containsKey(key)) return null;
+      for (final item in choices) {
+        if (item.name == value[key]) return item;
+      }
+      throw FormatException('Invalid cafe $key');
+    }
+
+    if (value.containsKey('weatherMotion') && value['weatherMotion'] is! bool) {
+      throw const FormatException('Invalid weather motion');
+    }
     return CafeAtmosphere(
       flow: value['flow'],
       volume: legacy ? .20 : number('volume'),
@@ -60,6 +103,14 @@ class CafeAtmosphere {
       water: number('water'),
       leaves: number('leaves'),
       music: number('music'),
+      weather: choice('weather', CafeWeather.values),
+      melody: choice('melody', CafeMelody.values) ?? CafeMelody.none,
+      environment: value.containsKey('environment') ? number('environment') : 0,
+      musicVolume: value.containsKey('musicVolume')
+          ? number('musicVolume')
+          : .35,
+      actions: value.containsKey('actions') ? number('actions') : 1,
+      weatherMotion: value['weatherMotion'] ?? true,
     );
   }
 }
@@ -117,13 +168,26 @@ class CafeSoundLevel {
 }
 
 class CafeSoundFrame {
-  const CafeSoundFrame(this.levels);
+  const CafeSoundFrame(
+    this.levels, {
+    this.melody = CafeMelody.none,
+    this.weather = CafeWeather.clear,
+    this.environment = 0,
+    this.musicVolume = 0,
+    this.step,
+  });
   final Map<CafeSound, CafeSoundLevel> levels;
+  final CafeMelody melody;
+  final CafeWeather weather;
+  final double environment, musicVolume;
+  final int? step;
   factory CafeSoundFrame.at({
     required CafeAtmosphere mix,
     required CafeCamera camera,
     required bool courtyard,
     required bool doorOpen,
+    CafeWeather? weather,
+    int? step,
   }) {
     // Convert both rooms into the cafe's continuous world coordinates.
     final p = courtyard
@@ -179,6 +243,23 @@ class CafeSoundFrame {
         outside != courtyard ? (doorOpen ? 3600 : 1000) : 14000,
       );
     }
-    return CafeSoundFrame(Map.unmodifiable(values));
+    final selectedWeather = weather ?? mix.weather ?? CafeWeather.clear;
+    final musicDistance = (p - const CafePoint(1.78, 1.2, -4.35)).length;
+    final windowDistance = (p.x + 4.2).abs();
+    return CafeSoundFrame(
+      Map.unmodifiable(values),
+      melody: mix.melody,
+      weather: selectedWeather,
+      environment:
+          mix.volume *
+          mix.environment *
+          (courtyard ? .30 : .12 * (.35 + .65 / (1 + windowDistance * .4))),
+      musicVolume:
+          mix.volume *
+          mix.musicVolume *
+          (courtyard ? .26 : .65) /
+          (1 + musicDistance * .08),
+      step: step,
+    );
   }
 }

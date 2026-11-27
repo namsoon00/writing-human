@@ -7,6 +7,7 @@ import 'cafe_visit.dart';
 import 'cafe_yard.dart';
 import 'cafe_layout.dart';
 import 'cafe_body.dart';
+import 'cafe_atmosphere.dart';
 
 part 'cafe_courtyard.dart';
 part 'cafe_yard_geometry.dart';
@@ -17,6 +18,7 @@ part 'cafe_entrance.dart';
 part 'cafe_items.dart';
 part 'cafe_use.dart';
 part 'cafe_home_geometry.dart';
+part 'cafe_seasons.dart';
 
 enum CafeSurface {
   plain,
@@ -1600,6 +1602,32 @@ class CafeWorld {
       ),
     );
     // An always-open veranda bay. No sliding glass or raised threshold crosses it.
+    _object(
+      'sound.musicbox',
+      '음악 상자',
+      CafeObjectKind.prop,
+      const CafePoint(1.78, 1.05, -4.35),
+      () {
+        _roundedSlab(
+          1.78,
+          -4.35,
+          .40,
+          .27,
+          top: 1.27,
+          thickness: .20,
+          radius: .04,
+          surface: CafeSurface.walnut,
+          color: dark,
+        );
+        for (var i = 0; i < 7; i++) {
+          box(1.65 + i * .037, 1.17, -4.205, .012, .105, .008, oak, wood: true);
+        }
+        cylinder(1.94, 1.29, -4.35, .025, .018, brass, sides: 10);
+      },
+      type: CafeItemType.decoration,
+      footprint: const Rect.fromLTWH(1.58, -4.485, .40, .27),
+      support: const Rect.fromLTWH(-.71, -4.925, 3.32, .91),
+    );
     _target = CafeTarget.courtyard;
     for (final z in [-2.16, 2.16]) {
       box(-4.15, 1.37, z, .12, 2.74, .07, dark, wood: true);

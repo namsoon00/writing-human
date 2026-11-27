@@ -12,6 +12,41 @@ import 'package:writing_human/ui/cafe_scene.dart';
 import 'package:writing_human/ui/cafe_screen.dart';
 
 void main() {
+  testWidgets(
+    'A drag after a long press interrupts a stroll without opening item editing',
+    (tester) async {
+      final c = CafeViewController();
+      addTearDown(c.dispose);
+      c.visit(CafeTarget.courtyard);
+      c.updateCamera(c.destination!);
+      c.finishTravel();
+      c.world.faces.clear();
+      c.world.linkedWorld.faces.clear();
+      c.world.plants.clear();
+      c.world.linkedWorld.plants.clear();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SizedBox.expand(
+            child: CafeScene(controller: c, hardwareRendering: false),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(c.startStroll(), isTrue);
+      await tester.pump();
+      final surface = find.byKey(const ValueKey('cafe-third-person-view'));
+      final gesture = await tester.startGesture(tester.getCenter(surface));
+      await tester.pump(const Duration(milliseconds: 650));
+      expect(c.travelling, isTrue);
+      await gesture.moveBy(const Offset(45, 0));
+      await tester.pump();
+      expect(c.travelling, isFalse);
+      expect(c.strolling, isFalse);
+      await gesture.up();
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+    },
+  );
   test(
     'Speed ramps from rest, stays bounded, and reaches the exact destination',
     () {

@@ -1,0 +1,41 @@
+{
+  "scope": "Shared seasonal yard and opt-in original scores; personal space v7",
+  "localChecks": {
+    "seasonsAndAudio": {
+      "passed": 7,
+      "failed": 0
+    },
+    "settingsAndSound": {
+      "passed": 17,
+      "failed": 0
+    },
+    "homecomingAndSettings": {
+      "passed": 26,
+      "failed": 0
+    },
+    "walkingAndGpu": {
+      "passed": 14,
+      "failed": 0
+    },
+    "saveRetry": {
+      "passed": 2,
+      "failed": 0
+    }
+  },
+  "browser": {
+    "initialRelease": [
+      "Weather saved without starting playback",
+      "Original score start accepted, no console errors",
+      "Sound off restores muted state",
+      "Yard stroll interrupted by actual CUA drag"
+    ],
+    "finalRelease": "pending",
+    "physicalDevices": false,
+    "auditoryQuality": "No physical speaker/headphone audition; codec/levels and playback request verified separately"
+  },
+  "ci": "pending",
+  "deployment": "pending",
+  "base": "90e493f68266949ba10fd57ca370d9de8155e4ae",
+  "audio": "audio-qa.json",
+  "gestureScreenshot": "stroll-drag-stop.jpg"
+}

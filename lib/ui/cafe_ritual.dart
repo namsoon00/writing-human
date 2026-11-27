@@ -285,7 +285,7 @@ class _CafeRitualSheetState extends State<CafeRitualSheet> {
                               onTap: busy
                                   ? null
                                   : () => save(home.copy(mood: i)),
-                              title: Text(['따뜻한 낮', '해 질 무렵', '비 오는 저녁'][i]),
+                              title: Text(['따뜻한 낮', '해 질 무렵', '조용한 저녁'][i]),
                             ),
                           const Text(
                             '내 공간의 연출이에요. 소리는 카페 위쪽에서 따로 켤 수 있어요.',

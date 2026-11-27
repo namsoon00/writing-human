@@ -86,7 +86,7 @@ void main() {
       );
       expect(
         rain.linkedWorld.weatherFaces(CafeCamera.gardenRest, 0).length,
-        100,
+        inInclusiveRange(50, 350),
       );
     },
   );

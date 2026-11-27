@@ -94,6 +94,8 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
       camera: view.camera,
       courtyard: view.inCourtyard,
       doorOpen: true,
+      weather: view.world.weather,
+      step: view.walkSpeed > .02 ? (view.walkPhase / math.pi).floor() : null,
     ),
   );
   @override
@@ -452,6 +454,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     Widget buildRitual(BuildContext routeContext) => page == 'ambience'
         ? CafeAtmosphereSheet(
             value: view.space.atmosphere,
+            legacyRain: view.space.home.mood == 2,
             playing: soundState,
             onPreview: (mix) {
               if (sound) _updateSound(mix);
@@ -473,7 +476,14 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
             chair: view.activeChairId,
             lastSentence: widget.lastSentence,
             canTranscribe: widget.onTranscribe != null,
-            onSave: (home) => _storeUse(view.space.copy(home: home)),
+            onSave: (home) => _storeUse(
+              view.space.copy(
+                home: home,
+                atmosphere: view.space.atmosphere.copy(
+                  weather: view.world.weather,
+                ),
+              ),
+            ),
           );
     if (!context.mounted) return;
     final pending = page == 'ambience'
@@ -487,7 +497,10 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
       await _startSentence(result);
     } else if (result == CafeRitualAction.rainWindow) {
       if (await _storeUse(
-            view.space.copy(home: view.space.home.copy(mood: 2)),
+            view.space.copy(
+              home: view.space.home.copy(mood: 2),
+              atmosphere: view.space.atmosphere.copy(weather: CafeWeather.rain),
+            ),
           ) &&
           mounted) {
         await _goToSeat(CafeSeat.window);
@@ -646,6 +659,14 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     }
     final object = view.world.objects[id];
     if (object == null) return false;
+    if (id == 'sound.musicbox') {
+      if ((object.pivot - view.camera.position).length > 2.5) {
+        setState(() => calmHint = '가까이 다가와 음악 상자를 눌러 보세요.');
+      } else {
+        unawaited(_openRitual('ambience'));
+      }
+      return true;
+    }
     if (id.startsWith('ritual.')) {
       if ((object.pivot - view.camera.position).length > 2) {
         setState(() => calmHint = '가까이 다가와 쪽지를 눌러 보세요.');

@@ -1,0 +1,42 @@
+[
+  {
+    "asset": "cafe-score-dusk.m4a",
+    "seconds": 64.0,
+    "peak": 0.24957275390625,
+    "rms": 0.0377865607043352,
+    "last100msPeak": 0.0,
+    "bytes": 324320
+  },
+  {
+    "asset": "cafe-score-paper.m4a",
+    "seconds": 64.0,
+    "peak": 0.249969482421875,
+    "rms": 0.04151286749381358,
+    "last100msPeak": 0.0,
+    "bytes": 338945
+  },
+  {
+    "asset": "cafe-season-leaf.wav",
+    "seconds": 0.42,
+    "peak": 0.160003662109375,
+    "rms": 0.023743589718084882,
+    "last100msPeak": 0.0,
+    "bytes": 20204
+  },
+  {
+    "asset": "cafe-season-rain.m4a",
+    "seconds": 30.99116666666667,
+    "peak": 0.217041015625,
+    "rms": 0.024886699993993122,
+    "last100msPeak": 0.000823974609375,
+    "bytes": 251327
+  },
+  {
+    "asset": "cafe-season-snow.wav",
+    "seconds": 0.42,
+    "peak": 0.160003662109375,
+    "rms": 0.020906516841293507,
+    "last100msPeak": 0.0,
+    "bytes": 20204
+  }
+]

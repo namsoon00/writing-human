@@ -124,6 +124,12 @@ flutter:
     - assets/audio/cafe-place.wav
     - assets/audio/cafe-sip.wav
     - assets/audio/cafe-page.wav
+    - assets/audio/cafe-score-paper.m4a
+    - assets/audio/cafe-score-dusk.m4a
+    - assets/audio/cafe-season-rain.m4a
+    - assets/audio/cafe-season-leaf.wav
+    - assets/audio/cafe-season-snow.wav
+    - assets/audio/cafe-seasons-credits.json
     - assets/audio/supertonic-license.txt
     - assets/audio/supertonic-code-license.txt
     - assets/audio/signalsmith-code-license.txt

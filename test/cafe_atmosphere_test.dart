@@ -451,6 +451,7 @@ void main() {
       await mixer(tester);
       store.reject = true;
       final flow = find.byKey(const ValueKey('cafe-light-flow'));
+      await tester.ensureVisible(flow);
       await tester.tap(flow);
       await tester.pumpAndSettle();
       expect(
@@ -501,14 +502,14 @@ void main() {
       await tester.tap(listen);
       await tester.pumpAndSettle();
       expect(find.text('소리를 재생하지 못했어요. 다시 켜 주세요.'), findsOneWidget);
-      expect(find.text('동작음 켜기'), findsOneWidget);
+      expect(find.text('소리 켜기'), findsOneWidget);
       audio.reject = false;
       await tester.tap(listen);
       await tester.pumpAndSettle();
-      expect(find.text('동작음 끄기'), findsOneWidget);
+      expect(find.text('소리 끄기'), findsOneWidget);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
       await tester.pump();
-      expect(find.text('동작음 켜기'), findsOneWidget);
+      expect(find.text('소리 켜기'), findsOneWidget);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await end(tester);
     },

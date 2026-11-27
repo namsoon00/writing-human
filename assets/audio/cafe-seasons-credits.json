@@ -1,0 +1,18 @@
+{
+  "rain": {
+    "title": "rain - drops on porch",
+    "author": "Anthousai",
+    "source": "https://freesound.org/people/Anthousai/sounds/398740/",
+    "download": "https://cdn.freesound.org/previews/398/398740_5923045-hq.mp3",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "edits": "mono 24kHz, DC removal, low-pass, edge fade, level reduction, AAC"
+  },
+  "scores": "Original sixteen-bar sparse tonal renderings; no sampled or copyrighted melody",
+  "footsteps": "Original short contact bursts; no continuous noise loop",
+  "files": {
+    "cafe-score-dusk.m4a": "31d9acafa525ae75be6a0154304957656681c2000825f0b0defbad312309f430",
+    "cafe-score-paper.m4a": "012771b60b41e305d249fa1c5e099690769693922f3e6d93876157e4a2484f7c",
+    "cafe-season-rain.m4a": "76d56123d9b563c5c3b35e37c865fc54567794e33a2f5eea3a700a5d9851e51e"
+  }
+}

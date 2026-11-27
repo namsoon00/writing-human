@@ -114,8 +114,7 @@ extension CafeHomeGeometry on CafeWorld {
   }
 
   /// All rain is in the same garden coordinates used through the windows.
-  Iterable<CafeFace> weatherFaces(CafeCamera camera, double time) sync* {
-    if (space.home.mood != 2) return;
+  Iterable<CafeFace> _rainWindowFaces(CafeCamera camera, double time) sync* {
     final random = math.Random(612);
     CafePoint room(CafePoint p) =>
         courtyard ? p : CafePoint(-p.z, p.y, p.x + 7.4);

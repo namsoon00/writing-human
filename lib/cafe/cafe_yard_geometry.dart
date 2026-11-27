@@ -28,7 +28,9 @@ extension _FrontYardGeometry on CafeWorld {
       faces.add(
         CafeFace(
           p,
-          color,
+          weather == CafeWeather.rain
+              ? Color.lerp(color, const Color(0xff596965), .18)!
+              : color,
           surface: surface,
           layer: 1,
           part: part,

@@ -289,7 +289,9 @@ extension _CourtyardGeometry on CafeWorld {
               CafePoint(x + .56, 0, z + .86),
               CafePoint(x + .56, 0, z),
             ],
-            const Color(0xfff4eddf),
+            weather == CafeWeather.rain && z + .43 < 1.9
+                ? const Color(0xffc3cec7)
+                : const Color(0xfff4eddf),
             surface: CafeSurface.gravel,
             layer: 0,
             textureCoordinates: [

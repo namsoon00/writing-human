@@ -118,6 +118,11 @@ class _CafeSceneState extends State<CafeScene>
             : 0.0);
     final length = math.sqrt(side * side + ahead * ahead);
     if (length > 0) {
+      if (!MediaQuery.disableAnimationsOf(context)) {
+        sceneTime += dt;
+        heldTime = sceneTime;
+        widget.controller.effectTime = sceneTime;
+      }
       widget.controller.freeStep(
         side / length * keySpeed * dt,
         ahead / length * keySpeed * dt,

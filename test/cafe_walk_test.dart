@@ -172,11 +172,14 @@ void main() {
           .requestFocus();
       await tester.pump();
       final before = c.camera.position;
+      c.look(0, 0);
+      final beforeEffects = c.effectTime;
       await tester.sendKeyDownEvent(LogicalKeyboardKey.keyW);
       for (var i = 0; i < 20; i++) {
         await tester.pump(const Duration(milliseconds: 30));
       }
       expect((c.camera.position - before).length, greaterThan(.2));
+      expect(c.effectTime, greaterThan(beforeEffects));
       expect(c.world.canStand(c.camera.position), isTrue);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.keyW);
       await tester.pump();

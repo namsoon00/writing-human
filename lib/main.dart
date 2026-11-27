@@ -51,7 +51,7 @@ class _WritingHumanAppState extends State<WritingHumanApp> {
         navigation: navigation,
         child: MediaQuery(
           data: media.copyWith(textScaler: ReadingTextScaler(media.textScaler)),
-          child: child!,
+          child: PaperBackGesture(navigation: navigation, child: child!),
         ),
       );
     },

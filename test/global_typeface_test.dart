@@ -252,7 +252,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('설정'));
+      await tester.tap(find.byTooltip('설정'));
       await tester.pumpAndSettle();
       expect(find.text('책장 설정'), findsOneWidget);
       final stocks = [for (final name in paperNames) find.text(name)];

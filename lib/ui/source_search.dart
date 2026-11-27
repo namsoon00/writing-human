@@ -817,7 +817,7 @@ class _SourceSearchState extends State<_SourceSearch> {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 6, 0),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
                 child: PaperHeaderRow(
                   children: [
                     PaperBackButton(

@@ -217,7 +217,7 @@ class _BookAppearanceState extends State<BookAppearance> {
               centerTitle: true,
               backgroundColor: paper,
               surfaceTintColor: Colors.transparent,
-              leadingWidth: 130,
+              leadingWidth: 56,
               leading: PaperBackButton(
                 label: opened == null ? null : '책 꾸미기',
                 enabled: controller.saveError == null,

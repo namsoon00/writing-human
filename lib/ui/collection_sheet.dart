@@ -578,7 +578,7 @@ class _CollectionSheetState extends State<CollectionSheet> {
       final sheet = Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 6, 12, 8),
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
             child: PaperHeaderRow(
               children: [
                 PaperBackButton(
@@ -590,10 +590,10 @@ class _CollectionSheetState extends State<CollectionSheet> {
                 if (topLevel) ...[
                   Expanded(child: PaperPanelTitle(shelf ? '책장' : '내 글')),
                   if (shelf && !showSearch && widget.onSettings != null)
-                    TextButton.icon(
+                    IconButton(
+                      tooltip: '설정',
                       onPressed: widget.onSettings,
-                      icon: const Icon(CupertinoIcons.gear, size: 17),
-                      label: const Text('설정'),
+                      icon: const Icon(CupertinoIcons.gear, size: 20),
                     ),
                 ] else if (book != null) ...[
                   if (showingPractice)

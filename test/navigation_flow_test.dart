@@ -203,19 +203,20 @@ void main() {
   );
 
   testWidgets(
-    'Tool panel drag returns to the same text and cursor with the selected tool',
+    'Full-screen tools return to the same text and cursor with the selected tool',
     (tester) async {
       final store = await open(tester);
       final before = store.data.activePage!.toJson();
       await tester.tap(find.text('쓰기 도구'));
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('paper-sheet')), findsOneWidget);
+      expect(find.byKey(const ValueKey('paper-sheet-handle')), findsNothing);
+      expect(
+        tester.getRect(find.byKey(const ValueKey('paper-panel-page'))),
+        const Rect.fromLTWH(0, 0, 390, 844),
+      );
       await tester.tap(find.byKey(const ValueKey('choose-paper-tool-eraser')));
       await tester.pumpAndSettle();
-      await tester.drag(
-        find.byKey(const ValueKey('paper-sheet-handle')),
-        const Offset(0, 160),
-      );
+      await tester.dragFrom(const Offset(5, 300), const Offset(220, 0));
       await tester.pumpAndSettle();
       expect(find.byType(ToolsScreen), findsNothing);
       expect(store.data.activePage!.toJson(), before);

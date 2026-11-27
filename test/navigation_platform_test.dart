@@ -8,7 +8,7 @@ import 'widget_test.dart' show MemoryStore;
 
 void main() {
   testWidgets(
-    'iOS edge back follows a local source/list step before leaving the route',
+    'Edge back follows a local source/list step before leaving the route',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
@@ -33,7 +33,11 @@ void main() {
       expect(find.byKey(const ValueKey('source-reading-text')), findsNothing);
       expect(store.data.activePageId, 'pa');
     },
-    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+    variant: TargetPlatformVariant({
+      TargetPlatform.iOS,
+      TargetPlatform.android,
+      TargetPlatform.linux,
+    }),
   );
 
   testWidgets(
@@ -74,7 +78,7 @@ void main() {
     },
   );
 
-  testWidgets('Sheet drag and barrier cannot bypass a failed-save guard', (
+  testWidgets('Full-screen back cannot bypass a failed-save guard', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -99,10 +103,9 @@ void main() {
     );
     await tester.tap(find.text('열기'));
     await tester.pumpAndSettle();
-    await tester.drag(
-      find.byKey(const ValueKey('paper-sheet-handle')),
-      const Offset(0, 170),
-    );
+    expect(find.byKey(const ValueKey('paper-sheet-handle')), findsNothing);
+    expect(find.byKey(const ValueKey('paper-panel-page')), findsOneWidget);
+    await tester.dragFrom(const Offset(5, 300), const Offset(200, 0));
     await tester.pumpAndSettle();
     expect(find.text('저장 실패 · 다시 저장'), findsOneWidget);
     await tester.binding.handlePopRoute();

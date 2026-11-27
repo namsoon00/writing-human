@@ -83,13 +83,17 @@ try {
   snapshot=JSON.parse(await evaluate('navigationSnapshot()'));
   if(snapshot.activePageId!=='pa'||JSON.stringify(snapshot.pages)!==JSON.stringify(initial.pages)||snapshot.records.length!==2)throw Error('Return changed writing/cursor/records');
   await click('쓰기 도구');
-  await until(async()=>(await labels()).includes('아래로 내려 돌아가기'),'tool panel');
-  await click('아래로 내려 돌아가기');
-  await until(async()=>!(await labels()).includes('아래로 내려 돌아가기'),'panel return');
+  await until(async()=>(await labels()).includes('지우개'),'full-screen tools');
+  if((await labels()).includes('아래로 내려 돌아가기'))throw Error('Obsolete sheet handle');
+  await send('Page.captureScreenshot',{format:'png'}).then(x=>writeFile(join(out,'browser-tools-fullscreen.png'),Buffer.from(x.result.data,'base64')));
+  await send('Input.dispatchMouseEvent',{type:'mousePressed',x:5,y:300,button:'left',clickCount:1});
+  for(let x=15;x<=245;x+=10){await send('Input.dispatchMouseEvent',{type:'mouseMoved',x,y:300,button:'left',buttons:1});await wait(16);}
+  await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:245,y:300,button:'left',clickCount:1});
+  await until(async()=>(await labels()).includes('쓰기 도구')&&!(await labels()).includes('지우개'),'edge back from full screen');
   const final=JSON.parse(await evaluate('navigationSnapshot()'));
   const finalUrl=await evaluate('location.href');
   if(JSON.stringify(final.pages)!==JSON.stringify(initial.pages)||final.activePageId!=='pa'||finalUrl!==initialUrl)throw Error('Panel changed paper or history URL');
-  const result={scope:'Actual compiled Flutter app in headless Chrome, synthetic in-memory records. Real browser history.back and CDP pointer input. Not physical-device or disk verification.',browser_back:'detail to source list',origin_shortcut:'deep source to original writing',panel_return:'same writing',pages_and_cursor_unchanged:true,record_count:final.records.length,url_unchanged:true};
+  const result={scope:'Actual compiled Flutter app in headless Chrome, synthetic in-memory records. Real browser history.back and CDP pointer input. Not physical-device or disk verification.',browser_back:'detail to source list',origin_shortcut:'deep source to original writing',full_screen_edge_return:'same writing',pages_and_cursor_unchanged:true,record_count:final.records.length,url_unchanged:true};
   await writeFile(join(out,'browser-navigation.json'),JSON.stringify(result,null,2)+'\n');
   await send('Page.captureScreenshot',{format:'png'}).then(x=>writeFile(join(out,'browser-returned-writing.png'),Buffer.from(x.result.data,'base64')));
   console.log(JSON.stringify(result));

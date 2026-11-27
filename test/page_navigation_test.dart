@@ -816,7 +816,7 @@ void main() {
       expect(tester.widget<TextField>(field).controller!.text, '둘째 페이지');
       await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('설정'));
+      await tester.tap(find.byTooltip('설정'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('기록 관리'));
       await tester.tap(find.text('기록 관리'));

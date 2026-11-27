@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'paper.dart';
 
 /// Navigation belongs to the current app instance, never to stored writing.
 class PaperNavigation extends NavigatorObserver with ChangeNotifier {
@@ -11,6 +10,9 @@ class PaperNavigation extends NavigatorObserver with ChangeNotifier {
   bool _notifying = false, _returning = false, _disposed = false;
   String? Function()? currentWritingPageId;
   Future<bool> Function()? canReturnToWriting;
+
+  Route<dynamic>? get currentRoute => _routes.lastOrNull;
+  bool get canGoBack => _routes.length > 1;
 
   void _changed() {
     if (_notifying || _disposed) return;
@@ -138,24 +140,16 @@ class PaperBackButton extends StatelessWidget {
         label ??
         PaperNavigationScope.maybeOf(context)?.parentLabel(context) ??
         '뒤로';
-    return Tooltip(
-      message: target,
-      child: TextButton.icon(
-        key: const ValueKey('paper-back'),
-        onPressed: enabled
-            ? onPressed ?? () => Navigator.maybePop(context)
-            : null,
-        icon: const Icon(CupertinoIcons.chevron_left, size: 17),
-        label: Text(target, maxLines: 2, textAlign: TextAlign.start),
-        style: TextButton.styleFrom(
-          minimumSize: const Size(48, 48),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          textStyle: const TextStyle(
-            fontFamily: appFontFamily,
-            fontFamilyFallback: appFontFallback,
-            fontSize: 14,
-          ),
-        ),
+    return IconButton(
+      tooltip: target,
+      key: const ValueKey('paper-back'),
+      onPressed: enabled
+          ? onPressed ?? () => Navigator.maybePop(context)
+          : null,
+      icon: const Icon(CupertinoIcons.chevron_left, size: 20),
+      style: IconButton.styleFrom(
+        minimumSize: const Size(48, 48),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
       ),
     );
   }
@@ -176,14 +170,15 @@ class PaperWritingReturn extends StatelessWidget {
         (!force && !navigation.hasParentScreen(context))) {
       return const SizedBox.shrink();
     }
-    return TextButton(
+    return IconButton(
       key: const ValueKey('return-to-writing'),
+      tooltip: '쓰던 쪽',
       onPressed: enabled ? navigation.returnToWriting : null,
-      style: TextButton.styleFrom(
+      style: IconButton.styleFrom(
         minimumSize: const Size(48, 48),
         padding: const EdgeInsets.symmetric(horizontal: 8),
       ),
-      child: const Text('쓰던 쪽', style: TextStyle(fontSize: 14)),
+      icon: const Icon(CupertinoIcons.square_pencil, size: 20),
     );
   }
 }
@@ -208,7 +203,7 @@ class _PaperInternalBackState extends State<PaperInternalBack> {
   double distance = 0;
   @override
   Widget build(BuildContext context) {
-    if (!widget.enabled || Theme.of(context).platform != TargetPlatform.iOS) {
+    if (!widget.enabled) {
       return widget.child;
     }
     return Stack(
@@ -237,4 +232,76 @@ class _PaperInternalBackState extends State<PaperInternalBack> {
       ],
     );
   }
+}
+
+/// All app routes share the same guarded edge-back action, including forms and
+/// future screens. A blocked route still receives maybePop for its draft guard.
+/// The writing root has no edge overlay, so book turning keeps its own gesture.
+class PaperBackGesture extends StatefulWidget {
+  const PaperBackGesture({
+    super.key,
+    required this.navigation,
+    required this.child,
+  });
+  final PaperNavigation navigation;
+  final Widget child;
+
+  @override
+  State<PaperBackGesture> createState() => _PaperBackGestureState();
+}
+
+class _PaperBackGestureState extends State<PaperBackGesture> {
+  double distance = 0;
+  Route<dynamic>? startedRoute;
+  bool requesting = false;
+
+  Future<void> _end(DragEndDetails details) async {
+    final navigation = widget.navigation;
+    final qualifies =
+        distance > 70 ||
+        (distance > 15 && (details.primaryVelocity ?? 0) > 700);
+    if (!qualifies ||
+        requesting ||
+        !identical(startedRoute, navigation.currentRoute)) {
+      return;
+    }
+    requesting = true;
+    try {
+      await navigation.navigator?.maybePop();
+    } finally {
+      requesting = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: widget.navigation,
+    builder: (context, _) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          widget.child,
+          if (widget.navigation.canGoBack)
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 22,
+              child: GestureDetector(
+                key: const ValueKey('paper-back-edge'),
+                behavior: HitTestBehavior.translucent,
+                excludeFromSemantics: true,
+                onHorizontalDragStart: (_) {
+                  distance = 0;
+                  startedRoute = widget.navigation.currentRoute;
+                },
+                onHorizontalDragUpdate: (event) => distance += event.delta.dx,
+                onHorizontalDragCancel: () => startedRoute = null,
+                onHorizontalDragEnd: _end,
+              ),
+            ),
+        ],
+      );
+    },
+  );
 }

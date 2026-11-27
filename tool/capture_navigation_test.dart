@@ -10,7 +10,9 @@ import '../test/navigation_flow_test.dart' show fixture;
 import '../test/widget_test.dart' show MemoryStore;
 
 void main() {
-  testWidgets('Capture implemented navigation and tool panel', (tester) async {
+  testWidgets('Capture full-screen navigation and centered headers', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -47,7 +49,7 @@ void main() {
         final image = await boundary.toImage(pixelRatio: 2);
         final data = await image.toByteData(format: ui.ImageByteFormat.png);
         final file = File(
-          'output/navigation-implementation-20261125/screens/$name.png',
+          'output/navigation-fullscreen-20261127/screens/$name.png',
         );
         await file.parent.create(recursive: true);
         await file.writeAsBytes(data!.buffer.asUint8List());
@@ -59,18 +61,23 @@ void main() {
     await capture('01-writing');
     await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
     await tester.pumpAndSettle();
+    await capture('02-bookshelf');
+    await tester.tap(find.widgetWithText(TextButton, '내 글'));
+    await capture('03-my-writing');
+    await tester.tap(find.widgetWithText(TextButton, '책장'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('shelf-book-b')));
-    await capture('02-book-contents');
+    await capture('04-book-contents');
     await tester.tap(find.text('원문'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('source-b')));
-    await capture('03-original');
+    await capture('05-original');
     await tester.tap(find.byKey(const ValueKey('return-to-writing')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('쓰기 도구'));
-    await capture('04-tools-sheet');
+    await capture('06-tools-fullscreen');
     tester.view.physicalSize = const Size(320, 640);
     tester.platformDispatcher.textScaleFactorTestValue = 2;
-    await capture('05-tools-large-text');
+    await capture('07-tools-large-text');
   });
 }

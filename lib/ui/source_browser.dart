@@ -124,8 +124,9 @@ class _SourceBrowserState extends State<_SourceBrowser> {
     final page = browser.embeddedSourcePage(widget.url);
     return Scaffold(
       appBar: AppBar(
-        leadingWidth: 120,
+        leadingWidth: 56,
         leading: const PaperBackButton(),
+        centerTitle: true,
         title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
           if (page != null)

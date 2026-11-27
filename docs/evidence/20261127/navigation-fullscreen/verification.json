@@ -1,0 +1,21 @@
+{
+  "date": "2026-11-27",
+  "focused_navigation_tests": 17,
+  "flutter_renders": 7,
+  "scoped_analyze": "No issues found",
+  "format": "226 files, 0 changed",
+  "compiled_web": {
+    "scope": "Actual compiled Flutter app in headless Chrome, synthetic in-memory records. Real browser history.back and CDP pointer input. Not physical-device or disk verification.",
+    "browser_back": "detail to source list",
+    "origin_shortcut": "deep source to original writing",
+    "full_screen_edge_return": "same writing",
+    "pages_and_cursor_unchanged": true,
+    "record_count": 2,
+    "url_unchanged": true
+  },
+  "limits": [
+    "iOS/Android are themed widget tests, not physical-device verification.",
+    "Existing artifacts/output Dart experiments cause 281 root-wide analyzer findings; source analysis passes."
+  ],
+  "full_suite": "running; final result recorded in docs/verification.md"
+}

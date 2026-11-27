@@ -649,7 +649,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
       await tester.pumpAndSettle();
-      final settings = find.widgetWithText(TextButton, '설정');
+      final settings = find.byTooltip('설정');
       expect(
         find.descendant(
           of: settings,
@@ -857,7 +857,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('open-bookshelf')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('설정'));
+    await tester.tap(find.byTooltip('설정'));
     await tester.pumpAndSettle();
     expect(find.textContaining('11,172'), findsNothing);
     final archive = find.text('기록 관리');

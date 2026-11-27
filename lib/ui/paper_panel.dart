@@ -69,19 +69,17 @@ class PaperPanelHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Wrap(
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 8,
+        PaperHeaderRow(
           children: [
-            PaperBackButton(
-              label: backLabel,
-              onPressed: onBack,
-              enabled: canClose,
-            ),
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.sizeOf(context).width * .7,
-              ),
+            if (showBackButton)
+              PaperBackButton(
+                label: backLabel,
+                onPressed: onBack,
+                enabled: canClose,
+              )
+            else
+              const SizedBox(width: 48),
+            Expanded(
               child: PaperPanelTitle(title, showInkMark: false, fontSize: 22),
             ),
             if (allowWritingReturn) PaperWritingReturn(enabled: canClose),
@@ -100,7 +98,7 @@ class PaperPanelTitle extends StatelessWidget {
     this.title, {
     super.key,
     this.fontSize = 25,
-    this.showInkMark = true,
+    this.showInkMark = false,
   });
   final String title;
   final double fontSize;
@@ -111,6 +109,7 @@ class PaperPanelTitle extends StatelessWidget {
     header: true,
     child: Row(
       mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (showInkMark) ...[
           const InkMark(size: 13),
@@ -119,6 +118,7 @@ class PaperPanelTitle extends StatelessWidget {
         Flexible(
           child: Text(
             title,
+            textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -166,138 +166,43 @@ class PaperSettingsSaveNotice extends StatelessWidget {
   );
 }
 
-/// One temporary panel over the existing paper. Its pop uses the same guards
-/// as a button/system back; dragging never edits the underlying document.
-PageRoute<T> paperSheetRoute<T>(WidgetBuilder builder) => PageRouteBuilder<T>(
-  opaque: false,
-  fullscreenDialog: true,
-  barrierDismissible: true,
-  barrierColor: Colors.black.withValues(alpha: .14),
-  barrierLabel: '이전 화면으로 돌아가기',
-  pageBuilder: (context, animation, secondaryAnimation) =>
-      _PaperSheetFrame(child: builder(context)),
-  transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-      SlideTransition(
-        position: Tween(begin: const Offset(0, 1), end: Offset.zero).animate(
-          CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-        ),
-        child: child,
-      ),
-);
+/// Compatibility entry point for callers that used a temporary sheet. The
+/// destination now occupies a normal full screen and follows page navigation.
+MaterialPageRoute<T> paperSheetRoute<T>(WidgetBuilder builder) =>
+    paperPanelRoute<T>(builder);
 
-class _PaperSheetFrame extends StatefulWidget {
-  const _PaperSheetFrame({required this.child});
-  final Widget child;
-  @override
-  State<_PaperSheetFrame> createState() => _PaperSheetFrameState();
-}
-
-class _PaperSheetFrameState extends State<_PaperSheetFrame> {
-  double drag = 0;
-  bool moving = false;
-
-  Future<void> _release([double velocity = 0]) async {
-    if (drag > 70 || velocity > 700) {
-      await Navigator.maybePop(context);
-    }
-    if (mounted) {
-      setState(() {
-        drag = 0;
-        moving = false;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final media = MediaQuery.of(context);
-    final tall =
-        media.size.width > media.size.height || media.textScaler.scale(16) > 22;
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: SizedBox(
-        width: 600,
-        height: media.size.height * (tall ? .96 : .74),
-        child: AnimatedSlide(
-          offset: Offset(0, drag / (media.size.height * (tall ? .96 : .74))),
-          duration: Duration(milliseconds: moving ? 0 : 160),
-          child: Material(
-            key: const ValueKey('paper-sheet'),
-            color: paper,
-            clipBehavior: Clip.antiAlias,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-            child: Column(
-              children: [
-                Semantics(
-                  label: '아래로 내려 돌아가기',
-                  button: true,
-                  onTap: () => Navigator.maybePop(context),
-                  child: GestureDetector(
-                    key: const ValueKey('paper-sheet-handle'),
-                    behavior: HitTestBehavior.opaque,
-                    onVerticalDragStart: (_) => setState(() => moving = true),
-                    onVerticalDragUpdate: (event) => setState(() {
-                      drag = (drag + event.delta.dy).clamp(
-                        0.0,
-                        media.size.height,
-                      );
-                    }),
-                    onVerticalDragCancel: () => _release(),
-                    onVerticalDragEnd: (event) =>
-                        _release(event.primaryVelocity ?? 0),
-                    child: SizedBox(
-                      height: 48,
-                      width: double.infinity,
-                      child: Center(
-                        child: Container(
-                          width: 36,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: muted.withValues(alpha: .5),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: MediaQuery.removePadding(
-                    context: context,
-                    removeTop: true,
-                    child: widget.child,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Navigation actions wrap before they can squeeze a title or overflow at large type.
+/// Equal side columns keep the title at the screen's center even when the
+/// actions are asymmetric. Actions wrap within their own column at large type.
 class PaperHeaderRow extends StatelessWidget {
   const PaperHeaderRow({super.key, required this.children});
   final List<Widget> children;
+
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
-      if (MediaQuery.sizeOf(context).width >= 360 &&
-          MediaQuery.textScalerOf(context).scale(16) <= 21) {
-        return Row(children: children);
-      }
-      return Wrap(
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          for (final child in children.where((child) => child is! Spacer))
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: child is Flexible ? box.maxWidth * .55 : box.maxWidth,
+      final middle = children.indexWhere((child) => child is Flexible);
+      if (middle < 0) return Row(children: children);
+      final title = (children[middle] as Flexible).child;
+      final sideWidth = (box.maxWidth / 3).clamp(48.0, 144.0);
+      Widget side(Iterable<Widget> items, WrapAlignment alignment) => SizedBox(
+        width: sideWidth,
+        child: Wrap(
+          alignment: alignment,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            for (final child in items.where((child) => child is! Spacer))
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: sideWidth),
+                child: child,
               ),
-              child: child is Flexible ? child.child : child,
-            ),
+          ],
+        ),
+      );
+      return Row(
+        children: [
+          side(children.take(middle), WrapAlignment.start),
+          Expanded(child: Center(child: title)),
+          side(children.skip(middle + 1), WrapAlignment.end),
         ],
       );
     },

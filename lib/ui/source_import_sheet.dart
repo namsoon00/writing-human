@@ -1284,7 +1284,7 @@ class _SourceImportSheetState extends State<SourceImportSheet> {
             builder: (context, constraints) => Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 12, 0),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
                   child: PaperHeaderRow(
                     children: [
                       PaperBackButton(

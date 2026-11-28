@@ -39,6 +39,9 @@ import '../cafe/cafe_space.dart';
 import 'cafe_screen.dart';
 import 'cafe_ritual.dart';
 
+const _firstWritingExampleLine = '창가에 앉아 저녁빛을 바라보았다.';
+const _firstWritingExampleSource = '마지막 빛이 종이 위에 천천히 내려앉았다.';
+
 typedef _SavedOriginal = ({
   String? bookId,
   RegisteredOriginal original,
@@ -80,6 +83,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
   late WritingPage draft = _blank();
   late bool fresh = c.library.pages.isEmpty;
   bool userFresh = false;
+  ({WritingPage page, RegisteredOriginal original})? _firstWritingExample;
+  String? _dismissedExamplePage;
+
   String? draftBookId;
   bool _pageNavigationBusy = false;
   int _directPageChange = 0;
@@ -444,6 +450,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       fresh = c.library.pages.isEmpty;
       userFresh = false;
       draft = _blank();
+      _firstWritingExample = null;
+      _dismissedExamplePage = null;
       draftBookId = null;
       _closePageSound();
       _updatePageSound();
@@ -499,10 +507,104 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     c.setEditorState(focused: false, isComposing: _editorComposing);
   }
 
+  bool get _canShowFirstWritingExample =>
+      fresh &&
+      !userFresh &&
+      c.library.pages.isEmpty &&
+      c.library.trashedPages.isEmpty &&
+      c.library.records.isEmpty &&
+      c.library.books.isEmpty;
+
+  void _startFirstWritingExample() {
+    if (!_canShowFirstWritingExample ||
+        !_canLeaveInput() ||
+        c.saveError != null) {
+      return;
+    }
+    final original = RegisteredOriginal(
+      const Uuid().v4(),
+      _firstWritingExampleSource,
+      citation: '쓰는 인간 · 필사 예시',
+    );
+    setState(() {
+      _firstWritingExample = (
+        page: c.attachedPage(draft, original),
+        original: original,
+      );
+    });
+    editorFocus.requestFocus();
+  }
+
+  bool _leaveFirstWritingExample(String pageId) {
+    if (_firstWritingExample?.page.id != pageId) return false;
+    setState(() {
+      _firstWritingExample = null;
+      _dismissedExamplePage = pageId;
+    });
+    return true;
+  }
+
+  Widget _firstWritingExamplePreview(WritingStyle style) {
+    final handwriting = writingTextStyle(
+      style.fontIndex,
+      size: 18,
+      useDevelopmentTypeface: style.useDevelopmentTypeface,
+      color: penColors[style.penIndex],
+    ).copyWith(height: 1.65);
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * .38,
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(22, 6, 22, 6),
+        child: Column(
+          key: const ValueKey('first-writing-example'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('필사 예시', style: TextStyle(color: muted, fontSize: 13)),
+            const SizedBox(height: 8),
+            Text(_firstWritingExampleLine, style: handwriting),
+            Text(
+              _firstWritingExampleSource,
+              style: handwriting.copyWith(color: muted),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                FilledButton(
+                  key: const ValueKey('try-first-transcription'),
+                  onPressed: _startFirstWritingExample,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(48, 48),
+                  ),
+                  child: const Text('이어서 필사하기'),
+                ),
+                TextButton(
+                  key: const ValueKey('skip-first-transcription'),
+                  onPressed: () {
+                    setState(() => _dismissedExamplePage = page.id);
+                    editorFocus.requestFocus();
+                  },
+                  style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                  child: const Text('빈 종이 쓰기'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _edit(String id, String text, int base, int extent, double scroll) {
     if (!c.library.pages.any((p) => p.id == id)) {
       if (text.isEmpty) return;
-      final next = draft.edited(
+      final example = _firstWritingExample?.page.id == id
+          ? _firstWritingExample
+          : null;
+      final next = (example?.page ?? draft).edited(
         text: text,
         base: base,
         extent: extent,
@@ -510,7 +612,12 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
       );
       // Same page ID/key on both sides of this first save: keep the live IME.
       fresh = false;
-      c.saveDraft(next, bookId: draftBookId);
+      _firstWritingExample = null;
+      c.saveDraft(
+        next,
+        bookId: draftBookId,
+        originals: example == null ? const [] : [example.original],
+      );
     } else {
       if (c.library.activePageId != id || !c.library.writing) c.openPage(id);
       c.editPage(id, text, base, extent, scroll);
@@ -521,6 +628,8 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     setState(() {
       _bookLeaf = null;
       draft = _blank();
+      _firstWritingExample = null;
+      _dismissedExamplePage = null;
       draftBookId = bookId;
       fresh = true;
       userFresh = true;
@@ -2273,8 +2382,23 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
         !preview &&
         tool == PaperTool.writing &&
         (keyboardInset > 0 || (mobileWeb && editorFocus.hasFocus));
+    final example =
+        !preview && fresh && _firstWritingExample?.page.id == currentPage.id
+        ? _firstWritingExample
+        : null;
+    final showExample =
+        !preview &&
+        _canShowFirstWritingExample &&
+        example == null &&
+        _dismissedExamplePage != currentPage.id &&
+        !editorFocus.hasFocus &&
+        keyboardInset == 0 &&
+        navigationEnabled &&
+        tool == PaperTool.writing;
     final originals = preview
         ? const <RegisteredOriginal>[]
+        : example != null
+        ? [example.original]
         : originalsFor(
             c.library,
             bookId: bookId,
@@ -2395,6 +2519,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                     ),
                   ],
                 ),
+              if (showExample) _firstWritingExamplePreview(style),
               Expanded(
                 key: const ValueKey('writing-surface'),
                 child: Stack(
@@ -2410,10 +2535,11 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                     else
                       PageEditor(
                         key: ValueKey('${currentPage.id}:${c.editorEpoch}'),
-                        page: currentPage,
+                        page: example?.page ?? currentPage,
                         style: style,
                         focusNode: editorFocus,
                         showFirstWritingHint:
+                            !showExample &&
                             fresh &&
                             c.library.pages.isEmpty &&
                             c.library.trashedPages.isEmpty &&
@@ -2421,7 +2547,10 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                         originals: originals,
                         guidedOriginal: originals
                             .where(
-                              (item) => item.id == currentPage.guidedOriginalId,
+                              (item) =>
+                                  item.id ==
+                                  (example?.page ?? currentPage)
+                                      .guidedOriginalId,
                             )
                             .firstOrNull,
                         onAddOriginal: navigationEnabled
@@ -2432,7 +2561,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                               !_editorComposing &&
                               !c.composing &&
                               page.id == currentPage.id) {
-                            c.detachOriginal(currentPage.id, id);
+                            if (!_leaveFirstWritingExample(currentPage.id)) {
+                              c.detachOriginal(currentPage.id, id);
+                            }
                           }
                         },
                         onWriteWithoutOriginal: () {
@@ -2440,7 +2571,9 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                               !_editorComposing &&
                               !c.composing &&
                               page.id == currentPage.id) {
-                            c.writeWithoutOriginal(currentPage.id);
+                            if (!_leaveFirstWritingExample(currentPage.id)) {
+                              c.writeWithoutOriginal(currentPage.id);
+                            }
                           }
                         },
                         keyboardOverlap: keyboardOverlap,
@@ -2479,7 +2612,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 child: WritingFooter(
                   offerSourceImport:
                       !preview &&
-                      originals.isEmpty &&
+                      (example != null || originals.isEmpty) &&
                       currentPage.originalCitations.isEmpty,
                   ornament: style.bookDetails.ornament,
                   onMenu: _menu,

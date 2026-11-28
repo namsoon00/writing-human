@@ -48,6 +48,66 @@ void main() {
   );
 
   testWidgets(
+    'The first paper shows a copyable example and only saves typed text',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final store = MemoryStore();
+      await tester.pumpWidget(WritingHumanApp(store: store));
+      await tester.pumpAndSettle();
+
+      const example = '창가에 앉아 저녁빛을 바라보았다.';
+      const next = '마지막 빛이 종이 위에 천천히 내려앉았다.';
+      expect(find.text(example).hitTestable(), findsOneWidget);
+      expect(find.text(next).hitTestable(), findsOneWidget);
+      expect(store.writes, 0);
+
+      final field = find.byKey(const ValueKey('page-text'));
+      final input = tester.widget<TextField>(field).controller!;
+      await tester.tap(find.byKey(const ValueKey('try-first-transcription')));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(field).controller, same(input));
+      expect(tester.widget<TextField>(field).focusNode!.hasFocus, isTrue);
+      expect(find.byKey(const ValueKey('transcription-guide')), findsOneWidget);
+      expect(input.text, isEmpty);
+      expect(store.writes, 0);
+
+      const typed = '마지막 빛이';
+      await tester.enterText(field, typed);
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(field).controller, same(input));
+      expect(store.data.pages.single.text, typed);
+      expect(store.data.activeRecord!.originals.single.text, next);
+      expect(
+        store.data.activePage!.guidedOriginalId,
+        store.data.activeRecord!.originals.single.id,
+      );
+      expect(find.byKey(const ValueKey('first-writing-example')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'Choosing a blank paper dismisses the example and keeps free writing',
+    (tester) async {
+      final store = MemoryStore();
+      await tester.pumpWidget(WritingHumanApp(store: store));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('skip-first-transcription')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('first-writing-example')), findsNothing);
+      expect(store.writes, 0);
+      await tester.enterText(find.byKey(const ValueKey('page-text')), '내 첫 글');
+      await tester.pumpAndSettle();
+      expect(store.data.pages.single.text, '내 첫 글');
+      expect(store.data.activeRecord!.originals, isEmpty);
+      expect(store.data.activePage!.guidedOriginalId, isNull);
+    },
+  );
+
+  testWidgets(
     'An empty collection offers actual writing and never creates example records',
     (tester) async {
       final store = MemoryStore();

@@ -9,6 +9,17 @@ import 'package:writing_human/cafe/cafe_walk.dart';
 import 'package:writing_human/cafe/cafe_visit.dart';
 
 void main() {
+  test('Seated hands rest flat above the table instead of pointing upward', () {
+    final a = CafeAvatar(
+      eye: const CafeCamera(position: CafePoint(0, 1.18, 0)),
+      yaw: 0,
+    );
+    final hand = a.faces
+        .where((f) => {'hand', 'finger', 'thumb'}.contains(f.part))
+        .expand((f) => f.points);
+    expect(hand.map((p) => p.y).reduce(math.min), greaterThan(.7525));
+    expect(hand.map((p) => p.y).reduce(math.max), lessThan(.82));
+  });
   test('Resting transitions fold and rise in place before walking away', () {
     final c = CafeViewController();
     addTearDown(c.dispose);

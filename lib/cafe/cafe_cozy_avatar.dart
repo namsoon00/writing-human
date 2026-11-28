@@ -256,7 +256,7 @@ extension _CozyAvatar on CafeAvatar {
         skeleton.fold,
       );
     } else if (seated > 0) {
-      wrist = CafePoint.lerp(wrist, CafePoint(s * .145, .76, -.23), seated);
+      wrist = CafePoint.lerp(wrist, CafePoint(s * .145, .785, -.23), seated);
     }
     if ((wrist - shoulder).length > .35) {
       wrist = shoulder + (wrist - shoulder).normalized * .35;
@@ -326,17 +326,22 @@ extension _CozyAvatar on CafeAvatar {
         across = direction.cross(normal).normalized;
       }
     }
-    if (!grip && skeleton.fold > .01) {
+    if (!grip && (skeleton.fold > .01 || (frame == null && seated > .01))) {
+      final folding = skeleton.fold > .01;
+      final weight = folding ? skeleton.fold : CafeBody.ease(seated);
       direction = CafePoint.lerp(
         direction,
-        CafePoint(s * .23, -.35, -.90).normalized,
-        skeleton.fold,
+        (folding ? CafePoint(s * .23, -.35, -.90) : const CafePoint(0, 0, -1))
+            .normalized,
+        weight,
       ).normalized;
-      normal =
+      final down =
           (const CafePoint(0, -1, 0) -
                   direction * const CafePoint(0, -1, 0).dot(direction))
               .normalized;
+      normal = CafePoint.lerp(normal, down, weight).normalized;
       across = direction.cross(normal).normalized;
+      normal = across.cross(direction).normalized;
     }
     _cozyHand(mesh, wrist, across, direction, normal, s, gripAmount);
   }

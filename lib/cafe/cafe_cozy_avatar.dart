@@ -42,7 +42,6 @@ extension _CozyAvatar on CafeAvatar {
     );
     for (final s in [-1.0, 1.0]) {
       final leg = rig.legs[s < 0 ? 0 : 1];
-      final gait = math.sin(phase + (s < 0 ? math.pi : 0)) * rig.moving;
       final hip = leg.hip, knee = leg.knee, ankle = leg.ankle;
       // Separate segments overlap in a rounded knee instead of twisting a
       // single wide tube through a sharp bend into the other leg.
@@ -93,7 +92,7 @@ extension _CozyAvatar on CafeAvatar {
           ankle - shin * .009,
           ankle + turn(CafePoint(0, naked ? -.064 : -.060, -.014)),
         ],
-        [.031, .033, .034],
+        naked ? [.031, .030, .028] : [.031, .033, .034],
         naked ? _skin : _cream,
         naked ? 'ankle' : 'sock',
         sides: 10,
@@ -101,23 +100,13 @@ extension _CozyAvatar on CafeAvatar {
       );
       if (naked) {
         foot.ellipsoid(
-          const CafePoint(0, -.067, -.035),
-          const CafePoint(.044, .026, .095),
+          CafeSkeleton._bareFootCenter,
+          CafeSkeleton._bareFootRadii,
           _skin,
           'foot',
           slices: 12,
           rings: 5,
         );
-        for (var i = 0; i < 5; i++) {
-          foot.ellipsoid(
-            CafePoint((i - 2) * .016, -.065, -.112 + i * .004),
-            CafePoint(.012 - i * .0007, .015, .022 - i * .0015),
-            _skin,
-            'foot.toe',
-            slices: 6,
-            rings: 4,
-          );
-        }
       } else {
         foot.ellipsoid(
           const CafePoint(0, -.091, -.025),
@@ -149,23 +138,20 @@ extension _CozyAvatar on CafeAvatar {
       }
       mesh.faces.addAll(foot.faces);
       if (ankle.y < .16) _footShadow(mesh, ankle);
-      _cozyArm(mesh, s, gait, bob, drop);
+      _cozyArm(mesh, s);
     }
     return [...coat.faces, ...head.faces, ...mesh.faces];
   }
 
-  void _cozyArm(
-    _AvatarMesh mesh,
-    double s,
-    double gait,
-    double bob,
-    double drop,
-  ) {
+  void _cozyArm(_AvatarMesh mesh, double s) {
+    // At heel strike, the shoulder and wrist on that side trail the foot.
+    // A cosine keeps the arm swinging smoothly even through the foot lift.
+    final swing = s * math.cos(phase) * skeleton.moving;
     final shoulder =
-        skeleton.torsoPoint(CafePoint(s * .163, .815, 0)) -
+        skeleton.torsoPoint(CafePoint(s * .163, .815, swing * .013)) -
         CafePoint(0, .02 * skeleton.fold, 0);
     var wrist = skeleton.torsoPoint(
-      CafePoint(s * .195, .490, -.012 - gait * .028),
+      CafePoint(s * .190, .491 + .008 * swing.abs(), -.012 + swing * .052),
     );
     final frame = use, obj = object;
     var reach = 0.0, grip = false;

@@ -9,6 +9,31 @@ import 'package:writing_human/cafe/cafe_walk.dart';
 import 'package:writing_human/cafe/cafe_visit.dart';
 
 void main() {
+  test(
+    'Walking palms swing opposite the forward foot at both heel strikes',
+    () {
+      for (final phase in [0.0, math.pi]) {
+        final actor = CafeAvatar(
+          eye: const CafeCamera(position: CafePoint(0, 1.62, 0)),
+          yaw: 0,
+          phase: phase,
+          stride: 1,
+        );
+        double palmZ(double side) {
+          final points = actor.faces
+              .where((face) => face.part == 'hand')
+              .expand((face) => face.points)
+              .where((point) => point.x * side > 0)
+              .toList();
+          return points.map((p) => p.z).reduce((a, b) => a + b) / points.length;
+        }
+
+        final frontSide = phase == 0 ? 1.0 : -1.0;
+        expect(actor.skeleton.legs[frontSide > 0 ? 1 : 0].ankle.z, lessThan(0));
+        expect(palmZ(frontSide) - palmZ(-frontSide), greaterThan(.07));
+      }
+    },
+  );
   test('Seated hands rest flat above the table instead of pointing upward', () {
     final a = CafeAvatar(
       eye: const CafeCamera(position: CafePoint(0, 1.18, 0)),
@@ -94,6 +119,8 @@ void main() {
     final left = a.skeleton.legs[0], right = a.skeleton.legs[1];
     expect(left.knee.x, lessThan(-.12));
     expect(right.knee.x, greaterThan(.12));
+    expect(left.ankle.x, lessThan(-.055));
+    expect(right.ankle.x, greaterThan(.055));
     expect((left.ankle.z - right.ankle.z).abs(), greaterThan(.10));
     var gap = double.infinity;
     for (var i = 1; i < 10; i++) {
@@ -109,8 +136,20 @@ void main() {
     expect(gap, greaterThan(.085));
     expect(left.yaw, greaterThan(1));
     expect(right.yaw, lessThan(-1));
-    final feet = a.faces.where((f) => f.part == 'foot').expand((f) => f.points);
-    expect(feet.map((p) => p.y).reduce(math.min), inInclusiveRange(.045, .060));
+    final feet = a.faces.where((f) => f.part == 'foot').toList();
+    final first = feet.take(feet.length ~/ 2).expand((f) => f.points);
+    final second = feet.skip(feet.length ~/ 2).expand((f) => f.points);
+    for (final foot in [first, second]) {
+      expect(
+        foot.map((p) => p.y).reduce(math.min),
+        inInclusiveRange(.045, .060),
+      );
+    }
+    // Check the rendered soles, not just their joint targets. The front foot
+    // must end before the rear one starts, including the rounded edges.
+    final frontEnd = first.map((p) => p.z).reduce(math.max);
+    final rearStart = second.map((p) => p.z).reduce(math.min);
+    expect(rearStart - frontEnd, greaterThan(.02));
   });
 
   test(

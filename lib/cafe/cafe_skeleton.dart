@@ -18,6 +18,8 @@ class CafeSkeleton {
   CafeSkeleton(this.avatar);
   final CafeAvatar avatar;
   static const thigh = .193, shin = .193;
+  static const _bareFootCenter = CafePoint(0, -.067, -.030);
+  static const _bareFootRadii = CafePoint(.036, .026, .073);
   late final fold = CafeBody.ease(avatar.meditation);
   late final seated = CafeBody.ease(avatar.seated);
   late final bareFeet = avatar.barefoot || avatar.meditating;
@@ -93,8 +95,8 @@ class CafeSkeleton {
 
   CafeLegPose _leg(double side) {
     final (z, lift, pitch) = _step(side);
-    final footYaw = -side * 1.22 * fold;
-    final roll = (side > 0 ? .35 : -.10) * fold;
+    final footYaw = -side * 1.17 * fold;
+    final roll = side * .48 * fold;
     final footHeight = footSupport(bareFeet, pitch, roll);
     final hip = CafePoint(side * .076 + sway, .497 + bob - drop, lean);
     var ankle = CafePoint(side * .081, footHeight + lift, z);
@@ -106,9 +108,10 @@ class CafeSkeleton {
     ankle = CafePoint.lerp(
       ankle,
       CafePoint(
-        side * .008,
+        // Keep the ankles apart and rest the feet at different depths.
+        side < 0 ? -.072 : .075,
         footSupport(true, 0, roll) + .046,
-        side < 0 ? -.275 : -.145,
+        side < 0 ? -.260 : -.147,
       ),
       fold,
     );
@@ -144,7 +147,13 @@ class CafeSkeleton {
               math.pow(zRadius * s, 2),
         );
     final low = barefoot
-        ? bottom(-.067, -.035, .044, .026, .095)
+        ? bottom(
+            _bareFootCenter.y,
+            _bareFootCenter.z,
+            _bareFootRadii.x,
+            _bareFootRadii.y,
+            _bareFootRadii.z,
+          )
         : math.min(
             bottom(-.091, -.025, .068, .017, .106),
             bottom(-.066, -.027, .067, .041, .100),

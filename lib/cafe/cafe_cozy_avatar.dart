@@ -70,15 +70,8 @@ extension _CozyAvatar on CafeAvatar {
         sides: 12,
         caps: false,
       );
-      final cuff = (knee - ankle).normalized;
-      mesh.tube(
-        [ankle + cuff * .012, ankle + cuff * .045],
-        [.037, .038],
-        const Color(0xff705742),
-        'trousers.cuff',
-        sides: 10,
-      );
-      final naked = barefoot || meditating;
+      final shin = (knee - ankle).normalized;
+      final naked = rig.bareFeet;
       final cr = math.cos(leg.roll), sr = math.sin(leg.roll);
       final cp = math.cos(leg.pitch), sp = math.sin(leg.pitch);
       final cy = math.cos(leg.yaw), sy = math.sin(leg.yaw);
@@ -92,12 +85,19 @@ extension _CozyAvatar on CafeAvatar {
         (q) => origin + _rotate(ankle + turn(q)),
         (q) => _rotate(turn(q)),
       );
-      foot.tube(
-        [const CafePoint(0, -.035, 0), const CafePoint(0, .035, 0)],
-        [.034, .037],
+      // The skin or sock follows the shin at the hem and meets the foot
+      // inside its heel, so neither ankle rotation nor a folded leg opens a seam.
+      mesh.tube(
+        [
+          ankle + shin * .038,
+          ankle - shin * .009,
+          ankle + turn(CafePoint(0, naked ? -.064 : -.060, -.014)),
+        ],
+        [.031, .033, .034],
         naked ? _skin : _cream,
         naked ? 'ankle' : 'sock',
         sides: 10,
+        caps: false,
       );
       if (naked) {
         foot.ellipsoid(

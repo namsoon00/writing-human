@@ -390,7 +390,7 @@ void main() {
   }
 
   testWidgets(
-    'Sound stays opt-in, continues across the door and stops on background/close',
+    'Sound selection survives the door, backgrounding and reopening',
     (tester) async {
       final audio = _Audio(), store = _Store();
       final c = await open(tester, audio, store);
@@ -399,6 +399,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(audio.starts, 1);
       expect(audio.frames, isNotEmpty);
+      expect(store.value.soundEnabled, isTrue);
       c.visit(CafeTarget.courtyard);
       await tester.pumpAndSettle();
       expect(c.inCourtyard, isTrue);
@@ -409,11 +410,22 @@ void main() {
       await tester.pump();
       expect(audio.stops, 1);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-      await tester.pump();
-      expect(audio.starts, 1);
-      expect(find.byTooltip('소리 켜기'), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(audio.starts, 2);
+      expect(find.byTooltip('소리 끄기'), findsOneWidget);
       await end(tester);
       expect(audio.disposed, isTrue);
+      final reopened = _Audio();
+      await open(tester, reopened, store);
+      expect(reopened.starts, 1);
+      await tester.tap(find.byTooltip('소리 끄기'));
+      await tester.pumpAndSettle();
+      expect(store.value.soundEnabled, isFalse);
+      await end(tester);
+      final muted = _Audio();
+      await open(tester, muted, store);
+      expect(muted.starts, 0);
+      await end(tester);
     },
   );
 

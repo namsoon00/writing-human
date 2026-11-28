@@ -5,9 +5,9 @@ import 'cafe_camera.dart';
 abstract final class CafeBody {
   static const width = .84, torsoScale = .65;
   static const headWidth = 1.27, headScale = .96;
-  static const gaitLength = .56;
-  static const walkSpeed = .46, strollSpeed = .40;
-  static const stance = .56;
+  static const gaitLength = .66;
+  static const walkSpeed = .63, strollSpeed = .55;
+  static const stance = .53;
   static double ease(double t) {
     final x = t.clamp(0.0, 1.0);
     return x * x * x * (10 + x * (-15 + x * 6));

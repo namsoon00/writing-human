@@ -57,7 +57,7 @@ void main() {
     () {
       expect(
         CafeBody.walkSpeed / CafeBody.gaitLength * 120,
-        inInclusiveRange(85, 110),
+        inInclusiveRange(95, 120),
       );
       for (var i = 0; i <= 30; i++) {
         final fold = i / 30;

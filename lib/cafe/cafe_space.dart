@@ -41,6 +41,7 @@ class CafePose {
 class CafeSpace {
   const CafeSpace({
     this.atmosphere = const CafeAtmosphere(),
+    this.soundEnabled = false,
     this.home = const CafeHome(),
     this.poses = const {},
     this.amounts = const {},
@@ -65,6 +66,7 @@ class CafeSpace {
   });
   final CafeHome home;
   final CafeAtmosphere atmosphere;
+  final bool soundEnabled;
   final Map<String, CafePose> poses;
   final Map<String, int> amounts;
   final Map<String, bool> uses;
@@ -126,6 +128,7 @@ class CafeSpace {
   CafePose pose(String id) => poses[id] ?? const CafePose();
   CafeSpace copy({
     CafeAtmosphere? atmosphere,
+    bool? soundEnabled,
     CafeHome? home,
     Map<String, CafePose>? poses,
     Map<String, int>? amounts,
@@ -150,6 +153,7 @@ class CafeSpace {
     bool? doorOpen,
   }) => CafeSpace(
     atmosphere: atmosphere ?? this.atmosphere,
+    soundEnabled: soundEnabled ?? this.soundEnabled,
     home: home ?? this.home,
     poses: poses ?? this.poses,
     amounts: amounts ?? this.amounts,
@@ -175,6 +179,7 @@ class CafeSpace {
   Map<String, dynamic> toJson() => {
     'version': 7,
     'atmosphere': atmosphere.toJson(),
+    'soundEnabled': soundEnabled,
     'home': home.toJson(),
     'amounts': amounts,
     'uses': uses,
@@ -255,6 +260,7 @@ class CafeSpace {
     }
 
     return CafeSpace(
+      soundEnabled: j.containsKey('soundEnabled') && flag('soundEnabled'),
       atmosphere: j['version'] < 5
           ? const CafeAtmosphere()
           : CafeAtmosphere.read(j['atmosphere'], legacy: j['version'] == 5),

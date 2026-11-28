@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../audio/cafe_ambience.dart';
 import '../audio/cafe_soundscape.dart';
@@ -74,6 +75,8 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
   late final moment = widget.moment ?? DateTime.now();
   String? calmHint;
   bool sound = false, soundBusy = false;
+  bool resumeSoundOnGesture = false;
+  Future<void>? soundStopping;
   final soundState = ValueNotifier(false);
   void _setSound(bool value) {
     sound = value;
@@ -83,13 +86,39 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
   int soundGeneration = 0;
   void _soundFailed(Object error) {
     soundGeneration++;
-    unawaited(ambience.stop());
+    unawaited(_stopSoundQuietly());
     if (mounted) {
       setState(() {
         _setSound(false);
         calmHint = '소리를 재생하지 못했어요. 소리를 다시 켜 주세요.';
       });
     }
+  }
+
+  bool get _foreground =>
+      WidgetsBinding.instance.lifecycleState == null ||
+      WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+
+  Future<void> _stopSound() {
+    return soundStopping ??= Future.wait([ambience.stop(), calmAudio.stop()])
+        .then<void>((_) {})
+        .whenComplete(() {
+          soundStopping = null;
+        });
+  }
+
+  Future<void> _stopSoundQuietly() => _stopSound().catchError((Object _) {});
+
+  Future<void> _restoreSound({bool fromGesture = false}) async {
+    if (!mounted ||
+        !_foreground ||
+        sound ||
+        soundBusy ||
+        !savedRoom.soundEnabled) {
+      return;
+    }
+    resumeSoundOnGesture = false;
+    await _changeSound(true, automatic: !fromGesture);
   }
 
   void _updateSound([CafeAtmosphere? mix]) => ambience.update(
@@ -113,34 +142,92 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) {
-      soundGeneration++;
-      unawaited(ambience.stop());
-      unawaited(calmAudio.stop());
-      if (mounted) setState(() => _setSound(false));
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_restoreSound());
+      return;
+    }
+    soundGeneration++;
+    resumeSoundOnGesture = false;
+    if (sound || soundBusy) unawaited(_stopSoundQuietly());
+    if (mounted) setState(() => _setSound(false));
+  }
+
+  Future<void> _toggleSound() => _changeSound(!sound);
+
+  Future<void> _changeSound(bool desired, {bool automatic = false}) async {
+    if (soundBusy || roomLoading || roomSaving || roomLoadFailed) return;
+    final generation = ++soundGeneration;
+    var failed = false;
+    resumeSoundOnGesture = false;
+    setState(() => soundBusy = true);
+    try {
+      if (desired) {
+        final stopping = soundStopping;
+        if (stopping != null) await stopping;
+        if (mounted && _foreground && generation == soundGeneration) {
+          _updateSound();
+          await ambience.start();
+        }
+      } else {
+        await _stopSound();
+      }
+      if (mounted && generation == soundGeneration) {
+        setState(() {
+          calmHint = null;
+          _setSound(desired && _foreground);
+        });
+      }
+    } catch (error) {
+      failed = true;
+      if (mounted && generation == soundGeneration) {
+        if (automatic && kIsWeb) {
+          // A fresh browser page may need a tap before it can play audio.
+          await _stopSoundQuietly();
+          resumeSoundOnGesture = _foreground;
+          if (mounted && resumeSoundOnGesture) {
+            setState(() => calmHint = '화면을 누르면 소리가 다시 나와요.');
+          }
+        } else {
+          _soundFailed(error);
+        }
+      }
+      return;
+    } finally {
+      if (mounted) {
+        if (generation == soundGeneration &&
+            !automatic &&
+            sound == desired &&
+            savedRoom.soundEnabled != desired) {
+          await _saveSoundPreference(desired);
+        }
+        if (mounted) {
+          setState(() => soundBusy = false);
+          if (!failed && generation != soundGeneration && _foreground) {
+            // Resume may have arrived while the backgrounded operation was
+            // still completing.
+            unawaited(_restoreSound());
+          }
+        }
+      }
     }
   }
 
-  Future<void> _toggleSound() async {
-    if (soundBusy) return;
-    final generation = ++soundGeneration;
-    final desired = !sound;
-    setState(() => soundBusy = true);
+  Future<void> _saveSoundPreference(bool enabled) async {
+    if (roomSaving || roomLoadFailed) {
+      setState(() => calmHint = '소리 설정을 저장하지 못했어요.');
+      return;
+    }
+    setState(() => roomSaving = true);
+    final value = savedRoom.copy(soundEnabled: enabled);
     try {
-      if (sound) {
-        await ambience.stop();
-        await calmAudio.stop();
-      } else {
-        _updateSound();
-        await ambience.start();
+      await (widget.spaceStore ?? _memoryRoom).save(value);
+      if (mounted) savedRoom = value;
+    } catch (_) {
+      if (mounted) {
+        setState(() => calmHint = '소리 설정을 저장하지 못했어요.');
       }
-      if (mounted && generation == soundGeneration) {
-        setState(() => _setSound(desired));
-      }
-    } catch (error) {
-      if (mounted && generation == soundGeneration) _soundFailed(error);
     } finally {
-      if (mounted) setState(() => soundBusy = false);
+      if (mounted) setState(() => roomSaving = false);
     }
   }
 
@@ -168,7 +255,9 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
       placing = false;
   String? roomError, selectedObject;
   CafeSpace savedRoom = const CafeSpace();
-  bool get roomDirty => view.space.encode() != savedRoom.encode();
+  CafeSpace get _roomWithSound =>
+      view.space.copy(soundEnabled: savedRoom.soundEnabled);
+  bool get roomDirty => _roomWithSound.encode() != savedRoom.encode();
   Future<void> _loadRoom() async {
     if (widget.spaceStore == null) return;
     setState(() {
@@ -200,7 +289,10 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
             '\uACF5\uAC04 \uC124\uC815\uC744 \uC5F4\uC9C0 \uBABB\uD588\uC5B4\uC694. \uB2E4\uC2DC \uBD88\uB7EC\uC640 \uC8FC\uC138\uC694.';
       }
     } finally {
-      if (mounted) setState(() => roomLoading = false);
+      if (mounted) {
+        setState(() => roomLoading = false);
+        unawaited(_restoreSound());
+      }
     }
   }
 
@@ -212,7 +304,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
       roomSaveFailed = false;
       roomError = null;
     });
-    final value = view.space;
+    final value = _roomWithSound;
     try {
       await (widget.spaceStore ?? _memoryRoom).save(value);
       if (!mounted) return false;
@@ -1960,30 +2052,40 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            CafeScene(
-              controller: view,
-              moment: moment,
-              interactive:
-                  !opening && !widget.saveFailed && !roomLoading && !roomSaving,
-              editing: editing,
-              placingId: placing ? selectedObject : null,
-              onObjectSelected: (id) async {
-                if (view.using) return;
-                if (!editing) await _editRoom();
-                if (mounted && editing) setState(() => selectedObject = id);
-              },
-              onWalk: _walk,
-              onPutDown: () {
-                unawaited(_putDown());
-              },
-              onObjectPlaced: (point) {
-                if (selectedObject != null) {
-                  _changeRoom(view.world.placed(selectedObject!, point));
+            Listener(
+              onPointerUp: (_) {
+                if (resumeSoundOnGesture) {
+                  unawaited(_restoreSound(fromGesture: true));
                 }
               },
-              onItemActivated: _activateItem,
-              onTargetSelected: _activate,
-              onWrite: _write,
+              child: CafeScene(
+                controller: view,
+                moment: moment,
+                interactive:
+                    !opening &&
+                    !widget.saveFailed &&
+                    !roomLoading &&
+                    !roomSaving,
+                editing: editing,
+                placingId: placing ? selectedObject : null,
+                onObjectSelected: (id) async {
+                  if (view.using) return;
+                  if (!editing) await _editRoom();
+                  if (mounted && editing) setState(() => selectedObject = id);
+                },
+                onWalk: _walk,
+                onPutDown: () {
+                  unawaited(_putDown());
+                },
+                onObjectPlaced: (point) {
+                  if (selectedObject != null) {
+                    _changeRoom(view.world.placed(selectedObject!, point));
+                  }
+                },
+                onItemActivated: _activateItem,
+                onTargetSelected: _activate,
+                onWrite: _write,
+              ),
             ),
             Positioned(
               top: 0,
@@ -2003,7 +2105,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                         ),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 6),
-                          child: PaperHeaderRow(
+                          child: Row(
                             children: [
                               IconButton(
                                 tooltip:
@@ -2020,17 +2122,20 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                                   color: brandInk,
                                 ),
                               ),
+                              if (!editing && !roomSaving && !widget.saveFailed)
+                                PaperWritingReturn(
+                                  enabled:
+                                      !opening && !roomDirty && !view.using,
+                                ),
                               Expanded(
                                 child: Text(
-                                  MediaQuery.textScalerOf(context).scale(16) >
-                                          22
-                                      ? (view.inCourtyard ? '고요한 뜰' : '필사 카페')
-                                      : view.inCourtyard
-                                      ? '쓰는 인간 · 고요한 뜰'
-                                      : '쓰는 인간 · 필사 카페',
-                                  style: TextStyle(
+                                  view.inCourtyard ? '고요한 뜰' : '필사 카페',
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
                                     color: brandInk,
-                                    fontSize: 16,
+                                    fontSize: 14,
                                   ),
                                 ),
                               ),
@@ -2056,7 +2161,13 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                               ),
                               IconButton(
                                 tooltip: sound ? '소리 끄기' : '소리 켜기',
-                                onPressed: soundBusy ? null : _toggleSound,
+                                onPressed:
+                                    soundBusy ||
+                                        roomLoading ||
+                                        roomSaving ||
+                                        roomLoadFailed
+                                    ? null
+                                    : _toggleSound,
                                 icon: Icon(
                                   sound
                                       ? Icons.volume_up_outlined
@@ -2078,11 +2189,6 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
                                   color: brandInk,
                                 ),
                               ),
-                              if (!editing && !roomSaving && !widget.saveFailed)
-                                PaperWritingReturn(
-                                  enabled:
-                                      !opening && !roomDirty && !view.using,
-                                ),
                             ],
                           ),
                         ),

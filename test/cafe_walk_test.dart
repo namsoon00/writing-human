@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/cafe/cafe_camera.dart';
+import 'package:writing_human/cafe/cafe_body.dart';
 import 'package:writing_human/cafe/cafe_renderer.dart';
 import 'package:writing_human/cafe/cafe_view_controller.dart';
 import 'package:writing_human/cafe/cafe_walk.dart';
@@ -60,7 +61,8 @@ void main() {
           last = next;
         }
         expect(last, closeTo(distance, 1e-9));
-        expect(peak, lessThanOrEqualTo(.461));
+        expect(peak, lessThanOrEqualTo(CafeBody.walkSpeed + .001));
+        if (distance >= 1) expect(peak, closeTo(CafeBody.walkSpeed, .001));
         expect(timing.at(.001), lessThan(distance * .001));
       }
     },

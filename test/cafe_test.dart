@@ -110,6 +110,43 @@ Future<void> _reveal(WidgetTester tester, Finder target) async {
 }
 
 void main() {
+  testWidgets('A past transcription opens its saved page from the cafe', (
+    tester,
+  ) async {
+    const source = RegisteredOriginal('old-source', '저녁 창가의 빛을 적습니다.');
+    final previous = _library.pages.last.withDetails(
+      writtenOn: '2026-11-22',
+      passages: const [
+        PagePassage(id: 'link-old', start: 0, attached: true, original: source),
+      ],
+    );
+    final store = MemoryStore()
+      ..data = _library.copy(pages: [_library.pages.first, previous]);
+    await _open(tester, store);
+    await _enterCafe(tester);
+    await tester.tap(find.byTooltip('공간 안내'));
+    await tester.pumpAndSettle();
+    final memory = find.byKey(const ValueKey('cafe-ritual-memory'));
+    await tester.ensureVisible(memory);
+    await tester.tap(memory);
+    await tester.pumpAndSettle();
+    expect(find.text('지난 필사 · 2026-11-22'), findsOneWidget);
+    expect(find.text(previous.text), findsOneWidget);
+    expect(store.data.activePageId, 'pa');
+    expect(store.data.records, hasLength(2));
+    final openPast = find.byKey(const ValueKey('cafe-open-past-writing'));
+    await tester.ensureVisible(openPast);
+    await tester.tap(openPast);
+    await tester.pumpAndSettle();
+    expect(find.byType(CafeScreen), findsNothing);
+    expect(store.data.activePageId, 'pb');
+    expect(
+      store.data.pages.map((page) => page.text),
+      _library.pages.map((page) => page.text),
+    );
+    expect(store.data.records, hasLength(2));
+  });
+
   setUp(() {
     final dispatcher =
         TestWidgetsFlutterBinding.ensureInitialized().platformDispatcher;

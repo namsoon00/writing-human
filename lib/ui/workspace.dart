@@ -37,6 +37,7 @@ import 'archive_sheet.dart';
 import '../cafe/cafe_visit.dart';
 import '../cafe/cafe_space.dart';
 import 'cafe_screen.dart';
+import 'cafe_ritual.dart';
 
 typedef _SavedOriginal = ({
   String? bookId,
@@ -616,6 +617,53 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
     );
   }
 
+  CafePastWriting? _pastCafeWriting(Library library) {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    WritingPage? past;
+    WritingPage? earlierToday;
+    for (final page in library.pages.reversed) {
+      if (page.text.trim().isEmpty ||
+          (page.guidedOriginalId == null &&
+              !page.passages.any(
+                (link) => link.attached && !link.referenceOnly,
+              ))) {
+        continue;
+      }
+      final date = page.writtenOn ?? '';
+      if (date == today && page.id != library.activePageId) {
+        earlierToday ??= page;
+      } else if (date.compareTo(today) < 0 &&
+          (past == null || date.compareTo(past.writtenOn ?? '') > 0)) {
+        past = page;
+      }
+    }
+    final chosen = past ?? earlierToday;
+    if (chosen == null) return null;
+    final record = library.records
+        .where((record) => record.id == chosen.recordId)
+        .firstOrNull;
+    if (record == null) return null;
+    final originals = originalsFor(
+      library,
+      bookId: record.bookId,
+      recordId: record.id,
+    );
+    final links = pageOriginals(
+      chosen,
+      originals,
+    ).where((link) => link.attached && !link.referenceOnly);
+    final source = links.map(passageOriginal).nonNulls.firstOrNull;
+    if (source?.canTranscribe != true) return null;
+    final line = chosen.text.trim().split('\n').first.trimRight();
+    final letters = line.characters.take(120).toString();
+    return (
+      pageId: chosen.id,
+      date: chosen.writtenOn,
+      text: line == letters ? letters : '$letters…',
+      photoId: source?.photoId,
+    );
+  }
+
   Future<void> _cafe() async {
     if (_openingCafe || _pageNavigationBusy || _accountLocked) return;
     if (_editorComposing || c.composing) {
@@ -645,6 +693,7 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
             )
           : MemoryCafeSpaceStore();
       if (!mounted || c != owner || _accountLocked) return;
+      final pastWriting = _pastCafeWriting(owner.library);
       final sentenceDrafts =
           <String, ({WritingPage page, RegisteredOriginal original})>{};
       final route = paperPanelRoute<void>(
@@ -658,6 +707,33 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                 : '${book!.title} · 지금 펼친 쪽',
             initialSeat: _cafeSeat,
             lastSentence: page.text.trim().characters.take(120).toString(),
+            pastWriting: pastWriting,
+            onOpenPastWriting: (pageId) async {
+              final route = ModalRoute.of(context);
+              if (route?.isCurrent != true ||
+                  !mounted ||
+                  c != owner ||
+                  _accountLocked ||
+                  _pageNavigationBusy ||
+                  !_canLeaveInput() ||
+                  owner.saveError != null ||
+                  !owner.library.pages.any((page) => page.id == pageId)) {
+                return false;
+              }
+              await _openPage(pageId, paperTurn: false);
+              await owner.settled;
+              if (!mounted ||
+                  c != owner ||
+                  _accountLocked ||
+                  route?.isCurrent != true ||
+                  owner.saveError != null ||
+                  owner.library.activePageId != pageId) {
+                return false;
+              }
+              route!.navigator!.pop();
+              await _finishWritingNavigation();
+              return true;
+            },
             onTranscribe: (seat, selectedBookId, sentence) async {
               final route = ModalRoute.of(context);
               if (route?.isCurrent != true ||
@@ -1439,8 +1515,13 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
               selectedPage.extent,
             )
           : null;
+      final guideMatch = matchTranscriptionPosition(
+        selectedPage,
+        activeLink,
+        available,
+      );
       final match = bookDetails == null
-          ? matchTranscriptionPosition(selectedPage, activeLink, available) ??
+          ? guideMatch ??
                 matchOriginal(available, selectedPage.text, selectedPage.extent)
           : null;
       final guided =
@@ -1531,6 +1612,36 @@ class _WorkspaceState extends State<Workspace> with WidgetsBindingObserver {
                   await _openPassage(passage, paperTurn: false);
                   openedWriting = true;
                 }),
+            onSetPosition:
+                activeLink == null ||
+                    activeLink.referenceOnly ||
+                    guideMatch == null
+                ? null
+                : (original, offset) async {
+                    if (!mounted ||
+                        c != owner ||
+                        _accountLocked ||
+                        !route.isCurrent ||
+                        !_canLeaveInput()) {
+                      return false;
+                    }
+                    final saved = await owner.saveOriginalPosition(
+                      pageId: selectedPage.id,
+                      passageId: activeLink.id,
+                      original: original,
+                      offset: offset,
+                    );
+                    if (!saved ||
+                        !mounted ||
+                        c != owner ||
+                        _accountLocked ||
+                        !route.isCurrent) {
+                      return false;
+                    }
+                    openedWriting = true;
+                    route.navigator!.pop();
+                    return true;
+                  },
             onRetry: owner.saveError == null ? null : _retrySave,
             onEdit: (original, text, citation) async {
               if (!mounted || c != owner || _accountLocked) return null;

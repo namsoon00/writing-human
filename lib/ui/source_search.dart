@@ -284,6 +284,7 @@ class _SourceSearchState extends State<_SourceSearch> {
   bool _webSearch = false;
   ({WikisourceWork work, String? text, String error})? _catalogRetry;
   WikisourceGenre? _catalogGenre;
+  bool _catalogShort = false;
   _SearchMode _mode = _SearchMode.title;
   _SourceHit? _selected;
   _CatalogNovel? _novel;
@@ -466,9 +467,14 @@ class _SourceSearchState extends State<_SourceSearch> {
 
   void _showNovel(_CatalogNovel novel) {
     _catalogFocus.unfocus();
+    final short = _catalogShort;
     setState(() {
       _novel = novel;
-      _passages = novel.load();
+      _passages = novel.load().then(
+        (passages) => passages == null || !short
+            ? passages
+            : shortNovelPassages(passages),
+      );
       _failedPassage = null;
       _linkError = null;
     });
@@ -521,6 +527,9 @@ class _SourceSearchState extends State<_SourceSearch> {
         return const Center(child: CircularProgressIndicator());
       }
       final passages = snapshot.data;
+      if (passages?.isEmpty == true && _catalogShort) {
+        return const Center(child: Text('이 작품에는 짧게 옮길 구절이 없어요.'));
+      }
       if (passages == null || passages.isEmpty) {
         return Center(
           child: Column(
@@ -826,19 +835,29 @@ class _SourceSearchState extends State<_SourceSearch> {
     bool matches(String title, String author) =>
         _compact(title).contains(query) || _compact(author).contains(query);
     final works = WikisourceWork.reviewed.values.where((work) {
-      return (genre == null || work.catalogInfo?.genre == genre) &&
+      final info = work.catalogInfo;
+      return (genre == null || info?.genre == genre) &&
+          (!_catalogShort ||
+              (info != null &&
+                  (info.genre == WikisourceGenre.fiction ||
+                      info.characters <= shortTranscriptionLimit))) &&
           matches(work.title, work.author);
     }).toList();
     final translations = [
       if (genre == null || genre == WikisourceGenre.fiction)
         for (final novel in translatedNovels)
-          if (matches(novel.title, novel.author)) novel,
+          if (matches(novel.title, novel.author) &&
+              (!_catalogShort || shortNovelPassages(novel.passages).isNotEmpty))
+            novel,
     ];
-    final firstWorks = works.take(3).toList();
+    final featured = _catalogShort && genre == null
+        ? works.where((work) => work.catalogInfo?.genre == WikisourceGenre.poem)
+        : works;
+    final firstWorks = featured.take(3).toList();
     final entries = [
       ...firstWorks,
       ...translations,
-      ...works.skip(firstWorks.length),
+      ...works.where((work) => !firstWorks.contains(work)),
     ];
 
     return CustomScrollView(
@@ -891,6 +910,18 @@ class _SourceSearchState extends State<_SourceSearch> {
                                 setState(() => _catalogGenre = filter);
                               },
                       ),
+                    FilterChip(
+                      key: const ValueKey('source-catalog-short'),
+                      label: const Text('짧게 필사'),
+                      selected: _catalogShort,
+                      onSelected: _importing
+                          ? null
+                          : (short) {
+                              _catalogFocus.unfocus();
+                              _resetCatalogScroll();
+                              setState(() => _catalogShort = short);
+                            },
+                    ),
                   ],
                 ),
               ],
@@ -922,7 +953,9 @@ class _SourceSearchState extends State<_SourceSearch> {
           SliverToBoxAdapter(
             child: ListTile(
               title: Text(
-                genre == null
+                _catalogShort
+                    ? '짧은 작품이 없어요. 갈래를 바꾸거나 짧게 필사 선택을 풀어 보세요.'
+                    : genre == null
                     ? '다른 제목이나 작가로 찾아보세요.'
                     : '다른 제목이나 작가로 찾거나 갈래를 바꿔 보세요.',
               ),
@@ -936,13 +969,15 @@ class _SourceSearchState extends State<_SourceSearch> {
               itemBuilder: (_, index) {
                 final entry = entries[index];
                 if (entry is TranslatedNovel) {
+                  final passages = _catalogShort
+                      ? shortNovelPassages(entry.passages)
+                      : entry.passages;
                   return OriginalListItem(
                     key: ValueKey('translated-novel-${entry.id}'),
                     style: widget.style,
                     title: entry.title,
-                    preview: entry.passages.first.text,
-                    subtitle:
-                        '${entry.author} · 소설 · 구절 ${entry.passages.length}개',
+                    preview: passages.first.text,
+                    subtitle: '${entry.author} · 소설 · 구절 ${passages.length}개',
                     indexCard: true,
                     showDivider: index > 0,
                     onTap: _importing

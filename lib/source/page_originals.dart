@@ -29,6 +29,21 @@ bool sameOriginalCopy(RegisteredOriginal a, RegisteredOriginal b) =>
     a.photoId == b.photoId &&
     _sameRegion(a.photoRegion, b.photoRegion);
 
+/// Offset in the registered edition corresponding to the first guide character.
+int? originalGuideStart(RegisteredOriginal copy, RegisteredOriginal original) {
+  final range = original.writingRange;
+  final leading = copy.text.length - copy.text.trimLeft().length;
+  if (sameOriginalCopy(copy, originalSnapshot(original))) return leading;
+  if (range != null &&
+      sameOriginalCopy(
+        copy,
+        originalSnapshot(original, useLegacyRange: true),
+      )) {
+    return range.start + leading;
+  }
+  return null;
+}
+
 bool _sameRegion(List<double>? a, List<double>? b) =>
     identical(a, b) ||
     (a != null &&

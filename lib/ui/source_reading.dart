@@ -38,6 +38,7 @@ class SourceReading extends StatefulWidget {
     this.onTranscribe,
     this.onExtractPhoto,
     this.onOpenWriting,
+    this.onSetPosition,
     this.onRetry,
     this.onSaveReflection,
     this.onDelete,
@@ -58,6 +59,7 @@ class SourceReading extends StatefulWidget {
   final Future<RegisteredOriginal?> Function(RegisteredOriginal)?
   onExtractPhoto;
   final ValueChanged<Passage>? onOpenWriting;
+  final Future<bool> Function(RegisteredOriginal, int)? onSetPosition;
   final VoidCallback? onRetry;
   final Future<bool> Function(RegisteredOriginal)? onDelete;
   final Future<RegisteredOriginal?> Function(
@@ -89,6 +91,8 @@ class _SourceReadingState extends State<SourceReading> {
   String _saved = '';
   bool _leaveEditor = false;
   bool saving = false, failed = false, markedOnly = false;
+  bool _choosingPosition = false, _positionFailed = false;
+  int? _sourcePosition;
   PencilMark? draftMark;
 
   bool get editing => _editingOriginal != null;
@@ -370,12 +374,47 @@ class _SourceReadingState extends State<SourceReading> {
     ],
   );
 
+  void _stopChoosingPosition() => setState(() {
+    _choosingPosition = false;
+    _positionFailed = false;
+    _sourcePosition = null;
+  });
+
+  Future<void> _setPosition(RegisteredOriginal original) async {
+    final offset = _sourcePosition;
+    if (offset == null || saving) return;
+    setState(() {
+      saving = true;
+      _positionFailed = false;
+    });
+    var saved = false;
+    try {
+      saved = await widget.onSetPosition!(original, offset);
+    } on Exception {
+      saved = false;
+    } finally {
+      if (mounted) {
+        setState(() {
+          saving = false;
+          _positionFailed = !saved;
+        });
+      }
+    }
+  }
+
   Widget _originalMenu(RegisteredOriginal original) =>
       PopupMenuButton<_OriginalAction>(
         tooltip: '원문 더 보기',
         icon: const Icon(CupertinoIcons.ellipsis, size: 19),
         enabled: !saving,
         itemBuilder: (_) => [
+          if (widget.onSetPosition != null &&
+              original.id == widget.match?.original.id &&
+              original.text == widget.match?.original.text)
+            const PopupMenuItem(
+              value: _OriginalAction.position,
+              child: Text('필사 위치 고르기'),
+            ),
           if (widget.onRegister != null)
             const PopupMenuItem(
               value: _OriginalAction.register,
@@ -393,6 +432,7 @@ class _SourceReadingState extends State<SourceReading> {
             ),
         ],
         onSelected: (action) => switch (action) {
+          _OriginalAction.position => setState(() => _choosingPosition = true),
           _OriginalAction.register => _register(),
           _OriginalAction.edit => _editOriginal(original, originalPanelColor),
           _OriginalAction.delete => _delete(original),
@@ -562,8 +602,29 @@ class _SourceReadingState extends State<SourceReading> {
             style: style,
             match: match,
             mark: mark,
-            note: inlineNote ? note : null,
-            footer: !original.canTranscribe || editing
+            note: inlineNote && !_choosingPosition ? note : null,
+            onPosition: !_choosingPosition || saving
+                ? null
+                : (offset) {
+                    final range = match?.useWritingRange == true
+                        ? original.writingRange
+                        : null;
+                    final start = range?.start ?? 0;
+                    final end = range?.end ?? original.text.length;
+                    final slice = original.text.substring(start, end);
+                    final first = end - slice.trimLeft().length;
+                    final next = offset >= first && offset < end
+                        ? offset
+                        : null;
+                    if (next != _sourcePosition || _positionFailed) {
+                      setState(() {
+                        _sourcePosition = next;
+                        _positionFailed = false;
+                      });
+                    }
+                  },
+            selecting: _choosingPosition,
+            footer: !original.canTranscribe || editing || _choosingPosition
                 ? null
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -583,6 +644,17 @@ class _SourceReadingState extends State<SourceReading> {
           );
     const panel = originalPanelColor;
     final internalBack = original != null && _openedFromList;
+    final localBack = internalBack || _choosingPosition;
+    void back() {
+      if (_choosingPosition) {
+        if (!saving) _stopChoosingPosition();
+      } else if (internalBack) {
+        _showList();
+      } else {
+        Navigator.pop(context);
+      }
+    }
+
     final resume = original == null
         ? null
         : widget.writingLocations[original.id]?.passage;
@@ -590,27 +662,24 @@ class _SourceReadingState extends State<SourceReading> {
         resume != null &&
         resume.page.id ==
             PaperNavigationScope.maybeOf(context)?.currentWritingPageId?.call();
-    PaperNavigationScope.maybeOf(
+    PaperNavigationScope.maybeOf(context)?.name(
       context,
-    )?.name(context, original == null ? '원문 목록' : '원문');
+      _choosingPosition
+          ? '필사 위치'
+          : original == null
+          ? '원문 목록'
+          : '원문',
+    );
     return PopScope(
-      canPop: _canLeave && !editing && !internalBack,
+      canPop: _canLeave && !editing && !localBack,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && !_composing && !failed) {
-          unawaited(
-            _navigate(() {
-              if (internalBack) {
-                _showList();
-              } else {
-                Navigator.pop(context);
-              }
-            }),
-          );
+        if (!didPop && !saving && !_composing && !failed) {
+          unawaited(_navigate(back));
         }
       },
       child: PaperInternalBack(
-        enabled: internalBack && _canLeave && !editing,
-        onBack: () => _navigate(_showList),
+        enabled: localBack && _canLeave && !editing,
+        onBack: () => _navigate(back),
         child: PaperPanel(
           key: const ValueKey('source-paper'),
           color: panel,
@@ -621,20 +690,21 @@ class _SourceReadingState extends State<SourceReading> {
                 PaperHeaderRow(
                   children: [
                     PaperBackButton(
-                      label: internalBack ? '원문 목록' : null,
-                      onPressed: () => _navigate(() {
-                        if (internalBack) {
-                          _showList();
-                        } else {
-                          Navigator.pop(context);
-                        }
-                      }),
+                      label: _choosingPosition
+                          ? '원문'
+                          : internalBack
+                          ? '원문 목록'
+                          : null,
+                      enabled: !saving,
+                      onPressed: () => _navigate(back),
                     ),
                     Expanded(
                       child: PaperPanelTitle(
-                        original != null &&
-                                !original.canTranscribe &&
-                                original.citation.trim().isNotEmpty
+                        _choosingPosition
+                            ? '필사 위치'
+                            : original != null &&
+                                  !original.canTranscribe &&
+                                  original.citation.trim().isNotEmpty
                             ? original.citation
                             : '원문',
                         fontSize: original == null ? 27 : 22,
@@ -661,15 +731,22 @@ class _SourceReadingState extends State<SourceReading> {
                       ),
                     if (original != null &&
                         !editing &&
-                        (widget.onRegister != null ||
+                        !_choosingPosition &&
+                        (widget.onSetPosition != null ||
+                            widget.onRegister != null ||
                             widget.onEdit != null ||
                             widget.onDelete != null))
                       _originalMenu(original),
-                    if (!editing && !resumesOrigin)
+                    if (!editing && !resumesOrigin && !_choosingPosition)
                       PaperWritingReturn(force: internalBack),
                   ],
                 ),
-                if (original != null && !internalBack)
+                if (_choosingPosition)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Text('이어 쓸 글자의 앞을 눌러 주세요.'),
+                  ),
+                if (original != null && !internalBack && !_choosingPosition)
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Tooltip(
@@ -760,7 +837,7 @@ class _SourceReadingState extends State<SourceReading> {
                   const Divider(),
                 if (original == null && widget.originals.isNotEmpty)
                   const SizedBox(height: 14),
-                if (widget.onRetry != null && !editing)
+                if (widget.onRetry != null && !editing && !_choosingPosition)
                   _saveNotice('원문을 저장하지 못했어요.', widget.onRetry),
                 if (original == null && widget.previousCitations.isNotEmpty)
                   Align(
@@ -873,7 +950,21 @@ class _SourceReadingState extends State<SourceReading> {
                       ),
                     ),
                   ),
-                if (original != null && !editing) _readingActions(original),
+                if (original != null && _choosingPosition) ...[
+                  const Divider(height: 24),
+                  if (_positionFailed)
+                    Semantics(
+                      liveRegion: true,
+                      child: const Text('필사 위치를 저장하지 못했어요.'),
+                    ),
+                  FilledButton(
+                    onPressed: saving || _sourcePosition == null
+                        ? null
+                        : () => _setPosition(original),
+                    child: Text(_positionFailed ? '다시 저장' : '이 위치에서 이어 쓰기'),
+                  ),
+                ] else if (original != null && !editing)
+                  _readingActions(original),
                 if (failed && editing)
                   _saveNotice('느낀 점을 저장하지 못했어요.', _composing ? null : _flush),
               ],
@@ -885,7 +976,7 @@ class _SourceReadingState extends State<SourceReading> {
   }
 }
 
-enum _OriginalAction { register, edit, delete }
+enum _OriginalAction { position, register, edit, delete }
 
 class _OriginalText extends StatefulWidget {
   const _OriginalText({
@@ -897,6 +988,8 @@ class _OriginalText extends StatefulWidget {
     this.note,
     this.footer,
     required this.editing,
+    this.selecting = false,
+    this.onPosition,
   });
 
   final RegisteredOriginal original;
@@ -904,7 +997,8 @@ class _OriginalText extends StatefulWidget {
   final OriginalMatch? match;
   final PencilMark? mark;
   final Widget? note, footer;
-  final bool editing;
+  final bool editing, selecting;
+  final ValueChanged<int>? onPosition;
 
   @override
   State<_OriginalText> createState() => _OriginalTextState();
@@ -1002,6 +1096,23 @@ class _OriginalTextState extends State<_OriginalText> {
     );
   }
 
+  Widget _body(TextSpan span, int start, {Key? key}) {
+    if (!widget.selecting) return Text.rich(span, key: key);
+    return SelectableText.rich(
+      span,
+      key: key,
+      showCursor: true,
+      cursorWidth: 1.5,
+      cursorColor: brandInk,
+      contextMenuBuilder: (_, _) => const SizedBox.shrink(),
+      onSelectionChanged: (selection, cause) {
+        if (selection.isValid && cause != null) {
+          widget.onPosition?.call(start + selection.start);
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = widget.original.text;
@@ -1063,8 +1174,9 @@ class _OriginalTextState extends State<_OriginalText> {
             children: [
               KeyedSubtree(
                 key: beforeNote,
-                child: Text.rich(
+                child: _body(
                   before,
+                  from,
                   key: const ValueKey('source-reading-text'),
                 ),
               ),
@@ -1074,7 +1186,7 @@ class _OriginalTextState extends State<_OriginalText> {
                 Padding(
                   key: afterNote,
                   padding: const EdgeInsets.only(top: 10),
-                  child: Text.rich(after),
+                  child: _body(after, split),
                 ),
               if (widget.footer case final footer?)
                 Padding(padding: const EdgeInsets.only(top: 24), child: footer),

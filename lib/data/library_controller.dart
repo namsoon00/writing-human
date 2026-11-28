@@ -1214,6 +1214,56 @@ class LibraryController extends ChangeNotifier {
     return _saveBeforePublishing(next, error: _trashSaveError);
   }
 
+  static const _originalPositionError = '필사 위치를 저장하지 못했어요.';
+
+  Future<bool> saveOriginalPosition({
+    required String pageId,
+    required String passageId,
+    required RegisteredOriginal original,
+    required int offset,
+  }) async {
+    await settled;
+    if (_disposed ||
+        composing ||
+        editorFocused ||
+        (saveError != null && saveError != _originalPositionError)) {
+      return false;
+    }
+    final page = library.activePage;
+    if (page == null || page.id != pageId) return false;
+    final links = pageOriginals(page, [original]);
+    final link = passageAt(links, page.extent);
+    if (link == null || link.id != passageId || link.referenceOnly) {
+      return false;
+    }
+    final copy = passageOriginal(link);
+    if (copy == null) return false;
+    final readingStart = originalGuideStart(copy, original);
+    if (readingStart == null) return false;
+    final source = offset - readingStart;
+    if (source < 0 || source >= copy.text.trimLeft().length) return false;
+    final updated = page.withDetails(
+      passages: [
+        for (final entry in page.passages)
+          if (entry.id == link.id)
+            entry.copy(resume: (writing: page.extent, source: source))
+          else
+            entry,
+        if (!page.passages.any((entry) => entry.id == link.id))
+          link.copy(resume: (writing: page.extent, source: source)),
+      ],
+    );
+    return _saveBeforePublishing(
+      library.copy(
+        pages: [
+          for (final item in library.pages)
+            if (item.id == pageId) updated else item,
+        ],
+      ),
+      error: _originalPositionError,
+    );
+  }
+
   Future<bool> _saveBeforePublishing(
     Library next, {
     required String error,

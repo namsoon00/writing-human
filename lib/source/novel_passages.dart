@@ -77,6 +77,20 @@ const _readingPoints = <int, List<(String, String)>>{
 
 final _sentenceBoundary = RegExp(r'''[.!?。！？…]+[”’"'」』)]*(?:\s+|$)''');
 
+const shortTranscriptionLimit = 300;
+
+List<NovelPassage> shortNovelPassages(List<NovelPassage> passages) => [
+  for (final passage in passages)
+    if (passage.text.length <= shortTranscriptionLimit)
+      passage
+    else if (_sentenceBoundary.firstMatch(passage.text) case final end?
+        when end.end <= shortTranscriptionLimit)
+      NovelPassage(
+        passage.label,
+        passage.text.substring(0, end.end).trimRight(),
+      ),
+];
+
 /// Extract complete paragraphs or sentences in the original order.
 List<NovelPassage> novelPassages(int pageId, List<String> paragraphs) {
   const limit = 6;

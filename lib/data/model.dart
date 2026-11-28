@@ -527,12 +527,21 @@ class PagePassage {
     this.original,
     this.referenceOnly = false,
     this.following = false,
+    this.resume,
   });
 
   final String id, source, citation;
   final int start, paragraph, sourceOffset;
   final bool continued, attached, referenceOnly, following;
   final RegisteredOriginal? original;
+  final ({int writing, int source})? resume;
+
+  ({int writing, int source}) comparisonStartAt(int caret) {
+    final point = resume;
+    return point != null && caret >= point.writing
+        ? point
+        : (writing: start, source: sourceOffset);
+  }
 
   PagePassage copy({
     int? start,
@@ -545,6 +554,7 @@ class PagePassage {
     RegisteredOriginal? original,
     bool? referenceOnly,
     bool? following,
+    ({int writing, int source})? resume,
     bool clearOriginal = false,
   }) => PagePassage(
     id: id,
@@ -558,6 +568,7 @@ class PagePassage {
     original: clearOriginal ? null : original ?? this.original,
     referenceOnly: referenceOnly ?? this.referenceOnly,
     following: following ?? this.following,
+    resume: resume ?? this.resume,
   );
 
   Json toJson() => {
@@ -572,6 +583,8 @@ class PagePassage {
     if (original != null) 'original': original!.toJson(),
     if (referenceOnly) 'referenceOnly': true,
     if (following) 'following': true,
+    if (resume case final point?)
+      'resume': {'writing': point.writing, 'source': point.source},
   };
 
   factory PagePassage.fromJson(Json j) => PagePassage(
@@ -588,6 +601,14 @@ class PagePassage {
         : RegisteredOriginal.fromJson(j['original'] as Json),
     referenceOnly: j['referenceOnly'] as bool? ?? false,
     following: j['following'] as bool? ?? false,
+    resume: switch (j['resume']) {
+      null => null,
+      {'writing': final int writing, 'source': final int source} => (
+        writing: writing,
+        source: source,
+      ),
+      _ => throw const FormatException('필사 위치를 확인할 수 없습니다.'),
+    },
   );
 
   static List<PagePassage> afterEdit(
@@ -621,17 +642,27 @@ class PagePassage {
       oldEnd--;
       newEnd--;
     }
+    int shift(int offset, {bool following = false}) {
+      if (offset == prefix && oldEnd == prefix && following) return newEnd;
+      if (offset <= prefix) return offset;
+      return offset < oldEnd ? prefix : offset + newEnd - oldEnd;
+    }
+
     return [
       for (final entry in passages)
-        entry.start == prefix && oldEnd == prefix && entry.following
-            ? entry.copy(start: newEnd)
-            : entry.start <= prefix
-            ? entry
-            : entry.copy(
-                start: entry.start < oldEnd
-                    ? prefix
-                    : entry.start + newEnd - oldEnd,
+        entry.copy(
+          start: shift(entry.start, following: entry.following),
+          resume: switch (entry.resume) {
+            final point? => (
+              writing: shift(
+                point.writing,
+                following: entry.following && point.writing == entry.start,
               ),
+              source: point.source,
+            ),
+            null => null,
+          },
+        ),
     ];
   }
 }
@@ -1170,7 +1201,18 @@ class Library {
                     entry.citation.length > 500 ||
                     entry.paragraph < 0 ||
                     entry.sourceOffset < 0 ||
-                    entry.sourceOffset > entry.source.length,
+                    entry.sourceOffset > entry.source.length ||
+                    switch (entry.resume) {
+                      final point? =>
+                        point.writing < entry.start ||
+                            point.writing > p.text.length ||
+                            point.source < 0 ||
+                            point.source >=
+                                (entry.original?.text ?? entry.source)
+                                    .trimLeft()
+                                    .length,
+                      null => false,
+                    },
               ) ||
               p.pencilMarks.any(
                 (m) => m.start < 0 || m.end <= m.start || m.end > p.text.length,

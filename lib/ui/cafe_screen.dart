@@ -35,6 +35,8 @@ class CafeScreen extends StatefulWidget {
     this.spaceStore,
     this.moment,
     this.lastSentence = '',
+    this.pastWriting,
+    this.onOpenPastWriting,
     this.onTranscribe,
     this.soundscape,
   });
@@ -43,6 +45,8 @@ class CafeScreen extends StatefulWidget {
   final CafeSpaceStore? spaceStore;
   final DateTime? moment;
   final String lastSentence;
+  final CafePastWriting? pastWriting;
+  final Future<bool> Function(String pageId)? onOpenPastWriting;
   final Future<bool> Function(
     CafeSeat seat,
     String? bookId,
@@ -475,6 +479,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
             currentSeat: view.seat,
             chair: view.activeChairId,
             lastSentence: widget.lastSentence,
+            pastWriting: widget.pastWriting,
             canTranscribe: widget.onTranscribe != null,
             onSave: (home) => _storeUse(
               view.space.copy(
@@ -486,7 +491,7 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
             ),
           );
     if (!context.mounted) return;
-    final pending = page == 'ambience'
+    final pending = page == 'ambience' || page == 'memory'
         ? Navigator.of(context).push<Object>(paperSheetRoute(buildRitual))
         : showDialog<Object>(context: context, builder: buildRitual);
     final result = await pending;
@@ -495,6 +500,18 @@ class _CafeScreenState extends State<CafeScreen> with WidgetsBindingObserver {
     if (sound) _updateSound();
     if (result is CafeSentence) {
       await _startSentence(result);
+    } else if (result == CafeRitualAction.openPastWriting) {
+      final past = widget.pastWriting;
+      final open = widget.onOpenPastWriting;
+      if (past == null || open == null) return;
+      setState(() => ritualOpening = true);
+      try {
+        if (!await open(past.pageId) && mounted) {
+          setState(() => calmHint = '필사한 쪽을 열지 못했어요. 다시 열어 주세요.');
+        }
+      } finally {
+        if (mounted) setState(() => ritualOpening = false);
+      }
     } else if (result == CafeRitualAction.rainWindow) {
       if (await _storeUse(
             view.space.copy(

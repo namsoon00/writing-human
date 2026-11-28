@@ -288,33 +288,23 @@ OriginalMatch? matchTranscriptionPosition(
   final original = originals.where((item) => item.id == source.id).firstOrNull;
   if (original == null) return null;
 
-  final range = original.writingRange;
-  final narrowed = !sameOriginalCopy(source, originalSnapshot(original));
-  if (narrowed &&
-      (range == null ||
-          !sameOriginalCopy(
-            source,
-            originalSnapshot(original, useLegacyRange: true),
-          ))) {
-    return null;
-  }
-
-  final rangeStart = narrowed ? range!.start : 0;
-  final written = page.text.substring(
-    link.start,
-    page.extent.clamp(link.start, page.text.length),
-  );
+  final readingStart = originalGuideStart(source, original);
+  if (readingStart == null) return null;
+  final caret = page.extent.clamp(link.start, page.text.length);
+  final point = link.comparisonStartAt(caret);
   final consumed = TranscriptionComparison(
     source,
-    sourceOffset: link.sourceOffset,
-  ).sourceOffsetFor(written);
-  final remaining = source.text.trimLeft();
+    sourceOffset: point.source,
+  ).sourceOffsetFor(page.text.substring(point.writing, caret));
   final position =
-      rangeStart +
-      source.text.length -
-      remaining.length +
-      (link.sourceOffset + consumed).clamp(0, remaining.length);
-  return OriginalMatch(original, position, position, useWritingRange: narrowed);
+      readingStart +
+      (point.source + consumed).clamp(0, source.text.trimLeft().length);
+  return OriginalMatch(
+    original,
+    position,
+    position,
+    useWritingRange: !sameOriginalCopy(source, originalSnapshot(original)),
+  );
 }
 
 /// Matches only the beginning of the source deliberately opened on an empty page.

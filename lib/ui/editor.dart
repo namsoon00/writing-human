@@ -96,21 +96,22 @@ class _PageEditorState extends State<PageEditor> with WidgetsBindingObserver {
     return passage == null ? null : passageOriginal(passage);
   }
 
-  void _updateComparison(PagePassage? passage, RegisteredOriginal? source) {
+  void _updateComparison(
+    PagePassage? passage,
+    RegisteredOriginal? source,
+    int sourceOffset,
+  ) {
     final key = (
       passage?.id,
       source?.text,
-      passage?.sourceOffset,
+      sourceOffset,
       passage?.referenceOnly,
     );
     if (_comparisonKey == key) return;
     _comparisonKey = key;
     _comparison =
         source?.canTranscribe == true && passage?.referenceOnly != true
-        ? TranscriptionComparison(
-            source!,
-            sourceOffset: passage?.sourceOffset ?? 0,
-          )
+        ? TranscriptionComparison(source!, sourceOffset: sourceOffset)
         : null;
   }
 
@@ -544,8 +545,14 @@ class _PageEditorState extends State<PageEditor> with WidgetsBindingObserver {
         final passages = _passages;
         final active = _activePassage;
         final source = active == null ? null : passageOriginal(active);
-        _updateComparison(active, source);
-        final start = active?.start ?? 0;
+        final value = text.value;
+        final caret = _composing
+            ? value.composing.start
+            : value.selection.extentOffset;
+        final point = active?.comparisonStartAt(caret);
+        final sourceOffset = point?.source ?? 0;
+        _updateComparison(active, source, sourceOffset);
+        final start = point?.writing ?? 0;
         final end = active == null
             ? text.text.length
             : passageEnd(passages, active, text.text.length);
@@ -825,7 +832,7 @@ class _PageEditorState extends State<PageEditor> with WidgetsBindingObserver {
                       original: source,
                       onOpen: _composing ? null : _showPageOriginals,
                       comparison: _comparison,
-                      sourceOffset: active?.sourceOffset ?? 0,
+                      sourceOffset: sourceOffset,
                       startOffset: start,
                       endOffset: end,
                       controller: text,

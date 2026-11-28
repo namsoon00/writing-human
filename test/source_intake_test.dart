@@ -1387,6 +1387,10 @@ void main() {
         expect(card.indexCard, isTrue);
         expect(card.subtitle, '현진건 · 소설 · 필사할 구절');
         expect(card.preview, startsWith('새침하게'));
+        final short = find.byKey(const ValueKey('source-catalog-short'));
+        await tester.tap(short);
+        await tester.pumpAndSettle();
+        expect(tester.widget<FilterChip>(short).selected, isTrue);
         await tester.tap(novel);
         await tester.pumpAndSettle();
         expect(requests.single.queryParameters['oldid'], '468924');
@@ -1397,6 +1401,7 @@ void main() {
         Navigator.of(tester.element(find.text('필사할 구절'))).maybePop();
         await tester.pumpAndSettle();
         expect(tester.widget<ChoiceChip>(novelFilter).selected, isTrue);
+        expect(tester.widget<FilterChip>(short).selected, isTrue);
         expect(
           tester
               .widget<TextField>(
@@ -2846,6 +2851,86 @@ void main() {
       expect(reopened.controller!.selection.extentOffset, first.length + 1);
       expect(remainingInline(tester), second);
       expect(reopened.focusNode!.hasFocus, isFalse);
+    },
+  );
+
+  testWidgets(
+    'A manual original position returns to the same cursor and survives retry',
+    (tester) async {
+      const written = '첫 문장.\n';
+      const target = '반복해서 나타나는 문장.\n마지막 대목.';
+      const original = RegisteredOriginal(
+        'o',
+        '$written반복해서 나타나는 문장.\n앞쪽 장면.\n$target',
+      );
+      final store = MemoryStore()
+        ..data = Library(
+          records: [
+            WritingRecord(id: 'r', title: '필사 노트', originals: [original]),
+          ],
+          pages: [
+            WritingPage(
+              id: 'p',
+              recordId: 'r',
+              number: 1,
+              text: written,
+              base: written.length,
+              extent: written.length,
+              guidedOriginalId: 'o',
+            ),
+          ],
+          activePageId: 'p',
+          writing: true,
+        );
+      await open(tester, store, FakeIntake());
+      await tester.tap(place);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('원문 더 보기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('필사 위치 고르기'));
+      await tester.pumpAndSettle();
+
+      final after = find.byType(SelectableText).last;
+      final offset = tester
+          .widget<SelectableText>(after)
+          .textSpan!
+          .toPlainText()
+          .lastIndexOf(target);
+      expect(offset, greaterThanOrEqualTo(0));
+      final editable = find.descendant(
+        of: after,
+        matching: find.byType(EditableText),
+      );
+      final render = tester.state<EditableTextState>(editable).renderEditable;
+      final point = render
+          .getLocalRectForCaret(TextPosition(offset: offset))
+          .centerLeft;
+      await tester.tapAt(render.localToGlobal(point + const Offset(1, 0)));
+      await tester.pumpAndSettle();
+      store.fail = true;
+      await tester.tap(find.text('이 위치에서 이어 쓰기'));
+      await tester.pumpAndSettle();
+      expect(find.text('다시 저장').hitTestable(), findsOneWidget);
+      expect(store.data.activePage!.passages, isEmpty);
+      store.fail = false;
+      await tester.tap(find.text('다시 저장').hitTestable());
+      await tester.pumpAndSettle();
+
+      final decoded = Library.decode(store.data.encode()).activePage!;
+      expect(decoded.id, 'p');
+      expect(decoded.text, written);
+      expect(decoded.extent, written.length);
+      expect(decoded.passages.single.resume, (
+        writing: written.length,
+        source: original.text.lastIndexOf(target),
+      ));
+      expect(remainingInline(tester), target);
+      await tester.tap(place);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<SourceReading>(reading).match?.start,
+        original.text.lastIndexOf(target),
+      );
     },
   );
 

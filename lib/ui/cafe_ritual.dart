@@ -2,9 +2,17 @@ import 'package:flutter/material.dart';
 import '../cafe/cafe_home.dart';
 import '../cafe/cafe_visit.dart';
 import 'paper.dart';
-import 'paper_navigation.dart';
+import 'paper_panel.dart';
+import 'original_photo.dart';
 
-enum CafeRitualAction { returnSeat, rainWindow }
+enum CafeRitualAction { returnSeat, rainWindow, openPastWriting }
+
+typedef CafePastWriting = ({
+  String pageId,
+  String text,
+  String? date,
+  String? photoId,
+});
 
 /// A paper-like reading surface, opened by the real card or accessible guide.
 class CafeRitualSheet extends StatefulWidget {
@@ -17,9 +25,11 @@ class CafeRitualSheet extends StatefulWidget {
     this.currentSeat,
     this.chair,
     this.lastSentence = '',
+    this.pastWriting,
     this.canTranscribe = false,
   });
   final String page, lastSentence;
+  final CafePastWriting? pastWriting;
   final CafeHome home;
   final DateTime moment;
   final CafeSeat? currentSeat;
@@ -73,6 +83,115 @@ class _CafeRitualSheetState extends State<CafeRitualSheet> {
     onPressed: busy ? null : () => Navigator.pop(context, result),
     child: Text(text),
   );
+  Widget _memory(BuildContext context, String current) => PopScope(
+    canPop: !busy,
+    child: PaperPanel(
+      color: originalPanelColor,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 16, 0),
+            child: PaperPanelHeader(
+              '내가 남긴 문장',
+              backLabel: '카페',
+              canClose: !busy,
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+              children: [
+                if (widget.pastWriting case final past?) ...[
+                  Text(
+                    past.date == null ? '지난 필사' : '지난 필사 · ${past.date}',
+                    style: const TextStyle(color: muted, fontSize: 14),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    past.text,
+                    style: const TextStyle(fontSize: 21, height: 1.75),
+                  ),
+                  if (past.photoId case final photo?) ...[
+                    const SizedBox(height: 10),
+                    InkWell(
+                      onTap: busy
+                          ? null
+                          : () => showOriginalPhoto(
+                              context,
+                              photo,
+                              color: originalPanelColor,
+                            ),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 86,
+                            height: 62,
+                            child: OriginalPhoto(
+                              id: photo,
+                              compact: true,
+                              thumbnailSize: const Size(172, 124),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Flexible(child: Text('원본 사진 보기')),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  action(
+                    '필사한 쪽 열기',
+                    CafeRitualAction.openPastWriting,
+                    'cafe-open-past-writing',
+                  ),
+                  const Divider(height: 32),
+                ],
+                Text(
+                  home.pinned ?? '아직 걸어 둔 문장이 없어요.',
+                  key: const ValueKey('cafe-pinned-sentence'),
+                  style: const TextStyle(fontSize: 23, height: 1.8),
+                ),
+                const SizedBox(height: 20),
+                if (current.isNotEmpty) ...[
+                  const Text(
+                    '지금 쓰던 글에서',
+                    style: TextStyle(color: muted, fontSize: 14),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(current, style: const TextStyle(height: 1.7)),
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    key: const ValueKey('cafe-pin-sentence'),
+                    onPressed: busy
+                        ? null
+                        : () => save(home.copy(pinned: current)),
+                    child: const Text('이 문장을 액자에 걸기'),
+                  ),
+                ] else
+                  const Text(
+                    '필사하거나 쓴 문장을 이곳에 걸어 둘 수 있어요.',
+                    style: TextStyle(height: 1.7),
+                  ),
+                if (home.pinned != null)
+                  TextButton(
+                    key: const ValueKey('cafe-unpin-sentence'),
+                    onPressed: busy
+                        ? null
+                        : () => save(home.copy(clearPinned: true)),
+                    child: const Text('액자 비우기'),
+                  ),
+                if (error case final message?)
+                  Text(message, style: const TextStyle(color: burgundy)),
+                if (notice case final message?)
+                  Text(message, style: const TextStyle(color: muted)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final line = CafeEditorial.today(widget.moment, home.topic),
@@ -80,7 +199,9 @@ class _CafeRitualSheetState extends State<CafeRitualSheet> {
     final favorite = CafeSeat.values
         .where((s) => s.name == home.seat)
         .firstOrNull;
-    final current = shortLine(widget.lastSentence);
+    if (page == 'memory') {
+      return _memory(context, shortLine(widget.lastSentence));
+    }
     return PopScope(
       canPop: !busy,
       child: Dialog(
@@ -102,7 +223,6 @@ class _CafeRitualSheetState extends State<CafeRitualSheet> {
                       child: Text(switch (page) {
                         'today' => '오늘의 문장',
                         'letter' => '쓰는 인간의 쪽지',
-                        'memory' => '내가 남긴 문장',
                         'mood' => '공간의 시간',
                         _ => '나를 기다리는 자리',
                       }, style: const TextStyle(fontSize: 22)),
@@ -230,42 +350,6 @@ class _CafeRitualSheetState extends State<CafeRitualSheet> {
                               height: 1.6,
                             ),
                           ),
-                        ],
-                        if (page == 'memory') ...[
-                          Text(
-                            home.pinned ?? '아직 걸어 둔 문장이 없어요.',
-                            key: const ValueKey('cafe-pinned-sentence'),
-                            style: const TextStyle(fontSize: 23, height: 1.8),
-                          ),
-                          const SizedBox(height: 20),
-                          if (current.isNotEmpty) ...[
-                            const Text(
-                              '지금 쓰던 글에서',
-                              style: TextStyle(color: muted, fontSize: 14),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(current, style: const TextStyle(height: 1.7)),
-                            const SizedBox(height: 12),
-                            FilledButton(
-                              key: const ValueKey('cafe-pin-sentence'),
-                              onPressed: busy
-                                  ? null
-                                  : () => save(home.copy(pinned: current)),
-                              child: const Text('이 문장을 액자에 걸기'),
-                            ),
-                          ] else
-                            const Text(
-                              '필사하거나 쓴 문장을 이곳에 걸어 둘 수 있어요.',
-                              style: TextStyle(height: 1.7),
-                            ),
-                          if (home.pinned != null)
-                            TextButton(
-                              key: const ValueKey('cafe-unpin-sentence'),
-                              onPressed: busy
-                                  ? null
-                                  : () => save(home.copy(clearPinned: true)),
-                              child: const Text('액자 비우기'),
-                            ),
                         ],
                         if (page == 'mood') ...[
                           const Text(

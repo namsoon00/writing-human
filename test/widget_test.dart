@@ -28,20 +28,20 @@ class MemoryStore implements LibraryStore {
 }
 
 void main() {
-  testWidgets('Only the first blank writing surface prompts for a first line', (
+  testWidgets('Free writing on the first paper preserves composition', (
     tester,
   ) async {
     final store = MemoryStore();
     await tester.pumpWidget(WritingHumanApp(store: store));
     await tester.pumpAndSettle();
     final field = find.byKey(const ValueKey('page-text'));
-    final hint = find.text('여기를 눌러 첫 문장을 써 보세요');
-    expect(hint, findsOneWidget);
+    final example = find.byKey(const ValueKey('first-writing-example'));
+    expect(example, findsOneWidget);
     expect(find.text('필사할 글 가져오기').hitTestable(), findsOneWidget);
     expect(store.data.pages, isEmpty);
-    await tester.tapAt(tester.getTopLeft(hint) + const Offset(8, 8));
+    await tester.tap(find.byKey(const ValueKey('skip-first-transcription')));
     await tester.pumpAndSettle();
-    expect(hint, findsNothing);
+    expect(example, findsNothing);
     expect(tester.widget<TextField>(field).focusNode!.hasFocus, isTrue);
     const composing = TextEditingValue(
       text: '하',
@@ -58,7 +58,7 @@ void main() {
     await tester.tap(find.byTooltip('새 글'));
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(field).controller!.text, isEmpty);
-    expect(hint, findsNothing);
+    expect(example, findsNothing);
     expect(store.data.pages.single.text, '하');
   });
 

@@ -135,10 +135,10 @@ extension CafeSeasons on CafeWorld {
         if (x + .8 > -7.25 && x < -4.75) continue;
         yield CafeFace(
           [
-            CafePoint(x, 1.233, walkBounds.top - .32),
-            CafePoint(x + .8, 1.233, walkBounds.top - .32),
-            CafePoint(x + .8, 1.233, walkBounds.top - .08),
-            CafePoint(x, 1.233, walkBounds.top - .08),
+            CafePoint(x, CafeYard.wallHeight + .004, walkBounds.top - .32),
+            CafePoint(x + .8, CafeYard.wallHeight + .004, walkBounds.top - .32),
+            CafePoint(x + .8, CafeYard.wallHeight + .004, walkBounds.top - .08),
+            CafePoint(x, CafeYard.wallHeight + .004, walkBounds.top - .08),
           ],
           const Color(0xffeeeadd),
           doubleSided: true,

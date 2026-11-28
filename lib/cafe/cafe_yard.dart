@@ -5,6 +5,7 @@ import 'cafe_camera.dart';
 /// Metre-based layout shared by soil geometry, walking, picking and the camera.
 /// The cafe glazing stays on z=3.165; the complete loop is inside the walls.
 class CafeYard {
+  static const wallHeight = .82;
   static const bounds = Rect.fromLTRB(-22, -21, 8, 2.8);
   static const gate = CafePoint(-6, 1.62, -18.8);
   static const shoeApproach = CafePoint(-3, 1.62, -12.6);

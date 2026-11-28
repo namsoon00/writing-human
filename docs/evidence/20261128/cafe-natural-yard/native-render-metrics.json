@@ -1,0 +1,119 @@
+{
+  "scope": "Native synthetic CPU paint samples, not device FPS",
+  "faces": 34599,
+  "grassFaces": 454,
+  "samples": [
+    {
+      "courtyard": false,
+      "visible": 53836,
+      "projectUs": 2035692,
+      "orderUs": 5,
+      "submitUs": 72333,
+      "linkedUs": 0
+    },
+    {
+      "courtyard": true,
+      "visible": 32709,
+      "projectUs": 1364476,
+      "orderUs": 202,
+      "submitUs": 78552,
+      "linkedUs": 2109772
+    },
+    {
+      "courtyard": false,
+      "visible": 53836,
+      "projectUs": 215866,
+      "orderUs": 2,
+      "submitUs": 88439,
+      "linkedUs": 0
+    },
+    {
+      "courtyard": true,
+      "visible": 32709,
+      "projectUs": 180380,
+      "orderUs": 7,
+      "submitUs": 40618,
+      "linkedUs": 323951
+    },
+    {
+      "courtyard": false,
+      "visible": 53836,
+      "projectUs": 379406,
+      "orderUs": 1,
+      "submitUs": 192620,
+      "linkedUs": 0
+    },
+    {
+      "courtyard": true,
+      "visible": 34829,
+      "projectUs": 450572,
+      "orderUs": 6,
+      "submitUs": 105815,
+      "linkedUs": 572190
+    },
+    {
+      "courtyard": false,
+      "visible": 43305,
+      "projectUs": 225251,
+      "orderUs": 2,
+      "submitUs": 64406,
+      "linkedUs": 0
+    },
+    {
+      "courtyard": true,
+      "visible": 31646,
+      "projectUs": 234191,
+      "orderUs": 2,
+      "submitUs": 59812,
+      "linkedUs": 289693
+    },
+    {
+      "courtyard": true,
+      "visible": 6383,
+      "projectUs": 121953,
+      "orderUs": 2,
+      "submitUs": 10395,
+      "linkedUs": 0
+    },
+    {
+      "courtyard": true,
+      "visible": 7424,
+      "projectUs": 310963,
+      "orderUs": 2,
+      "submitUs": 24200,
+      "linkedUs": 0
+    },
+    {
+      "courtyard": true,
+      "visible": 7316,
+      "projectUs": 160751,
+      "orderUs": 2,
+      "submitUs": 23502,
+      "linkedUs": 0
+    },
+    {
+      "courtyard": true,
+      "visible": 13058,
+      "projectUs": 154599,
+      "orderUs": 2,
+      "submitUs": 37590,
+      "linkedUs": 0
+    },
+    {
+      "courtyard": false,
+      "visible": 47182,
+      "projectUs": 174326,
+      "orderUs": 3,
+      "submitUs": 152973,
+      "linkedUs": 0
+    },
+    {
+      "courtyard": true,
+      "visible": 22800,
+      "projectUs": 158736,
+      "orderUs": 2,
+      "submitUs": 75240,
+      "linkedUs": 327336
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 // Real Flutter mesh renders with synthetic poses, not generated concept art.
 import 'dart:io';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -32,6 +33,7 @@ void main() {
         await (FontLoader(e.key)..addFont(rootBundle.load(e.value))).load();
       }
     });
+    final timings = <Map<String, Object>>[];
     final boundary = GlobalKey();
     final c = CafeViewController();
     c.inCourtyard = true;
@@ -45,6 +47,14 @@ void main() {
           key: boundary,
           child: CafeScene(
             controller: c,
+            onRenderTiming: (t) => timings.add({
+              'courtyard': t.courtyard,
+              'visible': t.visibleFaces,
+              'projectUs': t.projectMicros,
+              'orderUs': t.orderMicros,
+              'submitUs': t.submitMicros,
+              'linkedUs': t.linkedMicros,
+            }),
             onWrite: () {},
             moment: DateTime(2026, 11, 25, 16),
           ),
@@ -84,6 +94,22 @@ void main() {
       ),
     );
     await save('long-trail');
+    c.updateCamera(
+      const CafeCamera(
+        position: CafePoint(-18.8, 1.62, -15.5),
+        yaw: -1.1,
+        pitch: -.25,
+      ),
+    );
+    await save('stone-and-grass');
+    c.updateCamera(
+      const CafeCamera(
+        position: CafePoint(-5.5, 1.62, -17.5),
+        yaw: -.75,
+        pitch: -.45,
+      ),
+    );
+    await save('earth-underfoot');
     tester.view.physicalSize = const Size(390, 844);
     c.toggleBarefoot();
     c.updateCamera(
@@ -95,6 +121,22 @@ void main() {
     c.stand();
     c.visit(CafeTarget.trailRest);
     await save('rest-390');
+    await tester.runAsync(() async {
+      final path = const String.fromEnvironment(
+        'CAFE_CAPTURE',
+        defaultValue: 'output/cafe-yard-20261125',
+      );
+      await File('$path/render-metrics.json').writeAsString(
+        const JsonEncoder.withIndent('  ').convert({
+          'scope': 'Native synthetic CPU paint samples, not device FPS',
+          'faces': c.world.faces.length,
+          'grassFaces': c.world.faces
+              .where((f) => f.part == 'yard.grass.blade')
+              .length,
+          'samples': timings,
+        }),
+      );
+    });
     await tester.pumpWidget(const SizedBox());
     c.dispose();
   });

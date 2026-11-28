@@ -1,0 +1,22 @@
+{
+  "scope": "Approved low stone wall, lawn and earth detail; unchanged routes and persistence",
+  "local": {
+    "relatedTests": 33,
+    "boundsTests": 8,
+    "captureTests": 1,
+    "faces": 34599,
+    "grassFaces": 454,
+    "actualNativeRenders": 7,
+    "format": "pass",
+    "analyze": "pass"
+  },
+  "initialFailure": "37338 faces exceeded the unchanged 35000 face budget; reduced hidden geometry. Intermediate 35498/35253 runs are not reported as passes.",
+  "web": "pending",
+  "ci": "pending",
+  "deployment": "pending",
+  "unverified": [
+    "Physical iOS and Android frame rate",
+    "Photorealistic match to generated design concept"
+  ],
+  "concept": "../../../../design/cafe-natural-yard/20261128/approved-low-stone-concept.jpg"
+}

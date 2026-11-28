@@ -52,23 +52,151 @@ abstract final class CafeWatercolor {
 
   static Future<ui.Image> lawn() => _image((canvas) {
     final random = math.Random(7421);
-    canvas.drawColor(const ui.Color(0xff9bac70), ui.BlendMode.src);
+    canvas.drawColor(const ui.Color(0xffa1ac7b), ui.BlendMode.src);
+    _washes(
+      canvas,
+      random,
+      const ui.Color(0xff657e50),
+      count: 90,
+      strength: .16,
+    );
+    _washes(
+      canvas,
+      random,
+      const ui.Color(0xffd7cc9c),
+      count: 55,
+      strength: .15,
+    );
     final paint = ui.Paint()..strokeCap = ui.StrokeCap.round;
-    for (var i = 0; i < 4200; i++) {
+    // Several blade directions and lengths avoid an artificial mown stripe.
+    for (var i = 0; i < 26000; i++) {
       final x = random.nextDouble() * _size, y = random.nextDouble() * _size;
+      final angle = random.nextDouble() * math.pi * 2;
+      final length = 1.2 + random.nextDouble() * 3.8;
+      final dx = math.cos(angle) * length;
+      final dy = math.sin(angle) * length;
       paint
-        ..color = [
-          const ui.Color(0xff83995c),
-          const ui.Color(0xffb8c58b),
-          const ui.Color(0xffa5b773),
-          const ui.Color(0xffd0cf98),
-        ][i % 4].withValues(alpha: .25 + random.nextDouble() * .35)
-        ..strokeWidth = .7 + random.nextDouble() * 1.3;
-      canvas.drawLine(
-        ui.Offset(x, y),
-        ui.Offset(
-          x + 2 + random.nextDouble() * 4,
-          y - 1 - random.nextDouble() * 5,
+        ..color = const [
+          ui.Color(0xff617c47),
+          ui.Color(0xffc4ce9b),
+          ui.Color(0xff8a9f60),
+          ui.Color(0xffd3ce9e),
+        ][i % 4].withValues(alpha: .22 + random.nextDouble() * .33)
+        ..strokeWidth = .45 + random.nextDouble() * .70;
+      for (final ox in [-_size, 0.0, _size]) {
+        for (final oy in [-_size, 0.0, _size]) {
+          if (x + ox < -8 ||
+              x + ox > _size + 8 ||
+              y + oy < -8 ||
+              y + oy > _size + 8) {
+            continue;
+          }
+          final path = ui.Path()
+            ..moveTo(x + ox, y + oy)
+            ..quadraticBezierTo(
+              x + ox + dx * .2,
+              y + oy + dy * .6,
+              x + ox + dx,
+              y + oy + dy,
+            );
+          canvas.drawPath(path, paint);
+        }
+      }
+    }
+    _grain(canvas, random, count: 7000);
+  }, resolution: 768);
+
+  static Future<ui.Image> earth() => _image((canvas) {
+    final random = math.Random(281128);
+    canvas.drawColor(const ui.Color(0xffbd906e), ui.BlendMode.src);
+    _washes(
+      canvas,
+      random,
+      const ui.Color(0xff8d6048),
+      count: 80,
+      strength: .18,
+    );
+    _washes(
+      canvas,
+      random,
+      const ui.Color(0xffe6c59c),
+      count: 65,
+      strength: .20,
+    );
+    final paint = ui.Paint()..isAntiAlias = true;
+    for (var i = 0; i < 13000; i++) {
+      final p = ui.Offset(
+        random.nextDouble() * _size,
+        random.nextDouble() * _size,
+      );
+      paint.color = const [
+        ui.Color(0xff7c5843),
+        ui.Color(0xffd7b48c),
+        ui.Color(0xffa97758),
+      ][i % 3].withValues(alpha: .14 + random.nextDouble() * .2);
+      canvas.drawOval(
+        ui.Rect.fromCenter(
+          center: p,
+          width: .3 + random.nextDouble() * 1.6,
+          height: .3 + random.nextDouble() * .9,
+        ),
+        paint,
+      );
+    }
+    // Tiny compacted grains rather than gravel or deep cracked desert clay.
+    for (var i = 0; i < 220; i++) {
+      final p = ui.Offset(
+        3 + random.nextDouble() * 506,
+        3 + random.nextDouble() * 506,
+      );
+      paint.color = const ui.Color(0x30734e3a);
+      canvas.drawOval(
+        ui.Rect.fromCenter(
+          center: p + const ui.Offset(0, .6),
+          width: 1.2,
+          height: .8,
+        ),
+        paint,
+      );
+      paint.color = const ui.Color(0x70ddc3a4);
+      canvas.drawOval(
+        ui.Rect.fromCenter(center: p, width: 1.1, height: .65),
+        paint,
+      );
+    }
+  }, resolution: 768);
+
+  static Future<ui.Image> fieldstone() => _image((canvas) {
+    final random = math.Random(281130);
+    // Neutral mineral detail lets each solid stone carry its own warm grey tint.
+    canvas.drawColor(const ui.Color(0xffeeeae2), ui.BlendMode.src);
+    _washes(
+      canvas,
+      random,
+      const ui.Color(0xff8c887d),
+      count: 90,
+      strength: .55,
+    );
+    _washes(
+      canvas,
+      random,
+      const ui.Color(0xffc1b69f),
+      count: 55,
+      strength: .14,
+    );
+    final paint = ui.Paint();
+    for (var i = 0; i < 14000; i++) {
+      paint.color = i.isEven
+          ? const ui.Color(0x23857e6d)
+          : const ui.Color(0x70ffffff);
+      canvas.drawOval(
+        ui.Rect.fromCenter(
+          center: ui.Offset(
+            random.nextDouble() * _size,
+            random.nextDouble() * _size,
+          ),
+          width: .35 + random.nextDouble() * 1.6,
+          height: .30 + random.nextDouble() * .9,
         ),
         paint,
       );

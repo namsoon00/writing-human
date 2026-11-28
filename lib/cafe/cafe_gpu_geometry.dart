@@ -76,6 +76,7 @@ class CafeGpuGeometry {
                 CafeSurface.plain,
                 CafeSurface.plaster,
                 CafeSurface.limestone,
+                CafeSurface.fieldstone,
                 CafeSurface.water,
                 CafeSurface.brass,
               ].contains(f.surface)

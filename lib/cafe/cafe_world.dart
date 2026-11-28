@@ -11,6 +11,7 @@ import 'cafe_atmosphere.dart';
 
 part 'cafe_courtyard.dart';
 part 'cafe_yard_geometry.dart';
+part 'cafe_natural_yard.dart';
 part 'cafe_interior.dart';
 part 'cafe_objects.dart';
 part 'cafe_soft_geometry.dart';
@@ -36,6 +37,8 @@ enum CafeSurface {
   lawn,
   water,
   glass,
+  earth,
+  fieldstone,
 }
 
 enum CafeGrain { x, y, z }
@@ -95,6 +98,12 @@ class CafeFace {
         surface == CafeSurface.brass ||
         surface == CafeSurface.limestone) {
       return Offset((p.x + p.z * .37) / .45, (p.y + p.z * .29) / .45);
+    }
+    if (surface == CafeSurface.lawn) return Offset(p.x / 3.2, p.z / 3.2);
+    if (surface == CafeSurface.earth) return Offset(p.x / 1.8, p.z / 1.8);
+    if (surface == CafeSurface.fieldstone) {
+      if (n.y.abs() > .6) return Offset(p.x / .65, p.z / .65);
+      return Offset((n.x.abs() > .6 ? p.z : p.x) / .65, -p.y / .65);
     }
     if (surface == CafeSurface.water) return Offset(p.x / 2.8, p.z / 2.8);
     if (surface == CafeSurface.gravel) return Offset(p.x / .6, p.z / .6);

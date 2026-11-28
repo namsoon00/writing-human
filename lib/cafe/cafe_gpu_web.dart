@@ -76,6 +76,8 @@ class _SurfaceState extends State<_Surface> {
     p.plaster,
     p.artwork,
     p.gravel,
+    p.earth,
+    p.fieldstone,
     p.tree,
     p.flowers,
     p.blossom,

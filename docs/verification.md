@@ -4425,3 +4425,12 @@ SHA256은 `53af53d59599a235428ff0b49b1f701134ddc66b2d508289e442e4c183533fde`로
   [공개 HTTP 확인](evidence/20261127/cafe-seasons/public-http.json),
   [실제 로컬 산책 중지 화면](evidence/20261127/cafe-seasons/stroll-drag-stop.jpg).
   기존 비공개 Sites project 설정과 사용자 기록은 변경하지 않았다.
+
+
+## 2026-11-28 · 낮은 돌담·잔디·황토길 구현
+
+[승인된 생성 시안](../design/cafe-natural-yard/20261128/approved-low-stone-concept.jpg)을 기준으로
+돌담을 82cm로 낮추고 잔디·황토·돌의 재질을 분리했다. 통행과 글 저장 형식은 유지한다.
+초기 기하 검사에서 37,338면으로 기존 35,000면 예산을 넘어 실패했다. 돌의 보이지 않는 면과
+중복 풀잎을 덜어냈으며 예산 기준을 완화하지 않았다. 중간 소스와 최종 소스의 검사 결과를
+구분한다. 최종 로컬 검사·실제 렌더·Chrome·배포 결과와 미검증 범위는 후속 기록한다.

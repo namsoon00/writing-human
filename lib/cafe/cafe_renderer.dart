@@ -124,6 +124,8 @@ class CafeRenderer extends CustomPainter {
     this.plaster,
     this.artwork,
     this.gravel,
+    this.earth,
+    this.fieldstone,
     this.tree,
     this.flowers,
     this.blossom,
@@ -159,6 +161,8 @@ class CafeRenderer extends CustomPainter {
       plaster,
       artwork,
       gravel,
+      earth,
+      fieldstone,
       tree,
       flowers;
   final List<ui.Image?> framedArt;
@@ -235,6 +239,8 @@ class CafeRenderer extends CustomPainter {
       use,
       thirdPerson: useCamera != null,
     )) {
+      // Fine grass is decoration; floor clicks still reach the walking ground.
+      if (face.part == 'yard.grass.blade') continue;
       // Floor light/shadow decals do not obstruct the physical surface.
       if (face.color.a < .99 && face.surface != CafeSurface.glass) continue;
       // The chase camera can be across the open bay while the person has
@@ -328,6 +334,8 @@ class CafeRenderer extends CustomPainter {
             ? framedArt[face.artIndex!] ?? artwork
             : artwork,
       CafeSurface.gravel => gravel,
+      CafeSurface.earth => earth,
+      CafeSurface.fieldstone => fieldstone,
       CafeSurface.tree => tree,
       CafeSurface.flowers => flowers,
       CafeSurface.blossom => blossom,
@@ -464,6 +472,7 @@ class CafeRenderer extends CustomPainter {
         textured &&
             face.surface != CafeSurface.limestone &&
             face.surface != CafeSurface.plaster &&
+            face.surface != CafeSurface.fieldstone &&
             face.surface != CafeSurface.water &&
             face.surface != CafeSurface.plain &&
             face.surface != CafeSurface.brass
@@ -893,6 +902,8 @@ class CafeRenderer extends CustomPainter {
       plaster,
       artwork,
       gravel,
+      earth,
+      fieldstone,
       tree,
       flowers,
       blossom,
@@ -1009,6 +1020,8 @@ class CafeRenderer extends CustomPainter {
         plaster: plaster,
         artwork: artwork,
         gravel: gravel,
+        earth: earth,
+        fieldstone: fieldstone,
         tree: tree,
         flowers: flowers,
         blossom: blossom,
@@ -1113,6 +1126,10 @@ class CafeRenderer extends CustomPainter {
       oldDelegate.plaster != plaster ||
       oldDelegate.artwork != artwork ||
       oldDelegate.gravel != gravel ||
+      oldDelegate.earth != earth ||
+      oldDelegate.fieldstone != fieldstone ||
+      oldDelegate.blossom != blossom ||
+      oldDelegate.lawn != lawn ||
       oldDelegate.tree != tree ||
       oldDelegate.flowers != flowers ||
       oldDelegate.world != world;

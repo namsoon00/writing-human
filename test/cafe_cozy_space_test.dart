@@ -159,7 +159,8 @@ void main() {
   test('Enclosure expands around existing calm places and remains bounded', () {
     final yard = CafeWorld(courtyard: true);
     expect(CafeYard.bounds.width * CafeYard.bounds.height, greaterThan(700));
-    expect(yard.faces.where((f) => f.part == 'yard.wall.plaster').length, 6);
+    expect(yard.faces.where((f) => f.part == 'yard.wall.plaster'), isEmpty);
+    expect(yard.faces.where((f) => f.part == 'yard.wall.coping'), isNotEmpty);
     expect(yard.canStand(const CafePoint(-20, 1.62, -18)), isTrue);
     expect(yard.canStand(const CafePoint(-22.4, 1.62, -18)), isFalse);
     expect(yard.validateLayout(), isNull);

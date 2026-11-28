@@ -19,7 +19,10 @@ extension _FrontYardGeometry on CafeWorld {
     }
 
     CafePoint at(int i, double sign) {
-      final p = points[i] + side(i) * sign;
+      final edge = part == 'yard.earth'
+          ? 1 + .025 * math.sin(i * 2.7) + .018 * math.cos(i * .91)
+          : 1.0;
+      final p = points[i] + side(i) * (sign * edge);
       return CafePoint(p.x, height, p.z);
     }
 
@@ -32,6 +35,10 @@ extension _FrontYardGeometry on CafeWorld {
               ? Color.lerp(color, const Color(0xff596965), .18)!
               : color,
           surface: surface,
+          materialTint:
+              weather == CafeWeather.rain && surface == CafeSurface.earth
+              ? const Color(0xffc5bcb0)
+              : const Color(0xffffffff),
           layer: 1,
           part: part,
           textureCoordinates: p
@@ -39,6 +46,35 @@ extension _FrontYardGeometry on CafeWorld {
               .toList(),
         ),
       );
+      if (part == 'yard.earth') {
+        for (final sign in [-1.0, 1.0]) {
+          final a = at(i, sign), b = at(i + 1, sign);
+          final fringe =
+              (a + b) * .5 +
+              side(i).normalized *
+                  (sign * (.03 + .025 * (1 + math.sin(i * 3.7))));
+          var edge = [
+            a,
+            b,
+            fringe,
+          ].map((p) => CafePoint(p.x, .010, p.z)).toList();
+          if ((edge[1] - edge[0]).cross(edge[2] - edge[0]).y < 0) {
+            edge = edge.reversed.toList();
+          }
+          faces.add(
+            CafeFace(
+              edge,
+              color,
+              surface: CafeSurface.earth,
+              materialTint: weather == CafeWeather.rain
+                  ? const Color(0xffbcb6a8)
+                  : const Color(0xffe5e3ca),
+              layer: 1,
+              part: 'yard.earth.edge',
+            ),
+          );
+        }
+      }
       if (part == 'yard.stone' && i.isEven) {
         final a = at(i, -1),
             b = at(i, 1),
@@ -119,100 +155,49 @@ extension _FrontYardGeometry on CafeWorld {
   }
 
   void _yardBoundary() {
+    final random = math.Random(28112026);
     void panel(double x1, double z1, double x2, double z2) {
       final a = CafePoint(x1, 0, z1), b = CafePoint(x2, 0, z2);
-      faces.add(
-        CafeFace(
-          [
-            a,
-            b,
-            b + const CafePoint(0, 1.15, 0),
-            a + const CafePoint(0, 1.15, 0),
-          ],
-          CafeWorld.wall,
-          doubleSided: true,
-          surface: CafeSurface.plaster,
-          layer: 0,
-          part: 'yard.wall.plaster',
-        ),
+      final length = (b - a).length, axis = (b - a).normalized;
+      // Recessed mortar fills the wall, while real stones make its silhouette.
+      final start = faces.length;
+      box(
+        (x1 + x2) / 2,
+        .335,
+        (z1 + z2) / 2,
+        axis.x.abs() > .5 ? length : .24,
+        .67,
+        axis.x.abs() > .5 ? .24 : length,
+        const Color(0xffaaa493),
+        surface: CafeSurface.plaster,
+        layer: 0,
       );
-      final delta = b - a, length = delta.length, axis = delta.normalized;
-      final horizontal = axis.x.abs() > .5;
-      void stone(CafePoint p, double w, double h, double depth, Color color) {
-        box(
-          p.x,
-          p.y,
-          p.z,
-          horizontal ? w : depth,
-          h,
-          horizontal ? depth : w,
-          color,
-          surface: CafeSurface.limestone,
-          layer: 1,
-        );
+      for (final f in faces.skip(start)) {
+        f.part = 'yard.wall.mortar';
       }
-
-      // Two staggered courses, individual coping stones, and shallow piers
-      // give the enclosure thickness without putting dense brickwork on it.
-      for (var row = 0; row < 2; row++) {
-        var start = 0.0;
-        while (start < length - .01) {
-          final w = math.min(
-            row == 1 && start == 0 ? .56 : 1.12,
-            length - start,
+      for (var row = 0; row < 3; row++) {
+        var offset = 0.0;
+        while (offset < length - .02) {
+          final cap = row == 2;
+          final width = math.min(
+            (offset == 0 && row == 1 ? .32 : .64) + random.nextDouble() * .42,
+            length - offset,
           );
-          stone(
-            a + axis * (start + w / 2) + CafePoint(0, .075 + row * .135, 0),
-            math.max(.02, w - .018),
-            .126,
-            .23,
-            Color.lerp(
-              const Color(0xffc4b69d),
-              const Color(0xffdbcfb7),
-              ((start * 3 + row).floor() % 4) / 4,
-            )!,
+          final height = cap ? .14 : .30 + random.nextDouble() * .035;
+          final y = cap
+              ? CafeYard.wallHeight - .07
+              : .17 + row * .32 + (random.nextDouble() - .5) * .015;
+          _yardFieldstone(
+            a + axis * (offset + width / 2) + CafePoint(0, y, 0),
+            axis,
+            math.max(.02, width - .012),
+            height,
+            cap ? .44 : .37 + random.nextDouble() * .04,
+            random,
+            cap: cap,
           );
-          start += w;
+          offset += width;
         }
-      }
-      final count = (length / .95).ceil();
-      for (var i = 0; i < count; i++) {
-        final w = length / count, p = a + axis * ((i + .5) * w);
-        stone(
-          p + const CafePoint(0, 1.16, 0),
-          w - .012,
-          .09,
-          .32,
-          const Color(0xffd5c6aa),
-        );
-        stone(
-          p + const CafePoint(0, 1.21, 0),
-          w - .020,
-          .035,
-          .26,
-          const Color(0xffe1d5bf),
-        );
-      }
-      for (var d = 0.0; d < length; d += 3.0) {
-        final p = a + axis * d;
-        box(
-          p.x,
-          .63,
-          p.z,
-          .26,
-          1.26,
-          .26,
-          CafeWorld.wall,
-          surface: CafeSurface.plaster,
-          layer: 1,
-        );
-        stone(
-          p + const CafePoint(0, 1.28, 0),
-          .34,
-          .09,
-          .34,
-          const Color(0xffd5c6aa),
-        );
       }
     }
 
@@ -225,37 +210,16 @@ extension _FrontYardGeometry on CafeWorld {
     panel(right, top, right, 3.165);
     panel(left, 3.165, -4.65, 3.165);
     panel(4.65, 3.165, right, 3.165);
+    // The original open entry stays clear, with low timber leaves folded inside.
     for (final x in [-7.25, -4.75]) {
-      box(
-        x,
-        .68,
-        top + .05,
-        .30,
-        1.36,
-        .32,
-        CafeWorld.wall,
-        surface: CafeSurface.plaster,
-      );
-      box(
-        x,
-        1.37,
-        top + .05,
-        .38,
-        .08,
-        .40,
-        const Color(0xffd8cbb2),
-        surface: CafeSurface.limestone,
-        layer: 1,
-      );
-      // Open gate leaves stay inside the garden; there is no exterior road.
-      for (var j = 0; j < 6; j++) {
+      for (var j = 0; j < 5; j++) {
         box(
           x,
-          .60,
-          top + .15 + j * .16,
-          .065,
-          1.14,
-          .125,
+          .35,
+          top + .18 + j * .15,
+          .055,
+          .66,
+          .11,
           CafeWorld.oak,
           wood: true,
         );
@@ -408,7 +372,7 @@ extension _FrontYardGeometry on CafeWorld {
       1.30,
       const Color(0xffb9825e),
       'yard.earth',
-      surface: CafeSurface.plaster,
+      surface: CafeSurface.earth,
       closed: true,
     );
     _yardRibbon(
@@ -419,6 +383,7 @@ extension _FrontYardGeometry on CafeWorld {
       height: .023,
       surface: CafeSurface.limestone,
     );
+    _yardNaturalDetails();
     _yardBoundary();
     _yardCafeShell();
     for (final p in [

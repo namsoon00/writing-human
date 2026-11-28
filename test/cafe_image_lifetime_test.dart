@@ -34,7 +34,10 @@ void main() {
           artwork = await texture(),
           gravel = await texture(),
           tree = await texture(),
-          flowers = await texture();
+          flowers = await texture(),
+          earth = await texture(),
+          fieldstone = await texture(),
+          lawn = await texture();
       final originals = [
         wood,
         sign,
@@ -46,6 +49,9 @@ void main() {
         gravel,
         tree,
         flowers,
+        earth,
+        fieldstone,
+        lawn,
       ];
       final artOriginals = [for (var i = 0; i < 3; i++) await texture()];
       originals.addAll(artOriginals);
@@ -68,6 +74,9 @@ void main() {
             gravel: gravel,
             tree: tree,
             flowers: flowers,
+            earth: earth,
+            fieldstone: fieldstone,
+            lawn: lawn,
             framedArt: artOriginals,
             camera: CafeCamera(
               position: frame < 6

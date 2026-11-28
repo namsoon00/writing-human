@@ -235,6 +235,8 @@ class _CafeSceneState extends State<CafeScene>
       plaster,
       artwork,
       gravel,
+      earth,
+      fieldstone,
       tree,
       flowers,
       blossom,
@@ -476,6 +478,8 @@ class _CafeSceneState extends State<CafeScene>
       CafeWatercolor.blossom(),
       CafeWatercolor.lawn(),
       CafeMaterials.knit(),
+      CafeWatercolor.earth(),
+      CafeWatercolor.fieldstone(),
     ]);
     if (!mounted) {
       for (final image in images) {
@@ -498,6 +502,8 @@ class _CafeSceneState extends State<CafeScene>
       blossom = images[13];
       lawn = images[14];
       knit = images[15];
+      earth = images[16];
+      fieldstone = images[17];
     });
   }
 
@@ -643,6 +649,8 @@ class _CafeSceneState extends State<CafeScene>
     plaster?.dispose();
     artwork?.dispose();
     gravel?.dispose();
+    earth?.dispose();
+    fieldstone?.dispose();
     tree?.dispose();
     flowers?.dispose();
     blossom?.dispose();
@@ -947,6 +955,8 @@ class _CafeSceneState extends State<CafeScene>
                           plaster: plaster,
                           artwork: artwork,
                           gravel: gravel,
+                          earth: earth,
+                          fieldstone: fieldstone,
                           tree: tree,
                           flowers: flowers,
                           blossom: blossom,

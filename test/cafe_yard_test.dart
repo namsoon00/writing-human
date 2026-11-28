@@ -1,4 +1,6 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
+import 'package:writing_human/cafe/cafe_renderer.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/cafe/cafe_camera.dart';
 import 'package:writing_human/cafe/cafe_avatar.dart';
@@ -20,6 +22,67 @@ CafeViewController enter() {
 }
 
 void main() {
+  test('Natural banks stay low, clear and within a fixed geometry budget', () {
+    final yard = CafeWorld(courtyard: true);
+    final wall = yard.faces
+        .where((f) => f.part?.startsWith('yard.wall.') == true)
+        .toList();
+    expect(wall, isNotEmpty);
+    expect(wall.any((f) => f.surface == CafeSurface.fieldstone), isTrue);
+    expect(
+      wall.expand((f) => f.points).map((p) => p.y).reduce(math.max),
+      closeTo(CafeYard.wallHeight, .001),
+    );
+    expect(
+      wall.any(
+        (f) =>
+            f.surface == CafeSurface.plaster && f.points.any((p) => p.y > .7),
+      ),
+      isFalse,
+    );
+    expect(yard.faces.length, lessThan(35000));
+    for (final f in yard.faces) {
+      expect(f.normal.isFinite && f.points.every((p) => p.isFinite), isTrue);
+    }
+    final blades = yard.faces
+        .where((f) => f.part == 'yard.grass.blade')
+        .toList();
+    expect(blades.length, inInclusiveRange(400, 1200));
+    for (final f in blades) {
+      expect(CafeYard.distanceToTrail(f.center), greaterThan(.66));
+      expect(CafeYard.distanceToStone(f.center), greaterThan(.78));
+    }
+    expect(
+      yard.faces
+          .where((f) => f.part == 'yard.earth')
+          .every((f) => f.surface == CafeSurface.earth),
+      isTrue,
+    );
+  });
+
+  test('Fine grass does not intercept walking clicks', () {
+    final yard = CafeWorld(courtyard: true);
+    final blade = yard.faces.firstWhere(
+      (f) =>
+          f.part == 'yard.grass.blade' &&
+          yard.canStand(CafePoint(f.center.x, 1.62, f.center.z)),
+    );
+    final aim = blade.center;
+    final camera = CafeCamera(
+      position: aim + const CafePoint(0, .6, .6),
+      pitch: -math.pi / 4,
+    );
+    final hit = CafeRenderer.pick(
+      const ui.Offset(200, 200),
+      camera,
+      const ui.Size(400, 400),
+      yard,
+    );
+    expect(hit, isNotNull);
+    expect(hit!.floor, isTrue);
+    expect(hit.position.y, lessThan(.03));
+  });
+
   test(
     'The sustained earthen loop closes inside the enclosure and stays clear',
     () {

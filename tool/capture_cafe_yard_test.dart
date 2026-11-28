@@ -118,6 +118,9 @@ void main() {
     await save('barefoot-390');
     c.visit(CafeTarget.meditation);
     await save('meditation-390');
+    c.look(math.pi, 0);
+    await save('meditation-front-390');
+    c.look(-math.pi, 0);
     c.stand();
     c.visit(CafeTarget.trailRest);
     await save('rest-390');

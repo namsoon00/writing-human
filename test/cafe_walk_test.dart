@@ -60,7 +60,7 @@ void main() {
           last = next;
         }
         expect(last, closeTo(distance, 1e-9));
-        expect(peak, lessThanOrEqualTo(1.201));
+        expect(peak, lessThanOrEqualTo(.461));
         expect(timing.at(.001), lessThan(distance * .001));
       }
     },
@@ -178,7 +178,7 @@ void main() {
       for (var i = 0; i < 20; i++) {
         await tester.pump(const Duration(milliseconds: 30));
       }
-      expect((c.camera.position - before).length, greaterThan(.2));
+      expect((c.camera.position - before).length, greaterThan(.12));
       expect(c.effectTime, greaterThan(beforeEffects));
       expect(c.world.canStand(c.camera.position), isTrue);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.keyW);

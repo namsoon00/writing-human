@@ -141,7 +141,28 @@ class CafeViewController extends ChangeNotifier {
   Future<bool> get travelFinished =>
       _travelDone?.future ?? Future.value(!travelling);
   Future<void> roomReady = Future<void>.value();
-  double walkSpeed = 0;
+  double walkSpeed = 0, _gait = 0;
+  double settleFrom = 0, settleProgress = 1;
+  int settleRequest = 0;
+  bool get settling => settleFrom > .001 && settleProgress < 1;
+  double get visualStride =>
+      settling ? settleFrom * (1 - CafeBody.ease(settleProgress)) : _gait;
+  void advanceSettle(double p) {
+    if (!p.isFinite) return;
+    settleProgress = p.clamp(0.0, 1.0);
+    if (settleProgress >= 1) settleFrom = 0;
+    notifyListeners();
+  }
+
+  void _haltMotion({bool smooth = false}) {
+    final before = visualStride;
+    walkSpeed = 0;
+    _gait = 0;
+    settleFrom = smooth ? before : 0;
+    settleProgress = smooth && before > .001 ? 0 : 1;
+    if (settling) settleRequest++;
+  }
+
   double bodyYaw = 0, walkPhase = 0;
   CafeAvatar? _avatar;
   CafeCamera get actorCamera =>
@@ -181,7 +202,7 @@ class CafeViewController extends ChangeNotifier {
             (meditating ||
                 arrival == CafeTarget.meditation ||
                 _departure == CafeTarget.meditation)
-        ? ((1.3 - eye.position.y) / .4).clamp(0.0, 1.0)
+        ? ((1.62 - eye.position.y) / .84).clamp(0.0, 1.0)
         : 0.0;
     if (previous != null &&
         previous.eye.position.x == eye.position.x &&
@@ -191,7 +212,9 @@ class CafeViewController extends ChangeNotifier {
         previous.yaw == eye.yaw &&
         previous.object == world.objects[frame?.id] &&
         previous.phase == walkPhase &&
-        previous.stride == (walkSpeed / .65).clamp(0.0, 1.0) &&
+        previous.stride == visualStride &&
+        previous.settleFrom == settleFrom &&
+        previous.settleProgress == settleProgress &&
         previous.barefoot == barefoot &&
         previous.meditation == meditation &&
         previous.use?.id == frame?.id &&
@@ -205,7 +228,9 @@ class CafeViewController extends ChangeNotifier {
       eye: eye,
       yaw: eye.yaw,
       phase: walkPhase,
-      stride: (walkSpeed / .65).clamp(0.0, 1.0),
+      stride: visualStride,
+      settleFrom: settleFrom,
+      settleProgress: settleProgress,
       use: frame,
       barefoot: barefoot,
       meditation: meditation,
@@ -228,10 +253,19 @@ class CafeViewController extends ChangeNotifier {
     if (walking && horizontal > .00001) {
       final targetYaw = math.atan2(delta.x, -delta.z);
       final turn = (targetYaw - bodyYaw + math.pi) % (2 * math.pi) - math.pi;
-      bodyYaw += turn * (dt * 12).clamp(0, 1);
+      bodyYaw += (turn * (dt * 7).clamp(0, 1)).clamp(-dt * 4, dt * 4);
       walkPhase += horizontal * 2 * math.pi / CafeBody.gaitLength;
     }
+    if (!walking && (arrival != null || _departure != null)) {
+      final turn = (value.yaw - bodyYaw + math.pi) % (2 * math.pi) - math.pi;
+      bodyYaw += turn * (dt * 6).clamp(0, 1);
+    }
+    if (settling) _gait = visualStride;
+    settleFrom = 0;
+    settleProgress = 1;
     walkSpeed = walking ? CafePoint(delta.x, 0, delta.z).length / dt : 0;
+    final target = (walkSpeed / CafeBody.walkSpeed).clamp(0.0, 1.0);
+    _gait = walking ? _gait + (target - _gait) * (1 - math.exp(-dt * 10)) : 0;
     notifyListeners();
   }
 
@@ -468,7 +502,7 @@ class CafeViewController extends ChangeNotifier {
     activeChairId = _pendingChairId;
     _pendingSeat = null;
     _pendingChairId = null;
-    walkSpeed = 0;
+    _haltMotion(smooth: true);
     if (arrival == CafeTarget.courtyard) {
       inCourtyard = true;
       camera = CafeCamera.courtyardEntrance;
@@ -522,7 +556,7 @@ class CafeViewController extends ChangeNotifier {
       seat = null;
       activeChairId = null;
     }
-    walkSpeed = 0;
+    _haltMotion(smooth: true);
     strolling = false;
     _pendingSeat = null;
     _pendingChairId = null;
@@ -543,8 +577,8 @@ class CafeViewController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void stopWalking() {
-    walkSpeed = 0;
+  void stopWalking({bool smooth = false}) {
+    _haltMotion(smooth: smooth);
     notifyListeners();
   }
 
@@ -566,7 +600,7 @@ class CafeViewController extends ChangeNotifier {
     }
     final next = camera.moved(sideways, ahead);
     if (!world.clearSegment(camera.position, next.position)) {
-      stopWalking();
+      stopWalking(smooth: true);
       return false;
     }
     advanceCamera(next, dt: dt, walking: animate);

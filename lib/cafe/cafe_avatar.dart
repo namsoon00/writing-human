@@ -6,6 +6,7 @@ import 'cafe_body.dart';
 import 'cafe_world.dart';
 
 part 'cafe_cozy_avatar.dart';
+part 'cafe_skeleton.dart';
 
 /// The approved A outfit. All dimensions are metres; the mesh shares the room's
 /// lighting and depth ordering. No character state is written into a record.
@@ -19,6 +20,8 @@ class CafeAvatar {
     this.object,
     this.barefoot = false,
     this.meditation = 0,
+    this.settleFrom = 0,
+    this.settleProgress = 1,
   });
   static const id = 'avatar.a.male';
   final CafeCamera eye;
@@ -27,8 +30,10 @@ class CafeAvatar {
   final CafeObject? object;
   final bool barefoot;
   final double meditation;
+  final double settleFrom, settleProgress;
+  late final CafeSkeleton skeleton = CafeSkeleton(this);
   bool get meditating => meditation > 0;
-  late final double seated = CafeBody.seated(eye);
+  late final double seated = CafeBody.seated(eye) * (1 - meditation);
   late final CafePoint origin = CafePoint(eye.position.x, 0, eye.position.z);
   late final List<CafeFace> faces = _build();
   late final double _cos = math.cos(yaw), _sin = math.sin(yaw);
@@ -51,7 +56,7 @@ CafePoint _joint(
   CafePoint bend,
 ) {
   final axis = (b - a).normalized;
-  final d = (b - a).length.clamp(.025, upper + lower - .001);
+  final d = (b - a).length.clamp(.025, upper + lower - .00001);
   final along = (upper * upper - lower * lower + d * d) / (2 * d);
   final perpendicular = (bend - axis * bend.dot(axis)).normalized;
   return a +
@@ -130,6 +135,7 @@ class _AvatarMesh {
       'shoe.sole' => (12, 4),
       'shoe' => (12, 5),
       'trousers' => (12, 4),
+      'knee' => (8, 4),
       'knit.button' => (8, 3),
       'button.hole' => (3, 2),
       _ => (slices, rings),
@@ -217,6 +223,7 @@ class _AvatarMesh {
     String part, {
     int sides = 8,
     double flatten = 1,
+    bool caps = true,
   }) {
     final axes = <(CafePoint, CafePoint)>[];
     for (var i = 0; i < centers.length; i++) {
@@ -257,7 +264,7 @@ class _AvatarMesh {
         );
       }
     }
-    for (final end in [0, centers.length - 1]) {
+    for (final end in caps ? [0, centers.length - 1] : <int>[]) {
       final ns = end == 0
           ? (centers[0] - centers[1]).normalized
           : (centers.last - centers[centers.length - 2]).normalized;

@@ -10,33 +10,30 @@ final _cozyCoat = _makeCozyCoat();
 
 extension _CozyAvatar on CafeAvatar {
   List<CafeFace> _cozyBuild() {
-    final drop = CafeBody.headDrop(eye);
-    final bob =
-        stride *
-        (1 - seated) *
-        (1 - meditation) *
-        (-.032 - .008 * math.sin(phase).abs());
+    final rig = skeleton;
+    final drop = rig.drop;
+    final bob = rig.bob;
     final mesh = _AvatarMesh((p) => origin + _rotate(p), _rotate);
     final coat = _AvatarMesh(
-      (p) => origin + _rotate(p + CafePoint(0, bob - drop, 0)),
-      _rotate,
+      (p) => origin + _rotate(rig.torsoPoint(p)),
+      (n) => _rotate(rig.torsoNormal(n)),
     );
     final head = _AvatarMesh(
       (p) =>
           origin +
           _rotate(
-            CafePoint(
-              p.x * 1.0925,
-              1.067 + p.y * .9975 + bob - drop,
-              p.z * 1.045,
+            rig.torsoPoint(
+              CafePoint(p.x * 1.0925, 1.067 + p.y * .9975, p.z * 1.045),
             ),
           ),
-      (n) => _rotate(CafePoint(n.x / 1.0925, n.y / .9975, n.z / 1.045)),
+      (n) => _rotate(
+        rig.torsoNormal(CafePoint(n.x / 1.0925, n.y / .9975, n.z / 1.045)),
+      ),
     );
     _copyTemplate(coat, _cozyCoat);
     _copyTemplate(head, _cozyHead);
     mesh.ellipsoid(
-      CafePoint(0, .454 + bob - drop, 0),
+      CafePoint(rig.sway, .454 + bob - drop, rig.lean),
       const CafePoint(.132, .063, .103),
       _pants,
       'trousers',
@@ -44,75 +41,67 @@ extension _CozyAvatar on CafeAvatar {
       rings: 5,
     );
     for (final s in [-1.0, 1.0]) {
-      final gait =
-          math.sin(phase + (s < 0 ? math.pi : 0)) *
-          stride *
-          (1 - seated) *
-          (1 - meditation);
-      final cycle = (phase / (2 * math.pi) + (s < 0 ? .5 : 0)) % 1;
-      final swingTime = ((cycle - .6) / .4).clamp(0.0, 1.0);
-      final eased = swingTime * swingTime * (3 - 2 * swingTime);
-      // 60% stance: local foot travel .288m matches .48m of body travel
-      // per cycle. A planted foot stays in place instead of skating backward.
-      final footZ = cycle < .6
-          ? -.144 + .288 * cycle / .6
-          : .144 - .288 * eased;
-      final lift =
-          math.sin(swingTime * math.pi) *
-          .045 *
-          stride *
-          (1 - seated) *
-          (1 - meditation);
-      final hip = CafePoint(s * .076, .473 + bob - drop, 0);
-      var ankle = CafePoint(
-        s * .081,
-        .113 + lift,
-        footZ * stride * (1 - seated) * (1 - meditation),
-      );
-      ankle = CafePoint.lerp(ankle, CafePoint(s * .087, .25, -.20), seated);
-      ankle = CafePoint.lerp(ankle, CafePoint(-s * .10, .20, -.23), meditation);
-      final knee = CafePoint.lerp(
-        _joint(hip, ankle, .181, .181, const CafePoint(0, 0, -1)),
-        CafePoint(s * .24, .21, -.22),
-        meditation,
-      );
+      final leg = rig.legs[s < 0 ? 0 : 1];
+      final gait = math.sin(phase + (s < 0 ? math.pi : 0)) * rig.moving;
+      final hip = leg.hip, knee = leg.knee, ankle = leg.ankle;
+      // Separate segments overlap in a rounded knee instead of twisting a
+      // single wide tube through a sharp bend into the other leg.
       mesh.tube(
-        [
-          hip,
-          CafePoint.lerp(hip, knee, .46),
-          knee,
-          CafePoint.lerp(knee, ankle, .55),
-          ankle + const CafePoint(0, .03, 0),
-        ],
-        [.066, .068, .060, .058, .054],
+        [hip, CafePoint.lerp(hip, knee, .48), knee],
+        [.061, .060, .047],
         _pants,
         'trousers',
         sides: 12,
+        caps: false,
+      );
+      mesh.ellipsoid(
+        knee,
+        const CafePoint(.048, .047, .048),
+        _pants,
+        'knee',
+        slices: 10,
+        rings: 5,
       );
       mesh.tube(
-        [
-          ankle + const CafePoint(0, .025, 0),
-          ankle + const CafePoint(0, .050, 0),
-        ],
-        [.055, .055],
+        [knee, CafePoint.lerp(knee, ankle, .53), ankle],
+        [.046, .044, .036],
+        _pants,
+        'trousers',
+        sides: 12,
+        caps: false,
+      );
+      final cuff = (knee - ankle).normalized;
+      mesh.tube(
+        [ankle + cuff * .012, ankle + cuff * .045],
+        [.037, .038],
         const Color(0xff705742),
         'trousers.cuff',
-        sides: 12,
+        sides: 10,
       );
       final naked = barefoot || meditating;
-      mesh.tube(
-        [
-          ankle + const CafePoint(0, -.035, 0),
-          ankle + const CafePoint(0, .035, 0),
-        ],
+      final cr = math.cos(leg.roll), sr = math.sin(leg.roll);
+      final cp = math.cos(leg.pitch), sp = math.sin(leg.pitch);
+      final cy = math.cos(leg.yaw), sy = math.sin(leg.yaw);
+      CafePoint turn(CafePoint q) {
+        final x = q.x * cr - q.y * sr, y = q.x * sr + q.y * cr;
+        final yy = y * cp - q.z * sp, z = y * sp + q.z * cp;
+        return CafePoint(x * cy - z * sy, yy, x * sy + z * cy);
+      }
+
+      final foot = _AvatarMesh(
+        (q) => origin + _rotate(ankle + turn(q)),
+        (q) => _rotate(turn(q)),
+      );
+      foot.tube(
+        [const CafePoint(0, -.035, 0), const CafePoint(0, .035, 0)],
         [.034, .037],
         naked ? _skin : _cream,
         naked ? 'ankle' : 'sock',
         sides: 10,
       );
       if (naked) {
-        mesh.ellipsoid(
-          ankle + const CafePoint(0, -.067, -.035),
+        foot.ellipsoid(
+          const CafePoint(0, -.067, -.035),
           const CafePoint(.044, .026, .095),
           _skin,
           'foot',
@@ -120,8 +109,8 @@ extension _CozyAvatar on CafeAvatar {
           rings: 5,
         );
         for (var i = 0; i < 5; i++) {
-          mesh.ellipsoid(
-            ankle + CafePoint((i - 2) * .016, -.065, -.112 + i * .004),
+          foot.ellipsoid(
+            CafePoint((i - 2) * .016, -.065, -.112 + i * .004),
             CafePoint(.012 - i * .0007, .015, .022 - i * .0015),
             _skin,
             'foot.toe',
@@ -130,27 +119,27 @@ extension _CozyAvatar on CafeAvatar {
           );
         }
       } else {
-        mesh.ellipsoid(
-          ankle + const CafePoint(0, -.091, -.025),
+        foot.ellipsoid(
+          const CafePoint(0, -.091, -.025),
           const CafePoint(.068, .017, .106),
           const Color(0xffa49179),
           'shoe.sole',
           slices: 14,
           rings: 5,
         );
-        mesh.ellipsoid(
-          ankle + const CafePoint(0, -.066, -.027),
+        foot.ellipsoid(
+          const CafePoint(0, -.066, -.027),
           const CafePoint(.067, .041, .100),
           _slipper,
           'shoe',
           slices: 14,
           rings: 6,
         );
-        mesh.tube(
+        foot.tube(
           [
-            ankle + const CafePoint(-.056, -.077, -.075),
-            ankle + const CafePoint(0, -.077, -.125),
-            ankle + const CafePoint(.056, -.077, -.075),
+            const CafePoint(-.056, -.077, -.075),
+            const CafePoint(0, -.077, -.125),
+            const CafePoint(.056, -.077, -.075),
           ],
           [.0016, .0016, .0016],
           _cream,
@@ -158,6 +147,7 @@ extension _CozyAvatar on CafeAvatar {
           sides: 5,
         );
       }
+      mesh.faces.addAll(foot.faces);
       if (ankle.y < .16) _footShadow(mesh, ankle);
       _cozyArm(mesh, s, gait, bob, drop);
     }
@@ -171,20 +161,19 @@ extension _CozyAvatar on CafeAvatar {
     double bob,
     double drop,
   ) {
-    final shoulder = CafePoint(s * .163, .815 + bob - drop, 0);
-    var wrist = CafePoint(s * .223, .495 + bob - drop, -.025 - gait * .045);
+    final shoulder =
+        skeleton.torsoPoint(CafePoint(s * .163, .815, 0)) -
+        CafePoint(0, .02 * skeleton.fold, 0);
+    var wrist = skeleton.torsoPoint(
+      CafePoint(s * .195, .490, -.012 - gait * .028),
+    );
     final frame = use, obj = object;
     var reach = 0.0, grip = false;
-    CafePoint? cupDirection, cupAcross, cupNormal;
+    var gripAmount = 0.0;
+    CafePoint? cupDirection, cupNormal;
     if (frame != null && obj != null) {
       final progress = frame.progress.clamp(0.0, 1.0);
-      final lift = frame.kind == CafeUseKind.pickUp
-          ? progress
-          : frame.kind == CafeUseKind.putDown
-          ? 1 - progress
-          : frame.held
-          ? 1.0
-          : 0.0;
+      final lift = cafePropLift(frame);
       final volume = obj.type == CafeItemType.volume;
       final cup = obj.type == CafeItemType.cup;
       final opening = frame.kind == CafeUseKind.open
@@ -210,7 +199,6 @@ extension _CozyAvatar on CafeAvatar {
             origin + cafeHeldVector(eye, obj.type, frame, p, thirdPerson: true),
           ).normalized;
           cupDirection = axis(const CafePoint(0, 0, -1));
-          cupAcross = axis(CafePoint(0, s, 0));
           cupNormal = axis(CafePoint(-s, 0, 0));
         } else {
           target =
@@ -219,15 +207,26 @@ extension _CozyAvatar on CafeAvatar {
               CafePoint(0, volume ? -.06 : .055, 0) -
               (volume ? eye.forward * .04 : _zero);
         }
-        final onTable = obj.pivot + CafePoint(cup ? s * .071 : 0, .045, 0);
-        reach = lift > 0 ? 1.0 : math.sin(progress * math.pi);
+        var onTable =
+            obj.pivot +
+            (cup ? eye.right * (s * .071) : _zero) +
+            CafePoint(0, obj.type == CafeItemType.chair ? .72 : .045, 0);
+        if (frame.kind == CafeUseKind.pull || frame.kind == CafeUseKind.push) {
+          onTable +=
+              CafePoint(-math.sin(obj.yaw), 0, math.cos(obj.yaw)) *
+              (.06 *
+                  cafeContactProgress(frame) *
+                  (frame.kind == CafeUseKind.push ? -1 : 1));
+        }
+        reach = cafeHandReach(frame);
         wrist = CafePoint.lerp(
           wrist,
           _local(CafePoint.lerp(onTable, target, lift)),
           reach,
         );
+        gripAmount = cafeGrip(frame);
         grip =
-            lift > .45 &&
+            gripAmount > .01 &&
             (frame.held ||
                 frame.kind == CafeUseKind.pickUp ||
                 frame.kind == CafeUseKind.putDown);
@@ -250,7 +249,12 @@ extension _CozyAvatar on CafeAvatar {
         );
       }
     } else if (meditating) {
-      wrist = CafePoint.lerp(wrist, CafePoint(s * .23, .27, -.21), meditation);
+      final knee = skeleton.legs[s < 0 ? 0 : 1].knee;
+      wrist = CafePoint.lerp(
+        wrist,
+        knee + CafePoint(-s * .025, .08, .01),
+        skeleton.fold,
+      );
     } else if (seated > 0) {
       wrist = CafePoint.lerp(wrist, CafePoint(s * .145, .76, -.23), seated);
     }
@@ -262,7 +266,7 @@ extension _CozyAvatar on CafeAvatar {
       wrist,
       .19,
       .165,
-      CafePoint(s * .7, -.5, .25),
+      CafePoint(s * .12, -.35, .045),
     );
     mesh.ellipsoid(
       shoulder + CafePoint(-s * .006, 0, 0),
@@ -300,20 +304,41 @@ extension _CozyAvatar on CafeAvatar {
             .normalized;
     var across = direction.cross(normal).normalized;
     if (grip && cupDirection != null) {
-      direction = cupDirection;
-      across = cupAcross!;
-      normal = cupNormal!;
+      direction = CafePoint.lerp(
+        direction,
+        cupDirection,
+        gripAmount,
+      ).normalized;
+      normal = CafePoint.lerp(normal, cupNormal!, gripAmount).normalized;
+      across = direction.cross(normal).normalized;
+      normal = across.cross(direction).normalized;
     } else if (grip && obj != null && frame != null) {
       final toward =
           _local(cafeHeldPoint(eye, obj.type, frame, thirdPerson: true)) -
           wrist;
       final projected = toward - direction * toward.dot(direction);
       if (projected.length > .005) {
-        normal = projected.normalized;
+        normal = CafePoint.lerp(
+          normal,
+          projected.normalized,
+          gripAmount,
+        ).normalized;
         across = direction.cross(normal).normalized;
       }
     }
-    _cozyHand(mesh, wrist, across, direction, normal, s, grip);
+    if (!grip && skeleton.fold > .01) {
+      direction = CafePoint.lerp(
+        direction,
+        CafePoint(s * .23, -.35, -.90).normalized,
+        skeleton.fold,
+      ).normalized;
+      normal =
+          (const CafePoint(0, -1, 0) -
+                  direction * const CafePoint(0, -1, 0).dot(direction))
+              .normalized;
+      across = direction.cross(normal).normalized;
+    }
+    _cozyHand(mesh, wrist, across, direction, normal, s, gripAmount);
   }
 }
 
@@ -324,7 +349,7 @@ void _cozyHand(
   CafePoint direction,
   CafePoint normal,
   double s,
-  bool grip,
+  double grip,
 ) {
   CafePoint p(double x, double y, double z) =>
       wrist + across * x + direction * y + normal * z;
@@ -350,9 +375,11 @@ void _cozyHand(
     final length = [.031, .041, .044, .039][i];
     var tip = p(s * (i - 1.5) * .013, .047 - (i == 0 ? .005 : 0), .001);
     final points = <CafePoint>[tip];
-    final curls = grip
-        ? [.40, .66, .43]
-        : [.12 + i * .025, .34 + i * .025, .23];
+    final relaxed = [.12 + i * .025, .34 + i * .025, .23];
+    final curls = [
+      for (var j = 0; j < 3; j++)
+        relaxed[j] + ([.40, .66, .43][j] - relaxed[j]) * grip,
+    ];
     var angle = 0.0;
     for (var j = 0; j < 3; j++) {
       angle += curls[j];
@@ -365,15 +392,15 @@ void _cozyHand(
   }
   final thumb = p(s * .025, .018, .005);
   final axis =
-      (across * (s * (grip ? .60 : .42)) +
-              direction * (grip ? .76 : .86) +
-              normal * (grip ? .25 : .19))
+      (across * (s * (.42 + .18 * grip)) +
+              direction * (.86 - .10 * grip) +
+              normal * (.19 + .06 * grip))
           .normalized;
   mesh.tube(
     [
       thumb,
       thumb + axis * .020,
-      thumb + axis * .034 + normal * (grip ? .004 : .007),
+      thumb + axis * .034 + normal * (.007 - .003 * grip),
     ],
     [.010, .008, .0038],
     _skin,

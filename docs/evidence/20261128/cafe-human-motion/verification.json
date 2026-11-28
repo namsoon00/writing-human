@@ -1,0 +1,24 @@
+{
+  "scope": "Slow gait, fixed leg bones, quiet recovery, separated meditation calves, continuous grip/contact poses",
+  "localRelatedTests": 41,
+  "rigContractTests": 6,
+  "countsOverlap": true,
+  "nativeFrameStudy": [
+    "walk",
+    "fold",
+    "sip"
+  ],
+  "cadenceStepsPerMinute": 98.57142857,
+  "walkMetresPerSecond": 0.46,
+  "strollMetresPerSecond": 0.4,
+  "gaitMetres": 0.56,
+  "recoveryMilliseconds": 420,
+  "web": "pending",
+  "ci": "pending",
+  "deployment": "pending",
+  "unverified": [
+    "Physical iOS/Android frame rate",
+    "Motion capture",
+    "Full cloth or whole-body physics"
+  ]
+}

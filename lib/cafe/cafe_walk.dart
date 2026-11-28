@@ -1,15 +1,16 @@
 import 'dart:math' as math;
 import 'cafe_camera.dart';
 import 'cafe_world.dart';
+import 'cafe_body.dart';
 
 /// A trapezoidal speed profile with quiet acceleration and a bounded top speed.
 class CafeWalkTiming {
-  CafeWalkTiming(this.distance, {double speed = 1.2})
-    : seconds = distance / speed + .32;
+  CafeWalkTiming(this.distance, {double speed = CafeBody.walkSpeed})
+    : seconds = distance / speed + .65;
   final double distance, seconds;
   double at(double progress) {
     final t = progress.clamp(0.0, 1.0) * seconds;
-    final ramp = math.min(.32, seconds / 2),
+    final ramp = math.min(.65, seconds / 2),
         speed = distance / (seconds - ramp);
     if (t < ramp) return .5 * speed / ramp * t * t;
     if (t > seconds - ramp) {

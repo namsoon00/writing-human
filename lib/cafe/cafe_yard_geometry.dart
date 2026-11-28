@@ -518,11 +518,11 @@ extension _FrontYardGeometry on CafeWorld {
     _turned(
       2.8,
       -8.5,
-      [(.046, .29), (.08, .32), (.13, .27), (.145, .18)],
+      [(.046, .10), (.08, .11), (.13, .10), (.145, .085)],
       const Color(0xffd4c4a5),
       sides: 32,
     );
-    cylinder(2.8, .14, -8.5, .18, .01, const Color(0xffd4c4a5), sides: 32);
+    cylinder(2.8, .14, -8.5, .085, .01, const Color(0xffd4c4a5), sides: 32);
     _target = null;
     // Shoe bench and closed-tap rinse station sit off the earthen loop.
     _yardSeat(-3.0, -13.6, target: CafeTarget.barefoot, width: 1.55);

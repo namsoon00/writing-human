@@ -19,6 +19,7 @@ import '../cafe/cafe_view_controller.dart';
 import '../cafe/cafe_visit.dart';
 import '../cafe/cafe_world.dart';
 import '../cafe/cafe_walk.dart';
+import '../cafe/cafe_body.dart';
 import 'paper.dart';
 
 /// The same room geometry, observed behind the person with a collision-aware camera.
@@ -74,6 +75,8 @@ class _CafeSceneState extends State<CafeScene>
   CafeWalkTiming? timing;
   late final Ticker calm;
   late final Ticker keyboard;
+  late final AnimationController gaitRecovery;
+  int settledRequest = 0;
   final heldKeys = <LogicalKeyboardKey>{};
   double keySpeed = 0, keyElapsed = 0;
   void _stopKeys() {
@@ -82,7 +85,7 @@ class _CafeSceneState extends State<CafeScene>
     keySpeed = 0;
     keyElapsed = 0;
     if (widget.controller.walkSpeed > 0 && !widget.controller.travelling) {
-      widget.controller.stopWalking();
+      widget.controller.stopWalking(smooth: true);
     }
   }
 
@@ -103,7 +106,7 @@ class _CafeSceneState extends State<CafeScene>
     final now = elapsed.inMicroseconds / 1000000,
         dt = (now - keyElapsed).clamp(.001, .04);
     keyElapsed = now;
-    keySpeed = math.min(1.2, keySpeed + dt * 3);
+    keySpeed = math.min(CafeBody.walkSpeed, keySpeed + dt * .95);
     bool held(LogicalKeyboardKey a, [LogicalKeyboardKey? b]) =>
         heldKeys.contains(a) || (b != null && heldKeys.contains(b));
     final side =
@@ -130,7 +133,7 @@ class _CafeSceneState extends State<CafeScene>
         animate: !MediaQuery.disableAnimationsOf(context),
       );
     } else {
-      widget.controller.stopWalking();
+      widget.controller.stopWalking(smooth: true);
     }
   }
 
@@ -167,6 +170,8 @@ class _CafeSceneState extends State<CafeScene>
       useAnimation.stop();
       widget.controller.cancelUse();
       widget.controller.look(0, 0);
+      gaitRecovery.stop();
+      widget.controller.advanceSettle(1);
     }
   }
 
@@ -248,6 +253,10 @@ class _CafeSceneState extends State<CafeScene>
     WidgetsBinding.instance.addObserver(this);
     focus.addListener(_focusChanged);
     keyboard = createTicker(_keyFrame);
+    gaitRecovery = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 420),
+    )..addListener(() => widget.controller.advanceSettle(gaitRecovery.value));
     calm = createTicker((elapsed) {
       final next = heldTime + elapsed.inMicroseconds / 1000000;
       // Leave input time AFTER a completed decorative paint. Measuring only
@@ -514,7 +523,9 @@ class _CafeSceneState extends State<CafeScene>
       oldWidget.controller.removeListener(_changed);
       travel.stop();
       useAnimation.stop();
+      gaitRecovery.stop();
       oldWidget.controller.cancelUse();
+      settledRequest = widget.controller.settleRequest;
       useRequest = widget.controller.useRequest;
       request = widget.controller.request;
       widget.controller.addListener(_changed);
@@ -530,6 +541,16 @@ class _CafeSceneState extends State<CafeScene>
       lightTime = 0;
     }
     _refreshAtlas();
+    if (settledRequest != c.settleRequest) {
+      settledRequest = c.settleRequest;
+      if (MediaQuery.disableAnimationsOf(context)) {
+        c.advanceSettle(1);
+      } else if (c.settling) {
+        gaitRecovery.forward(from: 0);
+      }
+    } else if (!c.settling && gaitRecovery.isAnimating) {
+      gaitRecovery.stop();
+    }
     if (useRequest != c.useRequest) {
       useRequest = c.useRequest;
       _stopKeys();
@@ -543,8 +564,10 @@ class _CafeSceneState extends State<CafeScene>
               kind == CafeUseKind.sip ||
                   kind == CafeUseKind.water ||
                   kind == CafeUseKind.refill
-              ? 1100
-              : 650,
+              ? 2200
+              : kind == CafeUseKind.pickUp || kind == CafeUseKind.putDown
+              ? 1200
+              : 900,
         );
         useAnimation.forward(from: 0);
       }
@@ -568,7 +591,10 @@ class _CafeSceneState extends State<CafeScene>
             lengths.add(length);
             total += length;
           }
-          timing = CafeWalkTiming(total, speed: c.strolling ? .85 : 1.2);
+          timing = CafeWalkTiming(
+            total,
+            speed: c.strolling ? CafeBody.strollSpeed : CafeBody.walkSpeed,
+          );
           travel.duration = Duration(
             milliseconds: (timing!.seconds * 1000).round(),
           );
@@ -638,6 +664,7 @@ class _CafeSceneState extends State<CafeScene>
     atlasGeneration++;
     letterAtlas?.dispose();
     travel.dispose();
+    gaitRecovery.dispose();
     useAnimation.dispose();
     focus.dispose();
     wood?.dispose();

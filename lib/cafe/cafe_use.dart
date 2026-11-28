@@ -30,6 +30,30 @@ class CafeUseFrame {
   final bool held, open;
 }
 
+// Contact precedes lift; release follows placement. Hands and props share it.
+double cafePropLift(CafeUseFrame use) => switch (use.kind) {
+  CafeUseKind.pickUp => CafeBody.ease((use.progress - .30) / .70),
+  CafeUseKind.putDown => 1 - CafeBody.ease(use.progress / .72),
+  _ => use.held ? 1.0 : 0.0,
+};
+double cafeContactProgress(CafeUseFrame use) =>
+    CafeBody.ease((use.progress - .22) / .56);
+
+double cafeHandReach(CafeUseFrame use) => switch (use.kind) {
+  CafeUseKind.push || CafeUseKind.pull || CafeUseKind.touch =>
+    CafeBody.ease(use.progress / .22) *
+        (1 - CafeBody.ease((use.progress - .78) / .22)),
+  CafeUseKind.pickUp => CafeBody.ease(use.progress / .30),
+  CafeUseKind.putDown => 1 - CafeBody.ease((use.progress - .75) / .25),
+  _ => use.held ? 1.0 : math.sin(use.progress.clamp(0.0, 1.0) * math.pi),
+};
+double cafeGrip(CafeUseFrame use) => switch (use.kind) {
+  CafeUseKind.pull => cafeHandReach(use) * .65,
+  CafeUseKind.pickUp => CafeBody.ease((use.progress - .14) / .16),
+  CafeUseKind.putDown => 1 - CafeBody.ease((use.progress - .72) / .18),
+  _ => use.held ? 1.0 : 0.0,
+};
+
 /// Shared prop/hand anchor, independent of the observer camera.
 CafePoint cafeHeldPoint(
   CafeCamera camera,
@@ -160,13 +184,7 @@ extension CafeUseGeometry on CafeWorld {
     }
     final p = use.progress.clamp(0.0, 1.0);
     final wave = math.sin(p * math.pi);
-    final lift = use.kind == CafeUseKind.pickUp
-        ? p
-        : use.kind == CafeUseKind.putDown
-        ? 1 - p
-        : use.held
-        ? 1.0
-        : 0.0;
+    final lift = cafePropLift(use);
     final cup = obj.type == CafeItemType.cup;
     final volume = obj.type == CafeItemType.volume;
     final pen = obj.type == CafeItemType.pencil;
@@ -186,10 +204,8 @@ extension CafeUseGeometry on CafeWorld {
       if (use.kind == CafeUseKind.pull || use.kind == CafeUseKind.push) {
         target +=
             _useRotate(const CafePoint(0, 0, .06), obj.yaw, 0) *
-            (p * (use.kind == CafeUseKind.push ? -1 : 1));
-      }
-      if (use.kind == CafeUseKind.touch) {
-        target += const CafePoint(0, .012, 0) * wave;
+            (cafeContactProgress(use) *
+                (use.kind == CafeUseKind.push ? -1 : 1));
       }
       if (use.kind == CafeUseKind.write) {
         target += camera.right * (math.sin(p * math.pi * 10) * .012 * wave);

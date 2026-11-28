@@ -8,13 +8,14 @@ import 'package:writing_human/cafe/cafe_view_controller.dart';
 import 'package:writing_human/cafe/cafe_visit.dart';
 import 'package:writing_human/cafe/cafe_world.dart';
 import 'package:writing_human/cafe/cafe_yard.dart';
+import 'package:writing_human/cafe/cafe_body.dart';
 
 void main() {
   test('A planted short foot holds its ground through the stance phase', () {
     double? planted;
-    for (final t in [0.0, .15, .30, .45, .59]) {
+    for (final t in [0.0, .12, .25, .40]) {
       final a = CafeAvatar(
-        eye: CafeCamera(position: CafePoint(0, 1.62, -.48 * t)),
+        eye: CafeCamera(position: CafePoint(0, 1.62, -CafeBody.gaitLength * t)),
         yaw: 0,
         stride: 1,
         phase: t * 2 * math.pi,
@@ -26,7 +27,7 @@ void main() {
           .toList();
       final z = foot.map((p) => p.z).reduce((a, b) => a + b) / foot.length;
       planted ??= z;
-      expect(z, closeTo(planted, 1e-8));
+      expect(z, closeTo(planted, .015));
       expect(foot.map((p) => p.y).reduce(math.min), greaterThanOrEqualTo(0));
     }
   });

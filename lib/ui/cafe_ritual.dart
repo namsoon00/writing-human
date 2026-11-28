@@ -83,6 +83,25 @@ class _CafeRitualSheetState extends State<CafeRitualSheet> {
     onPressed: busy ? null : () => Navigator.pop(context, result),
     child: Text(text),
   );
+  List<Widget> _saveFeedback() => [
+    if (error != null) ...[
+      const SizedBox(height: 14),
+      Text(error!, style: const TextStyle(color: burgundy, height: 1.6)),
+      TextButton(
+        key: const ValueKey('cafe-ritual-retry'),
+        onPressed: busy ? null : () => save(home),
+        child: const Text('다시 저장'),
+      ),
+    ] else if (notice != null)
+      Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Text(
+          notice!,
+          style: const TextStyle(color: muted, fontSize: 14),
+        ),
+      ),
+  ];
+
   Widget _memory(BuildContext context, String current) => PopScope(
     canPop: !busy,
     child: PaperPanel(
@@ -180,10 +199,7 @@ class _CafeRitualSheetState extends State<CafeRitualSheet> {
                         : () => save(home.copy(clearPinned: true)),
                     child: const Text('액자 비우기'),
                   ),
-                if (error case final message?)
-                  Text(message, style: const TextStyle(color: burgundy)),
-                if (notice case final message?)
-                  Text(message, style: const TextStyle(color: muted)),
+                ..._saveFeedback(),
               ],
             ),
           ),
@@ -380,31 +396,7 @@ class _CafeRitualSheetState extends State<CafeRitualSheet> {
                             ),
                           ),
                         ],
-                        if (error != null) ...[
-                          const SizedBox(height: 14),
-                          Text(
-                            error!,
-                            style: const TextStyle(
-                              color: burgundy,
-                              height: 1.6,
-                            ),
-                          ),
-                          TextButton(
-                            key: const ValueKey('cafe-ritual-retry'),
-                            onPressed: busy ? null : () => save(home),
-                            child: const Text('다시 저장'),
-                          ),
-                        ] else if (notice != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 12),
-                            child: Text(
-                              notice!,
-                              style: const TextStyle(
-                                color: muted,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
+                        ..._saveFeedback(),
                       ],
                     ),
                   ),

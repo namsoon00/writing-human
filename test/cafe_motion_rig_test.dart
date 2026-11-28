@@ -121,6 +121,7 @@ void main() {
     expect(right.knee.x, greaterThan(.12));
     expect(left.ankle.x, lessThan(-.055));
     expect(right.ankle.x, greaterThan(.055));
+    expect(math.max(left.ankle.y, right.ankle.y), lessThan(.115));
     expect((left.ankle.z - right.ankle.z).abs(), greaterThan(.10));
     var gap = double.infinity;
     for (var i = 1; i < 10; i++) {

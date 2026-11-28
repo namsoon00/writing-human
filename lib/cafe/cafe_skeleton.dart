@@ -18,11 +18,13 @@ class CafeSkeleton {
   CafeSkeleton(this.avatar);
   final CafeAvatar avatar;
   static const thigh = .193, shin = .193;
-  static const _bareFootCenter = CafePoint(0, -.067, -.030);
   static const _bareFootRadii = CafePoint(.036, .026, .073);
   late final fold = CafeBody.ease(avatar.meditation);
   late final seated = CafeBody.ease(avatar.seated);
   late final bareFeet = avatar.barefoot || avatar.meditating;
+  // A resting foot lies alongside the lower leg, rather than keeping the
+  // raised ankle of an upright stance above the foot.
+  late final bareFootCenter = CafePoint(0, -.067 + .040 * fold, -.030);
   late final moving = avatar.stride * (1 - fold) * (1 - seated);
   late final drop =
       .0245 * seated + .252 * fold + (avatar.barefoot ? .016 * (1 - fold) : 0);
@@ -129,7 +131,7 @@ class CafeSkeleton {
   }
 
   /// The lowest point of the rotated sole remains on its support plane.
-  static double footSupport(bool barefoot, double pitch, double roll) {
+  double footSupport(bool barefoot, double pitch, double roll) {
     final c = math.cos(pitch), s = math.sin(pitch);
     final cr = math.cos(roll), sr = math.sin(roll);
     double bottom(
@@ -148,8 +150,8 @@ class CafeSkeleton {
         );
     final low = barefoot
         ? bottom(
-            _bareFootCenter.y,
-            _bareFootCenter.z,
+            bareFootCenter.y,
+            bareFootCenter.z,
             _bareFootRadii.x,
             _bareFootRadii.y,
             _bareFootRadii.z,

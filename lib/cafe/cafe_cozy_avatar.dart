@@ -90,7 +90,8 @@ extension _CozyAvatar on CafeAvatar {
         [
           ankle + shin * .038,
           ankle - shin * .009,
-          ankle + turn(CafePoint(0, naked ? -.064 : -.060, -.014)),
+          ankle +
+              turn(CafePoint(0, naked ? rig.bareFootCenter.y : -.060, -.014)),
         ],
         naked ? [.031, .030, .028] : [.031, .033, .034],
         naked ? _skin : _cream,
@@ -100,7 +101,7 @@ extension _CozyAvatar on CafeAvatar {
       );
       if (naked) {
         foot.ellipsoid(
-          CafeSkeleton._bareFootCenter,
+          rig.bareFootCenter,
           CafeSkeleton._bareFootRadii,
           _skin,
           'foot',

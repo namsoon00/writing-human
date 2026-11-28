@@ -8,12 +8,57 @@
     "grassFaces": 454,
     "actualNativeRenders": 7,
     "format": "pass",
-    "analyze": "pass"
+    "analyze": "pass",
+    "releaseBuild": {
+      "compileSeconds": 50.8,
+      "success": true
+    }
   },
   "initialFailure": "37338 faces exceeded the unchanged 35000 face budget; reduced hidden geometry. Intermediate 35498/35253 runs are not reported as passes.",
-  "web": "pending",
-  "ci": "pending",
-  "deployment": "pending",
+  "web": {
+    "browser": "Chrome",
+    "renderer": "webgl2",
+    "sizes": [
+      "default desktop",
+      "390x844"
+    ],
+    "verified": [
+      "Cafe to yard entry",
+      "Earthen loop stroll",
+      "Drag interrupts desktop stroll",
+      "Mobile stop control",
+      "Mobile floor tap starts and finishes walking",
+      "No console errors/warnings observed"
+    ],
+    "screenshots": [
+      "local-chrome-yard.jpg",
+      "local-chrome-mobile.jpg"
+    ],
+    "sourceCommit": "7c6dcd9a9ba4dbcb6ba71b3de49ae3f6ebfae2f7",
+    "public": {
+      "visited": true,
+      "renderer": "webgl2",
+      "strollStartedAndStopped": true,
+      "consoleErrorsOrWarningsObserved": false,
+      "screenshot": "public-yard.jpg"
+    }
+  },
+  "ci": {
+    "run": 46088956110,
+    "source": "7c6dcd9a9ba4dbcb6ba71b3de49ae3f6ebfae2f7",
+    "nativeTests": 408,
+    "dspChromeTests": 6,
+    "chromeTests": 132,
+    "format": "success",
+    "analyze": "success",
+    "build": "success",
+    "deploy": "success"
+  },
+  "deployment": {
+    "url": "https://namsoon00.github.io/writing-human/?v=7c6dcd9a",
+    "publicHttp": "public-http.json",
+    "mainMatchesLocalRelease": true
+  },
   "unverified": [
     "Physical iOS and Android frame rate",
     "Photorealistic match to generated design concept"

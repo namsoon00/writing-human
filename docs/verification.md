@@ -4434,3 +4434,30 @@ SHA256은 `53af53d59599a235428ff0b49b1f701134ddc66b2d508289e442e4c183533fde`로
 초기 기하 검사에서 37,338면으로 기존 35,000면 예산을 넘어 실패했다. 돌의 보이지 않는 면과
 중복 풀잎을 덜어냈으며 예산 기준을 완화하지 않았다. 중간 소스와 최종 소스의 검사 결과를
 구분한다. 최종 로컬 검사·실제 렌더·Chrome·배포 결과와 미검증 범위는 후속 기록한다.
+
+
+### 자연 소재 최종 검증과 공개 반영 · 2026-11-28
+
+- 소스 `7c6dcd9a9ba4dbcb6ba71b3de49ae3f6ebfae2f7`의
+  [GitHub Pages 검사 46088956110](https://github.com/namsoon00/writing-human/actions/runs/46088956110)이
+  성공했다. 포맷·분석, native 408개, 음성 DSP Chrome 6개, 카페·내비게이션 Chrome 132개,
+  release 웹 빌드와 배포가 통과했다.
+- 최종 로컬 관련 검사 33개가 통과했다(그중 뜰 경계·이동 검사 8개). 실제 Flutter 캡처 검사
+  1개에서 7개 구도를 만들었다. 최종 분석 문제 없음, release 웹 빌드 성공(컴파일 50.8초)을
+  확인했다. 중간 기하 예산 실패 실행을 최종 통과 수에 포함하지 않는다.
+- 원본 뜰 기하는 34,599면, 짧은 풀잎은 454면이다. 35,000면 기준은 CafeWorld의 원본
+  면 수이며 CPU 깊이 정렬에서 분할된 면이나 GPU 삼각형 수와 다르다. 기록한 native CPU
+  렌더 샘플 14개와 WebGL 준비·제출 시간은 실기기 프레임 속도의 근거로 쓰지 않는다.
+- 실제 로컬 Chrome의 기본 크기와 390×844 크기에서 뜰 진입, 산책, 드래그 중지,
+  모바일 중지 버튼, 바닥 클릭 뒤 이동 완료를 확인했다. 화면 크기 에뮬레이션은
+  iOS·Android 실기기 검증이 아니다. 새로 연 공개 Chrome에서도 뜰 진입·산책·중지를
+  확인했고 WebGL2를 사용했다. 검수 중 콘솔 오류·경고가 관찰되지 않았다.
+- 공개 HTML·loader·main·GPU 스크립트가 HTTP 200을 반환했고 버전값과 해당 파일의
+  SHA-256이 일치했다. 공개 main은 최종 로컬 release와 동일하며 SHA-256은
+  `9d0ff3c2ab3893024bef79d2b8e14facdc2da07bc4e086bd6502340af159a35a`다.
+- [검증 요약](evidence/20261128/cafe-natural-yard/verification.json),
+  [공개 HTTP 확인](evidence/20261128/cafe-natural-yard/public-http.json),
+  [실제 공개 화면](evidence/20261128/cafe-natural-yard/public-yard.jpg),
+  [로컬 모바일 화면](evidence/20261128/cafe-natural-yard/local-chrome-mobile.jpg)을 보관했다.
+  생성 시안의 사실적 조명·수풀 밀도와 실제 렌더의 표현 범위를 구분한다. iOS·Android
+  실기기 성능은 미검증이다. 기존 비공개 Sites project 설정과 사용자 기록은 변경하지 않았다.

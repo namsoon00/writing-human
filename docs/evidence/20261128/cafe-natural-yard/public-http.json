@@ -1,0 +1,31 @@
+{
+  "sourceCommit": "7c6dcd9a9ba4dbcb6ba71b3de49ae3f6ebfae2f7",
+  "cacheVersionsMatch": true,
+  "matchesLocalRelease": true,
+  "files": {
+    "index.html": {
+      "status": 200,
+      "bytes": 8207,
+      "sha256": "25d49c3db4b9df948e0e36f37745532a38af814705dff69cb4adb54b393e1200",
+      "url": "https://namsoon00.github.io/writing-human/?v=7c6dcd9a"
+    },
+    "flutter_bootstrap.js?v=0e90658c3363a6cb": {
+      "status": 200,
+      "bytes": 10016,
+      "sha256": "0e90658c3363a6cb7d6a45f2786cc4ebf119c7e2081249c60fbba48030038e56",
+      "url": "https://namsoon00.github.io/writing-human/flutter_bootstrap.js?v=0e90658c3363a6cb"
+    },
+    "main.dart.js?v=9d0ff3c2ab389302": {
+      "status": 200,
+      "bytes": 5459562,
+      "sha256": "9d0ff3c2ab3893024bef79d2b8e14facdc2da07bc4e086bd6502340af159a35a",
+      "url": "https://namsoon00.github.io/writing-human/main.dart.js?v=9d0ff3c2ab389302"
+    },
+    "cafe_gpu.js?v=eb523e91b551563d": {
+      "status": 200,
+      "bytes": 10598,
+      "sha256": "eb523e91b551563df97b52968a5923b5363d23736fc2eb0ce063a4809be94458",
+      "url": "https://namsoon00.github.io/writing-human/cafe_gpu.js?v=eb523e91b551563d"
+    }
+  }
+}

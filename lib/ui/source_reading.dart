@@ -465,6 +465,35 @@ class _SourceReadingState extends State<SourceReading> {
     ),
   );
 
+  Widget _writingPreview(RegisteredOriginal original, Passage resume) =>
+      Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 4, 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '쓴 글 · ${resume.excerpt.replaceAll(_previewWhitespace, ' ')}',
+                key: ValueKey('original-writing-preview-${original.id}'),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 14, height: 1.5, color: muted),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: TextButton(
+                key: ValueKey('original-resume-${original.id}'),
+                onPressed: saving || widget.onRetry != null
+                    ? null
+                    : () => widget.onOpenWriting!(resume),
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                child: const Text('이어서 쓰기', textAlign: TextAlign.center),
+              ),
+            ),
+          ],
+        ),
+      );
+
   Widget _readingActions(RegisteredOriginal original) {
     final transcribe = widget.onTranscribe;
     final writing = widget.writingLocations[original.id]?.passage;
@@ -902,7 +931,14 @@ class _SourceReadingState extends State<SourceReading> {
                                   itemCount: visibleOriginals.length,
                                   itemBuilder: (context, index) {
                                     final item = visibleOriginals[index].$2;
-                                    return OriginalListItem(
+                                    final resume =
+                                        widget.onOpenWriting == null ||
+                                            !item.canTranscribe
+                                        ? null
+                                        : widget
+                                              .writingLocations[item.id]
+                                              ?.passage;
+                                    final card = OriginalListItem(
                                       key: item.id == _readingId
                                           ? readingItem
                                           : ValueKey(item.id),
@@ -919,6 +955,18 @@ class _SourceReadingState extends State<SourceReading> {
                                       showDivider: index > 0,
                                       onTap: () =>
                                           _open(item.id, fromList: true),
+                                    );
+                                    if (resume == null ||
+                                        resume.excerpt.trim().isEmpty) {
+                                      return card;
+                                    }
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        card,
+                                        _writingPreview(item, resume),
+                                      ],
                                     );
                                   },
                                 ),

@@ -15,6 +15,7 @@ import 'source_intake_test.dart'
         place,
         reading,
         readingText,
+        remainingReference,
         settleSourceSheets,
         sourceCitation,
         sourceField;
@@ -121,6 +122,69 @@ void main() {
       expect(sourceField.hitTestable(), findsOneWidget);
       expect(store.data.activePage!.guidedOriginalId, first.id);
       expect(store.writes, writes);
+    },
+  );
+
+  testWidgets(
+    'The source list shows written text and resumes the original in one tap',
+    (tester) async {
+      const original = RegisteredOriginal('resume', '햇빛이 책장에 내려앉았다.');
+      const written = '햇빛이 내려왔다.';
+      final store = MemoryStore()
+        ..data = const Library(
+          books: [
+            Book(id: 'b', title: '필사 노트', originals: [original]),
+          ],
+          records: [
+            WritingRecord(id: 'memo', bookId: 'b', title: '새 메모'),
+            WritingRecord(id: 'copy', bookId: 'b', title: '지난 필사'),
+          ],
+          pages: [
+            WritingPage(
+              id: 'memo-page',
+              recordId: 'memo',
+              number: 1,
+              text: '기억할 메모',
+            ),
+            WritingPage(
+              id: 'copy-page',
+              recordId: 'copy',
+              number: 1,
+              text: written,
+              base: 4,
+              extent: 4,
+              passages: [
+                PagePassage(
+                  id: 'linked',
+                  start: 0,
+                  attached: true,
+                  original: original,
+                ),
+              ],
+            ),
+          ],
+          activePageId: 'memo-page',
+          writing: true,
+        );
+      await open(tester, store, FakeIntake());
+      tester.view.physicalSize = const Size(320, 640);
+      await tester.pumpAndSettle();
+      await tester.tap(place);
+      await tester.pumpAndSettle();
+      expect(readingText, findsNothing);
+      expect(find.text('쓴 글 · $written').hitTestable(), findsOneWidget);
+      final resume = find.byKey(const ValueKey('original-resume-resume'));
+      expect(resume.hitTestable(), findsOneWidget);
+      await tester.tap(resume);
+      await tester.pumpAndSettle();
+      expect(reading, findsNothing);
+      expect(store.data.activePageId, 'copy-page');
+      expect(store.data.pages, hasLength(2));
+      expect(store.data.records, hasLength(2));
+      final input = tester.widget<TextField>(bodyField).controller!;
+      expect(input.text, written);
+      expect(input.selection, const TextSelection.collapsed(offset: 4));
+      expect(remainingReference(tester), '책장에 내려앉았다.');
     },
   );
 

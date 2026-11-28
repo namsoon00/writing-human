@@ -1,7 +1,7 @@
 {
   "scope": "Slow gait, fixed leg bones, quiet recovery, separated meditation calves, continuous grip/contact poses",
   "localRelatedTests": 41,
-  "rigContractTests": 6,
+  "rigContractTests": 7,
   "countsOverlap": true,
   "nativeFrameStudy": [
     "walk",
@@ -20,5 +20,7 @@
     "Physical iOS/Android frame rate",
     "Motion capture",
     "Full cloth or whole-body physics"
-  ]
+  ],
+  "postureTransitions": "Walk to rest anchor before folding; rise in place before walking back; no yaw change while rising",
+  "manualBrowser": "local Chrome checked before staging fix; final fix awaits build/browser verification"
 }

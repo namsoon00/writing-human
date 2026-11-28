@@ -256,7 +256,7 @@ class CafeViewController extends ChangeNotifier {
       bodyYaw += (turn * (dt * 7).clamp(0, 1)).clamp(-dt * 4, dt * 4);
       walkPhase += horizontal * 2 * math.pi / CafeBody.gaitLength;
     }
-    if (!walking && (arrival != null || _departure != null)) {
+    if (!walking && delta.y <= 0 && (arrival != null || _departure != null)) {
       final turn = (value.yaw - bodyYaw + math.pi) % (2 * math.pi) - math.pi;
       bodyYaw += turn * (dt * 6).clamp(0, 1);
     }

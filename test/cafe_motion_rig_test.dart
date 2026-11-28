@@ -5,8 +5,42 @@ import 'package:writing_human/cafe/cafe_body.dart';
 import 'package:writing_human/cafe/cafe_camera.dart';
 import 'package:writing_human/cafe/cafe_view_controller.dart';
 import 'package:writing_human/cafe/cafe_world.dart';
+import 'package:writing_human/cafe/cafe_walk.dart';
+import 'package:writing_human/cafe/cafe_visit.dart';
 
 void main() {
+  test('Resting transitions fold and rise in place before walking away', () {
+    final c = CafeViewController();
+    addTearDown(c.dispose);
+    c.visit(CafeTarget.courtyard);
+    c.updateCamera(c.destination!);
+    c.finishTravel();
+    c.visit(CafeTarget.meditation);
+    void check(List<CafeCamera> route) {
+      for (var i = 1; i < route.length; i++) {
+        final delta = route[i].position - route[i - 1].position;
+        if (delta.y.abs() > .01) {
+          expect(CafePoint(delta.x, 0, delta.z).length, lessThan(1e-8));
+        }
+      }
+    }
+
+    check(cafeWalkRoute([c.camera, ...c.journey], c.world));
+    c.updateCamera(c.destination!);
+    c.finishTravel();
+    c.look(1.0, 0);
+    final yaw = c.bodyYaw;
+    c.stand();
+    final route = cafeWalkRoute([c.camera, ...c.journey], c.world);
+    check(route);
+    expect(route[1].position.y, 1.62);
+    c.advanceCamera(
+      CafeCamera.interpolate(route[0], route[1], .4),
+      dt: .1,
+      walking: false,
+    );
+    expect(c.bodyYaw, yaw);
+  });
   test(
     'Slow cadence has fixed bones throughout folding and every footfall',
     () {

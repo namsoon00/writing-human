@@ -624,11 +624,14 @@ class _CafeSceneState extends State<CafeScene>
       distance -= lengths[segment];
       segment++;
     }
+    final posture =
+        (route[segment].position.y - route[segment + 1].position.y).abs() > .01;
+    final progress = (distance / lengths[segment]).clamp(0.0, 1.0);
     widget.controller.advanceCamera(
       CafeCamera.interpolate(
         route[segment],
         route[segment + 1],
-        (distance / lengths[segment]).clamp(0, 1),
+        posture ? CafeBody.ease(progress) : progress,
       ),
       dt: dt,
       walking:

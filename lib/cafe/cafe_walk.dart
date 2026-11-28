@@ -22,6 +22,32 @@ class CafeWalkTiming {
 
 /// Fillet only corners that remain inside the collision-tested walking region.
 List<CafeCamera> cafeWalkRoute(List<CafeCamera> input, CafeWorld world) {
+  // Reach the resting place on foot, then fold in place. On departure, stand
+  // at the same point before walking away instead of sliding a folded body.
+  final staged = <CafeCamera>[];
+  for (final b in input) {
+    if (staged.isNotEmpty) {
+      final a = staged.last;
+      final horizontal = CafePoint(
+        b.position.x - a.position.x,
+        0,
+        b.position.z - a.position.z,
+      ).length;
+      if (horizontal > .01 && (a.position.y - b.position.y).abs() > .01) {
+        final rising = a.position.y < b.position.y;
+        final anchor = rising ? a : b;
+        staged.add(
+          CafeCamera(
+            position: CafePoint(anchor.position.x, 1.62, anchor.position.z),
+            yaw: anchor.yaw,
+            pitch: -.10,
+          ),
+        );
+      }
+    }
+    staged.add(b);
+  }
+  input = staged;
   if (input.length < 3) return input;
   final result = <CafeCamera>[input.first];
   for (var i = 1; i + 1 < input.length; i++) {

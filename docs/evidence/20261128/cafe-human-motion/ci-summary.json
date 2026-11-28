@@ -1,0 +1,105 @@
+{
+  "source": "55407f7b31ee325c72217ffb8ce5982dcc31d556",
+  "run": 46110597833,
+  "url": "https://github.com/namsoon00/writing-human/actions/runs/46110597833",
+  "conclusion": "success",
+  "native": 418,
+  "narrationChrome": 6,
+  "cafeChrome": 140,
+  "jobs": [
+    {
+      "id": 140873687028,
+      "name": "build",
+      "conclusion": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run subosito/flutter-action@v2",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install SQLite test library",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run node --check web/cafe_gpu.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run flutter pub get",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run dart format --output=none --set-exit-if-changed lib test tool/capture_preview_test.dart tool/capture_cafe_items_test.dart tool/capture_cafe_actions_test.dart tool/capture_cafe_homecoming_test.dart tool/capture_cafe_occlusion_test.dart tool/capture_cafe_atmosphere_test.dart tool/capture_avatar_test.dart tool/capture_cafe_yard_test.dart tool/capture_cafe_motion_test.dart tool/benchmark_cafe_test.dart tool/benchmark_cafe_motion_test.dart tool/cafe_response_probe.dart",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run flutter analyze --no-pub",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run flutter test --no-pub --concurrency=2",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check the single narration voice DSP in Chrome",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check cafe image lifetime and room persistence in Chrome",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build Flutter preview",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/upload-pages-artifact@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run subosito/flutter-action@v2",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 140878028667,
+      "name": "deploy",
+      "conclusion": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Configure Pages",
+          "conclusion": "success"
+        },
+        {
+          "name": "Deploy to GitHub Pages",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ]
+}

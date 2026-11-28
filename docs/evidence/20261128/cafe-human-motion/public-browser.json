@@ -1,0 +1,22 @@
+{
+  "source": "55407f7b31ee325c72217ffb8ce5982dcc31d556",
+  "url": "https://namsoon00.github.io/writing-human/?v=55407f7b",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "checks": [
+    "floor click walking",
+    "drag stop",
+    "cafe to courtyard",
+    "meditation and front orbit"
+  ],
+  "scripts": [
+    "https://namsoon00.github.io/writing-human/main.dart.js?v=5f7aac3c2a894410",
+    "https://namsoon00.github.io/writing-human/source_ocr.js?v=4",
+    "https://namsoon00.github.io/writing-human/cafe_gpu.js?v=eb523e91b551563d",
+    "https://namsoon00.github.io/writing-human/flutter_bootstrap.js?v=115864ea720265fc"
+  ],
+  "console": [],
+  "physicalDevice": false
+}

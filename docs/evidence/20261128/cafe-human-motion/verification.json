@@ -3,25 +3,261 @@
   "localRelatedTests": 41,
   "rigContractTests": 8,
   "countsOverlap": true,
-  "nativeFrameStudy": [
-    "walk",
-    "fold",
-    "sip"
-  ],
+  "nativeFrameStudy": {
+    "status": "passed",
+    "log": "motion-frames-final-source.log",
+    "seconds": 21,
+    "walkFrames": 53,
+    "foldFrames": 31,
+    "sipFrames": 27,
+    "type": "Actual native Flutter frames; not browser recording or physical-device capture"
+  },
   "cadenceStepsPerMinute": 98.57142857,
   "walkMetresPerSecond": 0.46,
   "strollMetresPerSecond": 0.4,
   "gaitMetres": 0.56,
   "recoveryMilliseconds": 420,
-  "web": "pending",
-  "ci": "pending",
-  "deployment": "pending",
+  "web": {
+    "http": "passed",
+    "manualChrome": "passed",
+    "physicalDevice": false
+  },
+  "ci": "passed",
+  "deployment": "passed",
   "unverified": [
-    "Physical iOS/Android frame rate",
+    "Physical iOS/Android motion feel and frame rate"
+  ],
+  "postureTransitions": "Walk to rest anchor before folding; rise in place before walking back; no yaw change while rising",
+  "manualBrowser": {
+    "source": "55407f7b31ee325c72217ffb8ce5982dcc31d556",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "checks": [
+      "floor click walking",
+      "drag stop",
+      "cafe and courtyard return",
+      "meditation front and side",
+      "rise in place on e9ba16a, unchanged in final source",
+      "seated palms on final source"
+    ],
+    "scripts": [
+      "http://127.0.0.1:59521/writing-human/main.dart.js?v=5f7aac3c2a894410",
+      "http://127.0.0.1:59521/writing-human/source_ocr.js?v=4",
+      "http://127.0.0.1:59521/writing-human/cafe_gpu.js?v=eb523e91b551563d",
+      "http://127.0.0.1:59521/writing-human/flutter_bootstrap.js?v=25d916703e9a08bb"
+    ],
+    "consoleErrors": [],
+    "consoleWarnings": [],
+    "physicalDevice": false
+  },
+  "seatedHands": "Palms rest along the table; fingers stay above the top",
+  "sourceCommit": "55407f7b31ee325c72217ffb8ce5982dcc31d556",
+  "sourceTree": "0f516a34fb3b8826edcf08479c5ff5a70198dfbf",
+  "localTestRuns": [
+    {
+      "log": "verified-tests.log",
+      "passed": 41,
+      "phase": "initial motion; before final pure trigonometric caching and follow-ups"
+    },
+    {
+      "log": "staged-posture-tests.log",
+      "passed": 25,
+      "phase": "in-place posture staging"
+    },
+    {
+      "log": "seated-hand-tests.log",
+      "passed": 12,
+      "phase": "final avatar and rig source; includes eight rig contracts"
+    }
+  ],
+  "localAnalysis": {
+    "status": "passed",
+    "log": "analyze-seated-hand.log"
+  },
+  "localReleaseBuild": {
+    "status": "passed",
+    "compileSeconds": 47.4,
+    "log": "build-final-motion.log",
+    "mainJsSha256": "5f7aac3c2a8944103f87164106b33b5e4f68288053f883389ffd618c6c09d6a8"
+  },
+  "initialCI": {
+    "source": "0e8916ac4ef5d3ad49645c53c7d8216996018c08",
+    "run": 46107987073,
+    "conclusion": "success",
+    "native": 416,
+    "narrationChrome": 6,
+    "cafeChrome": 138,
+    "scope": "Initial motion source before in-place posture and seated palm follow-ups"
+  },
+  "finalCI": {
+    "source": "55407f7b31ee325c72217ffb8ce5982dcc31d556",
+    "run": 46110597833,
+    "url": "https://github.com/namsoon00/writing-human/actions/runs/46110597833",
+    "conclusion": "success",
+    "native": 418,
+    "narrationChrome": 6,
+    "cafeChrome": 140,
+    "jobs": [
+      {
+        "id": 140873687028,
+        "name": "build",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run subosito/flutter-action@v2",
+            "conclusion": "success"
+          },
+          {
+            "name": "Install SQLite test library",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run node --check web/cafe_gpu.js",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run flutter pub get",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run dart format --output=none --set-exit-if-changed lib test tool/capture_preview_test.dart tool/capture_cafe_items_test.dart tool/capture_cafe_actions_test.dart tool/capture_cafe_homecoming_test.dart tool/capture_cafe_occlusion_test.dart tool/capture_cafe_atmosphere_test.dart tool/capture_avatar_test.dart tool/capture_cafe_yard_test.dart tool/capture_cafe_motion_test.dart tool/benchmark_cafe_test.dart tool/benchmark_cafe_motion_test.dart tool/cafe_response_probe.dart",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run flutter analyze --no-pub",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run flutter test --no-pub --concurrency=2",
+            "conclusion": "success"
+          },
+          {
+            "name": "Check the single narration voice DSP in Chrome",
+            "conclusion": "success"
+          },
+          {
+            "name": "Check cafe image lifetime and room persistence in Chrome",
+            "conclusion": "success"
+          },
+          {
+            "name": "Build Flutter preview",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/upload-pages-artifact@v4",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run subosito/flutter-action@v2",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 140878028667,
+        "name": "deploy",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "conclusion": "success"
+          },
+          {
+            "name": "Configure Pages",
+            "conclusion": "success"
+          },
+          {
+            "name": "Deploy to GitHub Pages",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "conclusion": "success"
+          }
+        ]
+      }
+    ]
+  },
+  "notImplemented": [
     "Motion capture",
     "Full cloth or whole-body physics"
   ],
-  "postureTransitions": "Walk to rest anchor before folding; rise in place before walking back; no yaw change while rising",
-  "manualBrowser": "local Chrome checked before staging fix; final fix awaits build/browser verification",
-  "seatedHands": "Palms rest along the table; fingers stay above the top"
+  "evidence": {
+    "nativeFrames": "motion-study.jpg",
+    "localInPlaceRise": "local-rise.jpg",
+    "localSeatedPalms": "local-seated-hands.jpg",
+    "localRiseSource": "e9ba16af57ab6a3cc900e0681be31983c7ae6cb5; staging code unchanged in final source",
+    "publicMeditation": "public-meditation.jpg"
+  },
+  "publicBrowser": {
+    "source": "55407f7b31ee325c72217ffb8ce5982dcc31d556",
+    "url": "https://namsoon00.github.io/writing-human/?v=55407f7b",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "checks": [
+      "floor click walking",
+      "drag stop",
+      "cafe to courtyard",
+      "meditation and front orbit"
+    ],
+    "scripts": [
+      "https://namsoon00.github.io/writing-human/main.dart.js?v=5f7aac3c2a894410",
+      "https://namsoon00.github.io/writing-human/source_ocr.js?v=4",
+      "https://namsoon00.github.io/writing-human/cafe_gpu.js?v=eb523e91b551563d",
+      "https://namsoon00.github.io/writing-human/flutter_bootstrap.js?v=115864ea720265fc"
+    ],
+    "console": [],
+    "physicalDevice": false,
+    "initialViewportMismatch": "recovered by resetting viewport after load; initial frame excluded"
+  },
+  "publicHttp": {
+    "source": "55407f7b31ee325c72217ffb8ce5982dcc31d556",
+    "checkedAt": "2026-11-28T05:28:30.773784+00:00",
+    "base": "https://namsoon00.github.io/writing-human/",
+    "files": [
+      {
+        "path": "index.html?v=55407f7b",
+        "status": 200,
+        "sha256": "3512388d31becc4f94368602dab36299f64e678f67bb1a00a80ab3762c0e7f94"
+      },
+      {
+        "path": "flutter_bootstrap.js?v=115864ea720265fc",
+        "status": 200,
+        "sha256": "115864ea720265fc99bfe29cee2c5b480694774823f0691655ead5aca4fc377c"
+      },
+      {
+        "path": "main.dart.js?v=5f7aac3c2a894410",
+        "status": 200,
+        "sha256": "5f7aac3c2a8944103f87164106b33b5e4f68288053f883389ffd618c6c09d6a8"
+      },
+      {
+        "path": "cafe_gpu.js?v=eb523e91b551563d",
+        "status": 200,
+        "sha256": "eb523e91b551563df97b52968a5923b5363d23736fc2eb0ce063a4809be94458"
+      }
+    ],
+    "versionHashesMatch": true,
+    "mainMatchesLocalRelease": true,
+    "expectedMainSha256": "5f7aac3c2a8944103f87164106b33b5e4f68288053f883389ffd618c6c09d6a8"
+  }
 }

@@ -1,0 +1,30 @@
+{
+  "source": "55407f7b31ee325c72217ffb8ce5982dcc31d556",
+  "checkedAt": "2026-11-28T05:28:30.773784+00:00",
+  "base": "https://namsoon00.github.io/writing-human/",
+  "files": [
+    {
+      "path": "index.html?v=55407f7b",
+      "status": 200,
+      "sha256": "3512388d31becc4f94368602dab36299f64e678f67bb1a00a80ab3762c0e7f94"
+    },
+    {
+      "path": "flutter_bootstrap.js?v=115864ea720265fc",
+      "status": 200,
+      "sha256": "115864ea720265fc99bfe29cee2c5b480694774823f0691655ead5aca4fc377c"
+    },
+    {
+      "path": "main.dart.js?v=5f7aac3c2a894410",
+      "status": 200,
+      "sha256": "5f7aac3c2a8944103f87164106b33b5e4f68288053f883389ffd618c6c09d6a8"
+    },
+    {
+      "path": "cafe_gpu.js?v=eb523e91b551563d",
+      "status": 200,
+      "sha256": "eb523e91b551563df97b52968a5923b5363d23736fc2eb0ce063a4809be94458"
+    }
+  ],
+  "versionHashesMatch": true,
+  "mainMatchesLocalRelease": true,
+  "expectedMainSha256": "5f7aac3c2a8944103f87164106b33b5e4f68288053f883389ffd618c6c09d6a8"
+}

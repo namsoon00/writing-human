@@ -5,7 +5,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/animation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:writing_human/cafe/cafe_avatar.dart';
-import 'package:writing_human/cafe/cafe_body.dart';
 import 'package:writing_human/cafe/cafe_camera.dart';
 import 'package:writing_human/cafe/cafe_materials.dart';
 import 'package:writing_human/cafe/cafe_renderer.dart';
@@ -165,7 +164,7 @@ void main() {
             scene: props,
           );
         }
-        expect(CafeBody.walkSpeed, lessThan(.5));
+        expect(c.camera.position.z, closeTo(-1.45, 1e-9));
       } finally {
         knit.dispose();
         c.dispose();

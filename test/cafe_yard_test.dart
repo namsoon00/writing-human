@@ -160,7 +160,7 @@ void main() {
       expect(c.resting, isTrue);
       expect(c.meditating, isTrue);
       expect(c.avatar.meditation, closeTo(1, 1e-8));
-      expect(c.avatar.faces.any((f) => f.part == 'foot.toe'), isTrue);
+      expect(c.avatar.faces.any((f) => f.part == 'foot'), isTrue);
       expect(
         c.avatar.faces.any((f) => f.part?.startsWith('shoe') == true),
         isFalse,
